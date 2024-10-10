@@ -1,0 +1,100 @@
+<?xml version=1.0?>
+
+<helios>
+	<canopygenerator>
+		<VSPGrapevineParameters>
+			<leaf_width> 0.18 </leaf_width>
+			<leaf_subdivisions> 1 1 </leaf_subdivisions>
+			<leaf_texture_file> plugins/canopygenerator/textures/GrapeLeaf.png </leaf_texture_file>
+			<wood_texture_file> plugins/canopygenerator/textures/wood.jpg </wood_texture_file>
+			<wood_subdivisions> 10 </wood_subdivisions>
+			<trunk_height> 0.7 </trunk_height>
+			<trunk_radius> 0.05 </trunk_radius>
+			<cordon_height> 0.9 </cordon_height>
+			<cordon_radius> 0.02 </cordon_radius>
+			<shoot_length> 0.9 </shoot_length>
+			<shoot_radius> 0.005 </shoot_radius>
+			<shoots_per_cordon> 10 </shoots_per_cordon>
+			<leaf_spacing_fraction> 0.5 </leaf_spacing_fraction>
+			<grape_radius> 0.0075 </grape_radius>
+			<cluster_radius> 0.03 </cluster_radius>
+			<cluster_height_max> 0.15 </cluster_height_max>
+			<grape_color> 0.18 0.2 0.25 </grape_color>
+			<grape_subdivisions> 8 </grape_subdivisions>
+			<canopy_origin> 0 0 0 </canopy_origin>
+			<canopy_rotation> 0 </canopy_rotation>
+		</VSPGrapevineParameters>
+
+		<SplitGrapevineParameters>
+			<leaf_width> 0.18 </leaf_width>
+			<leaf_subdivisions> 1 1 </leaf_subdivisions>
+			<leaf_texture_file> plugins/canopygenerator/textures/GrapeLeaf.png </leaf_texture_file>
+			<wood_texture_file> plugins/canopygenerator/textures/wood.jpg </wood_texture_file>
+			<wood_subdivisions> 10 </wood_subdivisions>
+			<trunk_height> 1.3 </trunk_height>
+			<trunk_radius> 0.05 </trunk_radius>
+			<cordon_height> 1.5 </cordon_height>
+			<cordon_radius> 0.02 </cordon_radius>
+			<cordon_spacing> 1.0 </cordon_spacing>
+			<shoot_length> 1.2 </shoot_length>
+			<shoot_radius> 0.0025 </shoot_radius>
+			<shoots_per_cordon> 10 </shoots_per_cordon>
+			<shoot_angle_tip> 1.256637 <!-- 0.4 * pi --> </shoot_angle_tip>
+			<shoot_angle_base> 0 </shoot_angle_base>
+			<leaf_spacing_fraction> 0.6 </leaf_spacing_fraction>
+			<grape_radius> 0.0075 </grape_radius>
+			<cluster_radius> 0.03 </cluster_radius>
+			<cluster_height_max> 0.1 </cluster_height_max>
+			<grape_color> 0.18 0.2 0.25 </grape_color>
+			<grape_subdivisions> 8 </grape_subdivisions>
+			<canopy_origin> 0 0 0 </canopy_origin>
+			<canopy_rotation> 0 </canopy_rotation>
+		</SplitGrapevineParameters>
+
+		<UnilateralGrapevineParameters>
+			<leaf_width> 0.18 </leaf_width>
+			<leaf_subdivisions> 1 1 </leaf_subdivisions>
+			<leaf_texture_file> plugins/canopygenerator/textures/GrapeLeaf.png </leaf_texture_file>
+			<wood_texture_file> plugins/canopygenerator/textures/wood.jpg </wood_texture_file>
+			<wood_subdivisions> 10 </wood_subdivisions>
+			<trunk_height> 0.7 </trunk_height>
+			<trunk_radius> 0.05 </trunk_radius>
+			<cordon_height> 0.9 </cordon_height>
+			<cordon_radius> 0.04 </cordon_radius>
+			<shoot_length> 0.9 </shoot_length>
+			<shoot_radius> 0.0025 </shoot_radius>
+			<shoots_per_cordon> 20 </shoots_per_cordon>
+			<leaf_spacing_fraction> 0.6 </leaf_spacing_fraction>
+			<grape_radius> 0.0075 </grape_radius>
+			<cluster_radius> 0.03 </cluster_radius>
+			<cluster_height_max> 0.1 </cluster_height_max>
+			<grape_color> 0.18 0.2 0.25 </grape_color>
+			<grape_subdivisions> 8 </grape_subdivisions>
+			<canopy_origin> 0 0 0 </canopy_origin>
+			<canopy_rotation> 0 </canopy_rotation>
+		</UnilateralGrapevineParameters>
+
+		<GobletGrapevineParameters>
+			<leaf_width> 0.18 </leaf_width>
+			<leaf_subdivisions> 1 1 </leaf_subdivisions>
+			<leaf_texture_file> plugins/canopygenerator/textures/GrapeLeaf.png </leaf_texture_file>
+			<wood_texture_file> plugins/canopygenerator/textures/wood.jpg </wood_texture_file>
+			<wood_subdivisions> 10 </wood_subdivisions>
+			<trunk_height> 0.7 </trunk_height>
+			<trunk_radius> 0.05 </trunk_radius>
+			<cordon_height> 0.9 </cordon_height>
+			<cordon_radius> 0.02 </cordon_radius>
+			<shoot_length> 0.9 </shoot_length>
+			<shoot_radius> 0.0025 </shoot_radius>
+			<shoots_per_cordon> 10 </shoots_per_cordon>
+			<leaf_spacing_fraction> 0.6 </leaf_spacing_fraction>
+			<grape_radius> 0.0075 </grape_radius>
+			<cluster_radius> 0.03 </cluster_radius>
+			<cluster_height_max> 0.1 </cluster_height_max>
+			<grape_color> 0.18 0.2 0.25 </grape_color>
+			<grape_subdivisions> 8 </grape_subdivisions>
+			<canopy_origin> 0 0 0 </canopy_origin>
+			<canopy_rotation> 0 </canopy_rotation>
+		</GobletGrapevineParameters>
+	</canopygenerator>
+</helios>

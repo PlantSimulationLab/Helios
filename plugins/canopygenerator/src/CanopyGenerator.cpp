@@ -18,7 +18,37 @@
 
 using namespace helios;
 
-HomogeneousCanopyParameters::HomogeneousCanopyParameters(){
+//! Float null value in XML parameters
+static float nullvalue_f = 99999;
+//! Int null value in XML parameters
+static int nullvalue_i = 99999;
+//! String null value in XML parameters
+static std::string nullvalue_s = "99999";
+
+BaseCanopyParameters::BaseCanopyParameters(){
+    canopy_origin = make_vec3(0,0,0);
+    canopy_rotation = 0;
+}
+
+BaseCanopyParameters::BaseCanopyParameters(const pugi::xml_node canopy_node) : BaseCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void BaseCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    // ----- canopy origin ------ //
+    vec3 new_canopy_origin = XMLloadvec3(canopy_node, "canopy_origin");
+    if (new_canopy_origin.x != nullvalue_f && new_canopy_origin.y != nullvalue_f) {
+        canopy_origin = new_canopy_origin;
+    }
+
+    // ----- canopy rotation ------ //
+    float new_canopy_rotation = XMLloadfloat(canopy_node, "canopy_rotation");
+    if (new_canopy_rotation != nullvalue_f) {
+        canopy_rotation = new_canopy_rotation;
+    }
+}
+
+HomogeneousCanopyParameters::HomogeneousCanopyParameters() : BaseCanopyParameters(){
 
     leaf_size = make_vec2(0.1,0.1);
 
@@ -34,13 +64,75 @@ HomogeneousCanopyParameters::HomogeneousCanopyParameters(){
 
     canopy_extent = make_vec2(5,5);
 
-    canopy_origin = make_vec3(0,0,0);
-
     buffer = "z";
 
 }
 
-SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(){
+HomogeneousCanopyParameters::HomogeneousCanopyParameters(const pugi::xml_node canopy_node) : HomogeneousCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void HomogeneousCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    // ----- leaf size ------//
+    vec2 new_leaf_size = XMLloadvec2(canopy_node, "leaf_size");
+    if (new_leaf_size.x != nullvalue_f && new_leaf_size.y != nullvalue_f) {
+        leaf_size = new_leaf_size;
+    }
+
+    // ----- leaf subdivisions ------//
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    // ----- leaf color ------//
+    RGBAcolor new_leaf_color = XMLloadrgba(canopy_node, "leaf_color");
+    if (new_leaf_color.a != 0) {
+        leaf_color = make_RGBcolor(new_leaf_color.r, new_leaf_color.g, new_leaf_color.b);
+    }
+
+    // ----- leaf texture file ------//
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if (new_leaf_texture_file != nullvalue_s) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    // ----- leaf area index ------//
+    float LAI = XMLloadfloat(canopy_node, "leaf_area_index");
+    if (LAI != nullvalue_f) {
+        leaf_area_index = LAI;
+    }
+
+    // ----- canopy height ------//
+    float h = XMLloadfloat(canopy_node, "canopy_height");
+    if (h != nullvalue_f) {
+        canopy_height = h;
+    }
+
+    // ----- canopy extent ------//
+    vec2 new_canopy_extent = XMLloadvec2(canopy_node, "canopy_extent");
+    if (new_canopy_extent.x != nullvalue_f && new_canopy_extent.y != nullvalue_f) {
+        canopy_extent = new_canopy_extent;
+    }
+
+    // ----- buffer ------//
+    std::string new_buffer = XMLloadstring(canopy_node, "buffer");
+    if ( new_buffer != nullvalue_s ) {
+        buffer = new_buffer;
+    }
+}
+
+void HomogeneousCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    std::cout << "HomogeneousCanopyParameters::buildPlant: Cannot build a single plant of canopy type HomogeneousCanopyParameters" << std::endl;
+}
+
+void HomogeneousCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters() : BaseCanopyParameters(){
 
     leaf_size = make_vec2(0.025,0.025);
 
@@ -60,13 +152,85 @@ SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(){
 
     plant_count = make_int2(5,5);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0.f;
-
 }
 
-ConicalCrownsCanopyParameters::ConicalCrownsCanopyParameters(){
+SphericalCrownsCanopyParameters::SphericalCrownsCanopyParameters(const pugi::xml_node canopy_node) : SphericalCrownsCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void SphericalCrownsCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    // ----- leaf size ------//
+    vec2 new_leaf_size = XMLloadvec2(canopy_node, "leaf_size");
+    if (new_leaf_size.x != nullvalue_f && new_leaf_size.y != nullvalue_f) {
+        leaf_size = new_leaf_size;
+    }
+
+    // ----- leaf subdivisions ------//
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    // ----- leaf color ------//
+    RGBAcolor new_leaf_color = XMLloadrgba(canopy_node, "leaf_color");
+    if (new_leaf_color.a != 0) {
+        leaf_color = make_RGBcolor(new_leaf_color.r, new_leaf_color.g, new_leaf_color.b);
+    }
+
+    // ----- leaf texture file ------//
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if (new_leaf_texture_file != nullvalue_s) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    // ----- leaf angle distribution ------//
+    std::string new_leaf_angle_distribution = XMLloadstring(canopy_node, "leaf_angle_distribution");
+    if (new_leaf_angle_distribution != nullvalue_s) {
+        leaf_angle_distribution = new_leaf_angle_distribution;
+    }
+
+    // ----- leaf area density ------//
+    float new_leaf_area_density = XMLloadfloat(canopy_node, "leaf_area_density");
+    if (new_leaf_area_density != nullvalue_f) {
+        leaf_area_density = new_leaf_area_density;
+    }
+
+    // ----- crown radius ------//
+    vec3 new_crown_radius = XMLloadvec3(canopy_node, "crown_radius");
+    if (new_crown_radius.x != nullvalue_f && new_crown_radius.y != nullvalue_f) {
+        crown_radius = new_crown_radius;
+    }
+
+    // ----- canopy configuration ------//
+    std::string new_canopy_configuration = XMLloadstring(canopy_node, "canopy_configuration");
+    if (new_canopy_configuration != nullvalue_s) {
+        canopy_configuration = new_canopy_configuration;
+    }
+
+    // ----- plant spacing ------//
+    vec2 new_plant_spacing = XMLloadvec2(canopy_node, "plant_spacing");
+    if (new_plant_spacing.x != nullvalue_f && new_plant_spacing.y != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    // ----- plant count ------//
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void SphericalCrownsCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    std::cout << "SphericalCrownsCanopyParameters::buildPlant: Cannot build a single plant of canopy type SphericalCrownsCanopyParameters" << std::endl;
+}
+
+void SphericalCrownsCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+ConicalCrownsCanopyParameters::ConicalCrownsCanopyParameters() : BaseCanopyParameters(){
 
     leaf_size = make_vec2(0.025,0.025);
 
@@ -88,23 +252,230 @@ ConicalCrownsCanopyParameters::ConicalCrownsCanopyParameters(){
 
     plant_count = make_int2(5,5);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0.f;
-
 }
 
-VSPGrapevineParameters::VSPGrapevineParameters(){
+ConicalCrownsCanopyParameters::ConicalCrownsCanopyParameters(const pugi::xml_node canopy_node) : ConicalCrownsCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
 
-    leaf_width = 0.18;
+void ConicalCrownsCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
 
-    leaf_subdivisions = make_int2(1,1);
+    // ----- leaf size ------//
+    vec2 new_leaf_size = XMLloadvec2(canopy_node, "leaf_size");
+    if (new_leaf_size.x != nullvalue_f && new_leaf_size.y != nullvalue_f) {
+        leaf_size = new_leaf_size;
+    }
+
+    // ----- leaf subdivisions ------//
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    // ----- leaf color ------//
+    RGBAcolor new_leaf_color = XMLloadrgba(canopy_node, "leaf_color");
+    if (new_leaf_color.a != 0) {
+        leaf_color = make_RGBcolor(new_leaf_color.r, new_leaf_color.g, new_leaf_color.b);
+    }
+
+    // ----- leaf texture file ------//
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if (new_leaf_texture_file != nullvalue_s) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    // ----- leaf angle distribution ------//
+    std::string new_leaf_angle_distribution = XMLloadstring(canopy_node, "leaf_angle_distribution");
+    if (new_leaf_angle_distribution != nullvalue_s) {
+        leaf_angle_distribution = new_leaf_angle_distribution;
+    }
+
+    // ----- leaf area density ------//
+    float new_leaf_area_density = XMLloadfloat(canopy_node, "leaf_area_density");
+    if (new_leaf_area_density != nullvalue_f) {
+        leaf_area_density = new_leaf_area_density;
+    }
+
+    // ----- crown radius ------//
+    float new_crown_radius = XMLloadfloat(canopy_node, "crown_radius");
+    if (new_crown_radius != nullvalue_f) {
+        crown_radius = new_crown_radius;
+    }
+
+    // ----- crown height ------//
+    float new_crown_height = XMLloadfloat(canopy_node, "crown_height");
+    if (new_crown_height != nullvalue_f) {
+        crown_height = new_crown_height;
+    }
+
+    // ----- canopy configuration ------//
+    std::string new_canopy_configuration = XMLloadstring(canopy_node, "canopy_configuration");
+    if (new_canopy_configuration != nullvalue_s) {
+        canopy_configuration = new_canopy_configuration;
+    }
+
+    // ----- plant spacing ------//
+    vec2 new_plant_spacing = XMLloadvec2(canopy_node, "plant_spacing");
+    if (new_plant_spacing.x != nullvalue_f && new_plant_spacing.y != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    // ----- plant count ------//
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void ConicalCrownsCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    std::cout << "ConicalCrownsCanopyParameters::buildPlant: Cannot build a single plant of canopy type ConicalCrownsCanopyParameters" << std::endl;
+}
+
+void ConicalCrownsCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+BaseGrapeVineParameters::BaseGrapeVineParameters() : BaseCanopyParameters(){
 
     leaf_texture_file = "plugins/canopygenerator/textures/GrapeLeaf.png";
 
     wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
 
+    leaf_width = 0.18;
+
+    leaf_subdivisions = make_int2(1,1);
+
     wood_subdivisions = 10;
+
+    grape_color = make_RGBcolor(0.18,0.2,0.25);
+
+    plant_count = make_int2(3,3);
+
+}
+
+BaseGrapeVineParameters::BaseGrapeVineParameters(const pugi::xml_node canopy_node) : BaseGrapeVineParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_leaf_width = XMLloadfloat(canopy_node, "leaf_width");
+    if (new_leaf_width != nullvalue_f) {
+        leaf_width = new_leaf_width;
+    }
+
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if ( new_leaf_texture_file != nullvalue_s ) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    std::string new_wood_texture_file = XMLloadstring(canopy_node, "wood_texture_file");
+    if ( new_wood_texture_file != nullvalue_s ) {
+        wood_texture_file = new_wood_texture_file;
+    }
+
+    int new_wood_subdivisions = XMLloadint(canopy_node, "wood_subdivisions");
+    if ( new_wood_subdivisions != nullvalue_i) {
+        wood_subdivisions = new_wood_subdivisions;
+    }
+
+    float h = XMLloadfloat(canopy_node, "trunk_height");
+    if (h != nullvalue_f) {
+        trunk_height = h;
+    }
+
+    float r = XMLloadfloat(canopy_node, "trunk_radius");
+    if (r != nullvalue_f) {
+        trunk_radius = r;
+    }
+
+    float ch = XMLloadfloat(canopy_node, "cordon_height");
+    if (ch != nullvalue_f) {
+        cordon_height = ch;
+    }
+
+    float cr = XMLloadfloat(canopy_node, "cordon_radius");
+    if (cr != nullvalue_f) {
+        cordon_radius = cr;
+    }
+
+    float sl = XMLloadfloat(canopy_node, "shoot_length");
+    if (sl != nullvalue_f) {
+        shoot_length = sl;
+    }
+
+    float sr = XMLloadfloat(canopy_node, "shoot_radius");
+    if (sr != nullvalue_f) {
+        shoot_radius = sr;
+    }
+
+    int spc = XMLloadint(canopy_node, "shoots_per_cordon");
+    if (spc != nullvalue_i) {
+        shoots_per_cordon = uint(spc);
+    }
+
+    float lsf = XMLloadfloat(canopy_node, "leaf_spacing_fraction");
+    if (lsf != nullvalue_f) {
+        leaf_spacing_fraction = lsf;
+    }
+
+    float gr = XMLloadfloat(canopy_node, "grape_radius");
+    if (gr != nullvalue_f) {
+        grape_radius = gr;
+    }
+
+    float clr = XMLloadfloat(canopy_node, "cluster_radius");
+    if (clr != nullvalue_f) {
+        cluster_radius = clr;
+    }
+
+    float clhm = XMLloadfloat(canopy_node, "cluster_height_max");
+    if (clhm != nullvalue_f) {
+        cluster_height_max = clhm;
+    }
+
+    RGBAcolor new_grape_color = XMLloadrgba(canopy_node, "grape_color");
+    if ( new_grape_color.a != 0 ) {
+        grape_color = make_RGBcolor(new_grape_color.r, new_grape_color.g, new_grape_color.b);
+    }
+
+    int new_grape_subdivisions = XMLloadint(canopy_node, "grape_subdivisions");
+    if (new_grape_subdivisions != nullvalue_i) {
+        grape_subdivisions = uint(new_grape_subdivisions);
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void BaseGrapeVineParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    std::cout << "BaseGrapeVineParameters::buildPlant: Cannot build a single plant of canopy type BaseGrapeVineParameters" << std::endl;
+}
+
+void BaseGrapeVineParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    std::cout << "BaseGrapeVineParameters::buildPlant: Cannot build a canopy of type BaseGrapeVineParameters" << std::endl;
+}
+
+VSPGrapevineParameters::VSPGrapevineParameters() : BaseGrapeVineParameters(){
 
     trunk_height = 0.7;
 
@@ -128,33 +499,31 @@ VSPGrapevineParameters::VSPGrapevineParameters(){
 
     cluster_height_max = 0.15;
 
-    grape_color = make_RGBcolor(0.18,0.2,0.25);
-
     grape_subdivisions = 8;
 
     plant_spacing = 2;
 
     row_spacing = 2;
 
-    plant_count = make_int2(3,3);
-
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-SplitGrapevineParameters::SplitGrapevineParameters(){
+VSPGrapevineParameters::VSPGrapevineParameters(const pugi::xml_node canopy_node) : VSPGrapevineParameters(){
+    readParametersFromXML(canopy_node);
+}
 
-    leaf_width = 0.18;
+void VSPGrapevineParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseGrapeVineParameters::readParametersFromXML(canopy_node);
+}
 
-    leaf_subdivisions = make_int2(1,1);
+void VSPGrapevineParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.grapevineVSP(*this, origin);
+}
 
-    leaf_texture_file = "plugins/canopygenerator/textures/GrapeLeaf.png";
+void VSPGrapevineParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
 
-    wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
-
-    wood_subdivisions = 10;
+SplitGrapevineParameters::SplitGrapevineParameters() : BaseGrapeVineParameters(){
 
     trunk_height = 1.3;
 
@@ -184,33 +553,46 @@ SplitGrapevineParameters::SplitGrapevineParameters(){
 
     cluster_height_max = 0.1;
 
-    grape_color = make_RGBcolor(0.18,0.2,0.25);
-
     grape_subdivisions = 8;
 
     plant_spacing = 2;
 
     row_spacing = 4;
 
-    plant_count = make_int2(3,3);
-
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-UnilateralGrapevineParameters::UnilateralGrapevineParameters(){
+SplitGrapevineParameters::SplitGrapevineParameters(const pugi::xml_node canopy_node) : SplitGrapevineParameters(){
+    readParametersFromXML(canopy_node);
+}
 
-    leaf_width = 0.18;
+void SplitGrapevineParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseGrapeVineParameters::readParametersFromXML(canopy_node);
 
-    leaf_subdivisions = make_int2(1,1);
+    float cs = XMLloadfloat(canopy_node, "cordon_spacing");
+    if (cs != nullvalue_f) {
+        cordon_spacing = cs;
+    }
 
-    leaf_texture_file = "plugins/canopygenerator/textures/GrapeLeaf.png";
+    float sat = XMLloadfloat( canopy_node, "shoot_angle_tip" );
+    if( sat != nullvalue_f ){
+        shoot_angle_tip = sat;
+    }
 
-    wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
+    float sab = XMLloadfloat( canopy_node, "shoot_angle_base" );
+    if( sab != nullvalue_f ){
+        shoot_angle_base = sab;
+    }
+}
 
-    wood_subdivisions = 10;
+void SplitGrapevineParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.grapevineSplit(*this, origin);
+}
+
+void SplitGrapevineParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+UnilateralGrapevineParameters::UnilateralGrapevineParameters() : BaseGrapeVineParameters(){
 
     trunk_height = 0.7;
 
@@ -234,33 +616,31 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters(){
 
     cluster_height_max = 0.1;
 
-    grape_color = make_RGBcolor(0.18,0.2,0.25);
-
     grape_subdivisions = 8;
 
     plant_spacing = 1.5;
 
     row_spacing = 2;
 
-    plant_count = make_int2(3,3);
-
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-GobletGrapevineParameters::GobletGrapevineParameters(){
+UnilateralGrapevineParameters::UnilateralGrapevineParameters(const pugi::xml_node canopy_node) : UnilateralGrapevineParameters(){
+    readParametersFromXML(canopy_node);
+}
 
-    leaf_width = 0.18;
+void UnilateralGrapevineParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseGrapeVineParameters::readParametersFromXML(canopy_node);
+}
 
-    leaf_subdivisions = make_int2(1,1);
+void UnilateralGrapevineParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.grapevineUnilateral(*this, origin);
+}
 
-    leaf_texture_file = "plugins/canopygenerator/textures/GrapeLeaf.png";
+void UnilateralGrapevineParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
 
-    wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
-
-    wood_subdivisions = 10;
+GobletGrapevineParameters::GobletGrapevineParameters() : BaseGrapeVineParameters(){
 
     trunk_height = 0.7;
 
@@ -284,23 +664,31 @@ GobletGrapevineParameters::GobletGrapevineParameters(){
 
     cluster_height_max = 0.1;
 
-    grape_color = make_RGBcolor(0.18,0.2,0.25);
-
     grape_subdivisions = 8;
 
     plant_spacing = 2;
 
     row_spacing = 2;
 
-    plant_count = make_int2(3,3);
-
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(){
+GobletGrapevineParameters::GobletGrapevineParameters(const pugi::xml_node canopy_node) : GobletGrapevineParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void GobletGrapevineParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseGrapeVineParameters::readParametersFromXML(canopy_node);
+}
+
+void GobletGrapevineParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.grapevineGoblet(*this, origin);
+}
+
+void GobletGrapevineParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters() : BaseCanopyParameters(){
 
     needle_width = 0.0005;
 
@@ -336,13 +724,105 @@ WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(){
 
     plant_count = make_int2(3,3);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-TomatoParameters::TomatoParameters(){
+WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(const pugi::xml_node canopy_node) : WhiteSpruceCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void WhiteSpruceCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_needle_width = XMLloadfloat(canopy_node, "needle_width");
+    if (new_needle_width != nullvalue_f) {
+        needle_width = new_needle_width;
+    }
+
+    float new_needle_length = XMLloadfloat(canopy_node, "needle_length");
+    if (new_needle_length != nullvalue_f) {
+        needle_length = new_needle_length;
+    }
+
+    int2 new_needle_subdivisions = XMLloadint2(canopy_node, "needle_subdivisions");
+    if (new_needle_subdivisions.x != nullvalue_i && new_needle_subdivisions.y != nullvalue_i) {
+        needle_subdivisions = new_needle_subdivisions;
+    }
+
+    RGBAcolor new_needle_color = XMLloadrgba(canopy_node, "needle_color");
+    if (new_needle_color.a != 0) {
+        needle_color = make_RGBcolor(new_needle_color.r, new_needle_color.g, new_needle_color.b);
+    }
+
+    std::string new_wood_texture_file = XMLloadstring(canopy_node, "wood_texture_file");
+    if ( new_wood_texture_file != nullvalue_s ) {
+        wood_texture_file = new_wood_texture_file;
+    }
+
+    int new_wood_subdivisions = XMLloadint(canopy_node, "wood_subdivisions");
+    if (new_wood_subdivisions != nullvalue_i) {
+        wood_subdivisions = new_wood_subdivisions;
+    }
+
+    float new_trunk_height = XMLloadfloat(canopy_node, "trunk_height");
+    if (new_trunk_height != nullvalue_f) {
+        trunk_height = new_trunk_height;
+    }
+
+    float new_trunk_radius = XMLloadfloat(canopy_node, "trunk_radius");
+    if (new_trunk_radius != nullvalue_f) {
+        trunk_radius = new_trunk_radius;
+    }
+
+    float new_crown_radius = XMLloadfloat(canopy_node, "crown_radius");
+    if (new_crown_radius != nullvalue_f) {
+        crown_radius = new_crown_radius;
+    }
+
+    float new_shoot_radius = XMLloadfloat(canopy_node, "shoot_radius");
+    if (new_shoot_radius != nullvalue_f) {
+        shoot_radius = new_shoot_radius;
+    }
+
+    float new_level_spacing = XMLloadfloat(canopy_node, "level_spacing");
+    if (new_level_spacing != nullvalue_f) {
+        level_spacing = new_level_spacing;
+    }
+
+    int new_branches_per_level = XMLloadint(canopy_node, "branches_per_level");
+    if (new_branches_per_level != nullvalue_i) {
+        branches_per_level = new_branches_per_level;
+    }
+
+    float new_shoot_angle = XMLloadfloat(canopy_node, "shoot_angle");
+    if (new_shoot_angle != nullvalue_f) {
+        shoot_angle = new_shoot_angle;
+    }
+
+    std::string new_canopy_configuration = XMLloadstring(canopy_node, "canopy_configuration");
+    if (new_canopy_configuration != nullvalue_s) {
+        canopy_configuration = new_canopy_configuration;
+    }
+
+    vec2 new_plant_spacing = XMLloadvec2(canopy_node, "plant_spacing");
+    if (new_plant_spacing.x != nullvalue_f && new_plant_spacing.y != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void WhiteSpruceCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.whitespruce(*this, origin);
+}
+
+void WhiteSpruceCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+TomatoParameters::TomatoParameters() : BaseCanopyParameters(){
 
     leaf_length = 0.2;
 
@@ -368,13 +848,86 @@ TomatoParameters::TomatoParameters(){
 
     plant_count = make_int2(3,3);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-StrawberryParameters::StrawberryParameters(){
+TomatoParameters::TomatoParameters(const pugi::xml_node canopy_node) : TomatoParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void TomatoParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_leaf_length = XMLloadfloat(canopy_node, "leaf_length");
+    if (new_leaf_length != nullvalue_f) {
+        leaf_length = new_leaf_length;
+    }
+
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if ( new_leaf_texture_file != nullvalue_s ) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    RGBAcolor new_shoot_color = XMLloadrgba(canopy_node, "shoot_color");
+    if (new_shoot_color.a != 0 ) {
+        shoot_color = make_RGBcolor(new_shoot_color.r, new_shoot_color.g, new_shoot_color.b);
+    }
+
+    int new_shoot_subdivisions = XMLloadint(canopy_node, "shoot_subdivisions");
+    if (new_shoot_subdivisions != nullvalue_i) {
+        shoot_subdivisions = new_shoot_subdivisions;
+    }
+
+    float h = XMLloadfloat(canopy_node, "plant_height");
+    if (h != nullvalue_f) {
+        plant_height = h;
+    }
+
+    float gr = XMLloadfloat(canopy_node, "fruit_radius");
+    if (gr != nullvalue_f) {
+        fruit_radius = gr;
+    }
+
+    RGBAcolor new_fruit_color = XMLloadrgba(canopy_node, "fruit_color");
+    if (new_fruit_color.a != 0 ) {
+        fruit_color = make_RGBcolor(new_fruit_color.r, new_fruit_color.g, new_fruit_color.b);
+    }
+
+
+    int new_fruit_subdivisions = XMLloadint(canopy_node, "fruit_subdivisions");
+    if (new_fruit_subdivisions != nullvalue_i) {
+        fruit_subdivisions = uint(new_fruit_subdivisions);
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void TomatoParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.tomato(*this, origin);
+}
+
+void TomatoParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+StrawberryParameters::StrawberryParameters() : BaseCanopyParameters(){
 
     leaf_length = 0.1;
 
@@ -406,13 +959,95 @@ StrawberryParameters::StrawberryParameters(){
 
     plant_count = make_int2(4,2);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-WalnutCanopyParameters::WalnutCanopyParameters(){
+StrawberryParameters::StrawberryParameters(const pugi::xml_node canopy_node) : StrawberryParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void StrawberryParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_leaf_length = XMLloadfloat(canopy_node, "leaf_length");
+    if (new_leaf_length != nullvalue_f) {
+        leaf_length = new_leaf_length;
+    }
+
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if ( new_leaf_texture_file != nullvalue_s ) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    int new_stem_subdivisions = XMLloadint(canopy_node, "stem_subdivisions");
+    if (new_stem_subdivisions != nullvalue_i) {
+        stem_subdivisions = new_stem_subdivisions;
+    }
+
+    float new_stem_radius = XMLloadfloat(canopy_node, "stem_radius");
+    if (new_stem_radius != nullvalue_f) {
+        stem_radius = new_stem_radius;
+    }
+
+    float h = XMLloadfloat(canopy_node, "plant_height");
+    if (h != nullvalue_f) {
+        plant_height = h;
+    }
+
+    int r = XMLloadint(canopy_node, "stems_per_plant");
+    if (r != nullvalue_i) {
+        stems_per_plant = r;
+    }
+
+    float gr = XMLloadfloat(canopy_node, "fruit_radius");
+    if (gr != nullvalue_f) {
+        fruit_radius = gr;
+    }
+
+    float clr = XMLloadfloat(canopy_node, "clusters_per_stem");
+    if (clr != nullvalue_f) {
+        clusters_per_stem = clr;
+    }
+
+    int new_fruit_subdivisions = XMLloadint(canopy_node, "fruit_subdivisions");
+    if (new_fruit_subdivisions != nullvalue_i) {
+        fruit_subdivisions = uint(new_fruit_subdivisions);
+    }
+
+    std::string new_fruit_texture_file = XMLloadstring(canopy_node, "fruit_texture_file");
+    if ( new_fruit_texture_file != nullvalue_s ) {
+        fruit_texture_file = new_fruit_texture_file;
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = plant_count;
+    }
+}
+
+void StrawberryParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.strawberry(*this, origin);
+}
+
+void StrawberryParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+WalnutCanopyParameters::WalnutCanopyParameters() : BaseCanopyParameters(){
 
     leaf_length = 0.15;
 
@@ -442,13 +1077,86 @@ WalnutCanopyParameters::WalnutCanopyParameters(){
 
     plant_count = make_int2(4,2);
 
-    canopy_origin = make_vec3(0,0,0);
-
-    canopy_rotation = 0;
-
 }
 
-SorghumCanopyParameters::SorghumCanopyParameters(){
+WalnutCanopyParameters::WalnutCanopyParameters(const pugi::xml_node canopy_node) : WalnutCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void WalnutCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_leaf_length = XMLloadfloat(canopy_node, "leaf_length");
+    if (new_leaf_length != nullvalue_f) {
+        leaf_length = new_leaf_length;
+    }
+
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if ( new_leaf_texture_file != nullvalue_s ) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    int new_wood_subdivisions = XMLloadint(canopy_node, "wood_subdivisions");
+    if (new_wood_subdivisions != nullvalue_i) {
+        wood_subdivisions = new_wood_subdivisions;
+    }
+
+
+    float new_trunk_radius = XMLloadfloat(canopy_node, "trunk_radius");
+    if (new_trunk_radius != nullvalue_f) {
+        trunk_radius = new_trunk_radius;
+    }
+
+    float new_trunk_height = XMLloadfloat(canopy_node, "trunk_height");
+    if (new_trunk_height != nullvalue_f) {
+        trunk_height = new_trunk_height;
+    }
+
+    vec3 new_branch_length = XMLloadvec3(canopy_node, "branch_length");
+    if (new_branch_length.x != nullvalue_f && new_branch_length.y != nullvalue_f) {
+        branch_length = new_branch_length;
+    }
+
+    std::string new_fruit_texture_file = XMLloadstring(canopy_node, "fruit_texture_file");
+    if ( new_fruit_texture_file != nullvalue_s ) {
+        fruit_texture_file = new_fruit_texture_file;
+    }
+
+    int new_fruit_subdivisions = XMLloadint(canopy_node, "fruit_subdivisions");
+    if (new_fruit_subdivisions != nullvalue_i) {
+        fruit_subdivisions = uint(new_fruit_subdivisions);
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void WalnutCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.walnut(*this, origin);
+}
+
+void WalnutCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+SorghumCanopyParameters::SorghumCanopyParameters() : BaseCanopyParameters(){
     sorghum_stage = 5;
 
     // stage 1
@@ -578,10 +1286,335 @@ SorghumCanopyParameters::SorghumCanopyParameters(){
 
     plant_count = make_int2(10 ,10);
 
-    canopy_origin = make_vec3(0,0,0);
 }
 
-BeanParameters::BeanParameters() {
+SorghumCanopyParameters::SorghumCanopyParameters(const pugi::xml_node canopy_node) : SorghumCanopyParameters(){
+    readParametersFromXML(canopy_node);
+}
+
+void SorghumCanopyParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    int new_sorghum_stage = XMLloadint(canopy_node, "sorghum_stage");
+    if (new_sorghum_stage != nullvalue_i) {
+        sorghum_stage = new_sorghum_stage;
+    }
+
+    // STAGE 1
+    float new_s1_stem_length = XMLloadint(canopy_node, "s1_stem_length");
+    if (new_s1_stem_length != nullvalue_i) {
+        s1_stem_length = new_s1_stem_length;
+    }
+
+    float new_s1_stem_radius = XMLloadfloat(canopy_node, "s1_stem_radius");
+    if (new_s1_stem_radius != nullvalue_f) {
+        s1_stem_radius = new_s1_stem_radius;
+    }
+
+    int new_s1_stem_subdivisions = XMLloadint(canopy_node, "s1_stem_subdivisions");
+    if (new_s1_stem_subdivisions != nullvalue_f) {
+        s1_stem_subdivisions = uint(new_s1_stem_subdivisions);
+    }
+
+    vec2 new_s1_leaf_size1 = XMLloadvec2(canopy_node, "s1_leaf_size1");
+    if (new_s1_leaf_size1.x != nullvalue_f && new_s1_leaf_size1.y != nullvalue_f) {
+        s1_leaf_size1 = new_s1_leaf_size1;
+    }
+
+    vec2 new_s1_leaf_size2 = XMLloadvec2(canopy_node, "s1_leaf_size2");
+    if (new_s1_leaf_size2.x != nullvalue_f && new_s1_leaf_size2.y != nullvalue_f) {
+        s1_leaf_size2 = new_s1_leaf_size2;
+    }
+
+    vec2 new_s1_leaf_size3 = XMLloadvec2(canopy_node, "s1_leaf_size3");
+    if (new_s1_leaf_size3.x != nullvalue_f && new_s1_leaf_size3.y != nullvalue_f) {
+        s1_leaf_size3 = new_s1_leaf_size3;
+    }
+
+    float new_s1_leaf1_angle = XMLloadfloat(canopy_node, "s1_leaf1_angle");
+    if (new_s1_leaf1_angle != nullvalue_f) {
+        s1_leaf1_angle = new_s1_leaf1_angle;
+    }
+
+    float new_s1_leaf2_angle = XMLloadfloat(canopy_node, "s1_leaf2_angle");
+    if (new_s1_leaf2_angle != nullvalue_f) {
+        s1_leaf2_angle = new_s1_leaf2_angle;
+    }
+
+    float new_s1_leaf3_angle = XMLloadfloat(canopy_node, "s1_leaf3_angle");
+    if (new_s1_leaf3_angle != nullvalue_f) {
+        s1_leaf3_angle = new_s1_leaf3_angle;
+    }
+
+    int2 new_s1_leaf_subdivisions = XMLloadint2(canopy_node, "s1_leaf_subdivisions");
+    if (new_s1_leaf_subdivisions.x != nullvalue_i && new_s1_leaf_subdivisions.y != nullvalue_i) {
+        s1_leaf_subdivisions = new_s1_leaf_subdivisions;
+    }
+
+    std::string new_s1_leaf_texture_file = XMLloadstring(canopy_node, "s1_leaf_texture_file");
+    if (new_s1_leaf_texture_file.compare(nullvalue_s) != 0) {
+        s1_leaf_texture_file = new_s1_leaf_texture_file;
+    }
+
+    // STAGE 2
+    float new_s2_stem_length = XMLloadint(canopy_node, "s2_stem_length");
+    if (new_s2_stem_length != nullvalue_i) {
+        s2_stem_length = new_s2_stem_length;
+    }
+
+    float new_s2_stem_radius = XMLloadfloat(canopy_node, "s2_stem_radius");
+    if (new_s2_stem_radius != nullvalue_f) {
+        s2_stem_radius = new_s2_stem_radius;
+    }
+
+    int new_s2_stem_subdivisions = XMLloadint(canopy_node, "s2_stem_subdivisions");
+    if (new_s2_stem_subdivisions != nullvalue_f) {
+        s2_stem_subdivisions = uint(new_s2_stem_subdivisions);
+    }
+
+    vec2 new_s2_leaf_size1 = XMLloadvec2(canopy_node, "s2_leaf_size1");
+    if (new_s2_leaf_size1.x != nullvalue_f && new_s2_leaf_size1.y != nullvalue_f) {
+        s2_leaf_size1 = new_s2_leaf_size1;
+    }
+
+    vec2 new_s2_leaf_size2 = XMLloadvec2(canopy_node, "s2_leaf_size2");
+    if (new_s2_leaf_size2.x != nullvalue_f && new_s2_leaf_size2.y != nullvalue_f) {
+        s2_leaf_size2 = new_s2_leaf_size2;
+    }
+
+    vec2 new_s2_leaf_size3 = XMLloadvec2(canopy_node, "s2_leaf_size3");
+    if (new_s2_leaf_size3.x != nullvalue_f && new_s2_leaf_size3.y != nullvalue_f) {
+        s2_leaf_size3 = new_s2_leaf_size3;
+    }
+
+    vec2 new_s2_leaf_size4 = XMLloadvec2(canopy_node, "s2_leaf_size4");
+    if (new_s2_leaf_size4.x != nullvalue_f && new_s2_leaf_size4.y != nullvalue_f) {
+        s2_leaf_size4 = new_s2_leaf_size4;
+    }
+
+    vec2 new_s2_leaf_size5 = XMLloadvec2(canopy_node, "s2_leaf_size5");
+    if (new_s2_leaf_size5.x != nullvalue_f && new_s2_leaf_size5.y != nullvalue_f) {
+        s2_leaf_size5 = new_s2_leaf_size5;
+    }
+
+    float new_s2_leaf1_angle = XMLloadfloat(canopy_node, "s2_leaf1_angle");
+    if (new_s2_leaf1_angle != nullvalue_f) {
+        s2_leaf1_angle = new_s2_leaf1_angle;
+    }
+
+    float new_s2_leaf2_angle = XMLloadfloat(canopy_node, "s2_leaf2_angle");
+    if (new_s2_leaf2_angle != nullvalue_f) {
+        s2_leaf2_angle = new_s2_leaf2_angle;
+    }
+
+    float new_s2_leaf3_angle = XMLloadfloat(canopy_node, "s2_leaf3_angle");
+    if (new_s2_leaf3_angle != nullvalue_f) {
+        s2_leaf3_angle = new_s2_leaf3_angle;
+    }
+
+    float new_s2_leaf4_angle = XMLloadfloat(canopy_node, "s2_leaf4_angle");
+    if (new_s2_leaf4_angle != nullvalue_f) {
+        s2_leaf4_angle = new_s2_leaf4_angle;
+    }
+
+    float new_s2_leaf5_angle = XMLloadfloat(canopy_node, "s2_leaf5_angle");
+    if (new_s2_leaf3_angle != nullvalue_f) {
+        s2_leaf5_angle = new_s2_leaf5_angle;
+    }
+
+    int2 new_s2_leaf_subdivisions = XMLloadint2(canopy_node, "s2_leaf_subdivisions");
+    if (new_s2_leaf_subdivisions.x != nullvalue_i && new_s2_leaf_subdivisions.y != nullvalue_i) {
+        s2_leaf_subdivisions = new_s2_leaf_subdivisions;
+    }
+
+    std::string new_s2_leaf_texture_file = XMLloadstring(canopy_node, "s2_leaf_texture_file");
+    if (new_s2_leaf_texture_file.compare(nullvalue_s) != 0) {
+        s2_leaf_texture_file = new_s2_leaf_texture_file;
+    }
+
+    // STAGE 3
+    float new_s3_stem_length = XMLloadint(canopy_node, "s3_stem_length");
+    if (new_s3_stem_length != nullvalue_i) {
+        s3_stem_length = new_s3_stem_length;
+    }
+
+    float new_s3_stem_radius = XMLloadfloat(canopy_node, "s3_stem_radius");
+    if (new_s3_stem_radius != nullvalue_f) {
+        s3_stem_radius = new_s3_stem_radius;
+    }
+
+    int new_s3_stem_subdivisions = XMLloadint(canopy_node, "s3_stem_subdivisions");
+    if (new_s3_stem_subdivisions != nullvalue_f) {
+        s3_stem_subdivisions = uint(new_s3_stem_subdivisions);
+    }
+
+    vec2 new_s3_leaf_size = XMLloadvec2(canopy_node, "s3_leaf_size");
+    if (new_s3_leaf_size.x != nullvalue_f && new_s3_leaf_size.y != nullvalue_f) {
+        s3_leaf_size = new_s3_leaf_size;
+    }
+
+    int2 new_s3_leaf_subdivisions = XMLloadint2(canopy_node, "s3_leaf_subdivisions");
+    if (new_s3_leaf_subdivisions.x != nullvalue_i && new_s3_leaf_subdivisions.y != nullvalue_i) {
+        s3_leaf_subdivisions = new_s3_leaf_subdivisions;
+    }
+
+    int new_s3_number_of_leaves = XMLloadint(canopy_node, "s3_number_of_leaves");
+    if (new_s3_number_of_leaves != nullvalue_i) {
+        s3_number_of_leaves = new_s3_number_of_leaves;
+    }
+
+    float new_s3_mean_leaf_angle = XMLloadfloat(canopy_node, "s3_mean_leaf_angle");
+    if (new_s3_mean_leaf_angle != nullvalue_f) {
+        s3_mean_leaf_angle = new_s3_mean_leaf_angle;
+    }
+
+    std::string new_s3_leaf_texture_file = XMLloadstring(canopy_node, "s3_leaf_texture_file");
+    if (new_s3_leaf_texture_file.compare(nullvalue_s) != 0) {
+        s3_leaf_texture_file = new_s3_leaf_texture_file;
+    }
+
+    // STAGE 4
+    float new_s4_stem_length = XMLloadint(canopy_node, "s4_stem_length");
+    if (new_s4_stem_length != nullvalue_i) {
+        s4_stem_length = new_s4_stem_length;
+    }
+
+    float new_s4_stem_radius = XMLloadfloat(canopy_node, "s4_stem_radius");
+    if (new_s4_stem_radius != nullvalue_f) {
+        s4_stem_radius = new_s4_stem_radius;
+    }
+
+    int new_s4_stem_subdivisions = XMLloadint(canopy_node, "s4_stem_subdivisions");
+    if (new_s4_stem_subdivisions != nullvalue_f) {
+        s4_stem_subdivisions = uint(new_s4_stem_subdivisions);
+    }
+
+    vec2 new_s4_panicle_size = XMLloadvec2(canopy_node, "s4_panicle_size");
+    if (new_s4_panicle_size.x != nullvalue_f && new_s4_panicle_size.y != nullvalue_f) {
+        s4_panicle_size = new_s4_panicle_size;
+    }
+
+    int new_s4_panicle_subdivisions = XMLloadint(canopy_node, "s4_panicle_subdivisions");
+    if (new_s4_panicle_subdivisions != nullvalue_f) {
+        s4_panicle_subdivisions = uint(new_s4_panicle_subdivisions);
+    }
+
+    std::string new_s4_seed_texture_file = XMLloadstring(canopy_node, "s4_seed_texture_file");
+    if (new_s4_seed_texture_file.compare(nullvalue_s) != 0) {
+        s4_seed_texture_file = new_s4_seed_texture_file;
+    }
+
+    vec2 new_s4_leaf_size = XMLloadvec2(canopy_node, "s4_leaf_size");
+    if (new_s4_leaf_size.x != nullvalue_f && new_s4_leaf_size.y != nullvalue_f) {
+        s4_leaf_size = new_s4_leaf_size;
+    }
+
+    int2 new_s4_leaf_subdivisions = XMLloadint2(canopy_node, "s4_leaf_subdivisions");
+    if (new_s4_leaf_subdivisions.x != nullvalue_i && new_s4_leaf_subdivisions.y != nullvalue_i) {
+        s4_leaf_subdivisions = new_s4_leaf_subdivisions;
+    }
+
+    int new_s4_number_of_leaves = XMLloadint(canopy_node, "s4_number_of_leaves");
+    if (new_s4_number_of_leaves != nullvalue_i) {
+        s4_number_of_leaves = new_s4_number_of_leaves;
+    }
+
+    float new_s4_mean_leaf_angle = XMLloadfloat(canopy_node, "s4_mean_leaf_angle");
+    if (new_s4_mean_leaf_angle != nullvalue_f) {
+        s4_mean_leaf_angle = new_s4_mean_leaf_angle;
+    }
+
+    std::string new_s4_leaf_texture_file = XMLloadstring(canopy_node, "s4_leaf_texture_file");
+    if (new_s4_leaf_texture_file.compare(nullvalue_s) != 0) {
+        s4_leaf_texture_file = new_s4_leaf_texture_file;
+    }
+
+    // STAGE 5
+    float new_s5_stem_length = XMLloadint(canopy_node, "s5_stem_length");
+    if (new_s5_stem_length != nullvalue_i) {
+        s5_stem_length = new_s5_stem_length;
+    }
+
+    float new_s5_stem_radius = XMLloadfloat(canopy_node, "s5_stem_radius");
+    if (new_s5_stem_radius != nullvalue_f) {
+        s5_stem_radius = new_s5_stem_radius;
+    }
+
+    float new_s5_stem_bend = XMLloadfloat(canopy_node, "s5_stem_bend");
+    if (new_s5_stem_bend != nullvalue_f) {
+        s5_stem_bend = new_s5_stem_bend;
+    }
+
+    int new_s5_stem_subdivisions = XMLloadint(canopy_node, "s5_stem_subdivisions");
+    if (new_s5_stem_subdivisions != nullvalue_f) {
+        s5_stem_subdivisions = uint(new_s5_stem_subdivisions);
+    }
+
+    vec2 new_s5_panicle_size = XMLloadvec2(canopy_node, "s5_panicle_size");
+    if (new_s5_panicle_size.x != nullvalue_f && new_s5_panicle_size.y != nullvalue_f) {
+        s5_panicle_size = new_s5_panicle_size;
+    }
+
+    int new_s5_panicle_subdivisions = XMLloadint(canopy_node, "s5_panicle_subdivisions");
+    if (new_s5_panicle_subdivisions != nullvalue_f) {
+        s5_panicle_subdivisions = uint(new_s5_panicle_subdivisions);
+    }
+
+    std::string new_s5_seed_texture_file = XMLloadstring(canopy_node, "s5_seed_texture_file");
+    if (new_s5_seed_texture_file.compare(nullvalue_s) != 0) {
+        s5_seed_texture_file = new_s5_seed_texture_file;
+    }
+
+    vec2 new_s5_leaf_size = XMLloadvec2(canopy_node, "s5_leaf_size");
+    if (new_s5_leaf_size.x != nullvalue_f && new_s5_leaf_size.y != nullvalue_f) {
+        s5_leaf_size = new_s5_leaf_size;
+    }
+
+    int2 new_s5_leaf_subdivisions = XMLloadint2(canopy_node, "s5_leaf_subdivisions");
+    if (new_s5_leaf_subdivisions.x != nullvalue_i && new_s5_leaf_subdivisions.y != nullvalue_i) {
+        s5_leaf_subdivisions = new_s5_leaf_subdivisions;
+    }
+
+    int new_s5_number_of_leaves = XMLloadint(canopy_node, "s5_number_of_leaves");
+    if (new_s5_number_of_leaves != nullvalue_i) {
+        s5_number_of_leaves = new_s5_number_of_leaves;
+    }
+
+    float new_s5_mean_leaf_angle = XMLloadfloat(canopy_node, "s5_mean_leaf_angle");
+    if (new_s5_mean_leaf_angle != nullvalue_f) {
+        s5_mean_leaf_angle = new_s5_mean_leaf_angle;
+    }
+
+    std::string new_s5_leaf_texture_file = XMLloadstring(canopy_node, "s5_leaf_texture_file");
+    if (new_s5_leaf_texture_file.compare(nullvalue_s) != 0) {
+        s5_leaf_texture_file = new_s5_leaf_texture_file;
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+}
+
+void SorghumCanopyParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.sorghum(*this, origin);
+}
+
+void SorghumCanopyParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
+}
+
+BeanParameters::BeanParameters() : BaseCanopyParameters() {
 
   leaf_length = 0.075;
 
@@ -613,10 +1646,97 @@ BeanParameters::BeanParameters() {
 
   germination_probability = 1.f;
 
-  canopy_origin = make_vec3(0, 0, 0);
+}
 
-  canopy_rotation = 0;
+BeanParameters::BeanParameters(const pugi::xml_node canopy_node) : BeanParameters(){
+    readParametersFromXML(canopy_node);
+}
 
+void BeanParameters::readParametersFromXML(const pugi::xml_node canopy_node){
+    BaseCanopyParameters::readParametersFromXML(canopy_node);
+
+    float new_leaf_length = XMLloadfloat(canopy_node, "leaf_length");
+    if (new_leaf_length != nullvalue_f) {
+        leaf_length = new_leaf_length;
+    }
+
+    int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
+    if (new_leaf_subdivisions.x != nullvalue_i && new_leaf_subdivisions.y != nullvalue_i) {
+        leaf_subdivisions = new_leaf_subdivisions;
+    }
+
+    std::string new_leaf_texture_file = XMLloadstring(canopy_node, "leaf_texture_file");
+    if ( new_leaf_texture_file != nullvalue_s ) {
+        leaf_texture_file = new_leaf_texture_file;
+    }
+
+    int new_shoot_subdivisions = XMLloadint(canopy_node, "shoot_subdivisions");
+    if (new_shoot_subdivisions != nullvalue_i) {
+        shoot_subdivisions = new_shoot_subdivisions;
+    }
+
+    float new_stem_radius = XMLloadfloat(canopy_node, "stem_radius");
+    if (new_stem_radius != nullvalue_f) {
+        stem_radius = new_stem_radius;
+    }
+
+    RGBAcolor new_shoot_color = XMLloadrgba(canopy_node, "shoot_color");
+    if( new_shoot_color.a != 0 ){
+        shoot_color = make_RGBcolor(new_shoot_color.r, new_shoot_color.g, new_shoot_color.b);
+    }
+
+    float new_stem_length = XMLloadfloat(canopy_node, "stem_length");
+    if (new_stem_length != nullvalue_f ) {
+        stem_length = new_stem_length;
+    }
+
+    float new_leaflet_length = XMLloadfloat(canopy_node, "leaflet_length");
+    if (new_leaflet_length != nullvalue_f ) {
+        leaflet_length = new_leaflet_length;
+    }
+
+    float new_pod_length = XMLloadfloat(canopy_node, "pod_length");
+    if (new_pod_length != nullvalue_f ) {
+        pod_length = new_pod_length;
+    }
+
+    RGBAcolor new_pod_color = XMLloadrgba(canopy_node, "pod_color");
+    if( new_pod_color.a != 0 ){
+        pod_color = make_RGBcolor(new_pod_color.r, new_pod_color.g, new_pod_color.b);
+    }
+
+    int new_pod_subdivisions = XMLloadint(canopy_node, "pod_subdivisions");
+    if (new_pod_subdivisions != nullvalue_i ) {
+        pod_subdivisions = new_pod_subdivisions;
+    }
+
+    float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
+    if (new_plant_spacing != nullvalue_f) {
+        plant_spacing = new_plant_spacing;
+    }
+
+    float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
+    if (new_row_spacing != nullvalue_f) {
+        row_spacing = new_row_spacing;
+    }
+
+    int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
+    if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
+        plant_count = new_plant_count;
+    }
+
+    float new_germination_probability = XMLloadfloat(canopy_node, "germination_probability");
+    if (new_germination_probability != nullvalue_f) {
+        germination_probability = new_germination_probability;
+    }
+}
+
+void BeanParameters::buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin){
+    canopy_generator.bean(*this, origin);
+}
+
+void BeanParameters::buildCanopy(CanopyGenerator& canopy_generator){
+    canopy_generator.buildCanopy(*this);
 }
 
   CanopyGenerator::CanopyGenerator( helios::Context* m_context ){
@@ -780,15 +1900,25 @@ int CanopyGenerator::selfTest(){
 
 }
 
-void CanopyGenerator::loadXML( const char* filename ){
+template <typename CanopyType, typename... Args>
+void CanopyGenerator::storeCanopyParameters(Args&&... args){
+    static_assert(std::is_base_of<BaseCanopyParameters, CanopyType>::value, "CanopyType must inherit from BaseCanopyParameters");
+    canopy_parameters_list.push_back(std::make_shared<CanopyType>(std::forward<Args>(args)...));
+}
+
+std::vector<std::shared_ptr<BaseCanopyParameters>> CanopyGenerator::getCanopyParametersList(){
+    std::vector<std::shared_ptr<BaseCanopyParameters>> params_list;
+    for (const auto& params : canopy_parameters_list) {
+        params_list.push_back(params);
+    }
+    return params_list;
+}
+
+void CanopyGenerator::loadXML( const char* filename, bool build ){
 
     if( printmessages ){
         std::cout << "Reading XML file: " << filename << "..." << std::flush;
     }
-
-    float nullvalue_f = 99999;
-    int nullvalue_i = 99999;
-    std::string nullvalue_s = "99999";
 
     //Check if file exists
     std::ifstream f(filename);
@@ -825,63 +1955,30 @@ void CanopyGenerator::loadXML( const char* filename ){
         for (pugi::xml_node s = cgen.child("HomogeneousCanopyParameters"); s; s = s.next_sibling(
                 "HomogeneousCanopyParameters")) {
 
-            HomogeneousCanopyParameters homogeneouscanopyparameters;
+            HomogeneousCanopyParameters homogeneouscanopyparameters(s);
+            storeCanopyParameters<HomogeneousCanopyParameters>(homogeneouscanopyparameters);
+            if (build)
+                buildCanopy(homogeneouscanopyparameters);
 
-            // ----- leaf size ------//
-            vec2 leaf_size = XMLloadvec2(s, "leaf_size");
-            if (leaf_size.x != nullvalue_f && leaf_size.y != nullvalue_f) {
-                homogeneouscanopyparameters.leaf_size = leaf_size;
-            }
+        }
 
-            // ----- leaf subdivisions ------//
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                homogeneouscanopyparameters.leaf_subdivisions = leaf_subdivisions;
-            }
+        //Spherical Canopy
+        for (pugi::xml_node s = cgen.child("SphericalCrownsCanopyParameters"); s; s = s.next_sibling("SphericalCrownsCanopyParameters")) {
 
-            // ----- leaf color ------//
-            RGBAcolor leaf_color = XMLloadrgba(s, "leaf_color");
-            if (leaf_color.a != 0) {
-                homogeneouscanopyparameters.leaf_color = make_RGBcolor(leaf_color.r,leaf_color.g,leaf_color.b);
-            }
+            SphericalCrownsCanopyParameters sphericalcrownscanopyparameters(s);
+            storeCanopyParameters<SphericalCrownsCanopyParameters>(sphericalcrownscanopyparameters);
+            if (build)
+                buildCanopy(sphericalcrownscanopyparameters);
 
-            // ----- leaf texture file ------//
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if (leaf_texture_file != nullvalue_s) {
-                homogeneouscanopyparameters.leaf_texture_file = leaf_texture_file;
-            }
+        }
 
-            // ----- leaf area index ------//
-            float LAI = XMLloadfloat(s, "leaf_area_index");
-            if (LAI != nullvalue_f) {
-                homogeneouscanopyparameters.leaf_area_index = LAI;
-            }
+        //Conical Canopy
+        for (pugi::xml_node s = cgen.child("ConicalCrownsCanopyParameters"); s; s = s.next_sibling("ConicalCrownsCanopyParameters")) {
 
-            // ----- canopy height ------//
-            float h = XMLloadfloat(s, "canopy_height");
-            if (h != nullvalue_f) {
-                homogeneouscanopyparameters.canopy_height = h;
-            }
-
-            // ----- canopy extent ------//
-            vec2 canopy_extent = XMLloadvec2(s, "canopy_extent");
-            if (canopy_extent.x != nullvalue_f && canopy_extent.y != nullvalue_f) {
-                homogeneouscanopyparameters.canopy_extent = canopy_extent;
-            }
-
-            // ----- canopy origin ------//
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                homogeneouscanopyparameters.canopy_origin = canopy_origin;
-            }
-
-            // ----- buffer ------//
-            std::string buffer = XMLloadstring(s, "buffer");
-            if ( buffer != nullvalue_s ) {
-                homogeneouscanopyparameters.buffer = buffer;
-            }
-
-            buildCanopy(homogeneouscanopyparameters);
+            ConicalCrownsCanopyParameters conicalcrownscanopyparameters(s);
+            storeCanopyParameters<ConicalCrownsCanopyParameters>(conicalcrownscanopyparameters);
+            if (build)
+                buildCanopy(conicalcrownscanopyparameters);
 
         }
 
@@ -889,124 +1986,10 @@ void CanopyGenerator::loadXML( const char* filename ){
         //VSP Grapevine Canopy
         for (pugi::xml_node s = cgen.child("VSPGrapevineParameters"); s; s = s.next_sibling("VSPGrapevineParameters")) {
 
-            VSPGrapevineParameters vspgrapevineparameters;
-
-            float leaf_width = XMLloadfloat(s, "leaf_width");
-            if (leaf_width != nullvalue_f) {
-                vspgrapevineparameters.leaf_width = leaf_width;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                vspgrapevineparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                vspgrapevineparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            std::string wood_texture_file = XMLloadstring(s, "wood_texture_file");
-            if ( wood_texture_file != nullvalue_s ) {
-                vspgrapevineparameters.wood_texture_file = wood_texture_file;
-            }
-
-            int wood_subdivisions = XMLloadint(s, "wood_subdivisions");
-            if ( wood_subdivisions != nullvalue_i) {
-                vspgrapevineparameters.wood_subdivisions = wood_subdivisions;
-            }
-
-            float h = XMLloadfloat(s, "trunk_height");
-            if (h != nullvalue_f) {
-                vspgrapevineparameters.trunk_height = h;
-            }
-
-            float r = XMLloadfloat(s, "trunk_radius");
-            if (r != nullvalue_f) {
-                vspgrapevineparameters.trunk_radius = r;
-            }
-
-            float ch = XMLloadfloat(s, "cordon_height");
-            if (ch != nullvalue_f) {
-                vspgrapevineparameters.cordon_height = ch;
-            }
-
-            float cr = XMLloadfloat(s, "cordon_radius");
-            if (cr != nullvalue_f) {
-                vspgrapevineparameters.cordon_radius = cr;
-            }
-
-            float sl = XMLloadfloat(s, "shoot_length");
-            if (sl != nullvalue_f) {
-                vspgrapevineparameters.shoot_length = sl;
-            }
-
-            float sr = XMLloadfloat(s, "shoot_radius");
-            if (sr != nullvalue_f) {
-                vspgrapevineparameters.shoot_radius = sr;
-            }
-
-            int spc = XMLloadint(s, "shoots_per_cordon");
-            if (spc != nullvalue_i) {
-                vspgrapevineparameters.shoots_per_cordon = uint(spc);
-            }
-
-            float lsf = XMLloadfloat(s, "leaf_spacing_fraction");
-            if (lsf != nullvalue_f) {
-                vspgrapevineparameters.leaf_spacing_fraction = lsf;
-            }
-
-            float gr = XMLloadfloat(s, "grape_radius");
-            if (gr != nullvalue_f) {
-                vspgrapevineparameters.grape_radius = gr;
-            }
-
-            float clr = XMLloadfloat(s, "cluster_radius");
-            if (clr != nullvalue_f) {
-                vspgrapevineparameters.cluster_radius = clr;
-            }
-
-            float clhm = XMLloadfloat(s, "cluster_height_max");
-            if (clhm != nullvalue_f) {
-                vspgrapevineparameters.cluster_height_max = clhm;
-            }
-
-            RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
-            if ( grape_color.a != 0 ) {
-                vspgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
-            }
-
-            int grape_subdivisions = XMLloadint(s, "grape_subdivisions");
-            if (grape_subdivisions != nullvalue_i) {
-                vspgrapevineparameters.grape_subdivisions = uint(grape_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                vspgrapevineparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                vspgrapevineparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                vspgrapevineparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                vspgrapevineparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                vspgrapevineparameters.canopy_rotation = canopy_rotation;
-            }
-
-            buildCanopy(vspgrapevineparameters);
+            VSPGrapevineParameters vspgrapevineparameters(s);
+            storeCanopyParameters<VSPGrapevineParameters>(vspgrapevineparameters);
+            if (build)
+                buildCanopy(vspgrapevineparameters);
 
         }
 
@@ -1014,140 +1997,10 @@ void CanopyGenerator::loadXML( const char* filename ){
         for (pugi::xml_node s = cgen.child("SplitGrapevineParameters"); s; s = s.next_sibling(
                 "SplitGrapevineParameters")) {
 
-            SplitGrapevineParameters splitgrapevineparameters;
-
-            float leaf_width = XMLloadfloat(s, "leaf_width");
-            if (leaf_width != nullvalue_f) {
-                splitgrapevineparameters.leaf_width = leaf_width;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                splitgrapevineparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                splitgrapevineparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            std::string wood_texture_file = XMLloadstring(s, "wood_texture_file");
-            if ( wood_texture_file != nullvalue_s ) {
-                splitgrapevineparameters.wood_texture_file = wood_texture_file;
-            }
-
-            int wood_subdivisions = XMLloadint(s, "wood_subdivisions");
-            if (wood_subdivisions != nullvalue_i) {
-                splitgrapevineparameters.wood_subdivisions = wood_subdivisions;
-            }
-
-            float h = XMLloadfloat(s, "trunk_height");
-            if (h != nullvalue_f) {
-                splitgrapevineparameters.trunk_height = h;
-            }
-
-            float r = XMLloadfloat(s, "trunk_radius");
-            if (r != nullvalue_f) {
-                splitgrapevineparameters.trunk_radius = r;
-            }
-
-            float ch = XMLloadfloat(s, "cordon_height");
-            if (ch != nullvalue_f) {
-                splitgrapevineparameters.cordon_height = ch;
-            }
-
-            float cr = XMLloadfloat(s, "cordon_radius");
-            if (cr != nullvalue_f) {
-                splitgrapevineparameters.cordon_radius = cr;
-            }
-
-            float cs = XMLloadfloat(s, "cordon_spacing");
-            if (cs != nullvalue_f) {
-                splitgrapevineparameters.cordon_spacing = cs;
-            }
-
-            float sl = XMLloadfloat(s, "shoot_length");
-            if (sl != nullvalue_f) {
-                splitgrapevineparameters.shoot_length = sl;
-            }
-
-            float sr = XMLloadfloat(s, "shoot_radius");
-            if (sr != nullvalue_f) {
-                splitgrapevineparameters.shoot_radius = sr;
-            }
-
-            int spc = XMLloadint(s, "shoots_per_cordon");
-            if (spc != nullvalue_i) {
-                splitgrapevineparameters.shoots_per_cordon = uint(spc);
-            }
-
-            float sat = XMLloadfloat( s, "shoot_angle_tip" );
-            if( sat != nullvalue_f ){
-                splitgrapevineparameters.shoot_angle_tip = sat;
-            }
-
-            float sab = XMLloadfloat( s, "shoot_angle_base" );
-            if( sab != nullvalue_f ){
-                splitgrapevineparameters.shoot_angle_base = sab;
-            }
-
-            float lsf = XMLloadfloat(s, "leaf_spacing_fraction");
-            if (lsf != nullvalue_f) {
-                splitgrapevineparameters.leaf_spacing_fraction = lsf;
-            }
-
-            float gr = XMLloadfloat(s, "grape_radius");
-            if (gr != nullvalue_f) {
-                splitgrapevineparameters.grape_radius = gr;
-            }
-
-            float clr = XMLloadfloat(s, "cluster_radius");
-            if (clr != nullvalue_f) {
-                splitgrapevineparameters.cluster_radius = clr;
-            }
-
-            float clhm = XMLloadfloat(s, "cluster_height_max");
-            if (clhm != nullvalue_f) {
-                splitgrapevineparameters.cluster_height_max = clhm;
-            }
-
-            RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
-            if (grape_color.a!=0 ) {
-                splitgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
-            }
-
-            int grape_subdivisions = XMLloadint(s, "grape_subdivisions");
-            if (grape_subdivisions != nullvalue_i) {
-                splitgrapevineparameters.grape_subdivisions = uint(grape_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                splitgrapevineparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                splitgrapevineparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                splitgrapevineparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                splitgrapevineparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                splitgrapevineparameters.canopy_rotation = canopy_rotation;
-            }
-
-
-            buildCanopy(splitgrapevineparameters);
+            SplitGrapevineParameters splitgrapevineparameters(s);
+            storeCanopyParameters<SplitGrapevineParameters>(splitgrapevineparameters);
+            if (build)
+                buildCanopy(splitgrapevineparameters);
 
         }
 
@@ -1156,131 +2009,10 @@ void CanopyGenerator::loadXML( const char* filename ){
         for (pugi::xml_node s = cgen.child("UnilateralGrapevineParameters"); s; s = s.next_sibling(
                 "UnilateralGrapevineParameters")) {
 
-            UnilateralGrapevineParameters unilateralgrapevineparameters;
-
-            float leaf_width = XMLloadfloat(s, "leaf_width");
-            if (leaf_width != nullvalue_f) {
-                unilateralgrapevineparameters.leaf_width = leaf_width;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                unilateralgrapevineparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                unilateralgrapevineparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            std::string wood_texture_file = XMLloadstring(s, "wood_texture_file");
-            if ( wood_texture_file != nullvalue_s ) {
-                unilateralgrapevineparameters.wood_texture_file = wood_texture_file;
-            }
-
-            int wood_subdivisions = XMLloadint(s, "wood_subdivisions");
-            if ( wood_subdivisions != nullvalue_i) {
-                unilateralgrapevineparameters.wood_subdivisions = wood_subdivisions;
-            }
-
-            float h = XMLloadfloat(s, "trunk_height");
-            if (h != nullvalue_f) {
-                unilateralgrapevineparameters.trunk_height = h;
-            }
-
-            float r = XMLloadfloat(s, "trunk_radius");
-            if (r != nullvalue_f) {
-                unilateralgrapevineparameters.trunk_radius = r;
-            }
-
-            float ch = XMLloadfloat(s, "cordon_height");
-            if (ch != nullvalue_f) {
-                unilateralgrapevineparameters.cordon_height = ch;
-            }
-
-            float cr = XMLloadfloat(s, "cordon_radius");
-            if (cr != nullvalue_f) {
-                unilateralgrapevineparameters.cordon_radius = cr;
-            }
-
-            float sl = XMLloadfloat(s, "shoot_length");
-            if (sl != nullvalue_f) {
-                unilateralgrapevineparameters.shoot_length = sl;
-            }
-
-            float sr = XMLloadfloat(s, "shoot_radius");
-            if (sr != nullvalue_f) {
-                unilateralgrapevineparameters.shoot_radius = sr;
-            }
-
-            int spc = XMLloadint(s, "shoots_per_cordon");
-            if (spc != nullvalue_i) {
-                unilateralgrapevineparameters.shoots_per_cordon = uint(spc);
-            }
-
-/*
-      float spa = XMLloadfloat( s, "shoots_tip_angle" );
-      if( spa != nullvalue_f ){
-	unilateralgrapevineparameters.shoots_tip_angle = uint(spa);
-      }*/
-
-            float lsf = XMLloadfloat(s, "leaf_spacing_fraction");
-            if (lsf != nullvalue_f) {
-                unilateralgrapevineparameters.leaf_spacing_fraction = lsf;
-            }
-
-            float gr = XMLloadfloat(s, "grape_radius");
-            if (gr != nullvalue_f) {
-                unilateralgrapevineparameters.grape_radius = gr;
-            }
-
-            float clr = XMLloadfloat(s, "cluster_radius");
-            if (clr != nullvalue_f) {
-                unilateralgrapevineparameters.cluster_radius = clr;
-            }
-
-            float clhm = XMLloadfloat(s, "cluster_height_max");
-            if (clhm != nullvalue_f) {
-                unilateralgrapevineparameters.cluster_height_max = clhm;
-            }
-
-            RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
-            if (grape_color.a!=0 ) {
-                unilateralgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
-            }
-
-            int grape_subdivisions = XMLloadint(s, "grape_subdivisions");
-            if (grape_subdivisions != nullvalue_i) {
-                unilateralgrapevineparameters.grape_subdivisions = uint(grape_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                unilateralgrapevineparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                unilateralgrapevineparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                unilateralgrapevineparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                unilateralgrapevineparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                unilateralgrapevineparameters.canopy_rotation = canopy_rotation;
-            }
-
-
-            buildCanopy(unilateralgrapevineparameters);
+            UnilateralGrapevineParameters unilateralgrapevineparameters(s);
+            storeCanopyParameters<UnilateralGrapevineParameters>(unilateralgrapevineparameters);
+            if (build)
+                buildCanopy(unilateralgrapevineparameters);
 
         }
 
@@ -1289,797 +2021,71 @@ void CanopyGenerator::loadXML( const char* filename ){
         for (pugi::xml_node s = cgen.child("GobletGrapevineParameters"); s; s = s.next_sibling(
                 "GobletGrapevineParameters")) {
 
-            GobletGrapevineParameters gobletgrapevineparameters;
+            GobletGrapevineParameters gobletgrapevineparameters(s);
+            storeCanopyParameters<GobletGrapevineParameters>(gobletgrapevineparameters);
+            if (build)
+                buildCanopy(gobletgrapevineparameters);
 
-            float leaf_width = XMLloadfloat(s, "leaf_width");
-            if (leaf_width != nullvalue_f) {
-                gobletgrapevineparameters.leaf_width = leaf_width;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                gobletgrapevineparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                gobletgrapevineparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            std::string wood_texture_file = XMLloadstring(s, "wood_texture_file");
-            if ( wood_texture_file != nullvalue_s ) {
-                gobletgrapevineparameters.wood_texture_file = wood_texture_file;
-            }
-
-            int wood_subdivisions = XMLloadint(s, "wood_subdivisions");
-            if (wood_subdivisions != nullvalue_i) {
-                gobletgrapevineparameters.wood_subdivisions = wood_subdivisions;
-            }
-
-            float h = XMLloadfloat(s, "trunk_height");
-            if (h != nullvalue_f) {
-                gobletgrapevineparameters.trunk_height = h;
-            }
-
-            float r = XMLloadfloat(s, "trunk_radius");
-            if (r != nullvalue_f) {
-                gobletgrapevineparameters.trunk_radius = r;
-            }
-
-            float ch = XMLloadfloat(s, "cordon_height");
-            if (ch != nullvalue_f) {
-                gobletgrapevineparameters.cordon_height = ch;
-            }
-
-            float cr = XMLloadfloat(s, "cordon_radius");
-            if (cr != nullvalue_f) {
-                gobletgrapevineparameters.cordon_radius = cr;
-            }
-
-            float sl = XMLloadfloat(s, "shoot_length");
-            if (sl != nullvalue_f) {
-                gobletgrapevineparameters.shoot_length = sl;
-            }
-
-            float sr = XMLloadfloat(s, "shoot_radius");
-            if (sr != nullvalue_f) {
-                gobletgrapevineparameters.shoot_radius = sr;
-            }
-
-            int spc = XMLloadint(s, "shoots_per_cordon");
-            if (spc != nullvalue_i) {
-                gobletgrapevineparameters.shoots_per_cordon = uint(spc);
-            }
-/*
-      float spa = XMLloadfloat( s, "shoots_tip_angle" );
-      if( spa != nullvalue_f ){
-	gobletgrapevineparameters.shoots_tip_angle = uint(spa);
-      }*/
-
-            float lsf = XMLloadfloat(s, "leaf_spacing_fraction");
-            if (lsf != nullvalue_f) {
-                gobletgrapevineparameters.leaf_spacing_fraction = lsf;
-            }
-
-            float gr = XMLloadfloat(s, "grape_radius");
-            if (gr != nullvalue_f) {
-                gobletgrapevineparameters.grape_radius = gr;
-            }
-
-            float clr = XMLloadfloat(s, "cluster_radius");
-            if (clr != nullvalue_f) {
-                gobletgrapevineparameters.cluster_radius = clr;
-            }
-
-            float clhm = XMLloadfloat(s, "cluster_height_max");
-            if (clhm != nullvalue_f) {
-                gobletgrapevineparameters.cluster_height_max = clhm;
-            }
-
-            RGBAcolor grape_color = XMLloadrgba(s, "grape_color");
-            if (grape_color.a != 0 ) {
-                gobletgrapevineparameters.grape_color = make_RGBcolor(grape_color.r,grape_color.g,grape_color.b);
-            }
-
-            int grape_subdivisions = XMLloadint(s, "grape_subdivisions");
-            if (grape_subdivisions != nullvalue_i) {
-                gobletgrapevineparameters.grape_subdivisions = uint(grape_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                gobletgrapevineparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                gobletgrapevineparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                gobletgrapevineparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                gobletgrapevineparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                gobletgrapevineparameters.canopy_rotation = canopy_rotation;
-            }
+        }
 
 
-            buildCanopy(gobletgrapevineparameters);
+        //WhiteSpruceCanopyParameters Canopy
+        for (pugi::xml_node s = cgen.child("WhiteSpruceCanopyParameters"); s; s = s.next_sibling("WhiteSpruceCanopyParameters")) {
+
+            WhiteSpruceCanopyParameters whitesprucecanopyparameters(s);
+            storeCanopyParameters<WhiteSpruceCanopyParameters>(whitesprucecanopyparameters);
+            if (build)
+                buildCanopy(whitesprucecanopyparameters);
 
         }
 
         //StrawberryParameters Canopy
         for (pugi::xml_node s = cgen.child("StrawberryParameters"); s; s = s.next_sibling("StrawberryParameters")) {
 
-            StrawberryParameters strawberryparameters;
-
-            float leaf_length = XMLloadfloat(s, "leaf_length");
-            if (leaf_length != nullvalue_f) {
-                strawberryparameters.leaf_length = leaf_length;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                strawberryparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                strawberryparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            int stem_subdivisions = XMLloadint(s, "stem_subdivisions");
-            if (stem_subdivisions != nullvalue_i) {
-                strawberryparameters.stem_subdivisions = stem_subdivisions;
-            }
-
-            float stem_radius = XMLloadfloat(s, "stem_radius");
-            if (stem_radius != nullvalue_f) {
-                strawberryparameters.stem_radius = stem_radius;
-            }
-
-            float h = XMLloadfloat(s, "plant_height");
-            if (h != nullvalue_f) {
-                strawberryparameters.plant_height = h;
-            }
-
-            int r = XMLloadint(s, "stems_per_plant");
-            if (r != nullvalue_i) {
-                strawberryparameters.stems_per_plant = r;
-            }
-
-            float gr = XMLloadfloat(s, "fruit_radius");
-            if (gr != nullvalue_f) {
-                strawberryparameters.fruit_radius = gr;
-            }
-
-            float clr = XMLloadfloat(s, "clusters_per_stem");
-            if (clr != nullvalue_f) {
-                strawberryparameters.clusters_per_stem = clr;
-            }
-
-            int fruit_subdivisions = XMLloadint(s, "fruit_subdivisions");
-            if (fruit_subdivisions != nullvalue_i) {
-                strawberryparameters.fruit_subdivisions = uint(fruit_subdivisions);
-            }
-
-            std::string fruit_texture_file = XMLloadstring(s, "fruit_texture_file");
-            if ( fruit_texture_file != nullvalue_s ) {
-                strawberryparameters.fruit_texture_file = fruit_texture_file;
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                strawberryparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                strawberryparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                strawberryparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                strawberryparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                strawberryparameters.canopy_rotation = canopy_rotation;
-            }
-
-
-            buildCanopy(strawberryparameters);
+            StrawberryParameters strawberryparameters(s);
+            storeCanopyParameters<StrawberryParameters>(strawberryparameters);
+            if (build)
+                buildCanopy(strawberryparameters);
 
         }
 
         //TomatoParameters Canopy
         for (pugi::xml_node s = cgen.child("TomatoParameters"); s; s = s.next_sibling("TomatoParameters")) {
 
-            TomatoParameters tomatoparameters;
-
-            float leaf_length = XMLloadfloat(s, "leaf_length");
-            if (leaf_length != nullvalue_f) {
-                tomatoparameters.leaf_length = leaf_length;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                tomatoparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                tomatoparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            RGBAcolor shoot_color = XMLloadrgba(s, "shoot_color");
-            if (shoot_color.a != 0 ) {
-                tomatoparameters.shoot_color = make_RGBcolor(shoot_color.r,shoot_color.g,shoot_color.b);
-            }
-
-            int shoot_subdivisions = XMLloadint(s, "shoot_subdivisions");
-            if (shoot_subdivisions != nullvalue_i) {
-                tomatoparameters.shoot_subdivisions = shoot_subdivisions;
-            }
-
-            float h = XMLloadfloat(s, "plant_height");
-            if (h != nullvalue_f) {
-                tomatoparameters.plant_height = h;
-            }
-
-            float gr = XMLloadfloat(s, "fruit_radius");
-            if (gr != nullvalue_f) {
-                tomatoparameters.fruit_radius = gr;
-            }
-
-            RGBAcolor fruit_color = XMLloadrgba(s, "fruit_color");
-            if (fruit_color.a != 0 ) {
-                tomatoparameters.fruit_color = make_RGBcolor(fruit_color.r,fruit_color.g,fruit_color.b);
-            }
-
-
-            int fruit_subdivisions = XMLloadint(s, "fruit_subdivisions");
-            if (fruit_subdivisions != nullvalue_i) {
-                tomatoparameters.fruit_subdivisions = uint(fruit_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                tomatoparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                tomatoparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                tomatoparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                tomatoparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                tomatoparameters.canopy_rotation = canopy_rotation;
-            }
-
-
-            buildCanopy(tomatoparameters);
+            TomatoParameters tomatoparameters(s);
+            storeCanopyParameters<TomatoParameters>(tomatoparameters);
+            if (build)
+                buildCanopy(tomatoparameters);
 
         }
 
         //WalnutCanopyParameters Canopy
         for (pugi::xml_node s = cgen.child("WalnutCanopyParameters"); s; s = s.next_sibling("WalnutCanopyParameters")) {
 
-            WalnutCanopyParameters walnutcanopyparameters;
-
-            float leaf_length = XMLloadfloat(s, "leaf_length");
-            if (leaf_length != nullvalue_f) {
-                walnutcanopyparameters.leaf_length = leaf_length;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                walnutcanopyparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                walnutcanopyparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            int wood_subdivisions = XMLloadint(s, "wood_subdivisions");
-            if (wood_subdivisions != nullvalue_i) {
-                walnutcanopyparameters.wood_subdivisions = wood_subdivisions;
-            }
-
-
-            float trunk_radius = XMLloadfloat(s, "trunk_radius");
-            if (trunk_radius != nullvalue_f) {
-                walnutcanopyparameters.trunk_radius = trunk_radius;
-            }
-
-            float trunk_height = XMLloadfloat(s, "trunk_height");
-            if (trunk_height != nullvalue_f) {
-                walnutcanopyparameters.trunk_height = trunk_height;
-            }
-
-            vec3 branch_length = XMLloadvec3(s, "branch_length");
-            if (branch_length.x != nullvalue_f && branch_length.y != nullvalue_f) {
-                walnutcanopyparameters.branch_length = branch_length;
-            }
-
-            std::string fruit_texture_file = XMLloadstring(s, "fruit_texture_file");
-            if ( fruit_texture_file != nullvalue_s ) {
-                walnutcanopyparameters.fruit_texture_file = fruit_texture_file;
-            }
-
-            int fruit_subdivisions = XMLloadint(s, "fruit_subdivisions");
-            if (fruit_subdivisions != nullvalue_i) {
-                walnutcanopyparameters.fruit_subdivisions = uint(fruit_subdivisions);
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                walnutcanopyparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                walnutcanopyparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                walnutcanopyparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                walnutcanopyparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                walnutcanopyparameters.canopy_rotation = canopy_rotation;
-            }
-
-
-            buildCanopy(walnutcanopyparameters);
+            WalnutCanopyParameters walnutcanopyparameters(s);
+            storeCanopyParameters<WalnutCanopyParameters>(walnutcanopyparameters);
+            if (build)
+                buildCanopy(walnutcanopyparameters);
 
         }
 
         //SorghumCanopyParameters Canopy
         for (pugi::xml_node s = cgen.child("SorghumCanopyParameters"); s; s = s.next_sibling("SorghumCanopyParameters")) {
 
-            SorghumCanopyParameters sorghumcanopyparameters;
-
-            int sorghum_stage = XMLloadint(s, "sorghum_stage");
-            if (sorghum_stage != nullvalue_i) {
-                sorghumcanopyparameters.sorghum_stage = sorghum_stage;
-            }
-            // STAGE 1
-            float s1_stem_length = XMLloadint(s, "s1_stem_length");
-            if (s1_stem_length != nullvalue_i) {
-                sorghumcanopyparameters.s1_stem_length = s1_stem_length;
-            }
-
-            float s1_stem_radius = XMLloadfloat(s, "s1_stem_radius");
-            if (s1_stem_radius != nullvalue_f) {
-                sorghumcanopyparameters.s1_stem_radius = s1_stem_radius;
-            }
-
-            int s1_stem_subdivisions = XMLloadint(s, "s1_stem_subdivisions");
-            if (s1_stem_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s1_stem_subdivisions = uint(s1_stem_subdivisions);
-            }
-
-            vec2 s1_leaf_size1 = XMLloadvec2(s, "s1_leaf_size1");
-            if (s1_leaf_size1.x != nullvalue_f && s1_leaf_size1.y != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf_size1 = s1_leaf_size1;
-            }
-
-            vec2 s1_leaf_size2 = XMLloadvec2(s, "s1_leaf_size2");
-            if (s1_leaf_size2.x != nullvalue_f && s1_leaf_size2.y != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf_size2 = s1_leaf_size2;
-            }
-
-            vec2 s1_leaf_size3 = XMLloadvec2(s, "s1_leaf_size3");
-            if (s1_leaf_size3.x != nullvalue_f && s1_leaf_size3.y != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf_size3 = s1_leaf_size3;
-            }
-
-            float s1_leaf1_angle = XMLloadfloat(s, "s1_leaf1_angle");
-            if (s1_leaf1_angle != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf1_angle = s1_leaf1_angle;
-            }
-
-            float s1_leaf2_angle = XMLloadfloat(s, "s1_leaf2_angle");
-            if (s1_leaf2_angle != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf2_angle = s1_leaf2_angle;
-            }
-
-            float s1_leaf3_angle = XMLloadfloat(s, "s1_leaf3_angle");
-            if (s1_leaf3_angle != nullvalue_f) {
-                sorghumcanopyparameters.s1_leaf3_angle = s1_leaf3_angle;
-            }
-
-            int2 s1_leaf_subdivisions = XMLloadint2(s, "s1_leaf_subdivisions");
-            if (s1_leaf_subdivisions.x != nullvalue_i && s1_leaf_subdivisions.y != nullvalue_i) {
-                sorghumcanopyparameters.s1_leaf_subdivisions = s1_leaf_subdivisions;
-            }
-
-            std::string s1_leaf_texture_file = XMLloadstring(s, "s1_leaf_texture_file");
-            if (s1_leaf_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s1_leaf_texture_file = s1_leaf_texture_file;
-            }
-            // STAGE 2
-            float s2_stem_length = XMLloadint(s, "s2_stem_length");
-            if (s2_stem_length != nullvalue_i) {
-                sorghumcanopyparameters.s2_stem_length = s2_stem_length;
-            }
-
-            float s2_stem_radius = XMLloadfloat(s, "s2_stem_radius");
-            if (s2_stem_radius != nullvalue_f) {
-                sorghumcanopyparameters.s2_stem_radius = s2_stem_radius;
-            }
-
-            int s2_stem_subdivisions = XMLloadint(s, "s2_stem_subdivisions");
-            if (s2_stem_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s2_stem_subdivisions = uint(s2_stem_subdivisions);
-            }
-
-            vec2 s2_leaf_size1 = XMLloadvec2(s, "s2_leaf_size1");
-            if (s2_leaf_size1.x != nullvalue_f && s2_leaf_size1.y != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf_size1 = s2_leaf_size1;
-            }
-
-            vec2 s2_leaf_size2 = XMLloadvec2(s, "s2_leaf_size2");
-            if (s2_leaf_size2.x != nullvalue_f && s2_leaf_size2.y != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf_size2 = s2_leaf_size2;
-            }
-
-            vec2 s2_leaf_size3 = XMLloadvec2(s, "s2_leaf_size3");
-            if (s2_leaf_size3.x != nullvalue_f && s2_leaf_size3.y != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf_size3 = s2_leaf_size3;
-            }
-
-            vec2 s2_leaf_size4 = XMLloadvec2(s, "s2_leaf_size4");
-            if (s2_leaf_size4.x != nullvalue_f && s2_leaf_size4.y != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf_size4 = s2_leaf_size4;
-            }
-
-            vec2 s2_leaf_size5 = XMLloadvec2(s, "s2_leaf_size5");
-            if (s2_leaf_size5.x != nullvalue_f && s2_leaf_size5.y != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf_size5 = s2_leaf_size5;
-            }
-
-            float s2_leaf1_angle = XMLloadfloat(s, "s2_leaf1_angle");
-            if (s2_leaf1_angle != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf1_angle = s2_leaf1_angle;
-            }
-
-            float s2_leaf2_angle = XMLloadfloat(s, "s2_leaf2_angle");
-            if (s2_leaf2_angle != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf2_angle = s2_leaf2_angle;
-            }
-
-            float s2_leaf3_angle = XMLloadfloat(s, "s2_leaf3_angle");
-            if (s2_leaf3_angle != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf3_angle = s2_leaf3_angle;
-            }
-
-            float s2_leaf4_angle = XMLloadfloat(s, "s2_leaf4_angle");
-            if (s2_leaf4_angle != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf4_angle = s2_leaf4_angle;
-            }
-
-            float s2_leaf5_angle = XMLloadfloat(s, "s2_leaf5_angle");
-            if (s2_leaf3_angle != nullvalue_f) {
-                sorghumcanopyparameters.s2_leaf5_angle = s2_leaf5_angle;
-            }
-
-            int2 s2_leaf_subdivisions = XMLloadint2(s, "s2_leaf_subdivisions");
-            if (s2_leaf_subdivisions.x != nullvalue_i && s2_leaf_subdivisions.y != nullvalue_i) {
-                sorghumcanopyparameters.s2_leaf_subdivisions = s2_leaf_subdivisions;
-            }
-
-            std::string s2_leaf_texture_file = XMLloadstring(s, "s2_leaf_texture_file");
-            if (s2_leaf_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s2_leaf_texture_file = s2_leaf_texture_file;
-            }
-            // STAGE 3
-            float s3_stem_length = XMLloadint(s, "s3_stem_length");
-            if (s3_stem_length != nullvalue_i) {
-                sorghumcanopyparameters.s3_stem_length = s3_stem_length;
-            }
-
-            float s3_stem_radius = XMLloadfloat(s, "s3_stem_radius");
-            if (s3_stem_radius != nullvalue_f) {
-                sorghumcanopyparameters.s3_stem_radius = s3_stem_radius;
-            }
-
-            int s3_stem_subdivisions = XMLloadint(s, "s3_stem_subdivisions");
-            if (s3_stem_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s3_stem_subdivisions = uint(s3_stem_subdivisions);
-            }
-
-            vec2 s3_leaf_size = XMLloadvec2(s, "s3_leaf_size");
-            if (s3_leaf_size.x != nullvalue_f && s3_leaf_size.y != nullvalue_f) {
-                sorghumcanopyparameters.s3_leaf_size = s3_leaf_size;
-            }
-
-            int2 s3_leaf_subdivisions = XMLloadint2(s, "s3_leaf_subdivisions");
-            if (s3_leaf_subdivisions.x != nullvalue_i && s3_leaf_subdivisions.y != nullvalue_i) {
-                sorghumcanopyparameters.s3_leaf_subdivisions = s3_leaf_subdivisions;
-            }
-
-            int s3_number_of_leaves = XMLloadint(s, "s3_number_of_leaves");
-            if (s3_number_of_leaves != nullvalue_i) {
-                sorghumcanopyparameters.s3_number_of_leaves = s3_number_of_leaves;
-            }
-
-            float s3_mean_leaf_angle = XMLloadfloat(s, "s3_mean_leaf_angle");
-            if (s3_mean_leaf_angle != nullvalue_f) {
-                sorghumcanopyparameters.s3_mean_leaf_angle = s3_mean_leaf_angle;
-            }
-
-            std::string s3_leaf_texture_file = XMLloadstring(s, "s3_leaf_texture_file");
-            if (s3_leaf_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s3_leaf_texture_file = s3_leaf_texture_file;
-            }
-
-            // STAGE 4
-            float s4_stem_length = XMLloadint(s, "s4_stem_length");
-            if (s4_stem_length != nullvalue_i) {
-                sorghumcanopyparameters.s4_stem_length = s4_stem_length;
-            }
-
-            float s4_stem_radius = XMLloadfloat(s, "s4_stem_radius");
-            if (s4_stem_radius != nullvalue_f) {
-                sorghumcanopyparameters.s4_stem_radius = s4_stem_radius;
-            }
-
-            int s4_stem_subdivisions = XMLloadint(s, "s4_stem_subdivisions");
-            if (s4_stem_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s4_stem_subdivisions = uint(s4_stem_subdivisions);
-            }
-
-            vec2 s4_panicle_size = XMLloadvec2(s, "s4_panicle_size");
-            if (s4_panicle_size.x != nullvalue_f && s4_panicle_size.y != nullvalue_f) {
-                sorghumcanopyparameters.s4_panicle_size = s4_panicle_size;
-            }
-
-            int s4_panicle_subdivisions = XMLloadint(s, "s4_panicle_subdivisions");
-            if (s4_panicle_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s4_panicle_subdivisions = uint(s4_panicle_subdivisions);
-            }
-
-            std::string s4_seed_texture_file = XMLloadstring(s, "s4_seed_texture_file");
-            if (s4_seed_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s4_seed_texture_file = s4_seed_texture_file;
-            }
-
-            vec2 s4_leaf_size = XMLloadvec2(s, "s4_leaf_size");
-            if (s4_leaf_size.x != nullvalue_f && s4_leaf_size.y != nullvalue_f) {
-                sorghumcanopyparameters.s4_leaf_size = s4_leaf_size;
-            }
-
-            int2 s4_leaf_subdivisions = XMLloadint2(s, "s4_leaf_subdivisions");
-            if (s4_leaf_subdivisions.x != nullvalue_i && s4_leaf_subdivisions.y != nullvalue_i) {
-                sorghumcanopyparameters.s4_leaf_subdivisions = s4_leaf_subdivisions;
-            }
-
-            int s4_number_of_leaves = XMLloadint(s, "s4_number_of_leaves");
-            if (s4_number_of_leaves != nullvalue_i) {
-                sorghumcanopyparameters.s4_number_of_leaves = s4_number_of_leaves;
-            }
-
-            float s4_mean_leaf_angle = XMLloadfloat(s, "s4_mean_leaf_angle");
-            if (s4_mean_leaf_angle != nullvalue_f) {
-                sorghumcanopyparameters.s4_mean_leaf_angle = s4_mean_leaf_angle;
-            }
-
-            std::string s4_leaf_texture_file = XMLloadstring(s, "s4_leaf_texture_file");
-            if (s4_leaf_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s4_leaf_texture_file = s4_leaf_texture_file;
-            }
-
-            // STAGE 5
-            float s5_stem_length = XMLloadint(s, "s5_stem_length");
-            if (s5_stem_length != nullvalue_i) {
-                sorghumcanopyparameters.s5_stem_length = s5_stem_length;
-            }
-
-            float s5_stem_radius = XMLloadfloat(s, "s5_stem_radius");
-            if (s5_stem_radius != nullvalue_f) {
-                sorghumcanopyparameters.s5_stem_radius = s5_stem_radius;
-            }
-
-            float s5_stem_bend = XMLloadfloat(s, "s5_stem_bend");
-            if (s5_stem_bend != nullvalue_f) {
-                sorghumcanopyparameters.s5_stem_bend = s5_stem_bend;
-            }
-
-            int s5_stem_subdivisions = XMLloadint(s, "s5_stem_subdivisions");
-            if (s5_stem_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s5_stem_subdivisions = uint(s5_stem_subdivisions);
-            }
-
-            vec2 s5_panicle_size = XMLloadvec2(s, "s5_panicle_size");
-            if (s5_panicle_size.x != nullvalue_f && s5_panicle_size.y != nullvalue_f) {
-                sorghumcanopyparameters.s5_panicle_size = s5_panicle_size;
-            }
-
-            int s5_panicle_subdivisions = XMLloadint(s, "s5_panicle_subdivisions");
-            if (s5_panicle_subdivisions != nullvalue_f) {
-                sorghumcanopyparameters.s5_panicle_subdivisions = uint(s5_panicle_subdivisions);
-            }
-
-            std::string s5_seed_texture_file = XMLloadstring(s, "s5_seed_texture_file");
-            if (s5_seed_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s5_seed_texture_file = s5_seed_texture_file;
-            }
-
-            vec2 s5_leaf_size = XMLloadvec2(s, "s5_leaf_size");
-            if (s5_leaf_size.x != nullvalue_f && s5_leaf_size.y != nullvalue_f) {
-                sorghumcanopyparameters.s5_leaf_size = s5_leaf_size;
-            }
-
-            int2 s5_leaf_subdivisions = XMLloadint2(s, "s5_leaf_subdivisions");
-            if (s5_leaf_subdivisions.x != nullvalue_i && s5_leaf_subdivisions.y != nullvalue_i) {
-                sorghumcanopyparameters.s5_leaf_subdivisions = s5_leaf_subdivisions;
-            }
-
-            int s5_number_of_leaves = XMLloadint(s, "s5_number_of_leaves");
-            if (s5_number_of_leaves != nullvalue_i) {
-                sorghumcanopyparameters.s5_number_of_leaves = s5_number_of_leaves;
-            }
-
-            float s5_mean_leaf_angle = XMLloadfloat(s, "s5_mean_leaf_angle");
-            if (s5_mean_leaf_angle != nullvalue_f) {
-                sorghumcanopyparameters.s5_mean_leaf_angle = s5_mean_leaf_angle;
-            }
-
-            std::string s5_leaf_texture_file = XMLloadstring(s, "s5_leaf_texture_file");
-            if (s5_leaf_texture_file.compare(nullvalue_s) != 0) {
-                sorghumcanopyparameters.s5_leaf_texture_file = s5_leaf_texture_file;
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                sorghumcanopyparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                sorghumcanopyparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                sorghumcanopyparameters.plant_count = plant_count;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                sorghumcanopyparameters.canopy_origin = canopy_origin;
-            }
-
-            buildCanopy(sorghumcanopyparameters);
+            SorghumCanopyParameters sorghumcanopyparameters(s);
+            storeCanopyParameters<SorghumCanopyParameters>(sorghumcanopyparameters);
+            if (build)
+                buildCanopy(sorghumcanopyparameters);
 
         }
 
         //BeanParameters Canopy
         for (pugi::xml_node s = cgen.child("BeanParameters"); s; s = s.next_sibling("BeanParameters")) {
 
-            BeanParameters beanparameters;
-
-            float leaf_length = XMLloadfloat(s, "leaf_length");
-            if (leaf_length != nullvalue_f) {
-                beanparameters.leaf_length = leaf_length;
-            }
-
-            int2 leaf_subdivisions = XMLloadint2(s, "leaf_subdivisions");
-            if (leaf_subdivisions.x != nullvalue_i && leaf_subdivisions.y != nullvalue_i) {
-                beanparameters.leaf_subdivisions = leaf_subdivisions;
-            }
-
-            std::string leaf_texture_file = XMLloadstring(s, "leaf_texture_file");
-            if ( leaf_texture_file != nullvalue_s ) {
-                beanparameters.leaf_texture_file = leaf_texture_file;
-            }
-
-            int shoot_subdivisions = XMLloadint(s, "shoot_subdivisions");
-            if (shoot_subdivisions != nullvalue_i) {
-                beanparameters.shoot_subdivisions = shoot_subdivisions;
-            }
-
-            float stem_radius = XMLloadfloat(s, "stem_radius");
-            if (stem_radius != nullvalue_f) {
-                beanparameters.stem_radius = stem_radius;
-            }
-
-            RGBAcolor shoot_color = XMLloadrgba(s, "shoot_color");
-            if( shoot_color.a != 0 ){
-                beanparameters.shoot_color = make_RGBcolor(shoot_color.r,shoot_color.g,shoot_color.b);
-            }
-
-            float stem_length = XMLloadfloat(s, "stem_length");
-            if (stem_length != nullvalue_f ) {
-                beanparameters.stem_length = stem_length;
-            }
-
-            float leaflet_length = XMLloadfloat(s, "leaflet_length");
-            if (leaflet_length != nullvalue_f ) {
-                beanparameters.leaflet_length = leaflet_length;
-            }
-
-            float pod_length = XMLloadfloat(s, "pod_length");
-            if (pod_length != nullvalue_f ) {
-                beanparameters.pod_length = pod_length;
-            }
-
-            RGBAcolor pod_color = XMLloadrgba(s, "pod_color");
-            if( pod_color.a != 0 ){
-                beanparameters.pod_color = make_RGBcolor(pod_color.r,pod_color.g,pod_color.b);
-            }
-
-            int pod_subdivisions = XMLloadint(s, "pod_subdivisions");
-            if (pod_subdivisions != nullvalue_i ) {
-                beanparameters.pod_subdivisions = pod_subdivisions;
-            }
-
-            float plant_spacing = XMLloadfloat(s, "plant_spacing");
-            if (plant_spacing != nullvalue_f) {
-                beanparameters.plant_spacing = plant_spacing;
-            }
-
-            float row_spacing = XMLloadfloat(s, "row_spacing");
-            if (row_spacing != nullvalue_f) {
-                beanparameters.row_spacing = row_spacing;
-            }
-
-            int2 plant_count = XMLloadint2(s, "plant_count");
-            if (plant_count.x != nullvalue_i && plant_count.y != nullvalue_i) {
-                beanparameters.plant_count = plant_count;
-            }
-
-            float germination_probability = XMLloadfloat(s, "germination_probability");
-            if (germination_probability != nullvalue_f) {
-                beanparameters.germination_probability = germination_probability;
-            }
-
-            vec3 canopy_origin = XMLloadvec3(s, "canopy_origin");
-            if (canopy_origin.x != nullvalue_f && canopy_origin.y != nullvalue_f) {
-                beanparameters.canopy_origin = canopy_origin;
-            }
-
-            float canopy_rotation = XMLloadfloat(s, "canopy_rotation");
-            if (canopy_rotation != nullvalue_f) {
-                beanparameters.canopy_rotation = canopy_rotation;
-            }
-
-            buildCanopy(beanparameters);
+            BeanParameters beanparameters(s);
+            storeCanopyParameters<BeanParameters>(beanparameters);
+            if (build)
+                buildCanopy(beanparameters);
 
         }
 
@@ -2125,7 +2131,8 @@ void CanopyGenerator::loadXML( const char* filename ){
                 rotation = 0;
             }
 
-            buildGround(origin, extent, texture_subtiles, texture_subpatches, texturefile.c_str(), rotation);
+            if (build)
+                buildGround(origin, extent, texture_subtiles, texture_subpatches, texturefile.c_str(), rotation);
 
         }
 
@@ -2171,6 +2178,12 @@ void CanopyGenerator::buildGround(const vec3 &ground_origin, const vec2 &ground_
         std::cout << "Ground consists of " << UUID_ground.size() << " total primitives." << std::endl;
     }
 
+}
+
+void CanopyGenerator::buildCanopies(){
+    for (const auto& canopy_parameters : canopy_parameters_list) {
+        canopy_parameters->buildCanopy(*this);
+    }
 }
 
 void CanopyGenerator::buildCanopy(const HomogeneousCanopyParameters &params ){
@@ -3005,6 +3018,19 @@ void CanopyGenerator::disableMessages(){
 
 void CanopyGenerator::enableMessages(){
     printmessages=true;
+}
+
+void CanopyGenerator::buildIndividualPlants(helios::vec3 position){
+    for (const auto& params : canopy_parameters_list) {
+        params->buildPlant(*this, position);
+    }
+}
+
+void CanopyGenerator::buildIndividualPlants(){
+    for (const auto& params : canopy_parameters_list) {
+        vec3 position = params->canopy_origin;
+        params->buildPlant(*this, position);
+    }
 }
 
 helios::vec3 interpolateTube(const std::vector<vec3> &P, float frac ){
