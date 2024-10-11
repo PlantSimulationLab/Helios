@@ -254,6 +254,8 @@ struct BaseGrapeVineParameters : BaseCanopyParameters{
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
+  //! Spread value for the maximum leaf width. With any new canopy or plant generation, the maximum leaf width would be between leaf_width - leaf_width_spread and leaf_width + leaf_width_spread.
+  float leaf_width_spread;
 
   //! Number of sub-division segments per leaf
   helios::int2 leaf_subdivisions;
@@ -266,57 +268,90 @@ struct BaseGrapeVineParameters : BaseCanopyParameters{
 
   //! Number of radial subdivisions for trunk/cordon/shoot tubes
   int wood_subdivisions;
+  //! Spread value for the number of wood subdivisions. With any new canopy or plant generation, the maximum number of wood subdivisions would be between wood_subdivisions - wood_subdivisions_spread and wood_subdivisions + wood_subdivisions_spread.
+  int wood_subdivisions_spread;
   
   //! Spacing between adjacent plants along the row direction.
   float plant_spacing;
+  //! Spread value for the plant spacing. The spacing between adjacent plants along a row would vary between plant_spacing - plant_spacing_spread and plant_spacing + plant_spacing_spread.
+  float plant_spacing_spread;
 
   //! Spacing between plant rows.
   float row_spacing;
+  //! Spread value for the row spacing. This allows to vary the alignment of plants along a row. The spacing between two plants of adjacent rows would be between row_spacing - row_spacing_spread and row_spacing + row_spacing_spread.
+  float row_spacing_spread;
 
   //! Distance between the ground and top of trunks
   float trunk_height;
+  //! Spread value for the trunk height. With any new canopy or plant generation, the trunk height would be between trunk_height - trunk_height_spread and trunk_height + trunk_height_spread.
+  float trunk_height_spread;
 
   //! Radius of the trunk at the widest point
   float trunk_radius;
+  //! Spread value for the trunk radius. With any new canopy or plant generation, the trunk radius would be between trunk_radius - trunk_radius_spread and trunk_radius + trunk_radius_spread.
+  float trunk_radius_spread;
 
   //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
   float cordon_height;
+  //! Spread value for the cordon height. With any new canopy or plant generation, the cordon height would be between cordon_height - cordon_height_spread and cordon_height + cordon_height_spread.
+  float cordon_height_spread;
 
   //! Radius of cordon branches.
   float cordon_radius;
+  //! Spread value for the cordon radius. With any new canopy or plant generation, the cordon radius would be between cordon_radius - cordon_radius_spread and cordon_radius + cordon_radius_spread.
+  float cordon_radius_spread;
 
   //! Length of shoots.
   float shoot_length;
+  //! Spread value for the shoot length. With any new canopy or plant generation, the shoot length would be between shoot_length - shoot_length_spread and shoot_length + shoot_length_spread.
+  float shoot_length_spread;
 
   //! Radius of shoot branches.
   float shoot_radius;
+  //! Spread value for the shoot radius. With any new canopy or plant generation, the shoot radius would be between shoot_radius - shoot_radius_spread and shoot_radius + shoot_radius_spread.
+  float shoot_radius_spread;
 
   //! Number of shoots on each cordon.
   uint shoots_per_cordon;
+  //! Spread value for the number of shoots per cordon. With any new canopy or plant generation, the number of shoots per cordon would be between shoots_per_cordon - shoots_per_cordon_spread and shoots_per_cordon + shoots_per_cordon_spread.
+  uint shoots_per_cordon_spread;
 
   //! Spacing between adjacent leaves as a fraction of the local leaf width. E.g., leaf_spacing_fraction = 1 would give a leaf spacing equal to the leaf width.
   float leaf_spacing_fraction;
+  //! Spread value for the leaf spacing fraction. With any new canopy or plant generation, the leaf spacing fraction would be between leaf_spacing_fraction - leaf_spacing_fraction_spread and leaf_spacing_fraction + leaf_spacing_fraction_spread.
+  float leaf_spacing_fraction_spread;
 
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
 
   //! Radius of grape berries
   float grape_radius;
+  //! Spread value for the grape radius. With any new canopy or plant generation, the grape radius would be between grape_radius - grape_radius_spread and grape_radius + grape_radius_spread.
+  float grape_radius_spread;
 
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
+  //! Spread value for the cluster radius. With any new canopy or plant generation, the cluster radius would be between cluster_radius - cluster_radius_spread and cluster_radius + cluster_radius_spread.
+  float cluster_radius_spread;
 
   //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
   float cluster_height_max;
+  //! Spread value for the cluster height. With any new canopy or plant generation, the cluster height would be between cluster_height - cluster_height_spread and cluster_height + cluster_height_spread.
+  float cluster_height_max_spread;
 
   //! Color of grapes
   helios::RGBcolor grape_color;
 
   //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly 2*(grape_subdivisions)^2 triangles per grape berry)
   uint grape_subdivisions;
+  //! Spread value for the number of grape subdivisions. With any new canopy or plant generation, the number of grape subdivisions would be between grape_subdivisions - grape_subdivisions_spread and grape_subdivisions + grape_subdivisions_spread.
+  uint grape_subdivisions_spread;
 
   //! 
   std::vector<float> leaf_angle_PDF;
+
+  //! Spread value for the canopy rotation. With any new canopy or plant generation, the canopy/plant rotation would be between canopy_rotation - canopy_rotation_spread and canopy_rotation + canopy_rotation_spread.
+  float canopy_rotation_spread;
 
 };
 
@@ -370,12 +405,18 @@ struct SplitGrapevineParameters : BaseGrapeVineParameters{
 
   //! Spacing between two opposite cordons
   float cordon_spacing;
+  //! Spread value for the cordon spacing. With any new canopy or plant generation, the cordon spacing would be between cordon_spacing - cordon_spacing_spread and cordon_spacing + cordon_spacing_spread.
+  float cordon_spacing_spread;
 
   //! Average angle of the shoot at the base (shoot_angle_base=0 points shoots upward; shoot_angle_base=M_PI points shoots downward and makes a Geneva Double Curtain)
   float shoot_angle_base;
+  //! Spread value for the base shoot angle. With any new canopy or plant generation, the base shoot angle would be between shoot_angle_base - shoot_angle_base_spread and shoot_angle_base + shoot_angle_base_spread.
+  float shoot_angle_base_spread;
   
   //! Average angle of the shoot at the tip (shoot_angle=0 is a completely vertical shoot; shoot_angle=M_PI is a downward-pointing shoot)
   float shoot_angle_tip;
+  //! Spread value for the base shoot angle. With any new canopy or plant generation, the base shoot angle would be between shoot_angle_tip - shoot_angle_tip_spread and shoot_angle_tip + shoot_angle_tip_spread.
+  float shoot_angle_tip_spread;
   
 };
 

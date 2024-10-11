@@ -343,14 +343,40 @@ BaseGrapeVineParameters::BaseGrapeVineParameters() : BaseCanopyParameters(){
     wood_texture_file = "plugins/canopygenerator/textures/wood.jpg";
 
     leaf_width = 0.18;
+    leaf_width_spread = 0;
 
     leaf_subdivisions = make_int2(1,1);
 
+    leaf_spacing_fraction_spread = 0;
+
     wood_subdivisions = 10;
+    wood_subdivisions_spread = 0;
+
+    trunk_height_spread = 0;
+
+    cordon_height_spread = 0;
+    cordon_radius_spread = 0;
+
+    shoot_length_spread = 0;
+    shoot_radius_spread = 0;
+    shoots_per_cordon_spread = 0;
 
     grape_color = make_RGBcolor(0.18,0.2,0.25);
 
+    grape_radius_spread = 0;
+
+    cluster_radius_spread = 0;
+    cluster_height_max_spread = 0;
+
+    grape_subdivisions_spread = 0;
+
     plant_count = make_int2(3,3);
+
+    canopy_rotation_spread = 0;
+
+    plant_spacing_spread = 0;
+
+    row_spacing_spread = 0;
 
 }
 
@@ -364,6 +390,11 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
     float new_leaf_width = XMLloadfloat(canopy_node, "leaf_width");
     if (new_leaf_width != nullvalue_f) {
         leaf_width = new_leaf_width;
+    }
+
+    float new_leaf_width_spread = XMLloadfloat(canopy_node, "leaf_width_spread");
+    if (new_leaf_width_spread != nullvalue_f) {
+        leaf_width_spread = new_leaf_width_spread;
     }
 
     int2 new_leaf_subdivisions = XMLloadint2(canopy_node, "leaf_subdivisions");
@@ -386,9 +417,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         wood_subdivisions = new_wood_subdivisions;
     }
 
+    int new_wood_subdivisions_spread = XMLloadint(canopy_node, "wood_subdivisions_spread");
+    if ( new_wood_subdivisions_spread != nullvalue_i) {
+        wood_subdivisions_spread = new_wood_subdivisions_spread;
+    }
+
     float h = XMLloadfloat(canopy_node, "trunk_height");
     if (h != nullvalue_f) {
         trunk_height = h;
+    }
+
+    float new_trunk_height_spread = XMLloadfloat(canopy_node, "trunk_height_spread");
+    if (new_trunk_height_spread != nullvalue_f) {
+        trunk_height_spread = new_trunk_height_spread;
     }
 
     float r = XMLloadfloat(canopy_node, "trunk_radius");
@@ -396,9 +437,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         trunk_radius = r;
     }
 
+    float new_trunk_radius_spread = XMLloadfloat(canopy_node, "trunk_radius_spread");
+    if (new_trunk_radius_spread != nullvalue_f) {
+        trunk_radius_spread = new_trunk_radius_spread;
+    }
+
     float ch = XMLloadfloat(canopy_node, "cordon_height");
     if (ch != nullvalue_f) {
         cordon_height = ch;
+    }
+
+    float new_cordon_height_spread = XMLloadfloat(canopy_node, "cordon_height_spread");
+    if (new_cordon_height_spread != nullvalue_f) {
+        cordon_height_spread = new_cordon_height_spread;
     }
 
     float cr = XMLloadfloat(canopy_node, "cordon_radius");
@@ -406,9 +457,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         cordon_radius = cr;
     }
 
+    float new_cordon_radius_spread = XMLloadfloat(canopy_node, "cordon_radius_spread");
+    if (new_cordon_radius_spread != nullvalue_f) {
+        cordon_radius_spread = new_cordon_radius_spread;
+    }
+
     float sl = XMLloadfloat(canopy_node, "shoot_length");
     if (sl != nullvalue_f) {
         shoot_length = sl;
+    }
+
+    float new_shoot_length_spread = XMLloadfloat(canopy_node, "shoot_length_spread");
+    if (new_shoot_length_spread != nullvalue_f) {
+        shoot_length_spread = new_shoot_length_spread;
     }
 
     float sr = XMLloadfloat(canopy_node, "shoot_radius");
@@ -416,9 +477,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         shoot_radius = sr;
     }
 
+    float new_shoot_radius_spread = XMLloadfloat(canopy_node, "shoot_radius_spread");
+    if (new_shoot_radius_spread != nullvalue_f) {
+        shoot_radius_spread = new_shoot_radius_spread;
+    }
+
     int spc = XMLloadint(canopy_node, "shoots_per_cordon");
     if (spc != nullvalue_i) {
         shoots_per_cordon = uint(spc);
+    }
+
+    int new_shoots_per_cordon_spread = XMLloadint(canopy_node, "shoots_per_cordon_spread");
+    if (new_shoots_per_cordon_spread != nullvalue_i) {
+        shoots_per_cordon_spread = uint(new_shoots_per_cordon_spread);
     }
 
     float lsf = XMLloadfloat(canopy_node, "leaf_spacing_fraction");
@@ -426,9 +497,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         leaf_spacing_fraction = lsf;
     }
 
+    float new_leaf_spacing_fraction_spread = XMLloadfloat(canopy_node, "leaf_spacing_fraction_spread");
+    if (new_leaf_spacing_fraction_spread != nullvalue_f) {
+        leaf_spacing_fraction_spread = new_leaf_spacing_fraction_spread;
+    }
+
     float gr = XMLloadfloat(canopy_node, "grape_radius");
     if (gr != nullvalue_f) {
         grape_radius = gr;
+    }
+
+    float new_grape_radius_spread = XMLloadfloat(canopy_node, "grape_radius_spread");
+    if (new_grape_radius_spread != nullvalue_f) {
+        grape_radius_spread = new_grape_radius_spread;
     }
 
     float clr = XMLloadfloat(canopy_node, "cluster_radius");
@@ -436,9 +517,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         cluster_radius = clr;
     }
 
+    float new_cluster_radius_spread = XMLloadfloat(canopy_node, "cluster_radius_spread");
+    if (new_cluster_radius_spread != nullvalue_f) {
+        cluster_radius_spread = new_cluster_radius_spread;
+    }
+
     float clhm = XMLloadfloat(canopy_node, "cluster_height_max");
     if (clhm != nullvalue_f) {
         cluster_height_max = clhm;
+    }
+
+    float new_cluster_height_max_spread = XMLloadfloat(canopy_node, "cluster_height_max_spread");
+    if (new_cluster_height_max_spread != nullvalue_f) {
+        cluster_height_max_spread = new_cluster_height_max_spread;
     }
 
     RGBAcolor new_grape_color = XMLloadrgba(canopy_node, "grape_color");
@@ -451,9 +542,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         grape_subdivisions = uint(new_grape_subdivisions);
     }
 
+    int new_grape_subdivisions_spread = XMLloadint(canopy_node, "grape_subdivisions_spread");
+    if (new_grape_subdivisions_spread != nullvalue_i) {
+        grape_subdivisions_spread = uint(new_grape_subdivisions_spread);
+    }
+
     float new_plant_spacing = XMLloadfloat(canopy_node, "plant_spacing");
     if (new_plant_spacing != nullvalue_f) {
         plant_spacing = new_plant_spacing;
+    }
+
+    float new_plant_spacing_spread = XMLloadfloat(canopy_node, "plant_spacing_spread");
+    if (new_plant_spacing_spread != nullvalue_f) {
+        plant_spacing_spread = new_plant_spacing_spread;
     }
 
     float new_row_spacing = XMLloadfloat(canopy_node, "row_spacing");
@@ -461,9 +562,19 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
         row_spacing = new_row_spacing;
     }
 
+    float new_row_spacing_spread = XMLloadfloat(canopy_node, "row_spacing_spread");
+    if (new_row_spacing_spread != nullvalue_f) {
+        row_spacing_spread = new_row_spacing_spread;
+    }
+
     int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
     if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
         plant_count = new_plant_count;
+    }
+
+    float new_canopy_rotation_spread = XMLloadfloat(canopy_node, "canopy_rotation_spread");
+    if (new_canopy_rotation_spread != nullvalue_f) {
+        canopy_rotation_spread = new_canopy_rotation_spread;
     }
 }
 
@@ -534,6 +645,7 @@ SplitGrapevineParameters::SplitGrapevineParameters() : BaseGrapeVineParameters()
     cordon_radius = 0.02;
 
     cordon_spacing = 1.f;
+    cordon_spacing_spread = 0;
 
     shoot_length = 1.2;
 
@@ -542,8 +654,10 @@ SplitGrapevineParameters::SplitGrapevineParameters() : BaseGrapeVineParameters()
     shoots_per_cordon = 10;
 
     shoot_angle_tip = 0.4*M_PI;
+    shoot_angle_tip_spread = 0;
 
     shoot_angle_base = 0.;
+    shoot_angle_base_spread = 0;
 
     leaf_spacing_fraction = 0.6;
 
@@ -2481,7 +2595,9 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
-            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
+            float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
+            float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
+            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
 
             uint plant_ID = grapevineVSP( params, center );
 
@@ -2513,7 +2629,9 @@ void CanopyGenerator::buildCanopy(const SplitGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
-            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
+            float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
+            float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
+            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
 
             uint plant_ID = grapevineSplit( params, center );
 
@@ -2545,7 +2663,9 @@ void CanopyGenerator::buildCanopy(const UnilateralGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
-            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
+            float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
+            float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
+            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
 
             uint plant_ID = grapevineUnilateral( params, center );
 
@@ -2577,7 +2697,9 @@ void CanopyGenerator::buildCanopy(const GobletGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
-            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*params.plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*params.row_spacing, 0 );
+            float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
+            float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
+            vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
 
             uint plant_ID = grapevineGoblet( params, center );
 
