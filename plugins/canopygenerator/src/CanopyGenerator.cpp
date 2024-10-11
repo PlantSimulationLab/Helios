@@ -378,6 +378,9 @@ BaseGrapeVineParameters::BaseGrapeVineParameters() : BaseCanopyParameters(){
 
     row_spacing_spread = 0;
 
+    dead_probability = 0;
+    missing_plant_probability = 0;
+
 }
 
 BaseGrapeVineParameters::BaseGrapeVineParameters(const pugi::xml_node canopy_node) : BaseGrapeVineParameters(){
@@ -570,6 +573,22 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
     int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
     if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
         plant_count = new_plant_count;
+    }
+
+    float new_dead_probability = XMLloadfloat(canopy_node, "dead_probability");
+    if (new_dead_probability != nullvalue_f) {
+        if (new_dead_probability < 0 || new_dead_probability > 1)
+            std::cout << "BaseGrapeVineParameters::readParametersFromXML: dead_probability value must be between 0 and 1" << std::endl;
+        else
+            dead_probability = new_dead_probability;
+    }
+
+    float new_missing_plant_probability = XMLloadfloat(canopy_node, "missing_plant_probability");
+    if (new_missing_plant_probability != nullvalue_f) {
+        if (new_missing_plant_probability < 0 || new_missing_plant_probability > 1)
+            std::cout << "BaseGrapeVineParameters::readParametersFromXML: missing_plant_probability value must be between 0 and 1" << std::endl;
+        else
+            missing_plant_probability = new_missing_plant_probability;
     }
 
     float new_canopy_rotation_spread = XMLloadfloat(canopy_node, "canopy_rotation_spread");
@@ -2595,6 +2614,14 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
+            if( params.missing_plant_probability > 0 ){
+                float random_draw = context->randu();
+                if( random_draw <= params.missing_plant_probability ){
+                    // Don't add the plant
+                    continue;
+                }
+            }
+
             float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
             float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
@@ -2628,6 +2655,14 @@ void CanopyGenerator::buildCanopy(const SplitGrapevineParameters &params ){
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
+
+            if( params.missing_plant_probability > 0 ){
+                float random_draw = context->randu();
+                if( random_draw <= params.missing_plant_probability ){
+                    // Don't add the plant
+                    continue;
+                }
+            }
 
             float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
             float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
@@ -2663,6 +2698,14 @@ void CanopyGenerator::buildCanopy(const UnilateralGrapevineParameters &params ){
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
 
+            if( params.missing_plant_probability > 0 ){
+                float random_draw = context->randu();
+                if( random_draw <= params.missing_plant_probability ){
+                    // Don't add the plant
+                    continue;
+                }
+            }
+
             float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
             float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);
             vec3 center = params.canopy_origin+make_vec3(-0.5f*canopy_extent.x+(float(i)+0.5f)*plant_spacing, -0.5f*canopy_extent.y+(float(j)+0.5f)*row_spacing, 0 );
@@ -2696,6 +2739,14 @@ void CanopyGenerator::buildCanopy(const GobletGrapevineParameters &params ){
     uint prim_count = 0;
     for( int j=0; j<params.plant_count.y; j++ ){
         for( int i=0; i<params.plant_count.x; i++ ){
+
+            if( params.missing_plant_probability > 0 ){
+                float random_draw = context->randu();
+                if( random_draw <= params.missing_plant_probability ){
+                    // Don't add the plant
+                    continue;
+                }
+            }
 
             float plant_spacing = params.plant_spacing + getVariation(params.plant_spacing_spread, generator);
             float row_spacing = params.row_spacing + getVariation(params.row_spacing_spread, generator);

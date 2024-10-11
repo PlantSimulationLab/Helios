@@ -270,6 +270,15 @@ struct BaseGrapeVineParameters : BaseCanopyParameters{
   int wood_subdivisions;
   //! Spread value for the number of wood subdivisions. With any new canopy or plant generation, the maximum number of wood subdivisions would be between wood_subdivisions - wood_subdivisions_spread and wood_subdivisions + wood_subdivisions_spread.
   int wood_subdivisions_spread;
+
+  //! Probability for a plant to be dead, i.e. without any leaves or grapes
+  float dead_probability;
+
+  //! Probability for a plant to be missing
+  /**
+   * \note Only applicable when building a canopy. If you are building an individual plant, well... just don't build it.
+   */
+  float missing_plant_probability;
   
   //! Spacing between adjacent plants along the row direction.
   float plant_spacing;

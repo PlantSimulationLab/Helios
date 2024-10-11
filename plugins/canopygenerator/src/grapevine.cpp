@@ -157,6 +157,12 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
 
+    bool is_dead = false;
+    if( params.dead_probability > 0 ){
+        float random_draw = context->randu();
+        is_dead = random_draw <= params.dead_probability;
+    }
+
     //------ trunks -------//
 
     float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
@@ -356,6 +362,11 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 context->setPrimitiveData( U, "element_label", "cane");
             }
 
+            if( is_dead ){
+                // Don't add grapes and leaves
+                continue;
+            }
+
             //grape clusters
             float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
             float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
@@ -456,6 +467,12 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     std::uniform_real_distribution<float> unif_distribution;
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
+
+    bool is_dead = false;
+    if( params.dead_probability > 0 ){
+        float random_draw = context->randu();
+        is_dead = random_draw <= params.dead_probability;
+    }
 
     //------ trunks -------//
 
@@ -713,6 +730,11 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                 U = context->getObjectPrimitiveUUIDs(objID);
                 UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
+                if( is_dead ){
+                    // Don't add grapes and leaves
+                    continue;
+                }
+
                 //grape clusters
                 float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
                 float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
@@ -814,6 +836,12 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
 
     float cost = cosf(canopy_rotation);
     float sint = sinf(canopy_rotation);
+
+    bool is_dead = false;
+    if( params.dead_probability > 0 ){
+        float random_draw = context->randu();
+        is_dead = random_draw <= params.dead_probability;
+    }
 
     //------ trunks -------//
 
@@ -937,6 +965,11 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         U = context->getObjectPrimitiveUUIDs(objID);
         UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
 
+        if( is_dead ){
+            // Don't add grapes and leaves
+            continue;
+        }
+
         //grape clusters
         float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
         float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
@@ -1033,6 +1066,12 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
     float cost = cosf(canopy_rotation);
     float sint = sinf(canopy_rotation);
 
+    bool is_dead = false;
+    if( params.dead_probability > 0 ){
+        float random_draw = context->randu();
+        is_dead = random_draw <= params.dead_probability;
+    }
+
     //------ trunks -------//
 
     float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
@@ -1115,6 +1154,11 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
             objID = context->addTubeObject(wood_subdivisions,tmp,rad_pshoot, params.wood_texture_file.c_str() );
             U = context->getObjectPrimitiveUUIDs(objID);
             UUID_branch_plant.insert(UUID_branch_plant.end(), U.begin(), U.end() );
+
+            if( is_dead ){
+                // Don't add grapes and leaves
+                continue;
+            }
 
             //grape clusters
             float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
