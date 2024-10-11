@@ -199,6 +199,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
     float cordon_radius = params.cordon_radius + getVariation(params.cordon_radius_spread, generator);
+    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
 
     float diff = cordon_height-trunk_height;
 
@@ -212,13 +213,13 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     std::vector<float> rad_cordw;
     rad_cordw.push_back(cordon_radius);
     std::vector<vec3> pos_cordw;
-    pos_cordw.push_back(make_vec3(0.01f*0.5f*params.plant_spacing*cost,0.01f*0.5f*params.plant_spacing*sint,0.95*trunk_height));
+    pos_cordw.push_back(make_vec3(0.01f*cordon_length*cost,0.01f*cordon_length*sint,0.95*trunk_height));
     vec3 n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),getVariation(0.2f*M_PI,generator)));
     vec3 n_end = make_vec3(0.5f*cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
         float frac = float(i)/float(Ncord-1);
-        vec3 n = spline_interp3( frac, pos_cordw.front(), n_start, make_vec3(0.5f*params.plant_spacing*cost,0.5f*params.plant_spacing*sint,trunk_height+diff),n_end);
+        vec3 n = spline_interp3( frac, pos_cordw.front(), n_start, make_vec3(cordon_length*cost,cordon_length*sint,trunk_height+diff),n_end);
         pos_cordw.push_back(n);
         rad_cordw.push_back( cordon_radius*(1.f-0.6f*frac) );
     }
@@ -236,13 +237,13 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     std::vector<float> rad_corde;
     rad_corde.push_back(cordon_radius);
     std::vector<vec3> pos_corde;
-    pos_corde.push_back(make_vec3(-0.01f*0.5f*params.plant_spacing*cost,-0.01f*0.5f*params.plant_spacing*sint,0.95f*trunk_height));
+    pos_corde.push_back(make_vec3(-0.01f*cordon_length*cost,-0.01f*cordon_length*sint,0.95f*trunk_height));
     n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),M_PI+getVariation(0.2*M_PI,generator)));
     n_end = make_vec3(-0.5f*cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
         float frac = float(i)/float(Ncord-1);
-        vec3 n = spline_interp3( frac, pos_corde.front(), n_start, make_vec3(-0.5f*params.plant_spacing*cost,-0.5f*params.plant_spacing*sint,trunk_height+diff),n_end);
+        vec3 n = spline_interp3( frac, pos_corde.front(), n_start, make_vec3(-cordon_length*cost,-cordon_length*sint,trunk_height+diff),n_end);
         pos_corde.push_back(n);
         rad_corde.push_back( cordon_radius*(1.f-0.6f*frac) );
     }
@@ -322,10 +323,12 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
             uint Nz = 2*wood_subdivisions;
             float dz = ((1+getVariation(0.1,generator))*height-cordon_height)/float(Nz);
 
+            float total_cordons_length = 2 * cordon_length;
+
             //position of middle of shoot
-            vec3 cane_mid = cane_base + make_vec3(0.1f*getVariation(params.plant_spacing,generator),0.1f*getVariation(params.plant_spacing,generator),0.75f*Nz*dz);
+            vec3 cane_mid = cane_base + make_vec3(0.1f*getVariation(total_cordons_length,generator),0.1f*getVariation(total_cordons_length,generator),0.75f*Nz*dz);
             //position of end of shoot
-            vec3 cane_end = cane_base + make_vec3(0.15f*getVariation(params.plant_spacing,generator),0.15f*getVariation(params.plant_spacing,generator),Nz*dz);
+            vec3 cane_end = cane_base + make_vec3(0.15f*getVariation(total_cordons_length,generator),0.15f*getVariation(total_cordons_length,generator),Nz*dz);
 
             float zfrac_mid = (cane_mid.z-cane_base.z)/(cane_end.z-cane_base.z);
 
@@ -553,6 +556,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //---- Cordons -----//
 
+    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
+
     std::vector<float> rad_cord;
     rad_cord.push_back(cordon_radius);
     rad_cord.push_back(0.95f*cordon_radius);
@@ -568,9 +573,9 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     pos_cordnw.push_back(make_vec3(0.85f*0.5f*cordon_spacing*cost+0.025f*sint,0.85f*0.5f*cordon_spacing*sint+0.025f*cost,cordon_height));
     pos_cordnw.push_back(make_vec3(0.95f*0.5f*cordon_spacing*cost+0.075f*sint,0.95f*0.5f*cordon_spacing*sint+0.075f*cost,cordon_height));
     pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.12f*sint,0.5f*cordon_spacing*sint+0.12f*cost,cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.4f*0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint+0.4f*0.5f*params.plant_spacing*cost,0.94f*cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.8f*0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint+0.8f*0.5f*params.plant_spacing*cost,0.97f*cordon_height));
-    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint+0.5f*params.plant_spacing*cost,cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.4f*cordon_length*sint,0.5f*cordon_spacing*sint+0.4f*cordon_length*cost,0.94f*cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+0.8f*cordon_length*sint,0.5f*cordon_spacing*sint+0.8f*cordon_length*cost,0.97f*cordon_height));
+    pos_cordnw.push_back(make_vec3(0.5f*cordon_spacing*cost+cordon_length*sint,0.5f*cordon_spacing*sint+cordon_length*cost,cordon_height));
 
     std::vector<vec3> tmp;
     tmp.resize(pos_cordnw.size());
@@ -586,9 +591,9 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     pos_cordsw.push_back(make_vec3(0.85f*0.5f*cordon_spacing*cost-0.025f*sint,0.85f*0.5f*cordon_spacing*sint-0.025f*cost,cordon_height));
     pos_cordsw.push_back(make_vec3(0.95f*0.5f*cordon_spacing*cost-0.075f*sint,0.95f*0.5f*cordon_spacing*sint-0.075f*cost,cordon_height));
     pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.12f*sint,0.5f*cordon_spacing*sint-0.12f*cost,cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.4f*0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint-0.4f*0.5f*params.plant_spacing*cost,0.94f*cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.8f*0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint-0.8f*0.5f*params.plant_spacing*cost,0.97f*cordon_height));
-    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.5f*params.plant_spacing*sint,0.5f*cordon_spacing*sint-0.5f*params.plant_spacing*cost,cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.4f*cordon_length*sint,0.5f*cordon_spacing*sint-0.4f*cordon_length*cost,0.94f*cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-0.8f*cordon_length*sint,0.5f*cordon_spacing*sint-0.8f*cordon_length*cost,0.97f*cordon_height));
+    pos_cordsw.push_back(make_vec3(0.5f*cordon_spacing*cost-cordon_length*sint,0.5f*cordon_spacing*sint-cordon_length*cost,cordon_height));
 
     tmp.resize(pos_cordsw.size());
     for( uint i=0; i<pos_cordsw.size(); i++ ){
@@ -605,9 +610,9 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     pos_cordne.push_back(make_vec3(-0.85f*0.5f*cordon_spacing*cost+0.025f*sint,-0.85f*0.5f*cordon_spacing*sint+0.025f*cost,cordon_height));
     pos_cordne.push_back(make_vec3(-0.95f*0.5f*cordon_spacing*cost+0.075f*sint,-0.95f*0.5f*cordon_spacing*sint+0.075f*cost,cordon_height));
     pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.12f*sint,-0.5f*cordon_spacing*sint+0.12f*cost,cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.4f*0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint+0.4f*0.5f*params.plant_spacing*cost,0.94f*cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.8f*0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint+0.8f*0.5f*params.plant_spacing*cost,0.97f*cordon_height));
-    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint+0.5f*params.plant_spacing*cost,cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.4f*cordon_length*sint,-0.5f*cordon_spacing*sint+0.4f*cordon_length*cost,0.94f*cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+0.8f*cordon_length*sint,-0.5f*cordon_spacing*sint+0.8f*cordon_length*cost,0.97f*cordon_height));
+    pos_cordne.push_back(make_vec3(-0.5f*cordon_spacing*cost+cordon_length*sint,-0.5f*cordon_spacing*sint+cordon_length*cost,cordon_height));
 
     tmp.resize(pos_cordne.size());
     for( uint i=0; i<pos_cordne.size(); i++ ){
@@ -623,9 +628,9 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     pos_cordse.push_back(make_vec3(-0.85f*0.5f*cordon_spacing*cost-0.025f*sint,-0.85f*0.5f*cordon_spacing*sint-0.025f*cost,cordon_height));
     pos_cordse.push_back(make_vec3(-0.95f*0.5f*cordon_spacing*cost-0.075f*sint,-0.95f*0.5f*cordon_spacing*sint-0.075f*cost,cordon_height));
     pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.12f*sint,-0.5f*cordon_spacing*sint-0.12f*cost,cordon_height));
-    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.4f*0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint-0.4f*0.5f*params.plant_spacing*cost,0.94f*cordon_height));
-    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.8f*0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint-0.8f*0.5f*params.plant_spacing*cost,0.97f*cordon_height));
-    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.5f*params.plant_spacing*sint,-0.5f*cordon_spacing*sint-0.5f*params.plant_spacing*cost,cordon_height));
+    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.4f*cordon_length*sint,-0.5f*cordon_spacing*sint-0.4f*cordon_length*cost,0.94f*cordon_height));
+    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-0.8f*cordon_length*sint,-0.5f*cordon_spacing*sint-0.8f*cordon_length*cost,0.97f*cordon_height));
+    pos_cordse.push_back(make_vec3(-0.5f*cordon_spacing*cost-cordon_length*sint,-0.5f*cordon_spacing*sint-cordon_length*cost,cordon_height));
 
     tmp.resize(pos_cordse.size());
     for( uint i=0; i<pos_cordse.size(); i++ ){
@@ -843,6 +848,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         is_dead = random_draw <= params.dead_probability;
     }
 
+    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
+
     //------ trunks -------//
 
     float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
@@ -856,12 +863,12 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     rad_main.push_back(0.95f*trunk_radius);
     rad_main.push_back(0.1*trunk_radius);
     std::vector<vec3> pos_main;
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,0.0));
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,0.2f*trunk_height));
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,0.22f*trunk_height));
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,0.6f*trunk_height));
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,0.96f*trunk_height));
-    pos_main.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius)*sint,trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.0));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.2f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.22f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.6f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.96f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,trunk_height));
 
     for( uint i=0; i<rad_main.size(); i++ ){
         pos_main.at(i) = pos_main.at(i) + origin;
@@ -877,6 +884,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
     float cordon_radius = params.cordon_radius + getVariation(params.cordon_radius_spread, generator);
 
+    float total_cordons_length = 2 * cordon_length;
+
     float diff = cordon_height-trunk_height;
 
     //Cordon
@@ -889,13 +898,13 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     rad_cord.push_back(0.6*cordon_radius);
     rad_cord.push_back(0.2f*cordon_radius);
     std::vector<vec3> pos_cord;
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.01f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.01f*params.plant_spacing)*sint,0.95*trunk_height));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.05f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.05f*params.plant_spacing)*sint,trunk_height+0.1f*diff));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.15f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.15f*params.plant_spacing)*sint,trunk_height+0.65f*diff));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.45f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.45f*params.plant_spacing)*sint,trunk_height+0.95f*diff));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.6f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.6f*params.plant_spacing)*sint,trunk_height+1.05f*diff));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+0.85f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+0.85f*params.plant_spacing)*sint,trunk_height+diff));
-    pos_cord.push_back(make_vec3((-0.5*params.plant_spacing+0.5*trunk_radius+1.0f*params.plant_spacing)*cost,(-0.5*params.plant_spacing+0.5*trunk_radius+1.0f*params.plant_spacing)*sint,trunk_height+diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.01f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.01f*total_cordons_length)*sint,0.95*trunk_height));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.05f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.05f*total_cordons_length)*sint,trunk_height+0.1f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.15f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.15f*total_cordons_length)*sint,trunk_height+0.65f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.45f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.45f*total_cordons_length)*sint,trunk_height+0.95f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.6f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.6f*total_cordons_length)*sint,trunk_height+1.05f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.85f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.85f*total_cordons_length)*sint,trunk_height+diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+1.0f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+1.0f*total_cordons_length)*sint,trunk_height+diff));
 
     std::vector<vec3> tmp;
     tmp.resize(pos_cord.size());

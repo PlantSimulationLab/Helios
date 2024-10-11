@@ -300,6 +300,11 @@ struct BaseGrapeVineParameters : BaseCanopyParameters{
   //! Spread value for the trunk radius. With any new canopy or plant generation, the trunk radius would be between trunk_radius - trunk_radius_spread and trunk_radius + trunk_radius_spread.
   float trunk_radius_spread;
 
+  //! Length of the cordons. By default, half the plant spacing.
+  float cordon_length;
+  //! Spread value for the cordon length. With any new canopy or plant generation, the cordon length would be between cordon_length - cordon_length_spread and cordon_length + cordon_length_spread.
+  float cordon_length_spread;
+
   //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
   float cordon_height;
   //! Spread value for the cordon height. With any new canopy or plant generation, the cordon height would be between cordon_height - cordon_height_spread and cordon_height + cordon_height_spread.

@@ -354,6 +354,7 @@ BaseGrapeVineParameters::BaseGrapeVineParameters() : BaseCanopyParameters(){
 
     trunk_height_spread = 0;
 
+    cordon_length_spread = 0;
     cordon_height_spread = 0;
     cordon_radius_spread = 0;
 
@@ -443,6 +444,16 @@ void BaseGrapeVineParameters::readParametersFromXML(const pugi::xml_node canopy_
     float new_trunk_radius_spread = XMLloadfloat(canopy_node, "trunk_radius_spread");
     if (new_trunk_radius_spread != nullvalue_f) {
         trunk_radius_spread = new_trunk_radius_spread;
+    }
+
+    float new_cordon_length = XMLloadfloat(canopy_node, "cordon_length");
+    if (new_cordon_length != nullvalue_f) {
+        cordon_length = new_cordon_length;
+    }
+
+    float new_cordon_length_spread = XMLloadfloat(canopy_node, "cordon_length_spread");
+    if (new_cordon_length_spread != nullvalue_f) {
+        cordon_length_spread = new_cordon_length_spread;
     }
 
     float ch = XMLloadfloat(canopy_node, "cordon_height");
@@ -633,6 +644,8 @@ VSPGrapevineParameters::VSPGrapevineParameters() : BaseGrapeVineParameters(){
 
     plant_spacing = 2;
 
+    cordon_length = 0.5 * plant_spacing;
+
     row_spacing = 2;
 
 }
@@ -689,6 +702,8 @@ SplitGrapevineParameters::SplitGrapevineParameters() : BaseGrapeVineParameters()
     grape_subdivisions = 8;
 
     plant_spacing = 2;
+
+    cordon_length = 0.5 * plant_spacing;
 
     row_spacing = 4;
 
@@ -752,6 +767,8 @@ UnilateralGrapevineParameters::UnilateralGrapevineParameters() : BaseGrapeVinePa
     grape_subdivisions = 8;
 
     plant_spacing = 1.5;
+
+    cordon_length = 0.5 * plant_spacing;
 
     row_spacing = 2;
 
