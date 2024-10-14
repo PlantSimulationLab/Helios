@@ -1,0 +1,53 @@
+<?xml version=1.0?>
+
+<helios>
+	<canopygenerator>
+		<VSPGrapevineParameters>
+			<leaf_width> 0.18 </leaf_width>
+			<leaf_width_spread> 0.09 </leaf_width_spread>
+			<leaf_subdivisions> 1 1 </leaf_subdivisions>
+			<leaf_texture_file> plugins/canopygenerator/textures/GrapeLeaf.png </leaf_texture_file>
+			<wood_texture_file> plugins/canopygenerator/textures/wood.jpg </wood_texture_file>
+			<wood_subdivisions> 10 </wood_subdivisions>
+			<wood_subdivisions_spread> 3 </wood_subdivisions_spread>
+			<trunk_height> 0.7 </trunk_height>
+			<trunk_height_spread> 0.3 </trunk_height_spread>
+			<trunk_radius> 0.05 </trunk_radius>
+			<trunk_radius_spread> 0.01 </trunk_radius_spread>
+			<cordon_length> 1 </cordon_length>
+			<cordon_length_spread> 0.2 </cordon_length_spread>
+			<cordon_height> 0.9 </cordon_height>
+			<cordon_height_spread> 0.3 </cordon_height_spread>
+			<cordon_radius> 0.02 </cordon_radius>
+			<cordon_radius_spread> 0.005 </cordon_radius_spread>
+			<shoot_length> 0.9 </shoot_length>
+			<shoot_length_spread> 0.3 </shoot_length_spread>
+			<shoot_radius> 0.005 </shoot_radius>
+			<shoot_radius_spread> 0.001 </shoot_radius_spread>
+			<shoots_per_cordon> 10 </shoots_per_cordon>
+			<shoots_per_cordon_spread> 4 </shoots_per_cordon_spread>
+			<leaf_spacing_fraction> 0.5 </leaf_spacing_fraction>
+			<leaf_spacing_fraction_spread> 0.1 </leaf_spacing_fraction_spread>
+			<grape_radius> 0.0075 </grape_radius>
+			<grape_radius_spread> 0.002 </grape_radius_spread>
+			<cluster_radius> 0.03 </cluster_radius>
+			<cluster_radius_spread> 0.005 </cluster_radius_spread>
+			<cluster_height_max> 0.15 </cluster_height_max>
+			<cluster_height_max_spread> 0.03 </cluster_height_max_spread>
+			<grape_color> 0.18 0.2 0.25 </grape_color>
+			<grape_subdivisions> 8 </grape_subdivisions>
+			<grape_subdivisions_spread> 3 </grape_subdivisions_spread>
+			<dead_probability> 0.2 </dead_probability>
+			<canopy_origin> 0 0 0 </canopy_origin>
+			<canopy_rotation> 0 </canopy_rotation>
+			<!-- The following parameters are only used when building a whole canopy (not just an individual plant)-->
+			<canopy_rotation_spread> 0.05 </canopy_rotation_spread>
+			<plant_spacing> 2 </plant_spacing>
+			<plant_spacing_spread> 0.1 </plant_spacing_spread>
+			<row_spacing> 2.5 </row_spacing>
+			<row_spacing_spread> 0.05 </row_spacing_spread>
+			<plant_count> 5 3 </plant_count>
+			<missing_plant_probability> 0.1 </missing_plant_probability>
+		</VSPGrapevineParameters>
+	</canopygenerator>
+</helios>
