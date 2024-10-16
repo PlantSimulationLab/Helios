@@ -1,0 +1,43 @@
+<?xml version=1.0?>
+
+<helios>
+	<WeberPennTree label="CustomOlive">
+		<Shape> 1 </Shape>
+		<BaseSize> 0.4 </BaseSize>
+		<BaseSizeV> 0.1 </BaseSizeV>
+		<BaseSplits> 3 </BaseSplits>
+		<BaseSplitsV> 2 </BaseSplitsV>
+		<BaseSplitSize> 0.4 </BaseSplitSize>
+		<BaseSplitSizeV> 0.1 </BaseSplitSizeV>
+		<Scale> 2 </Scale>
+		<ScaleV> 0.5 </ScaleV>
+		<ZScale> 2 </ZScale>
+		<ZScaleV> 0.5 </ZScaleV>
+		<Ratio> 0.03 </Ratio>
+		<RatioPower> 1. </RatioPower>
+		<Lobes> 7 </Lobes>
+		<LobeDepth> 0.1 </LobeDepth>
+		<Flare> 0 </Flare>
+		<Levels> 3 </Levels>
+		<nSegSplits> 0 0 0 0 </nSegSplits>
+		<nSplitAngle> 33 30 0 0 </nSplitAngle>
+		<nSplitAngleV> 20 10 0 0 </nSplitAngleV>
+		<nCurveRes> 4 4 4 0 </nCurveRes>
+		<nCurve> -50 -60 -60 0 </nCurve>
+		<nCurveV> 20 20 20 0 </nCurveV>
+		<nCurveBack> 0 0 0 0 </nCurveBack>
+		<nLength> 1 0.5 0.3 0 </nLength>
+		<nLengthV> 0 0.5 0.5 0 </nLengthV>
+		<nTaper> 1 1 1 0 </nTaper>
+		<nDownAngle> 65 45 45 35 </nDownAngle>
+		<nDownAngleV> 20 20 20 20 </nDownAngleV>
+		<nRotate> 0 0 0 0 </nRotate>
+		<nRotateV> 15 30 45 60 </nRotateV>
+		<nBranches> 30 35 20 0 </nBranches>
+		<Leaves> 10 </Leaves>
+		<LeafFile> plugins/weberpenntree/leaves/OliveLeaf.png </LeafFile>
+		<LeafScale> 0.08 </LeafScale>
+		<LeafScaleX> 0.1 </LeafScaleX>
+		<WoodFile> plugins/weberpenntree/wood/wood.jpg </WoodFile>
+	</WeberPennTree>
+</helios>
