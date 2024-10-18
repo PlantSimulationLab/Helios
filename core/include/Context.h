@@ -4347,6 +4347,12 @@ public:
      * \return Size/length of global data array
      */
     size_t getGlobalDataSize( const char* label ) const;
+
+    //! List the labels for all global data in the Context
+    /**
+     * \return Vector of labels for all global data
+     */
+    std::vector<std::string> listGlobalData() const;
     
     //! Check if global data 'label' exists
     /**

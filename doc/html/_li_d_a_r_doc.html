@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -535,7 +535,7 @@ Synthetic discrete-return data</h2>
 <div class="line">}</div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_a2d0c11c6d8001171269232ff5d7f6322"><div class="ttname"><a href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">LiDARcloud::exportPointCloud</a></div><div class="ttdeci">void exportPointCloud(const char *filename)</div><div class="ttdoc">Export to file all points in the point cloud to an ASCII text file following the column format specif...</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00728">fileIO.cpp:728</a></div></div>
 <div class="ttc" id="aclass_li_d_a_rcloud_html_aac5cafa2281f9d479f2bb56be0780e31"><div class="ttname"><a href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">LiDARcloud::syntheticScan</a></div><div class="ttdeci">void syntheticScan(helios::Context *context)</div><div class="ttdoc">Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l03093">LiDAR.cu:3093</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01207">Context.cpp:1207</a></div></div>
+<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01202">Context.cpp:1202</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARsynthwaveform"></a>
 Synthetic waveform data</h2>
 <p>Generation of synthetic full-waveform data is similar to discrete-return, except that additional information is needed to define the scan and simulation. In the XML file, the user must specify the diameter of the laser beam at the scan origin using the &lt;exitDiameter&gt; &lt;/exitDiameter&gt; tags, as well as the angle of beam divergence in radians using the &lt;beamDivergence&gt; &lt;/beamDivergence&gt; tags. If the exit diameter value is not specified, the default value of 0 is used, which means that the model will revert to discrete-return data generation. If the beam divergence value is not specified, a default beam divergence of 0 will be assumed, which effectively just means that the beam will remain perfectly cylindrical with diameter of exitDiameter.</p>

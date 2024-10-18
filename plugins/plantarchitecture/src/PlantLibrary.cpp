@@ -32,35 +32,43 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary( const helios::vec3 &base_
 
     uint plantID = 0;
     if( current_plant_model == "almond" ) {
-        plantID = buildAlmondTree(base_position, age);
+        plantID = buildAlmondTree(base_position);
+    }else if( current_plant_model == "apple" ) {
+        plantID = buildAppleTree(base_position);
     }else if( current_plant_model == "asparagus" ) {
-        plantID = buildAsparagusPlant(base_position, age);
+        plantID = buildAsparagusPlant(base_position);
     }else if( current_plant_model == "bindweed" ) {
-        plantID = buildBindweedPlant(base_position, age);
+        plantID = buildBindweedPlant(base_position);
     }else if( current_plant_model == "bean" ) {
-        plantID = buildBeanPlant(base_position, age);
+        plantID = buildBeanPlant(base_position);
     }else if( current_plant_model == "cheeseweed" ) {
-        plantID = buildCheeseweedPlant(base_position, age);
+        plantID = buildCheeseweedPlant(base_position);
     }else if( current_plant_model == "cowpea" ) {
-        plantID = buildCowpeaPlant(base_position, age);
+        plantID = buildCowpeaPlant(base_position);
+    }else if( current_plant_model == "grapevine_VSP" ) {
+        plantID = buildGrapevineVSP(base_position);
+    }else if( current_plant_model == "olive" ) {
+        plantID = buildOliveTree(base_position);
+    }else if( current_plant_model == "pistachio" ) {
+        plantID = buildPistachioTree(base_position);
     }else if( current_plant_model == "puncturevine" ) {
-        plantID = buildPuncturevinePlant(base_position, age);
+        plantID = buildPuncturevinePlant(base_position);
     }else if( current_plant_model == "easternredbud" ) {
-        plantID = buildEasternRedbudPlant(base_position, age);
+        plantID = buildEasternRedbudPlant(base_position);
     }else if( current_plant_model == "romainelettuce" ) {
-        plantID = buildRomaineLettucePlant(base_position, age);
+        plantID = buildRomaineLettucePlant(base_position);
     }else if( current_plant_model == "sorghum" ) {
-        plantID = buildSorghumPlant(base_position, age);
+        plantID = buildSorghumPlant(base_position);
     }else if( current_plant_model == "soybean" ) {
-        plantID = buildSoybeanPlant(base_position, age);
+        plantID = buildSoybeanPlant(base_position);
     }else if( current_plant_model == "strawberry" ) {
-        plantID = buildStrawberryPlant(base_position, age);
+        plantID = buildStrawberryPlant(base_position);
     }else if( current_plant_model == "sugarbeet" ) {
-        plantID = buildSugarbeetPlant(base_position, age);
+        plantID = buildSugarbeetPlant(base_position);
     }else if( current_plant_model == "tomato" ) {
-        plantID = buildTomatoPlant(base_position, age);
+        plantID = buildTomatoPlant(base_position);
     }else if( current_plant_model == "wheat" ) {
-        plantID = buildWheatPlant(base_position, age);
+        plantID = buildWheatPlant(base_position);
     }else{
         assert(true); //shouldn't be here
     }
@@ -101,6 +109,8 @@ void PlantArchitecture::initializeDefaultShoots( const std::string &plant_label 
 
     if( plant_label == "almond" ) {
         initializeAlmondTreeShoots();
+    }else if( plant_label == "apple" ) {
+        initializeAppleTreeShoots();
     }else if( plant_label == "asparagus" ) {
         initializeAsparagusShoots();
     }else if( plant_label == "bindweed" ) {
@@ -111,6 +121,12 @@ void PlantArchitecture::initializeDefaultShoots( const std::string &plant_label 
         initializeCheeseweedShoots();
     }else if( plant_label == "cowpea" ) {
         initializeCowpeaShoots();
+    }else if( plant_label == "grapevine_VSP" ) {
+        initializeGrapevineVSPShoots();
+    }else if( plant_label == "olive" ) {
+        initializeOliveTreeShoots();
+    }else if( plant_label == "pistachio" ) {
+        initializePistachioTreeShoots();
     }else if( plant_label == "puncturevine" ) {
         initializePuncturevineShoots();
     }else if( plant_label == "easternredbud" ) {
@@ -159,7 +175,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
 
     phytomer_parameters_almond.leaf.leaves_per_petiole = 1;
     phytomer_parameters_almond.leaf.prototype_function = AlmondLeafPrototype;
-    phytomer_parameters_almond.leaf.prototype_scale = 0.09;
+    phytomer_parameters_almond.leaf.prototype_scale = 0.08;
     phytomer_parameters_almond.leaf.unique_prototypes = 1;
 
     phytomer_parameters_almond.peduncle.length = 0.005;
@@ -168,7 +184,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     phytomer_parameters_almond.peduncle.roll = 90;
     phytomer_parameters_almond.peduncle.length_segments = 1;
 
-    phytomer_parameters_almond.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_almond.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_almond.inflorescence.pitch = 0;
     phytomer_parameters_almond.inflorescence.roll = 0;
     phytomer_parameters_almond.inflorescence.flower_prototype_scale = 0.03;
@@ -182,9 +198,9 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
     shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_almond;
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
-    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 14;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_growth_rate = 0.00075;
+    shoot_parameters_trunk.girth_area_factor = 35.f;
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
@@ -202,7 +218,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.max_nodes = 40;
     shoot_parameters_proleptic.phyllochron = 0.9;
     shoot_parameters_proleptic.elongation_rate = 0.25;
-    shoot_parameters_proleptic.girth_growth_rate = 0.00045;
+    shoot_parameters_proleptic.girth_area_factor = 35.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.leaf_flush_count = 1;
@@ -246,7 +262,6 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_scaffold.gravitropic_curvature = 300;
     shoot_parameters_scaffold.internode_length_max = 0.04;
     shoot_parameters_scaffold.tortuosity = 7;
-    shoot_parameters_scaffold.girth_growth_rate = 0.0005;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"},{1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
@@ -256,14 +271,14 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
 
 }
 
-uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
 
     if( shoot_types.empty() ){
         //automatically initialize almond tree shoots
         initializeAlmondTreeShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
 //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
 
@@ -301,7 +316,164 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position, float
 
     makePlantDormant(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 8, 20);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 8, 20, false);
+
+    return plantID;
+
+}
+
+void PlantArchitecture::initializeAppleTreeShoots(){
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_apple(context_ptr->getRandomGenerator());
+
+    phytomer_parameters_apple.internode.pitch = 0;
+    phytomer_parameters_apple.internode.phyllotactic_angle.uniformDistribution( 130, 145 );
+    phytomer_parameters_apple.internode.length_segments = 1;
+    phytomer_parameters_apple.internode.image_texture = "plugins/plantarchitecture/assets/textures/WesternRedbudBark.jpg";
+    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
+
+    phytomer_parameters_apple.petiole.petioles_per_internode = 1;
+    phytomer_parameters_apple.petiole.pitch.uniformDistribution(-25,-40);
+    phytomer_parameters_apple.petiole.taper = 0.1;
+    phytomer_parameters_apple.petiole.curvature = 0;
+    phytomer_parameters_apple.petiole.length = 0.04;
+    phytomer_parameters_apple.petiole.radius = 0.00075;
+    phytomer_parameters_apple.petiole.length_segments = 1;
+    phytomer_parameters_apple.petiole.radial_subdivisions = 3;
+    phytomer_parameters_apple.petiole.color = make_RGBcolor(0.61,0.5,0.24);
+
+    phytomer_parameters_apple.leaf.leaves_per_petiole = 1;
+    phytomer_parameters_apple.leaf.prototype_function = AppleLeafPrototype;
+    phytomer_parameters_apple.leaf.prototype_scale = 0.12;
+    phytomer_parameters_apple.leaf.unique_prototypes = 1;
+
+    phytomer_parameters_apple.peduncle.length = 0.04;
+    phytomer_parameters_apple.peduncle.radius = 0.001;
+    phytomer_parameters_apple.peduncle.pitch = 90;
+    phytomer_parameters_apple.peduncle.roll = 90;
+    phytomer_parameters_apple.peduncle.length_segments = 1;
+
+    phytomer_parameters_apple.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_apple.inflorescence.pitch = 0;
+    phytomer_parameters_apple.inflorescence.roll = 0;
+    phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
+    phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.1;
+    phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
+    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.5;
+
+    // ---- Shoot Parameters ---- //
+
+    // Trunk
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_apple;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
+    shoot_parameters_trunk.max_nodes = 20;
+    shoot_parameters_trunk.girth_area_factor = 16.f;
+    shoot_parameters_trunk.internode_radius_initial = 0.01;
+    shoot_parameters_trunk.vegetative_bud_break_probability = 0;
+    shoot_parameters_trunk.vegetative_bud_break_time = 0;
+    shoot_parameters_trunk.tortuosity = 6;
+    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_decay_rate = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"scaffold"},{1});
+
+    // Proleptic shoots
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_apple;
+    shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3,0.2,0.2);
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
+    shoot_parameters_proleptic.max_nodes = 40;
+    shoot_parameters_proleptic.phyllochron = 0.9;
+    shoot_parameters_proleptic.elongation_rate = 0.25;
+    shoot_parameters_proleptic.girth_area_factor = 20.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability = 0.15;
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
+    shoot_parameters_proleptic.leaf_flush_count = 1;
+    shoot_parameters_proleptic.gravitropic_curvature = 500;
+    shoot_parameters_proleptic.tortuosity = 20;
+    shoot_parameters_proleptic.internode_radius_initial = 0.006;
+    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 20, 25);
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
+    shoot_parameters_proleptic.internode_length_max = 0.035;
+    shoot_parameters_proleptic.internode_length_min = 0.01;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
+    shoot_parameters_proleptic.fruit_set_probability = 0.4;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 4;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.determinate_shoot_growth = false;
+    shoot_parameters_proleptic.defineChildShootTypes({"proleptic","sylleptic"},{1.0,0.});
+
+    // Sylleptic shoots
+    ShootParameters shoot_parameters_sylleptic = shoot_parameters_proleptic;
+    shoot_parameters_sylleptic.phytomer_parameters.internode.image_texture = "";
+    shoot_parameters_sylleptic.phytomer_parameters.leaf.prototype_scale = 0.12;
+    shoot_parameters_sylleptic.phytomer_parameters.leaf.pitch.uniformDistribution(-45, -20);
+    shoot_parameters_sylleptic.insertion_angle_tip = 0;
+    shoot_parameters_sylleptic.insertion_angle_decay_rate = 0;
+    shoot_parameters_sylleptic.vegetative_bud_break_probability = 0.1;
+    shoot_parameters_sylleptic.gravitropic_curvature= 600;
+    shoot_parameters_sylleptic.internode_length_max = 0.06;
+    shoot_parameters_sylleptic.flowers_require_dormancy = true;
+    shoot_parameters_sylleptic.growth_requires_dormancy = true;
+    shoot_parameters_sylleptic.defineChildShootTypes({"proleptic"},{1.0});
+
+    // Main scaffolds
+    ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
+    shoot_parameters_scaffold.max_nodes = 40;
+    shoot_parameters_scaffold.gravitropic_curvature = 400;
+    shoot_parameters_scaffold.internode_length_max = 0.04;
+    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.defineChildShootTypes({"proleptic"},{1.0});
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("scaffold", shoot_parameters_scaffold);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+    defineShootType("sylleptic", shoot_parameters_sylleptic);
+
+}
+
+uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
+
+    if( shoot_types.empty() ){
+        //automatically initialize almond tree shoots
+        initializeAlmondTreeShoots();
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+//    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
+
+    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.04, 1.f, 1.f, 0, "trunk");
+    appendPhytomerToShoot( plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
+
+    plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
+
+    auto phytomers = plant_instances.at(plantID).shoot_tree.at(uID_trunk)->phytomers;
+    for( const auto & phytomer : phytomers ){
+        phytomer->removeLeaf();
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    uint Nscaffolds = 4;//context_ptr->randu(4,5);
+
+    for( int i=0; i<Nscaffolds; i++ ) {
+        float pitch = context_ptr->randu(deg2rad(45), deg2rad(55));
+        uint uID_shoot = addChildShoot( plantID, uID_trunk, getShootNodeCount(plantID,uID_trunk)-i-1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06, 1.f, 1.f, 0.5, "scaffold", 0);
+
+    }
+
+    makePlantDormant(plantID);
+
+    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 8, 20, false);
 
     return plantID;
 
@@ -348,9 +520,8 @@ void PlantArchitecture::initializeAsparagusShoots() {
     phytomer_parameters.peduncle.length_segments = 6;
     phytomer_parameters.peduncle.radial_subdivisions = 6;
 
-    phytomer_parameters.inflorescence.flowers_per_rachis.uniformDistribution(1, 3);
+    phytomer_parameters.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);
     phytomer_parameters.inflorescence.flower_offset = 0.;
-    phytomer_parameters.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters.inflorescence.pitch.uniformDistribution(50, 70);
     phytomer_parameters.inflorescence.roll.uniformDistribution(-20, 20);
     phytomer_parameters.inflorescence.flower_prototype_scale = 0.015;
@@ -378,7 +549,8 @@ void PlantArchitecture::initializeAsparagusShoots() {
     shoot_parameters.phyllochron = 1;
 //    shoot_parameters.leaf_flush_count = 1; (default)
     shoot_parameters.elongation_rate = 0.15;
-    shoot_parameters.girth_growth_rate = 0.00005;
+//    shoot_parameters.girth_growth_rate = 0.00005;
+    shoot_parameters.girth_area_factor = 30;
     shoot_parameters.vegetative_bud_break_time = 5;
     shoot_parameters.vegetative_bud_break_probability = 0.25;
 //    shoot_parameters.max_terminal_floral_buds = 0; (default)
@@ -394,20 +566,20 @@ void PlantArchitecture::initializeAsparagusShoots() {
 
 }
 
-uint PlantArchitecture::buildAsparagusPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildAsparagusPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize asparagus plant shoots
         initializeAsparagusShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0003, 0.015, 1, 0.1, 0.1, "main");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, -1, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, -1, 5, 100, false);
 
     return plantID;
 
@@ -441,7 +613,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     phytomer_parameters_bindweed.leaf.prototype_scale = 0.04;
 
     phytomer_parameters_bindweed.peduncle.length = 0.001;
-    phytomer_parameters_bindweed.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_bindweed.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_bindweed.inflorescence.pitch = -90.f;
     phytomer_parameters_bindweed.inflorescence.flower_prototype_function = BindweedFlowerPrototype;
     phytomer_parameters_bindweed.inflorescence.flower_prototype_scale = 0.03;
@@ -456,7 +628,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_primary.internode_radius_initial = 0.001;
     shoot_parameters_primary.phyllochron = 1;
     shoot_parameters_primary.elongation_rate = 0.25;
-    shoot_parameters_primary.girth_growth_rate = 0.;
+    shoot_parameters_primary.girth_area_factor = 0;
     shoot_parameters_primary.internode_length_max = 0.03;
     shoot_parameters_primary.internode_length_decay_rate = 0;
     shoot_parameters_primary.insertion_angle_tip.uniformDistribution(50, 80);
@@ -480,7 +652,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_base.internode_radius_initial = 0.01;
     shoot_parameters_base.phyllochron = 1;
     shoot_parameters_base.elongation_rate = 0.25;
-    shoot_parameters_base.girth_growth_rate = 0.;
+    shoot_parameters_base.girth_area_factor = 0.f;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.01;
     shoot_parameters_base.internode_length_decay_rate = 0;
@@ -502,20 +674,20 @@ void PlantArchitecture::initializeBindweedShoots() {
 
 }
 
-uint PlantArchitecture::buildBindweedPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildBindweedPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize bindweed plant shoots
         initializeBindweedShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0.f, 0.f), 0.001, 0.001, 1, 1, 0, "base_bindweed");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 7, 1000, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 7, 1000, 5, 100, false);
 
     return plantID;
 
@@ -534,7 +706,7 @@ void PlantArchitecture::initializeBeanShoots() {
 
     phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
     phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(30,70);
-    phytomer_parameters_trifoliate.petiole.radius = 0.003;
+    phytomer_parameters_trifoliate.petiole.radius = 0.0025;
     phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.12,0.16);
     phytomer_parameters_trifoliate.petiole.taper = 0.25;
     phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-100,200);
@@ -543,27 +715,26 @@ void PlantArchitecture::initializeBeanShoots() {
     phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;
 
     phytomer_parameters_trifoliate.leaf.leaves_per_petiole = 3;
-    phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 10);
+    phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 20);
     phytomer_parameters_trifoliate.leaf.yaw = 10;
     phytomer_parameters_trifoliate.leaf.roll = -15;
     phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.2;
     phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
     phytomer_parameters_trifoliate.leaf.prototype_function = BeanLeafPrototype_trifoliate;
-    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.11,0.13);
-    phytomer_parameters_trifoliate.leaf.subdivisions = 10;
+    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09,0.11);
+    phytomer_parameters_trifoliate.leaf.subdivisions = 12;
     phytomer_parameters_trifoliate.leaf.unique_prototypes = 5;
 
     phytomer_parameters_trifoliate.peduncle.length = 0.04;
-    phytomer_parameters_trifoliate.peduncle.radius = 0.001;
+    phytomer_parameters_trifoliate.peduncle.radius = 0.00075;
     phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 40);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
     phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(-500, 500);
     phytomer_parameters_trifoliate.peduncle.length_segments = 1;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
-    phytomer_parameters_trifoliate.inflorescence.flowers_per_rachis.uniformDistribution(1, 4);
+    phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle.uniformDistribution(1, 4);
     phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.2;
-    phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.015;
@@ -579,7 +750,7 @@ void PlantArchitecture::initializeBeanShoots() {
     phytomer_parameters_unifoliate.petiole.petioles_per_internode = 2;
     phytomer_parameters_unifoliate.petiole.length = 0.001;
     phytomer_parameters_unifoliate.petiole.radius = 0.0004;
-    phytomer_parameters_unifoliate.petiole.pitch.uniformDistribution(60,80);
+    phytomer_parameters_unifoliate.petiole.pitch.uniformDistribution(50,70);
     phytomer_parameters_unifoliate.leaf.leaves_per_petiole = 1;
     phytomer_parameters_unifoliate.leaf.prototype_scale = 0.02;
     phytomer_parameters_unifoliate.leaf.pitch.uniformDistribution(-10, 10);
@@ -606,9 +777,9 @@ void PlantArchitecture::initializeBeanShoots() {
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
     shoot_parameters_trifoliate.elongation_rate = 0.1;
-    shoot_parameters_trifoliate.girth_growth_rate = 0.0003;
+    shoot_parameters_trifoliate.girth_area_factor = 25.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
-    shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.25;
+    shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.2;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
     shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.8,1.0);
     shoot_parameters_trifoliate.fruit_set_probability = 0.4;
@@ -621,6 +792,7 @@ void PlantArchitecture::initializeBeanShoots() {
 
     ShootParameters shoot_parameters_unifoliate = shoot_parameters_trifoliate;
     shoot_parameters_unifoliate.phytomer_parameters = phytomer_parameters_unifoliate;
+    shoot_parameters_unifoliate.phytomer_parameters.phytomer_creation_function = nullptr;
     shoot_parameters_unifoliate.max_nodes = 1;
     shoot_parameters_unifoliate.vegetative_bud_break_probability = 0;
     shoot_parameters_unifoliate.flower_bud_break_probability = 0;
@@ -635,14 +807,14 @@ void PlantArchitecture::initializeBeanShoots() {
 
 }
 
-uint PlantArchitecture::buildBeanPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildBeanPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize bean plant shoots
         initializeBeanShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     AxisRotation base_rotation = make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI));
     uint uID_unifoliate = addBaseStemShoot(plantID, 1, base_rotation, 0.0005, 0.01, 0.01, 0.01, 0, "unifoliate");
@@ -651,7 +823,7 @@ uint PlantArchitecture::buildBeanPlant(const helios::vec3 &base_position, float 
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 15, 3, 3, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 15, 3, 3, 5, 100, false);
 
     return plantID;
 
@@ -694,7 +866,7 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     shoot_parameters_base.internode_radius_max = 0.001;
     shoot_parameters_base.phyllochron = 1;
     shoot_parameters_base.elongation_rate = 0.2;
-    shoot_parameters_base.girth_growth_rate = 0.0002;
+    shoot_parameters_base.girth_area_factor = 20.f;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.0015;
     shoot_parameters_base.internode_length_decay_rate = 0;
@@ -707,20 +879,20 @@ void PlantArchitecture::initializeCheeseweedShoots() {
 
 }
 
-uint PlantArchitecture::buildCheeseweedPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildCheeseweedPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize cheeseweed plant shoots
         initializeCheeseweedShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0.f, 0.f), 0.0001, 0.0025, 0.1, 0.1, 0, "base");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 1000, 3, 1000, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 1000, 3, 1000, 5, 100, false);
 
     return plantID;
 
@@ -769,14 +941,13 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.peduncle.length_segments = 6;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
-    phytomer_parameters_trifoliate.inflorescence.flowers_per_rachis = 3;//.uniformDistribution(1, 3);
+    phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle = 3;//.uniformDistribution(1, 3);
     phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.;
-    phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.015;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
-    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.02,0.025);
+    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.025,0.03);
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
     phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.,0.5);
 
@@ -814,11 +985,11 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
     shoot_parameters_trifoliate.elongation_rate = 0.1;
-    shoot_parameters_trifoliate.girth_growth_rate = 0.0003;
+    shoot_parameters_trifoliate.girth_area_factor = 20.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.5;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
-    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.1,0.2);
+    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.2,0.3);
     shoot_parameters_trifoliate.fruit_set_probability = 0.5;
 //    shoot_parameters_trifoliate.flowers_require_dormancy = false; (default)
 //    shoot_parameters_trifoliate.growth_requires_dormancy = false; (default)
@@ -842,14 +1013,14 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
 }
 
-uint PlantArchitecture::buildCowpeaPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildCowpeaPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize cowpea plant shoots
         initializeCowpeaShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     AxisRotation base_rotation = make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI));
     uint uID_unifoliate = addBaseStemShoot(plantID, 1, base_rotation, 0.0005, 0.02, 0.01, 0.01, 0, "unifoliate");
@@ -858,7 +1029,417 @@ uint PlantArchitecture::buildCowpeaPlant(const helios::vec3 &base_position, floa
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 16, 3, 3, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 18, 3, 3, 5, 100, false);
+
+    return plantID;
+
+}
+
+void PlantArchitecture::initializeGrapevineVSPShoots() {
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_grapevine(context_ptr->getRandomGenerator());
+
+    phytomer_parameters_grapevine.internode.pitch = 20;
+    phytomer_parameters_grapevine.internode.phyllotactic_angle.uniformDistribution(170, 190);
+    phytomer_parameters_grapevine.internode.color = make_RGBcolor(0.65, 0.52, 0.39);
+    phytomer_parameters_grapevine.internode.length_segments = 3;//1;
+    phytomer_parameters_grapevine.internode.max_floral_buds_per_petiole = 1;
+    phytomer_parameters_grapevine.internode.max_vegetative_buds_per_petiole = 1;
+
+    phytomer_parameters_grapevine.petiole.petioles_per_internode = 1;
+    phytomer_parameters_grapevine.petiole.color = make_RGBcolor(0.65, 0.52, 0.39);
+    phytomer_parameters_grapevine.petiole.pitch.uniformDistribution(45, 70);
+    phytomer_parameters_grapevine.petiole.radius = 0.0025;
+    phytomer_parameters_grapevine.petiole.length = 0.1;
+    phytomer_parameters_grapevine.petiole.taper = 0;
+    phytomer_parameters_grapevine.petiole.curvature = 0;
+    phytomer_parameters_grapevine.petiole.length_segments = 1;
+
+    phytomer_parameters_grapevine.leaf.leaves_per_petiole = 1;
+    phytomer_parameters_grapevine.leaf.pitch.uniformDistribution(-110, -80);
+    phytomer_parameters_grapevine.leaf.yaw.uniformDistribution(-20, 20);
+    phytomer_parameters_grapevine.leaf.roll.uniformDistribution(-5, 5);
+    phytomer_parameters_grapevine.leaf.prototype_function = GrapevineLeafPrototype;
+    phytomer_parameters_grapevine.leaf.prototype_scale = 0.2;
+    phytomer_parameters_grapevine.leaf.subdivisions = 5;
+    phytomer_parameters_grapevine.leaf.unique_prototypes = 10;
+
+    phytomer_parameters_grapevine.peduncle.length = 0.08;
+    phytomer_parameters_grapevine.peduncle.pitch.uniformDistribution(50, 90);
+    phytomer_parameters_grapevine.peduncle.color = make_RGBcolor(0.32, 0.05, 0.13);
+
+    phytomer_parameters_grapevine.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_grapevine.inflorescence.pitch = 0;
+//    phytomer_parameters_grapevine.inflorescence.flower_prototype_function = GrapevineFlowerPrototype;
+    phytomer_parameters_grapevine.inflorescence.flower_prototype_scale = 0.04;
+//    phytomer_parameters_grapevine.inflorescence.fruit_prototype_function = GrapevineFruitPrototype;
+    phytomer_parameters_grapevine.inflorescence.fruit_prototype_scale = 0.04;
+    phytomer_parameters_grapevine.inflorescence.fruit_gravity_factor_fraction = 0.9;
+
+    phytomer_parameters_grapevine.phytomer_creation_function = GrapevinePhytomerCreationFunction;
+//    phytomer_parameters_grapevine.phytomer_callback_function = GrapevinePhytomerCallbackFunction;
+
+    // ---- Shoot Parameters ---- //
+
+    ShootParameters shoot_parameters_main(context_ptr->getRandomGenerator());
+    shoot_parameters_main.phytomer_parameters = phytomer_parameters_grapevine;
+    shoot_parameters_main.vegetative_bud_break_probability = 0.1;
+    shoot_parameters_main.vegetative_bud_break_time = 1;
+    shoot_parameters_main.phyllochron = 0.5;
+    shoot_parameters_main.elongation_rate = 0.15;
+    shoot_parameters_main.girth_area_factor = 4.f;
+    shoot_parameters_main.gravitropic_curvature = 300;
+    shoot_parameters_main.tortuosity = 20;
+    shoot_parameters_main.internode_length_max.uniformDistribution(0.075,0.1);
+    shoot_parameters_main.internode_length_decay_rate = 0;
+    shoot_parameters_main.insertion_angle_tip = 45;
+    shoot_parameters_main.insertion_angle_decay_rate = 0;
+    shoot_parameters_main.internode_radius_initial = 0.003;
+    shoot_parameters_main.internode_radius_max = 0.02;
+    shoot_parameters_main.flowers_require_dormancy = false;
+    shoot_parameters_main.growth_requires_dormancy = false;
+    shoot_parameters_main.determinate_shoot_growth = false;
+    shoot_parameters_main.max_terminal_floral_buds = 0;
+    shoot_parameters_main.flower_bud_break_probability = 0.5;
+    shoot_parameters_main.fruit_set_probability = 0.2;
+    shoot_parameters_main.max_nodes = 30;
+    shoot_parameters_main.base_roll = 90;
+    shoot_parameters_main.base_yaw = 0;
+
+    ShootParameters shoot_parameters_cane = shoot_parameters_main;
+//    shoot_parameters_cane.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    shoot_parameters_cane.phytomer_parameters.internode.pitch = 0;
+    shoot_parameters_cane.phytomer_parameters.internode.radial_subdivisions = 15;
+    shoot_parameters_cane.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
+    shoot_parameters_cane.phytomer_parameters.internode.phyllotactic_angle = 0;
+    shoot_parameters_cane.internode_radius_max = 0.1;
+    shoot_parameters_cane.insertion_angle_tip.uniformDistribution(60, 120);
+    shoot_parameters_cane.max_nodes = 9;
+    shoot_parameters_cane.tortuosity = 1.5;
+    shoot_parameters_cane.gravitropic_curvature = 10;
+    shoot_parameters_cane.vegetative_bud_break_probability = 1.0;
+    shoot_parameters_cane.defineChildShootTypes({"grapevine_shoot"},{1.f});
+
+    ShootParameters shoot_parameters_trunk = shoot_parameters_main;
+    shoot_parameters_trunk.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 25;
+    shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
+    shoot_parameters_trunk.internode_radius_max = 1;
+    shoot_parameters_trunk.phyllochron = 1.25;
+    shoot_parameters_trunk.insertion_angle_tip = 90;
+    shoot_parameters_trunk.max_nodes = 18;
+    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.vegetative_bud_break_probability = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"grapevine_shoot"},{1.f});
+
+    defineShootType("grapevine_trunk", shoot_parameters_trunk);
+    defineShootType("grapevine_cane", shoot_parameters_cane);
+    defineShootType("grapevine_shoot", shoot_parameters_main);
+
+}
+
+uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
+
+    if (shoot_types.empty()) {
+        //automatically initialize redbud plant shoots
+        initializeGrapevineVSPShoots();
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    uint uID_stem = addBaseStemShoot(plantID, 17, make_AxisRotation(context_ptr->randu(0,0.05*M_PI), 0, 0), 0.04, 0.05, 1, 1, 0.1, "grapevine_trunk");
+    //appendPhytomerToShoot( plantID, uID_stem, getCurrentShootParameters("grapevine_trunk").phytomer_parameters, 1e-3, 0.1, 1, 1 );
+
+    uint uID_cane_L = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),0,M_PI), 0.015, 0.15, 1, 1, 0.6, "grapevine_cane" );
+    uint uID_cane_R = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),M_PI,M_PI), 0.015, 0.15, 1, 1, 0.6, "grapevine_cane" );
+
+//    makePlantDormant(plantID);
+
+    removeShootLeaves( plantID, uID_stem );
+    removeShootLeaves( plantID, uID_cane_L );
+    removeShootLeaves( plantID, uID_cane_R );
+
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 5, 8, 25, false);
+
+    return plantID;
+
+}
+
+void PlantArchitecture::initializeOliveTreeShoots(){
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_olive(context_ptr->getRandomGenerator());
+
+    phytomer_parameters_olive.internode.pitch = 0;
+    phytomer_parameters_olive.internode.phyllotactic_angle.uniformDistribution(80, 100 );
+    phytomer_parameters_olive.internode.length_segments = 1;
+    phytomer_parameters_olive.internode.image_texture = "plugins/plantarchitecture/assets/textures/OliveBark.jpg";
+    phytomer_parameters_olive.internode.max_floral_buds_per_petiole = 3;
+
+    phytomer_parameters_olive.petiole.petioles_per_internode = 2;
+    phytomer_parameters_olive.petiole.pitch.uniformDistribution(-40,-20);
+    phytomer_parameters_olive.petiole.taper = 0.1;
+    phytomer_parameters_olive.petiole.curvature = 0;
+    phytomer_parameters_olive.petiole.length = 0.01;
+    phytomer_parameters_olive.petiole.radius = 0.0005;
+    phytomer_parameters_olive.petiole.length_segments = 1;
+    phytomer_parameters_olive.petiole.radial_subdivisions = 3;
+    phytomer_parameters_olive.petiole.color = make_RGBcolor(0.61, 0.5, 0.24);
+
+    phytomer_parameters_olive.leaf.leaves_per_petiole = 1;
+    phytomer_parameters_olive.leaf.prototype_function = OliveLeafPrototype;
+    phytomer_parameters_olive.leaf.prototype_scale = 0.07;
+    phytomer_parameters_olive.leaf.unique_prototypes = 1;
+    phytomer_parameters_olive.leaf.subdivisions = 1;
+
+    phytomer_parameters_olive.peduncle.length = 0.065;
+    phytomer_parameters_olive.peduncle.radius = 0.001;
+    phytomer_parameters_olive.peduncle.pitch = 60;
+    phytomer_parameters_olive.peduncle.roll = 0;
+    phytomer_parameters_olive.peduncle.length_segments = 1;
+    phytomer_parameters_olive.peduncle.color = make_RGBcolor(0.7, 0.72, 0.7);
+
+    phytomer_parameters_olive.inflorescence.flowers_per_peduncle = 10;
+    phytomer_parameters_olive.inflorescence.flower_offset = 0.13;
+    phytomer_parameters_olive.inflorescence.pitch.uniformDistribution(80,100);
+    phytomer_parameters_olive.inflorescence.roll.uniformDistribution(0,360);
+    phytomer_parameters_olive.inflorescence.flower_prototype_scale = 0.01;
+//    phytomer_parameters_olive.inflorescence.flower_prototype_function = OliveFlowerPrototype;
+    phytomer_parameters_olive.inflorescence.fruit_prototype_scale = 0.025;
+    phytomer_parameters_olive.inflorescence.fruit_prototype_function = OliveFruitPrototype;
+
+    // ---- Shoot Parameters ---- //
+
+    // Trunk
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_olive;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
+    shoot_parameters_trunk.max_nodes = 20;
+    shoot_parameters_trunk.girth_area_factor = 3.f;
+    shoot_parameters_trunk.internode_radius_initial = 0.01;
+    shoot_parameters_trunk.vegetative_bud_break_probability = 0;
+    shoot_parameters_trunk.vegetative_bud_break_time = 0;
+    shoot_parameters_trunk.tortuosity = 6;
+    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_decay_rate = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"scaffold"},{1});
+
+    // Proleptic shoots
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_olive;
+//    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = OlivePhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = OlivePhytomerCallbackFunction;
+    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.phyllochron = 1.0;
+    shoot_parameters_proleptic.elongation_rate = 0.25;
+    shoot_parameters_proleptic.girth_area_factor = 5.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability = 0.15;
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
+    shoot_parameters_proleptic.leaf_flush_count = 1;
+    shoot_parameters_proleptic.gravitropic_curvature = 450;
+    shoot_parameters_proleptic.tortuosity = 25;
+    shoot_parameters_proleptic.internode_radius_initial = 0.002;
+    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 15, 25);
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 2;
+    shoot_parameters_proleptic.internode_length_max = 0.05;
+    shoot_parameters_proleptic.internode_length_min = 0.03;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
+    shoot_parameters_proleptic.fruit_set_probability = 0.25;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.25;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 4;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.determinate_shoot_growth = false;
+    shoot_parameters_proleptic.defineChildShootTypes({"proleptic"},{1.0});
+
+    // Main scaffolds
+    ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
+    shoot_parameters_scaffold.max_nodes = 12;
+    shoot_parameters_scaffold.gravitropic_curvature = 700;
+    shoot_parameters_scaffold.internode_length_max = 0.04;
+    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.defineChildShootTypes({"proleptic"},{1.0});
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("scaffold", shoot_parameters_scaffold);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+
+}
+
+uint PlantArchitecture::buildOliveTree(const helios::vec3 &base_position) {
+
+    if( shoot_types.empty() ){
+        //automatically initialize almond tree shoots
+        initializeOliveTreeShoots();
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.015, 0.008, 1.f, 1.f, 0, "trunk");
+    appendPhytomerToShoot( plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
+
+    plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
+
+    auto phytomers = plant_instances.at(plantID).shoot_tree.at(uID_trunk)->phytomers;
+    for( const auto & phytomer : phytomers ){
+        phytomer->removeLeaf();
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    uint Nscaffolds = 4;//context_ptr->randu(4,5);
+
+    for( int i=0; i<Nscaffolds; i++ ) {
+        float pitch = context_ptr->randu(deg2rad(30), deg2rad(35));
+        uint uID_shoot = addChildShoot( plantID, uID_trunk, getShootNodeCount(plantID,uID_trunk)-i-1, context_ptr->randu(5, 7), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06, 1.f, 1.f, 0.5, "scaffold", 0);
+
+    }
+
+    makePlantDormant(plantID);
+
+    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 8, 20, true);
+
+    return plantID;
+
+}
+
+void PlantArchitecture::initializePistachioTreeShoots(){
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_pistachio(context_ptr->getRandomGenerator());
+
+    phytomer_parameters_pistachio.internode.pitch = 0;
+    phytomer_parameters_pistachio.internode.phyllotactic_angle.uniformDistribution(160, 200);
+    phytomer_parameters_pistachio.internode.length_segments = 1;
+    phytomer_parameters_pistachio.internode.image_texture = "plugins/plantarchitecture/assets/textures/OliveBark.jpg";
+    phytomer_parameters_pistachio.internode.max_floral_buds_per_petiole = 3;
+
+    phytomer_parameters_pistachio.petiole.petioles_per_internode = 2;
+    phytomer_parameters_pistachio.petiole.pitch.uniformDistribution(-45, -60);
+    phytomer_parameters_pistachio.petiole.taper = 0.1;
+    phytomer_parameters_pistachio.petiole.curvature.uniformDistribution(-800,800);
+    phytomer_parameters_pistachio.petiole.length = 0.075;
+    phytomer_parameters_pistachio.petiole.radius = 0.001;
+    phytomer_parameters_pistachio.petiole.length_segments = 1;
+    phytomer_parameters_pistachio.petiole.radial_subdivisions = 3;
+    phytomer_parameters_pistachio.petiole.color = make_RGBcolor(0.6, 0.6, 0.4);
+
+    phytomer_parameters_pistachio.leaf.leaves_per_petiole = 3;
+    phytomer_parameters_pistachio.leaf.prototype_function = PistachioLeafPrototype;
+    phytomer_parameters_pistachio.leaf.prototype_scale = 0.08;
+    phytomer_parameters_pistachio.leaf.leaflet_offset = 0.3;
+    phytomer_parameters_pistachio.leaf.leaflet_scale = 0.75;
+    phytomer_parameters_pistachio.leaf.pitch.uniformDistribution(-20,20);
+    phytomer_parameters_pistachio.leaf.roll.uniformDistribution(-20,20);
+    phytomer_parameters_pistachio.leaf.unique_prototypes = 5;
+    phytomer_parameters_pistachio.leaf.subdivisions = 3;
+
+    phytomer_parameters_pistachio.peduncle.length = 0.1;
+    phytomer_parameters_pistachio.peduncle.radius = 0.001;
+    phytomer_parameters_pistachio.peduncle.pitch = 60;
+    phytomer_parameters_pistachio.peduncle.roll = 0;
+    phytomer_parameters_pistachio.peduncle.length_segments = 1;
+    phytomer_parameters_pistachio.peduncle.curvature.uniformDistribution(500,900);
+    phytomer_parameters_pistachio.peduncle.color = make_RGBcolor(0.7, 0.72, 0.7);
+
+    phytomer_parameters_pistachio.inflorescence.flowers_per_peduncle = 16;
+    phytomer_parameters_pistachio.inflorescence.flower_offset = 0.08;
+    phytomer_parameters_pistachio.inflorescence.pitch.uniformDistribution(50, 70);
+    phytomer_parameters_pistachio.inflorescence.roll.uniformDistribution(0, 360);
+    phytomer_parameters_pistachio.inflorescence.flower_prototype_scale = 0.025;
+//    phytomer_parameters_pistachio.inflorescence.flower_prototype_function = PistachioFlowerPrototype;
+    phytomer_parameters_pistachio.inflorescence.fruit_prototype_scale = 0.025;
+    phytomer_parameters_pistachio.inflorescence.fruit_prototype_function = PistachioFruitPrototype;
+
+    // ---- Shoot Parameters ---- //
+
+    // Trunk
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_pistachio;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 180;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
+    shoot_parameters_trunk.max_nodes = 20;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
+    shoot_parameters_trunk.internode_radius_initial = 0.01;
+    shoot_parameters_trunk.vegetative_bud_break_probability = 0;
+    shoot_parameters_trunk.vegetative_bud_break_time = 0;
+    shoot_parameters_trunk.tortuosity = 5;
+    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_decay_rate = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"proleptic"},{1});
+
+    // Proleptic shoots
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_pistachio;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = PistachioPhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = PistachioPhytomerCallbackFunction;
+    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.phyllochron = 1;
+    shoot_parameters_proleptic.elongation_rate = 0.25;
+    shoot_parameters_proleptic.girth_area_factor = 10.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability = 0.15;
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
+    shoot_parameters_proleptic.leaf_flush_count = 1;
+    shoot_parameters_proleptic.gravitropic_curvature = 500;
+    shoot_parameters_proleptic.tortuosity = 15;
+    shoot_parameters_proleptic.internode_radius_initial = 0.002;
+    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 45, 55);
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 10;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
+    shoot_parameters_proleptic.internode_length_min = 0.02;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.005;
+    shoot_parameters_proleptic.fruit_set_probability = 0.35;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.35;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 4;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.determinate_shoot_growth = false;
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+
+}
+
+uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
+
+    if( shoot_types.empty() ){
+        //automatically initialize almond tree shoots
+        initializePistachioTreeShoots();
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.015, 0.03, 1.f, 1.f, 0, "trunk");
+    appendPhytomerToShoot( plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
+
+    plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
+
+    auto phytomers = plant_instances.at(plantID).shoot_tree.at(uID_trunk)->phytomers;
+    for( const auto & phytomer : phytomers ){
+        phytomer->removeLeaf();
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    uint Nscaffolds = 4;//context_ptr->randu(4,5);
+
+    for( int i=0; i<Nscaffolds; i++ ) {
+        float pitch = context_ptr->randu(deg2rad(65), deg2rad(80));
+        uint uID_shoot = addChildShoot( plantID, uID_trunk, getShootNodeCount(plantID,uID_trunk)-i-1, 1, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06, 1.f, 1.f, 0.5, "proleptic", 0);
+
+    }
+
+    makePlantDormant(plantID);
+
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 8, 20, false);
 
     return plantID;
 
@@ -895,7 +1476,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     phytomer_parameters_puncturevine.leaf.subdivisions = 3;
 
     phytomer_parameters_puncturevine.peduncle.length = 0.001;
-    phytomer_parameters_puncturevine.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_puncturevine.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_puncturevine.inflorescence.pitch = -90.f;
     phytomer_parameters_puncturevine.inflorescence.flower_prototype_function = PuncturevineFlowerPrototype;
     phytomer_parameters_puncturevine.inflorescence.flower_prototype_scale = 0.006;
@@ -910,7 +1491,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.internode_radius_initial = 0.001;
     shoot_parameters_primary.phyllochron = 1;
     shoot_parameters_primary.elongation_rate = 0.2;
-    shoot_parameters_primary.girth_growth_rate = 0.;
+    shoot_parameters_primary.girth_area_factor = 0.f;
     shoot_parameters_primary.internode_length_max = 0.02;
     shoot_parameters_primary.internode_length_decay_rate = 0;
     shoot_parameters_primary.insertion_angle_tip.uniformDistribution(50, 80);
@@ -934,7 +1515,6 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_base.internode_radius_initial = 0.001;
     shoot_parameters_base.phyllochron = 1;
     shoot_parameters_base.elongation_rate = 0.25;
-    shoot_parameters_base.girth_growth_rate = 0.;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.01;
     shoot_parameters_base.internode_length_decay_rate = 0;
@@ -956,20 +1536,20 @@ void PlantArchitecture::initializePuncturevineShoots() {
 
 }
 
-uint PlantArchitecture::buildPuncturevinePlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildPuncturevinePlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize puncturevine plant shoots
         initializePuncturevineShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0.f, 0.f), 0.001, 0.001, 1, 1, 0, "base_puncturevine");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 7, 1000, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 7, 1000, 5, 100, false);
 
     return plantID;
 
@@ -1010,7 +1590,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     phytomer_parameters_redbud.peduncle.pitch.uniformDistribution(50,90);
     phytomer_parameters_redbud.peduncle.color = make_RGBcolor(0.32, 0.05, 0.13);
 
-    phytomer_parameters_redbud.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_redbud.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_redbud.inflorescence.pitch = 0;
     phytomer_parameters_redbud.inflorescence.flower_prototype_function = RedbudFlowerPrototype;
     phytomer_parameters_redbud.inflorescence.flower_prototype_scale = 0.04;
@@ -1029,7 +1609,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.vegetative_bud_break_time = 1;
     shoot_parameters_main.phyllochron = 1.5;
     shoot_parameters_main.elongation_rate = 0.17;
-    shoot_parameters_main.girth_growth_rate = 0.00045;
+    shoot_parameters_main.girth_area_factor = 3.f;
     shoot_parameters_main.gravitropic_curvature = 300;
     shoot_parameters_main.tortuosity = 20;
     shoot_parameters_main.internode_length_max = 0.04;
@@ -1060,6 +1640,27 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
 
     defineShootType("eastern_redbud_trunk", shoot_parameters_trunk);
     defineShootType("eastern_redbud_shoot", shoot_parameters_main);
+
+}
+
+uint PlantArchitecture::buildEasternRedbudPlant(const helios::vec3 &base_position) {
+
+    if (shoot_types.empty()) {
+        //automatically initialize redbud plant shoots
+        initializeEasternRedbudShoots();
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    uint uID_stem = addBaseStemShoot(plantID, 16, make_AxisRotation(context_ptr->randu(0,0.1*M_PI), context_ptr->randu(0,2*M_PI), context_ptr->randu(0,2*M_PI)), 0.0075, 0.05, 1, 1, 0.4, "eastern_redbud_trunk");
+
+    makePlantDormant(plantID);
+
+    removeShootLeaves( plantID, uID_stem );
+
+    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 3, 12, false);
+
+    return plantID;
 
 }
 
@@ -1101,7 +1702,7 @@ void PlantArchitecture::initializeRomaineLettuceShoots() {
     shoot_parameters_mainstem.internode_radius_initial = 0.01;
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.15;
-    shoot_parameters_mainstem.girth_growth_rate = 0;
+    shoot_parameters_mainstem.girth_area_factor = 0.f;
     shoot_parameters_mainstem.gravitropic_curvature = 10;
     shoot_parameters_mainstem.internode_length_max = 0.001;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
@@ -1115,41 +1716,20 @@ void PlantArchitecture::initializeRomaineLettuceShoots() {
 
 }
 
-uint PlantArchitecture::buildRomaineLettucePlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildRomaineLettucePlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize sugarbeet plant shoots
         initializeSugarbeetShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 3, make_AxisRotation(context_ptr->randu(0.f, 0.03f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.25f * M_PI), 0.005, 0.001, 1, 1, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 1000, 10, 60, 5, 100);
-
-    return plantID;
-
-}
-
-uint PlantArchitecture::buildEasternRedbudPlant(const helios::vec3 &base_position, float age) {
-
-    if (shoot_types.empty()) {
-        //automatically initialize redbud plant shoots
-        initializeEasternRedbudShoots();
-    }
-
-    uint plantID = addPlantInstance(base_position, age);
-
-    uint uID_stem = addBaseStemShoot(plantID, 16, make_AxisRotation(context_ptr->randu(0,0.1*M_PI), context_ptr->randu(0,2*M_PI), context_ptr->randu(0,2*M_PI)), 0.0075, 0.05, 1, 1, 0.4, "eastern_redbud_trunk");
-
-    makePlantDormant(plantID);
-
-    removeShootLeaves( plantID, uID_stem );
-
-    setPlantPhenologicalThresholds(plantID, 0, -1, 1, 3, 3, 12);
+    setPlantPhenologicalThresholds(plantID, 0, 1000, 10, 60, 5, 100, false);
 
     return plantID;
 
@@ -1191,7 +1771,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.peduncle.color = phytomer_parameters_sorghum.internode.color;
     phytomer_parameters_sorghum.peduncle.radial_subdivisions = 10;
 
-    phytomer_parameters_sorghum.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_sorghum.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_sorghum.inflorescence.pitch = 0;
     phytomer_parameters_sorghum.inflorescence.roll = 0;
     phytomer_parameters_sorghum.inflorescence.fruit_prototype_scale = 0.16;
@@ -1208,7 +1788,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.internode_radius_initial = 0.003;
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.15;
-    shoot_parameters_mainstem.girth_growth_rate = 0.0015;
+    shoot_parameters_mainstem.girth_area_factor = 5.f;
     shoot_parameters_mainstem.internode_radius_max = 0.015;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000,-400);
     shoot_parameters_mainstem.internode_length_max = 0.26;
@@ -1226,20 +1806,20 @@ void PlantArchitecture::initializeSorghumShoots() {
 
 }
 
-uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize sorghum plant shoots
         initializeSorghumShoots();
     }
 
-    uint plantID = addPlantInstance(base_position - make_vec3(0,0,0.025), age);
+    uint plantID = addPlantInstance(base_position - make_vec3(0,0,0.025), 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.075f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003, 0.06, 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 2, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 2, 5, 100, false);
 
     return plantID;
 
@@ -1285,9 +1865,8 @@ void PlantArchitecture::initializeSoybeanShoots() {
     phytomer_parameters_trifoliate.peduncle.length_segments = 1;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
-    phytomer_parameters_trifoliate.inflorescence.flowers_per_rachis.uniformDistribution(1, 4);
+    phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle.uniformDistribution(1, 4);
     phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.2;
-    phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.015;
@@ -1330,7 +1909,7 @@ void PlantArchitecture::initializeSoybeanShoots() {
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
     shoot_parameters_trifoliate.elongation_rate = 0.15;
-    shoot_parameters_trifoliate.girth_growth_rate = 0.0003;
+    shoot_parameters_trifoliate.girth_area_factor = 25.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.25;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
@@ -1468,14 +2047,14 @@ void PlantArchitecture::initializeSoybeanShoots() {
 
 }
 
-uint PlantArchitecture::buildSoybeanPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildSoybeanPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize bean plant shoots
         initializeSoybeanShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     AxisRotation base_rotation = make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI));
     uint uID_unifoliate = addBaseStemShoot(plantID, 1, base_rotation, 0.0005, 0.01, 0.01, 0.01, 0, "unifoliate");
@@ -1484,7 +2063,7 @@ uint PlantArchitecture::buildSoybeanPlant(const helios::vec3 &base_position, flo
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 15, 3, 3, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 15, 3, 3, 5, 100, false);
 
     return plantID;
 
@@ -1530,9 +2109,8 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.peduncle.radial_subdivisions = 6;
     phytomer_parameters.peduncle.color = phytomer_parameters.petiole.color;
 
-    phytomer_parameters.inflorescence.flowers_per_rachis.uniformDistribution(1,3);
+    phytomer_parameters.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);
     phytomer_parameters.inflorescence.flower_offset = 0.2;
-    phytomer_parameters.inflorescence.flower_arrangement_pattern = "alternate";
     phytomer_parameters.inflorescence.pitch = 70;
     phytomer_parameters.inflorescence.roll = 90;
     phytomer_parameters.inflorescence.flower_prototype_scale = 0.04;
@@ -1562,7 +2140,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     shoot_parameters.phyllochron = 1.;
     shoot_parameters.leaf_flush_count = 1;
     shoot_parameters.elongation_rate = 0.1;
-    shoot_parameters.girth_growth_rate = 0.0003;
+    shoot_parameters.girth_area_factor = 10.f;
     shoot_parameters.vegetative_bud_break_time = 3;
     shoot_parameters.vegetative_bud_break_probability = 0.25;
     shoot_parameters.flower_bud_break_probability = 1;
@@ -1577,21 +2155,21 @@ void PlantArchitecture::initializeStrawberryShoots() {
 
 }
 
-uint PlantArchitecture::buildStrawberryPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildStrawberryPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize strawberry plant shoots
         initializeStrawberryShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     AxisRotation base_rotation = make_AxisRotation(0, context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI));
     uint uID_stem = addBaseStemShoot(plantID, 1, base_rotation, 0.001, 0.004, 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 10, 3, 1, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 10, 3, 1, 100, false);
 
     return plantID;
 
@@ -1633,7 +2211,7 @@ void PlantArchitecture::initializeSugarbeetShoots() {
     shoot_parameters_mainstem.internode_radius_initial = 0.005;
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.25;
-    shoot_parameters_mainstem.girth_growth_rate = 0;
+    shoot_parameters_mainstem.girth_area_factor = 20.f;
     shoot_parameters_mainstem.gravitropic_curvature = 10;
     shoot_parameters_mainstem.internode_length_max = 0.001;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
@@ -1647,20 +2225,20 @@ void PlantArchitecture::initializeSugarbeetShoots() {
 
 }
 
-uint PlantArchitecture::buildSugarbeetPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildSugarbeetPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize sugarbeet plant shoots
         initializeSugarbeetShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 3, make_AxisRotation(context_ptr->randu(0.f, 0.01f * M_PI), 0.f * context_ptr->randu(0.f, 2.f * M_PI), 0.25f * M_PI), 0.005, 0.001, 1, 1, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 1000, 10, 60, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, 1000, 10, 60, 5, 100, false);
 
     return plantID;
 
@@ -1680,7 +2258,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.petiole.petioles_per_internode = 1;
     phytomer_parameters.petiole.pitch.uniformDistribution(45,60);
     phytomer_parameters.petiole.radius = 0.002;
-    phytomer_parameters.petiole.length = 0.3;
+    phytomer_parameters.petiole.length = 0.2;
     phytomer_parameters.petiole.taper = 0.15;
     phytomer_parameters.petiole.curvature.uniformDistribution(-150,-50);
     phytomer_parameters.petiole.color = phytomer_parameters.internode.color;
@@ -1706,9 +2284,8 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.peduncle.length_segments = 5;
     phytomer_parameters.peduncle.radial_subdivisions = 8;
 
-    phytomer_parameters.inflorescence.flowers_per_rachis = 8;
+    phytomer_parameters.inflorescence.flowers_per_peduncle = 8;
     phytomer_parameters.inflorescence.flower_offset = 0.15;
-    phytomer_parameters.inflorescence.flower_arrangement_pattern = "opposite";
     phytomer_parameters.inflorescence.pitch = 90;
     phytomer_parameters.inflorescence.roll.uniformDistribution(-30,30);
     phytomer_parameters.inflorescence.flower_prototype_scale = 0.03;
@@ -1739,7 +2316,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     shoot_parameters.phyllochron = 1;
     shoot_parameters.leaf_flush_count = 1;
     shoot_parameters.elongation_rate = 0.1;
-    shoot_parameters.girth_growth_rate = 0.0002;
+    shoot_parameters.girth_area_factor = 3.f;
     shoot_parameters.vegetative_bud_break_time = 3;
     shoot_parameters.vegetative_bud_break_probability = 0.6;
     shoot_parameters.flower_bud_break_probability = 0.5;
@@ -1754,21 +2331,21 @@ void PlantArchitecture::initializeTomatoShoots() {
 
 }
 
-uint PlantArchitecture::buildTomatoPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildTomatoPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize tomato plant shoots
         initializeTomatoShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, age);
+    uint plantID = addPlantInstance(base_position, 0);
 
     AxisRotation base_rotation = make_AxisRotation(0, context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI));
     uint uID_stem = addBaseStemShoot(plantID, 1, base_rotation, 0.002, 0.04, 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, 10, 3, 2, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, 10, 3, 2, 100, false);
 
     return plantID;
 
@@ -1811,7 +2388,7 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.peduncle.curvature = -200;
     phytomer_parameters_wheat.peduncle.radial_subdivisions = 6;
 
-    phytomer_parameters_wheat.inflorescence.flowers_per_rachis = 1;
+    phytomer_parameters_wheat.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_wheat.inflorescence.pitch = 0;
     phytomer_parameters_wheat.inflorescence.roll = 0;
     phytomer_parameters_wheat.inflorescence.fruit_prototype_scale = 0.1;
@@ -1828,7 +2405,7 @@ void PlantArchitecture::initializeWheatShoots() {
     shoot_parameters_mainstem.internode_radius_initial = 0.001;
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.15;
-    shoot_parameters_mainstem.girth_growth_rate = 0.0015;
+    shoot_parameters_mainstem.girth_area_factor = 7.f;
     shoot_parameters_mainstem.internode_radius_max = 0.0025;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-2000,-800);
     shoot_parameters_mainstem.internode_length_max = 0.025;
@@ -1846,20 +2423,20 @@ void PlantArchitecture::initializeWheatShoots() {
 
 }
 
-uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position) {
 
     if (shoot_types.empty()) {
         //automatically initialize wheat plant shoots
         initializeWheatShoots();
     }
 
-    uint plantID = addPlantInstance(base_position - make_vec3(0,0,0.025), age);
+    uint plantID = addPlantInstance(base_position - make_vec3(0,0,0.025), 0);
 
     uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.1f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.001, 0.025, 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 2, 5, 100);
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 2, 5, 100, false);
 
     return plantID;
 

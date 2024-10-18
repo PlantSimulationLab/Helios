@@ -82,6 +82,9 @@ public:
     }
 
     void uniformDistribution( float minval, float maxval ){
+        if( minval>maxval ){
+            throw (std::runtime_error("ERROR (PlantArchitecture): RandomParameter_float::uniformDistribution() - minval must be less than or equal to maxval."));
+        }
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
         sampled = false;
@@ -169,8 +172,17 @@ public:
     }
 
     void uniformDistribution( int minval, int maxval ){
+        if( minval>maxval ){
+            throw (std::runtime_error("ERROR (PlantArchitecture): RandomParameter_int::uniformDistribution() - minval must be less than or equal to maxval."));
+        }
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
+        sampled = false;
+    }
+
+    void discreteValues( const std::vector<int> &values ){
+        distribution = "discretevalues";
+        distribution_parameters = values;
         sampled = false;
     }
 
@@ -190,6 +202,9 @@ public:
             if (distribution == "uniform") {
                 std::uniform_int_distribution<> unif_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
                 constval = unif_distribution(*generator);
+            }else if (distribution == "discretevalues") {
+                std::uniform_int_distribution<> unif_distribution(0,distribution_parameters.size()-1);
+                constval = distribution_parameters.at(unif_distribution(*generator));
             }
         }
         return constval;
@@ -425,9 +440,8 @@ private:
     };
 
     struct InflorescenceParameters {
-        RandomParameter_int flowers_per_rachis;
+        RandomParameter_int flowers_per_peduncle;
         RandomParameter_float flower_offset;
-        std::string flower_arrangement_pattern;
         RandomParameter_float pitch;
         RandomParameter_float roll;
         RandomParameter_float flower_prototype_scale;
@@ -438,11 +452,10 @@ private:
         uint unique_prototypes;
 
         InflorescenceParameters &operator=(const InflorescenceParameters &a) {
-            this->flowers_per_rachis = a.flowers_per_rachis;
-            this->flowers_per_rachis.resample();
+            this->flowers_per_peduncle = a.flowers_per_peduncle;
+            this->flowers_per_peduncle.resample();
             this->flower_offset = a.flower_offset;
             this->flower_offset.resample();
-            this->flower_arrangement_pattern = a.flower_arrangement_pattern;
             this->pitch = a.pitch;
             this->pitch.resample();
             this->roll = a.roll;
@@ -519,6 +532,10 @@ struct ShootParameters{
     // Radius of phytomer internodes when they are first created
     RandomParameter_float internode_radius_initial;
 
+    RandomParameter_float internode_radius_max; //meters
+
+    RandomParameter_float girth_area_factor; //cm^2 branch area / m^2 downstream leaf area
+
     // Insertion angle of the most apical child shoot bud at the time it breaks
     RandomParameter_float insertion_angle_tip;
     RandomParameter_float insertion_angle_decay_rate;
@@ -540,9 +557,6 @@ struct ShootParameters{
     uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
 
     RandomParameter_float elongation_rate; //length/day
-
-    RandomParameter_float girth_growth_rate; //1/day
-    RandomParameter_float internode_radius_max; //meters
 
     // Probability that bud with this shoot type will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability;
@@ -578,8 +592,8 @@ struct ShootParameters{
         this->leaf_flush_count = a.leaf_flush_count;
         this->elongation_rate = a.elongation_rate;
         this->elongation_rate.resample();
-        this->girth_growth_rate = a.girth_growth_rate;
-        this->girth_growth_rate.resample();
+        this->girth_area_factor = a.girth_area_factor;
+        this->girth_area_factor.resample();
         this->internode_radius_max = a.internode_radius_max;
         this->internode_radius_max.resample();
         this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
@@ -665,6 +679,8 @@ public:
     float getInternodeRadius( float stem_fraction ) const;
 
     bool hasLeaf() const;
+
+    float calculateDownstreamLeafArea() const;
 
     // ---- modify the phytomer ---- //
 
@@ -838,6 +854,8 @@ struct Shoot {
 
     helios::vec3 getShootAxisVector( float shoot_fraction ) const;
 
+    float sumShootLeafArea( uint start_node_index = 0 ) const;
+
     uint current_node_number;
 
     helios::vec3 base_position;
@@ -880,8 +898,8 @@ struct Shoot {
 
     bool build_context_geometry_internode = true;
 
-    //map of node number (key) to ID of shoot child (value)
-    std::map<int,int> childIDs;
+    //map of node number (key) to IDs of shoot children (value)
+    std::map<int,std::vector<int> > childIDs;
 
     ShootParameters shoot_parameters;
 
@@ -911,6 +929,7 @@ struct PlantInstance{
     float dd_to_fruit_set = 0;
     float dd_to_fruit_maturity = 0;
     float dd_to_senescence = 0;
+    bool is_evergreen = false;
 
 };
 
@@ -1027,15 +1046,16 @@ public:
     //! Specify the threshold values for plant phenological stages
     /**
      * \param[in] plantID ID of the plant.
-     * \param[in] time_to_leaf_out Time from dormancy required for leaf out.
+     * \param[in] time_to_dormancy_break Time from last scenescence required for breaking dormancy.
      * \param[in] time_to_flower_initiation Time from emergence/dormancy required to reach flower creation (closed flowers).
      * \param[in] time_to_flower_opening Time from flower initiation to flower opening.
      * \param[in] time_to_fruit_set Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
      * \param[in] time_to_fruit_maturity Time from fruit set date required to reach fruit maturity.
      * \param[in] time_to_senescence Time from emergence/dormancy required to reach senescence.
+     * \param[in] is_evergreen [OPTIONAL] True if the plant is evergreen (i.e., does not lose all leaves during senescence).
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float time_to_leaf_out, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence);
+    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence, bool is_evergreen=false);
 
     void disablePlantPhenology( uint plantID );
 
@@ -1174,9 +1194,7 @@ public:
 
     void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
 
-    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change, bool update_context_geometry = true);
-
-    void updateShootInternodeLength(uint plantID, uint shootID, float dt, bool update_context_geometry = true );
+    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry);
 
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
@@ -1205,6 +1223,13 @@ public:
     float getShootTaper( uint plantID, uint shootID ) const;
 
     helios::vec3 getPlantBasePosition(uint plantID) const;
+
+    //! Sum the one-sided leaf area of all leaves in the plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Total one-sided leaf area of all leaves in the plant.
+     */
+    float sumPlantLeafArea(uint plantID) const;
 
     //! Get object IDs for all organs objects for a given plant
     /**
@@ -1345,63 +1370,79 @@ protected:
 
     void initializeAlmondTreeShoots();
 
-    uint buildAlmondTree( const helios::vec3 &base_position, float age );
+    uint buildAlmondTree( const helios::vec3 &base_position );
+
+    void initializeAppleTreeShoots();
+
+    uint buildAppleTree( const helios::vec3 &base_position );
 
     void initializeAsparagusShoots();
 
-    uint buildAsparagusPlant( const helios::vec3 &base_position, float age );
+    uint buildAsparagusPlant( const helios::vec3 &base_position );
 
     void initializeBindweedShoots();
 
-    uint buildBindweedPlant( const helios::vec3 &base_position, float age );
+    uint buildBindweedPlant( const helios::vec3 &base_position );
 
     void initializeBeanShoots();
 
-    uint buildBeanPlant( const helios::vec3 &base_position, float age );
+    uint buildBeanPlant( const helios::vec3 &base_position );
 
     void initializeCheeseweedShoots();
 
-    uint buildCheeseweedPlant( const helios::vec3 &base_position, float age );
+    uint buildCheeseweedPlant( const helios::vec3 &base_position );
 
     void initializeCowpeaShoots();
 
-    uint buildCowpeaPlant( const helios::vec3 &base_position, float age );
+    uint buildCowpeaPlant( const helios::vec3 &base_position );
+
+    void initializeGrapevineVSPShoots();
+
+    uint buildGrapevineVSP( const helios::vec3 &base_position );
+
+    void initializeOliveTreeShoots();
+
+    uint buildOliveTree( const helios::vec3 &base_position );
+
+    void initializePistachioTreeShoots();
+
+    uint buildPistachioTree( const helios::vec3 &base_position );
 
     void initializePuncturevineShoots();
 
-    uint buildPuncturevinePlant( const helios::vec3 &base_position, float age );
+    uint buildPuncturevinePlant( const helios::vec3 &base_position );
 
     void initializeEasternRedbudShoots();
 
-    uint buildEasternRedbudPlant( const helios::vec3 &base_position, float age );
+    uint buildEasternRedbudPlant( const helios::vec3 &base_position );
 
     void initializeRomaineLettuceShoots();
 
-    uint buildRomaineLettucePlant( const helios::vec3 &base_position, float age );
+    uint buildRomaineLettucePlant( const helios::vec3 &base_position );
 
     void initializeSoybeanShoots();
 
-    uint buildSoybeanPlant( const helios::vec3 &base_position, float age );
+    uint buildSoybeanPlant( const helios::vec3 &base_position );
 
     void initializeSorghumShoots();
 
-    uint buildSorghumPlant( const helios::vec3 &base_position, float age );
+    uint buildSorghumPlant( const helios::vec3 &base_position );
 
     void initializeStrawberryShoots();
 
-    uint buildStrawberryPlant( const helios::vec3 &base_position, float age );
+    uint buildStrawberryPlant( const helios::vec3 &base_position );
 
     void initializeSugarbeetShoots();
 
-    uint buildSugarbeetPlant( const helios::vec3 &base_position, float age );
+    uint buildSugarbeetPlant( const helios::vec3 &base_position );
 
     void initializeTomatoShoots();
 
-    uint buildTomatoPlant( const helios::vec3 &base_position, float age );
+    uint buildTomatoPlant( const helios::vec3 &base_position );
 
     void initializeWheatShoots();
 
-    uint buildWheatPlant( const helios::vec3 &base_position, float age );
+    uint buildWheatPlant( const helios::vec3 &base_position );
 
 
 };

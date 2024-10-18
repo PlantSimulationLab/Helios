@@ -352,10 +352,11 @@ public:
   float y;
 
   //! Normalize vector components such that the magnitude is unity.
-  void normalize(){
+  vec2 normalize(){
     float mag = sqrt( x*x + y*y );
     x/=mag;
     y/=mag;
+    return {x,y};
   }
 
   //! Compute the vector magnitude 
@@ -510,11 +511,12 @@ public:
   float z;
 
   //! Normalize vector components such that the magnitude is unity.
-  void normalize(){
+  vec3 normalize(){
     float mag = sqrt( x*x + y*y + z*z );
     x/=mag;
     y/=mag;
     z/=mag;
+    return {x,y,z};
   }
 
   //! Compute the vector magnitude 
@@ -681,12 +683,13 @@ public:
   float w;
 
   //! Normalize vector components such that the magnitude is unity.
-  void normalize(){
+  vec4 normalize(){
     float mag = sqrt( x*x + y*y + z*z + w*w );
     x/=mag;
     y/=mag;
     z/=mag;
     w/=mag;
+    return {x,y,z,w};
   }
 
   //! Compute the vector magnitude 

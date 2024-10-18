@@ -69,6 +69,12 @@ public:
      */
     void addRadiationBand( const char* band );
 
+    //! Add the labels of radiation bands in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
+    /**
+     * \param[in] bands Vector of names of radiation bands (e.g., PAR, NIR, LW, etc.)
+     */
+    void addRadiationBand( const std::vector<std::string> &bands );
+
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)

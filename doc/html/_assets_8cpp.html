@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -125,6 +125,16 @@ Functions</h2></td></tr>
 <tr class="separator:acd62bf413dc540dac56450630f1395c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeb76c50338435780f5c6f1f1492509ad" id="r_aeb76c50338435780f5c6f1f1492509ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb76c50338435780f5c6f1f1492509ad">AlmondPhytomerCallbackFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer)</td></tr>
 <tr class="separator:aeb76c50338435780f5c6f1f1492509ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43434848255da8f88ecf61eba1a064a5" id="r_a43434848255da8f88ecf61eba1a064a5"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43434848255da8f88ecf61eba1a064a5">AppleLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
+<tr class="separator:a43434848255da8f88ecf61eba1a064a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abca44157c4b012eb929abe04ca1b112d" id="r_abca44157c4b012eb929abe04ca1b112d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abca44157c4b012eb929abe04ca1b112d">AppleFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, float time_since_fruit_set)</td></tr>
+<tr class="separator:abca44157c4b012eb929abe04ca1b112d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa262b093ab8c424997f012906129c17f" id="r_aa262b093ab8c424997f012906129c17f"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa262b093ab8c424997f012906129c17f">AppleFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
+<tr class="separator:aa262b093ab8c424997f012906129c17f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ba7d087e1be281f44dc3e845fcbf8d8" id="r_a9ba7d087e1be281f44dc3e845fcbf8d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ba7d087e1be281f44dc3e845fcbf8d8">AppledPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
+<tr class="separator:a9ba7d087e1be281f44dc3e845fcbf8d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28e227d3ac9328aeb61ea4cd25222a9b" id="r_a28e227d3ac9328aeb61ea4cd25222a9b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a28e227d3ac9328aeb61ea4cd25222a9b">ApplePhytomerCallbackFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer)</td></tr>
+<tr class="separator:a28e227d3ac9328aeb61ea4cd25222a9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af957ab82eecfc574dda4267e299d0a93" id="r_af957ab82eecfc574dda4267e299d0a93"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af957ab82eecfc574dda4267e299d0a93">AsparagusLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
 <tr class="separator:af957ab82eecfc574dda4267e299d0a93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89a768b369f38579bf9f65beec901ca7" id="r_a89a768b369f38579bf9f65beec901ca7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89a768b369f38579bf9f65beec901ca7">AsparagusPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
@@ -163,8 +173,38 @@ Functions</h2></td></tr>
 <tr class="separator:aebaf8388d9e932a75ec2bb1b90f3176f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a37e74970747ee1156737da37828427ec" id="r_a37e74970747ee1156737da37828427ec"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37e74970747ee1156737da37828427ec">CowpeaPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
 <tr class="separator:a37e74970747ee1156737da37828427ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2c36bb00d036c5f8df8b059747042d3" id="r_ae2c36bb00d036c5f8df8b059747042d3"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2c36bb00d036c5f8df8b059747042d3">GrapevineLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
+<tr class="separator:ae2c36bb00d036c5f8df8b059747042d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d944ed48c83eedfe629746ecccd1506" id="r_a9d944ed48c83eedfe629746ecccd1506"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d944ed48c83eedfe629746ecccd1506">random_float</a> (float min, float max)</td></tr>
+<tr class="separator:a9d944ed48c83eedfe629746ecccd1506"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29d08a915b4ab52e215952050dbf113e" id="r_a29d08a915b4ab52e215952050dbf113e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29d08a915b4ab52e215952050dbf113e">spheres_overlap</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;center1, float radius1, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;center2, float radius2)</td></tr>
+<tr class="separator:a29d08a915b4ab52e215952050dbf113e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7d6acd2b86628de1ca94ea44b9e9755" id="r_ac7d6acd2b86628de1ca94ea44b9e9755"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac7d6acd2b86628de1ca94ea44b9e9755">GrapevineFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, float time_since_fruit_set)</td></tr>
+<tr class="separator:ac7d6acd2b86628de1ca94ea44b9e9755"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d9643d06873e4f43ba96edfc73a71b4" id="r_a1d9643d06873e4f43ba96edfc73a71b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d9643d06873e4f43ba96edfc73a71b4">GrapevinePhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
+<tr class="separator:a1d9643d06873e4f43ba96edfc73a71b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2b61c2c0af93dac3cd2f3e70bbcd4bc" id="r_ae2b61c2c0af93dac3cd2f3e70bbcd4bc"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2b61c2c0af93dac3cd2f3e70bbcd4bc">PuncturevineLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
 <tr class="separator:ae2b61c2c0af93dac3cd2f3e70bbcd4bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac70facc4d34ace188d05bfcd26b4061b" id="r_ac70facc4d34ace188d05bfcd26b4061b"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac70facc4d34ace188d05bfcd26b4061b">OliveLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
+<tr class="separator:ac70facc4d34ace188d05bfcd26b4061b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7361cdb71d1d24f6c2a26d5b0556b75a" id="r_a7361cdb71d1d24f6c2a26d5b0556b75a"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7361cdb71d1d24f6c2a26d5b0556b75a">OliveFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, float time_since_fruit_set)</td></tr>
+<tr class="separator:a7361cdb71d1d24f6c2a26d5b0556b75a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0a43b5ca7614b3270db280d2f03cc62" id="r_ad0a43b5ca7614b3270db280d2f03cc62"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad0a43b5ca7614b3270db280d2f03cc62">OliveFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
+<tr class="separator:ad0a43b5ca7614b3270db280d2f03cc62"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4ad18b9d3f29ad1360eff0e049783b3" id="r_ab4ad18b9d3f29ad1360eff0e049783b3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab4ad18b9d3f29ad1360eff0e049783b3">OlivePhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
+<tr class="separator:ab4ad18b9d3f29ad1360eff0e049783b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c4f262e0dc1e4da332491c9865ff96d" id="r_a5c4f262e0dc1e4da332491c9865ff96d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c4f262e0dc1e4da332491c9865ff96d">OlivePhytomerCallbackFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer)</td></tr>
+<tr class="separator:a5c4f262e0dc1e4da332491c9865ff96d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1475624afe1b00eb038cd674f398dc7a" id="r_a1475624afe1b00eb038cd674f398dc7a"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1475624afe1b00eb038cd674f398dc7a">PistachioLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
+<tr class="separator:a1475624afe1b00eb038cd674f398dc7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae48f0306b050e463fbc4d1beb0e1df49" id="r_ae48f0306b050e463fbc4d1beb0e1df49"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae48f0306b050e463fbc4d1beb0e1df49">PistachioFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, float time_since_fruit_set)</td></tr>
+<tr class="separator:ae48f0306b050e463fbc4d1beb0e1df49"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90ce0960e4fce48bd97dfad818db30ec" id="r_a90ce0960e4fce48bd97dfad818db30ec"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a90ce0960e4fce48bd97dfad818db30ec">PistachioFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
+<tr class="separator:a90ce0960e4fce48bd97dfad818db30ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfe483d8321d5195445485a27a903b2c" id="r_abfe483d8321d5195445485a27a903b2c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abfe483d8321d5195445485a27a903b2c">PistachioPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
+<tr class="separator:abfe483d8321d5195445485a27a903b2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7a0f6a6d0b13f30d591ade1c7ffde38b" id="r_a7a0f6a6d0b13f30d591ade1c7ffde38b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7a0f6a6d0b13f30d591ade1c7ffde38b">PistachioPhytomerCallbackFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer)</td></tr>
+<tr class="separator:a7a0f6a6d0b13f30d591ade1c7ffde38b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0adc2c3f8694f9a0f10c29f3fbbc258b" id="r_a0adc2c3f8694f9a0f10c29f3fbbc258b"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0adc2c3f8694f9a0f10c29f3fbbc258b">PuncturevineFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
 <tr class="separator:a0adc2c3f8694f9a0f10c29f3fbbc258b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a83f54ae8ac266beeb8f12e75f9903ffa" id="r_a83f54ae8ac266beeb8f12e75f9903ffa"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83f54ae8ac266beeb8f12e75f9903ffa">RedbudLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
@@ -252,7 +292,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00131">131</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00128">128</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -280,7 +320,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00125">125</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00122">122</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -327,7 +367,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00154">154</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00151">151</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -365,7 +405,148 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00137">137</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00134">134</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9ba7d087e1be281f44dc3e845fcbf8d8" name="a9ba7d087e1be281f44dc3e845fcbf8d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ba7d087e1be281f44dc3e845fcbf8d8">&#9670;&#160;</a></span>AppledPhytomerCreationFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AppledPhytomerCreationFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_max_nodes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>plant_age</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00191">191</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa262b093ab8c424997f012906129c17f" name="aa262b093ab8c424997f012906129c17f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa262b093ab8c424997f012906129c17f">&#9670;&#160;</a></span>AppleFlowerPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint AppleFlowerPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>flower_is_open</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00185">185</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abca44157c4b012eb929abe04ca1b112d" name="abca44157c4b012eb929abe04ca1b112d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abca44157c4b012eb929abe04ca1b112d">&#9670;&#160;</a></span>AppleFruitPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint AppleFruitPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>time_since_fruit_set</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00179">179</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a43434848255da8f88ecf61eba1a064a5" name="a43434848255da8f88ecf61eba1a064a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43434848255da8f88ecf61eba1a064a5">&#9670;&#160;</a></span>AppleLeafPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint AppleLeafPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>compound_leaf_index</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00161">161</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a28e227d3ac9328aeb61ea4cd25222a9b" name="a28e227d3ac9328aeb61ea4cd25222a9b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a28e227d3ac9328aeb61ea4cd25222a9b">&#9670;&#160;</a></span>ApplePhytomerCallbackFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ApplePhytomerCallbackFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00208">208</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -393,7 +574,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00164">164</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00218">218</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -431,7 +612,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00191">191</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00245">245</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -459,7 +640,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00265">265</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00319">319</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -487,7 +668,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00259">259</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00313">313</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -515,7 +696,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00216">216</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00270">270</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -543,7 +724,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00246">246</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00300">300</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -571,7 +752,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00201">201</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00255">255</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -599,7 +780,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00238">238</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00292">292</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -637,7 +818,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00276">276</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00330">330</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -665,7 +846,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00300">300</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00357">357</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -693,7 +874,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00294">294</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00351">351</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -808,7 +989,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00306">306</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00363">363</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -836,7 +1017,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00376">376</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00433">433</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -864,7 +1045,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00370">370</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00427">427</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -892,7 +1073,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00327">327</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00384">384</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -920,7 +1101,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00357">357</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00414">414</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -948,7 +1129,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00312">312</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00369">369</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -976,7 +1157,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00349">349</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00406">406</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1014,7 +1195,383 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00387">387</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00444">444</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac7d6acd2b86628de1ca94ea44b9e9755" name="ac7d6acd2b86628de1ca94ea44b9e9755"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac7d6acd2b86628de1ca94ea44b9e9755">&#9670;&#160;</a></span>GrapevineFruitPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint GrapevineFruitPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>time_since_fruit_set</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00498">498</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae2c36bb00d036c5f8df8b059747042d3" name="ae2c36bb00d036c5f8df8b059747042d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2c36bb00d036c5f8df8b059747042d3">&#9670;&#160;</a></span>GrapevineLeafPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint GrapevineLeafPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>compound_leaf_index</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00462">462</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1d9643d06873e4f43ba96edfc73a71b4" name="a1d9643d06873e4f43ba96edfc73a71b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d9643d06873e4f43ba96edfc73a71b4">&#9670;&#160;</a></span>GrapevinePhytomerCreationFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void GrapevinePhytomerCreationFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_max_nodes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>plant_age</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00584">584</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad0a43b5ca7614b3270db280d2f03cc62" name="ad0a43b5ca7614b3270db280d2f03cc62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad0a43b5ca7614b3270db280d2f03cc62">&#9670;&#160;</a></span>OliveFlowerPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint OliveFlowerPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>flower_is_open</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00654">654</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7361cdb71d1d24f6c2a26d5b0556b75a" name="a7361cdb71d1d24f6c2a26d5b0556b75a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7361cdb71d1d24f6c2a26d5b0556b75a">&#9670;&#160;</a></span>OliveFruitPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint OliveFruitPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>time_since_fruit_set</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00645">645</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac70facc4d34ace188d05bfcd26b4061b" name="ac70facc4d34ace188d05bfcd26b4061b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac70facc4d34ace188d05bfcd26b4061b">&#9670;&#160;</a></span>OliveLeafPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint OliveLeafPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>compound_leaf_index</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00622">622</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5c4f262e0dc1e4da332491c9865ff96d" name="a5c4f262e0dc1e4da332491c9865ff96d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c4f262e0dc1e4da332491c9865ff96d">&#9670;&#160;</a></span>OlivePhytomerCallbackFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void OlivePhytomerCallbackFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00664">664</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab4ad18b9d3f29ad1360eff0e049783b3" name="ab4ad18b9d3f29ad1360eff0e049783b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4ad18b9d3f29ad1360eff0e049783b3">&#9670;&#160;</a></span>OlivePhytomerCreationFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void OlivePhytomerCreationFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_max_nodes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>plant_age</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00660">660</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a90ce0960e4fce48bd97dfad818db30ec" name="a90ce0960e4fce48bd97dfad818db30ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a90ce0960e4fce48bd97dfad818db30ec">&#9670;&#160;</a></span>PistachioFlowerPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint PistachioFlowerPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>flower_is_open</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00700">700</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae48f0306b050e463fbc4d1beb0e1df49" name="ae48f0306b050e463fbc4d1beb0e1df49"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae48f0306b050e463fbc4d1beb0e1df49">&#9670;&#160;</a></span>PistachioFruitPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint PistachioFruitPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>time_since_fruit_set</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00694">694</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1475624afe1b00eb038cd674f398dc7a" name="a1475624afe1b00eb038cd674f398dc7a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1475624afe1b00eb038cd674f398dc7a">&#9670;&#160;</a></span>PistachioLeafPrototype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint PistachioLeafPrototype </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>compound_leaf_index</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00674">674</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7a0f6a6d0b13f30d591ade1c7ffde38b" name="a7a0f6a6d0b13f30d591ade1c7ffde38b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7a0f6a6d0b13f30d591ade1c7ffde38b">&#9670;&#160;</a></span>PistachioPhytomerCallbackFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PistachioPhytomerCallbackFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00716">716</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abfe483d8321d5195445485a27a903b2c" name="abfe483d8321d5195445485a27a903b2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfe483d8321d5195445485a27a903b2c">&#9670;&#160;</a></span>PistachioPhytomerCreationFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PistachioPhytomerCreationFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_max_nodes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>plant_age</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00706">706</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1042,7 +1599,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00421">421</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00729">729</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1070,7 +1627,30 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00405">405</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00606">606</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9d944ed48c83eedfe629746ecccd1506" name="a9d944ed48c83eedfe629746ecccd1506"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d944ed48c83eedfe629746ecccd1506">&#9670;&#160;</a></span>random_float()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float random_float </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>min</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>max</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00484">484</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1098,7 +1678,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00448">448</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00756">756</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1126,7 +1706,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00453">453</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00761">761</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1154,7 +1734,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00427">427</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00735">735</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1173,7 +1753,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00462">462</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00770">770</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1211,7 +1791,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00458">458</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00766">766</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1239,7 +1819,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00480">480</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00788">788</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1277,7 +1857,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00506">506</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00814">814</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1305,7 +1885,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00519">519</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00827">827</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1333,7 +1913,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00540">540</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00848">848</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1371,7 +1951,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00633">633</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00941">941</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1399,7 +1979,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00674">674</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00982">982</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1427,7 +2007,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00668">668</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00976">976</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1455,7 +2035,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00644">644</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00952">952</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1483,7 +2063,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00664">664</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00972">972</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1521,7 +2101,40 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00685">685</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00993">993</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a29d08a915b4ab52e215952050dbf113e" name="a29d08a915b4ab52e215952050dbf113e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29d08a915b4ab52e215952050dbf113e">&#9670;&#160;</a></span>spheres_overlap()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool spheres_overlap </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>center1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>radius1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>center2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>radius2</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00489">489</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1549,7 +2162,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00722">722</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01030">1030</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1577,7 +2190,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00728">728</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01036">1036</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1605,7 +2218,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00703">703</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01011">1011</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1633,7 +2246,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00734">734</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01042">1042</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1661,7 +2274,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00785">785</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01093">1093</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1689,7 +2302,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00779">779</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01087">1087</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1717,7 +2330,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00756">756</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01064">1064</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1755,7 +2368,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00791">791</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01099">1099</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1783,7 +2396,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00810">810</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01118">1118</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1821,7 +2434,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00837">837</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01145">1145</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1849,7 +2462,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00831">831</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l01139">1139</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>

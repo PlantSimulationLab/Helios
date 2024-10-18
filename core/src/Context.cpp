@@ -66,12 +66,7 @@ void Context::addTexture( const char* texture_file ){
 }
 
 bool Context::doesTextureFileExist(const char* texture_file ) const{
-    if (FILE *file = fopen(texture_file, "r")) {
-        fclose(file);
-        return true;
-    } else {
-        return false;
-    }
+    return std::filesystem::exists(texture_file);
 }
 
 bool Context::validateTextureFileExtenstion( const char* texture_file ) const{
@@ -99,7 +94,7 @@ Texture::Texture( const char* texture_file ){
 
     //-------- load transparency channel (if exists) ------------//
 
-    if( hastransparencychannel ){
+    if( ext==".png" ){
         transparencydata = readPNGAlpha( filename );
         image_resolution = make_int2(int(transparencydata.front().size()),int(transparencydata.size()));
     }else{
@@ -3559,17 +3554,18 @@ float Tube::getSegmentVolume( uint segment_index ) const{
 
 void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radius, const helios::RGBcolor &node_color ){
 
+    //\todo This is a computationally inefficient method for appending the tube, but it ensures that there is no twisting of the tube relative to the previous tube segments.
+
     if( node_radius<0 ){
         helios_runtime_error("ERROR (Tube::appendTubeSegment): Node radius must be positive.");
     }
+    node_radius = std::max((float)1e-5, node_radius);
 
     uint radial_subdivisions = subdiv;
 
     vec3 axial_vector;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-
-    vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
 
     for(int j=0; j < radial_subdivisions + 1; j++ ){
         cfact[j]=cosf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
@@ -3585,24 +3581,53 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
 
     int node_count = nodes.size();
 
-    for( int i=node_count-3; i<node_count; i++ ){ //looping over tube segments
+    vec3 initial_radial(1.0f, 0.0f, 0.0f);
+    vec3 previous_axial_vector;
+    vec3 previous_radial_dir;
 
-        axial_vector = node_position - nodes.at(node_count-2);
-        axial_vector.normalize();
+    for (int i = 0; i < node_count; i++) { // Looping over tube segments
+        if (radius.at(i) < 0) {
+            helios_runtime_error("ERROR (Context::appendTubeSegment): Radius of tube must be positive.");
+        }
 
-        vec3 radial_dir = nvec - axial_vector * (nvec * axial_vector);
-        radial_dir.normalize();
+        if (i == 0) {
+            axial_vector = nodes[i + 1] - nodes[i];
+            axial_vector.normalize();
+            if (fabs(axial_vector * initial_radial) > 0.99f) {
+                initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            previous_radial_dir = cross(axial_vector, initial_radial).normalize();
+        } else {
+            if (i == node_count - 1) {
+                axial_vector = nodes[i] - nodes[i - 1];
+            } else {
+                axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
+            }
+            axial_vector.normalize();
 
+            // Calculate radial direction using parallel transport
+            vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
+            if (rotation_axis.magnitude() > 1e-6) {
+                float angle = acos(previous_axial_vector * axial_vector);
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+            }
+            previous_radial_dir.normalize();
+        }
+
+        previous_axial_vector = axial_vector;
+
+        vec3 radial_dir = previous_radial_dir;
         vec3 orthogonal_dir = cross(radial_dir, axial_vector);
         orthogonal_dir.normalize();
 
-        for(int j=0; j < radial_subdivisions + 1; j++ ){
-
-            vec3 normal = cfact.at(j)*radius.at(i)*radial_dir + sfact.at(j)*radius.at(i)*orthogonal_dir;
-            triangle_vertices.at(i).at(j)=nodes.at(i)+normal;
-
+        if( i<node_count-2 ){
+            continue;
         }
 
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            triangle_vertices[i][j] = nodes[i] + normal;
+        }
     }
 
     int old_triangle_count = UUIDs.size();
@@ -3635,13 +3660,16 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
 
 }
 
-void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radius, const char* texturefile, const helios::vec2 &textureuv_ufrac ){
+void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radius, const char* texturefile, const helios::vec2 &textureuv_ufrac) {
 
-    if( node_radius<0 ){
+    //\todo This is a computationally inefficient method for appending the tube, but it ensures that there is no twisting of the tube relative to the previous tube segments.
+
+    if (node_radius < 0) {
         helios_runtime_error("ERROR (Tube::appendTubeSegment): Node radius must be positive.");
-    }else if( textureuv_ufrac.x<0 || textureuv_ufrac.y<0 || textureuv_ufrac.x>1 || textureuv_ufrac.y>1 ){
+    } else if (textureuv_ufrac.x < 0 || textureuv_ufrac.y < 0 || textureuv_ufrac.x > 1 || textureuv_ufrac.y > 1) {
         helios_runtime_error("ERROR (Tube::appendTubeSegment): Texture U fraction must be between 0 and 1.");
     }
+    node_radius = std::max((float)1e-5, node_radius);
 
     uint radial_subdivisions = subdiv;
 
@@ -3649,48 +3677,76 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
 
-    vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
-
-    for(int j=0; j < radial_subdivisions + 1; j++ ){
-        cfact[j]=cosf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
-        sfact[j]=sinf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
+    for (int j = 0; j < radial_subdivisions + 1; j++) {
+        cfact[j] = cosf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
+        sfact[j] = sinf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
     }
 
-    triangle_vertices.resize( triangle_vertices.size() + 1 );
-    triangle_vertices.back().resize(radial_subdivisions+1);
-    std::vector<std::vector<vec2> > uv;
-    resize_vector( uv, radial_subdivisions + 1, 2 );
+    triangle_vertices.resize(triangle_vertices.size() + 1);
+    triangle_vertices.back().resize(radial_subdivisions + 1);
+    std::vector<std::vector<vec2>> uv;
+    resize_vector(uv, radial_subdivisions + 1, 2);
 
-    nodes.push_back( node_position );
-    radius.push_back( node_radius );
-    colors.push_back( RGB::black );
+    nodes.push_back(node_position);
+    radius.push_back(node_radius);
+    colors.push_back(RGB::black);
 
     int node_count = nodes.size();
 
-    for( int i=node_count-3; i<node_count; i++ ){ //looping over tube segments
+    vec3 initial_radial(1.0f, 0.0f, 0.0f);
+    vec3 previous_axial_vector;
+    vec3 previous_radial_dir;
 
-        axial_vector = node_position - nodes.at(node_count-2);
-        axial_vector.normalize();
+    for (int i = 0; i < node_count; i++) { // Looping over tube segments
+        if (radius.at(i) < 0) {
+            helios_runtime_error("ERROR (Context::appendTubeSegment): Radius of tube must be positive.");
+        }
 
-        vec3 radial_dir = nvec - axial_vector * (nvec * axial_vector);
-        radial_dir.normalize();
+        if (i == 0) {
+            axial_vector = nodes[i + 1] - nodes[i];
+            axial_vector.normalize();
+            if (fabs(axial_vector * initial_radial) > 0.99f) {
+                initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            previous_radial_dir = cross(axial_vector, initial_radial).normalize();
+        } else {
+            if (i == node_count - 1) {
+                axial_vector = nodes[i] - nodes[i - 1];
+            } else {
+                axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
+            }
+            axial_vector.normalize();
 
+            // Calculate radial direction using parallel transport
+            vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
+            if (rotation_axis.magnitude() > 1e-6) {
+                float angle = acos(previous_axial_vector * axial_vector);
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+            }
+            previous_radial_dir.normalize();
+        }
+
+        previous_axial_vector = axial_vector;
+
+        vec3 radial_dir = previous_radial_dir;
         vec3 orthogonal_dir = cross(radial_dir, axial_vector);
         orthogonal_dir.normalize();
 
-        for(int j=0; j < radial_subdivisions + 1; j++ ){
+        if( i<node_count-2 ){
+            continue;
+        }
 
-            vec3 normal = cfact.at(j)*radius.at(i)*radial_dir + sfact.at(j)*radius.at(i)*orthogonal_dir;
-            triangle_vertices.at(i).at(j)=nodes.at(i)+normal;
-
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            triangle_vertices[i][j] = nodes[i] + normal;
         }
     }
 
     std::vector<float> ufrac{textureuv_ufrac.x, textureuv_ufrac.y};
-    for( int i=0; i<2; i++ ){
-        for(int j=0; j < radial_subdivisions + 1; j++ ){
-            uv.at(i).at(j).x = ufrac.at(i);
-            uv.at(i).at(j).y = float(j)/float(radial_subdivisions);
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            uv[i][j].x = ufrac[i];
+            uv[i][j].y = float(j) / float(radial_subdivisions);
         }
     }
 
@@ -3699,38 +3755,34 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
     vec3 v0, v1, v2;
     vec2 uv0, uv1, uv2;
 
-    //add triangles for new segment
+    // Add triangles for new segment
+    for (int j = 0; j < radial_subdivisions; j++) {
+        v0 = triangle_vertices[node_count - 2][j];
+        v1 = triangle_vertices[node_count - 1][j + 1];
+        v2 = triangle_vertices[node_count - 2][j + 1];
 
-    for(int j=0; j < radial_subdivisions; j++ ) {
-
-        v0 = triangle_vertices.at(1).at(j);
-        v1 = triangle_vertices.at(1+1).at(j + 1);
-        v2 = triangle_vertices.at(1).at(j + 1);
-
-        uv0 = uv.at(0).at(j);
-        uv1 = uv.at(0+1).at(j+1);
-        uv2 = uv.at(0).at(j+1);
+        uv0 = uv[0][j];
+        uv1 = uv[1][j + 1];
+        uv2 = uv[0][j + 1];
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
 
-        v0 = triangle_vertices.at(1).at(j);
-        v1 = triangle_vertices.at(1+1).at(j);
-        v2 = triangle_vertices.at(1+1).at(j + 1);
+        v0 = triangle_vertices[node_count - 2][j];
+        v1 = triangle_vertices[node_count - 1][j];
+        v2 = triangle_vertices[node_count - 1][j + 1];
 
-        uv0 = uv.at(0).at(j);
-        uv1 = uv.at(0+1).at(j);
-        uv2 = uv.at(0+1).at(j+1);
+        uv0 = uv[0][j];
+        uv1 = uv[1][j];
+        uv2 = uv[1][j + 1];
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
-
     }
 
-    for( uint p : UUIDs){
+    for (uint p : UUIDs) {
         context->setPrimitiveParentObjectID(p, this->OID);
     }
 
     updateTriangleVertices();
-
 }
 
 void Tube::scaleTubeGirth( float S ){
@@ -4370,12 +4422,12 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
     //top cap
     for( int j=0; j<Ndivs; j++ ){
 
-        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI), 0 ) );
+        vec3 cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI), 0 ) );
         vec3 v0 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
-        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
-        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
         cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j+1)*dphi ) );
-        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        vec3 v1 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);
+        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*float(M_PI)-dtheta, float(j)*dphi ) );
+        vec3 v2 = center + make_vec3(cart.x*radius.x,cart.y*radius.y,cart.z*radius.z);;
 
         vec3 n0 = v0-center;
         n0.normalize();
@@ -4384,7 +4436,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         vec3 n2 = v2-center;
         n2.normalize();
 
-        vec2 uv0 = make_vec2( 1.f - atan2f( sin((float(j)+0.5f)*dphi), -cos((float(j)+0.5f)*dphi) )/float(2.f*M_PI) - 0.5f, 1.f - n0.z*0.5f - 0.5f );
+        vec2 uv0 = make_vec2( 1.f - atan2f( sinf((float(j)+0.5f)*dphi), -cosf((float(j)+0.5f)*dphi) )/float(2.f*M_PI) - 0.5f, 1.f - n0.z*0.5f - 0.5f );
         vec2 uv1 = make_vec2( 1.f - atan2f( n1.x, -n1.y )/float(2.f*M_PI) - 0.5f, 1.f - n1.z*0.5f - 0.5f );
         vec2 uv2 = make_vec2( 1.f - atan2f( n2.x, -n2.y )/float(2.f*M_PI) - 0.5f, 1.f - n2.z*0.5f - 0.5f );
 
@@ -4662,51 +4714,61 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `color' arguments must agree.");
     }
 
-    vec3 axial_vector, convec;
+    vec3 axial_vector;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > triangle_vertices;
-    resize_vector( triangle_vertices, radial_subdivisions + 1, node_count );
+    std::vector<std::vector<vec3>> triangle_vertices;
+    resize_vector(triangle_vertices, radial_subdivisions + 1, node_count);
 
-    for(int j=0; j < radial_subdivisions + 1; j++ ){
-        cfact[j]=cosf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
-        sfact[j]=sinf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
+    // Initialize trigonometric factors for circle points
+    for (int j = 0; j < radial_subdivisions + 1; j++) {
+        cfact[j] = cosf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
+        sfact[j] = sinf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
     }
 
-    for( int i=0; i<node_count; i++ ){ //looping over tube segments
+    vec3 initial_radial(1.0f, 0.0f, 0.0f);
+    vec3 previous_axial_vector;
+    vec3 previous_radial_dir;
 
-        vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
-
-        if( radius.at(i)<0 ){
+    for (int i = 0; i < node_count; i++) { // Looping over tube segments
+        if (radius.at(i) < 0) {
             helios_runtime_error("ERROR (Context::addTubeObject): Radius of tube must be positive.");
         }
 
-        if(i==0){
-            axial_vector.x= nodes[i + 1].x - nodes[i].x;
-            axial_vector.y= nodes[i + 1].y - nodes[i].y;
-            axial_vector.z= nodes[i + 1].z - nodes[i].z;
-        }else if(i==node_count-1){
-            axial_vector.x= nodes[i].x - nodes[i - 1].x;
-            axial_vector.y= nodes[i].y - nodes[i - 1].y;
-            axial_vector.z= nodes[i].z - nodes[i - 1].z;
-        }else{
-            axial_vector.x= 0.5f * ((nodes[i].x - nodes[i - 1].x) + (nodes[i + 1].x - nodes[i].x) );
-            axial_vector.y= 0.5f * ((nodes[i].y - nodes[i - 1].y) + (nodes[i + 1].y - nodes[i].y) );
-            axial_vector.z= 0.5f * ((nodes[i].z - nodes[i - 1].z) + (nodes[i + 1].z - nodes[i].z) );
+        if (i == 0) {
+            axial_vector = nodes[i + 1] - nodes[i];
+            axial_vector.normalize();
+            if (fabs(axial_vector * initial_radial) > 0.99f) {
+                initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            previous_radial_dir = cross(axial_vector, initial_radial).normalize();
+        } else {
+            if (i == node_count - 1) {
+                axial_vector = nodes[i] - nodes[i - 1];
+            } else {
+                axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
+            }
+            axial_vector.normalize();
+
+            // Calculate radial direction using parallel transport
+            vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
+            if (rotation_axis.magnitude() > 1e-6) {
+                float angle = acos(previous_axial_vector * axial_vector);
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+            }
+            previous_radial_dir.normalize();
         }
 
-        convec = cross(nvec, axial_vector);
-        convec.normalize();
-        nvec = cross(axial_vector, convec);
-        nvec.normalize();
+        previous_axial_vector = axial_vector;
 
-        for(int j=0; j < radial_subdivisions + 1; j++ ){
+        vec3 radial_dir = previous_radial_dir;
+        vec3 orthogonal_dir = cross(radial_dir, axial_vector);
+        orthogonal_dir.normalize();
 
-            vec3 normal = cfact[j]*radius[i]*nvec+sfact[j]*radius[i]*convec;
-            triangle_vertices[i][j]=nodes[i]+normal;
-
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            triangle_vertices[i][j] = nodes[i] + normal;
         }
-
     }
 
 
@@ -4755,93 +4817,99 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
     return addTubeObject( radial_subdivisions, nodes, radius, texturefile, textureuv_ufrac );
 }
 
-uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile, const std::vector<float> &textureuv_ufrac ){
-
-
-    if( !validateTextureFileExtenstion(texturefile) ){
+uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile, const std::vector<float> &textureuv_ufrac) {
+    if (!validateTextureFileExtenstion(texturefile)) {
         helios_runtime_error("ERROR (Context::addTubeObject): Texture file " + std::string(texturefile) + " is not PNG or JPEG format.");
-    }else if( !doesTextureFileExist(texturefile) ){
+    } else if (!doesTextureFileExist(texturefile)) {
         helios_runtime_error("ERROR (Context::addTubeObject): Texture file " + std::string(texturefile) + " does not exist.");
     }
 
     const uint node_count = nodes.size();
 
-    if( node_count==0 ){
+    if (node_count == 0) {
         helios_runtime_error("ERROR (Context::addTubeObject): Node and radius arrays are empty.");
-    }else if( node_count!=radius.size() ){
+    } else if (node_count != radius.size()) {
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `radius' arguments must agree.");
-    }else if( node_count!=textureuv_ufrac.size() ){
+    } else if (node_count != textureuv_ufrac.size()) {
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `textureuv_ufrac' arguments must agree.");
     }
 
-    vec3 axial_vector, convec;
+    vec3 axial_vector;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > triangle_vertices;
-    resize_vector( triangle_vertices, radial_subdivisions + 1, node_count );
-    std::vector<std::vector<vec2> > uv;
-    resize_vector( uv, radial_subdivisions + 1, node_count );
+    std::vector<std::vector<vec3>> triangle_vertices;
+    resize_vector(triangle_vertices, radial_subdivisions + 1, node_count);
+    std::vector<std::vector<vec2>> uv;
+    resize_vector(uv, radial_subdivisions + 1, node_count);
 
-    for(int j=0; j < radial_subdivisions + 1; j++ ){
-        cfact[j]=cosf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
-        sfact[j]=sinf(2.f*float(M_PI)*float(j)/float(radial_subdivisions));
+    // Initialize trigonometric factors for circle points
+    for (int j = 0; j < radial_subdivisions + 1; j++) {
+        cfact[j] = cosf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
+        sfact[j] = sinf(2.f * float(M_PI) * float(j) / float(radial_subdivisions));
     }
 
-    for( int i=0; i<node_count; i++ ){ //looping over tube segments
+    vec3 initial_radial(1.0f, 0.0f, 0.0f);
+    vec3 previous_axial_vector;
+    vec3 previous_radial_dir;
 
-        vec3 nvec(0.1817f,0.6198f,0.7634f);//random vector to get things going
-
-        if( radius.at(i)<0 ){
+    for (int i = 0; i < node_count; i++) { // Looping over tube segments
+        if (radius.at(i) < 0) {
             helios_runtime_error("ERROR (Context::addTubeObject): Radius of tube must be positive.");
         }
 
-        if(i==0){
-            axial_vector.x= nodes[i + 1].x - nodes[i].x;
-            axial_vector.y= nodes[i + 1].y - nodes[i].y;
-            axial_vector.z= nodes[i + 1].z - nodes[i].z;
-        }else if(i==node_count-1){
-            axial_vector.x= nodes[i].x - nodes[i - 1].x;
-            axial_vector.y= nodes[i].y - nodes[i - 1].y;
-            axial_vector.z= nodes[i].z - nodes[i - 1].z;
-        }else{
-            axial_vector.x= 0.5f * ((nodes[i].x - nodes[i - 1].x) + (nodes[i + 1].x - nodes[i].x) );
-            axial_vector.y= 0.5f * ((nodes[i].y - nodes[i - 1].y) + (nodes[i + 1].y - nodes[i].y) );
-            axial_vector.z= 0.5f * ((nodes[i].z - nodes[i - 1].z) + (nodes[i + 1].z - nodes[i].z) );
+        if (i == 0) {
+            axial_vector = nodes[i + 1] - nodes[i];
+            axial_vector.normalize();
+            if (fabs(axial_vector * initial_radial) > 0.99f) {
+                initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            previous_radial_dir = cross(axial_vector, initial_radial).normalize();
+        } else {
+            if (i == node_count - 1) {
+                axial_vector = nodes[i] - nodes[i - 1];
+            } else {
+                axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
+            }
+            axial_vector.normalize();
+
+            // Calculate radial direction using parallel transport
+            vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
+            if (rotation_axis.magnitude() > 1e-6) {
+                float angle = acos(previous_axial_vector * axial_vector);
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+            }
+            previous_radial_dir.normalize();
         }
 
-        float norm;
-        convec = cross(nvec, axial_vector);
-        convec.normalize();
-        nvec = cross(axial_vector, convec);
-        nvec.normalize();
+        previous_axial_vector = axial_vector;
 
-        for(int j=0; j < radial_subdivisions + 1; j++ ){
+        vec3 radial_dir = previous_radial_dir;
+        vec3 orthogonal_dir = cross(radial_dir, axial_vector);
+        orthogonal_dir.normalize();
 
-            vec3 normal = cfact[j]*radius[i]*nvec+sfact[j]*radius[i]*convec;
-            triangle_vertices[i][j]=nodes[i]+normal;
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            triangle_vertices[i][j] = nodes[i] + normal;
 
             uv[i][j].x = textureuv_ufrac[i];
-            uv[i][j].y = float(j)/float(radial_subdivisions);
-
+            uv[i][j].y = float(j) / float(radial_subdivisions);
         }
-
     }
 
-    std::vector<uint> UUIDs(2 * (node_count-1) * radial_subdivisions );
+    std::vector<uint> UUIDs(2 * (node_count - 1) * radial_subdivisions);
     vec3 v0, v1, v2;
     vec2 uv0, uv1, uv2;
 
-    int ii=0;
-    for(int j=0; j < radial_subdivisions; j++ ) {
+    int ii = 0;
+    for (int j = 0; j < radial_subdivisions; j++) {
         for (int i = 0; i < node_count - 1; i++) {
-
             v0 = triangle_vertices[i][j];
             v1 = triangle_vertices[i + 1][j + 1];
             v2 = triangle_vertices[i][j + 1];
 
             uv0 = uv[i][j];
-            uv1 = uv[i+1][j+1];
-            uv2 = uv[i][j+1];
+            uv1 = uv[i + 1][j + 1];
+            uv2 = uv[i][j + 1];
 
             UUIDs.at(ii) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
 
@@ -4850,8 +4918,8 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             v2 = triangle_vertices[i + 1][j + 1];
 
             uv0 = uv[i][j];
-            uv1 = uv[i+1][j];
-            uv2 = uv[i+1][j+1];
+            uv1 = uv[i + 1][j];
+            uv2 = uv[i + 1][j + 1];
 
             UUIDs.at(ii + 1) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
 
@@ -4863,15 +4931,14 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
     auto* tube_new = (new Tube(currentObjectID, UUIDs, nodes, radius, colors, triangle_vertices, radial_subdivisions, texturefile, this));
 
-    for( uint p : UUIDs){
+    for (uint p : UUIDs) {
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
     objects[currentObjectID] = tube_new;
     currentObjectID++;
 
-    return currentObjectID-1;
-
+    return currentObjectID - 1;
 }
 
 uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv ){

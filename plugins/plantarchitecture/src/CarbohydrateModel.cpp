@@ -184,7 +184,9 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(float dt ) {
         auto shoot_tree = &plant.second.shoot_tree;
 
         for (auto &shoot: *shoot_tree) {
-            shoot->carbohydrate_pool_molC -= context_ptr->getTubeObjectVolume(shoot->internode_tube_objID) * rho_cw * stem_maintainance_respiration_rate * dt;
+            if( context_ptr->doesObjectExist(shoot->internode_tube_objID) ) {
+                shoot->carbohydrate_pool_molC -= context_ptr->getTubeObjectVolume(shoot->internode_tube_objID) * rho_cw * stem_maintainance_respiration_rate * dt;
+            }
         }
 
     }
@@ -257,11 +259,12 @@ void PlantArchitecture::checkCarbonPool_abortbuds(){
             uint parentID = shoot->parent_shoot_ID;
 
 
-            for(auto &child : shoot->childIDs ){
+            for(auto node : shoot->childIDs ){
+                for( int childID : node.second ){
+                    int node_number = node.first;
+                    int child_ID = childID;
 
-                int node_number = child.first;
-                int child_ID = child.second;
-
+                }
             }
 
 
