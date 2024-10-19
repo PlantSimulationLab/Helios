@@ -15,6 +15,7 @@
 
 #include "SyntheticAnnotation.h"
 #include "Visualizer.h"
+#include <filesystem>
 #include <iomanip>
 
 using namespace std;
@@ -269,21 +270,26 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     }
 
     //check that output directory exists, if not create it
-    std::string createdir = "mkdir -p ";
-    createdir += odir;
-    int dir = system(createdir.c_str());
-    if (dir < 0) {
+    #ifdef _WIN32
+    std::replace(odir.begin(), odir.end(), '/', '\\');
+    #endif
+    bool dir = std::filesystem::create_directory(odir);
+    if (!dir && !std::filesystem::exists(odir)) {
         helios_runtime_error("ERROR (SyntheticAnnotation::render): output directory " + std::string(outputdir) + " could not be created. Exiting...");
     }
     //create sub-directory structure for each view
     //std::string viewdir;
     for( int d=0; d<camera_position.size(); d++ ){
       std::stringstream viewdir;
-      viewdir << createdir << "view" << std::setfill('0') << std::setw(5) << d << "/";
+      #ifdef _WIN32
+      viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << "\\";
+      #else
+      viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << "/";
+      #endif
       std::cout << "viewdir: " << viewdir.str() << std::endl;
       //std::snprintf(viewdir,createdir.size()+24,"%sview%05d/",createdir.c_str(),d);
-      int dir = system( viewdir.str().c_str() );
-      if (dir < 0) {
+      dir = std::filesystem::create_directory(viewdir.str());
+      if (!dir && !std::filesystem::exists(viewdir.str())) {
         helios_runtime_error("ERROR (SyntheticAnnotation::render): view sub-directory could not be created. Exiting...");
       }
     }
