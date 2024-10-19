@@ -281,11 +281,11 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     //std::string viewdir;
     for( int d=0; d<camera_position.size(); d++ ){
       std::stringstream viewdir;
+      std::string slash = "/";
       #ifdef _WIN32
-      viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << "\\";
-      #else
-      viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << "/";
+      slash = "\\";
       #endif
+      viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << slash;
       std::cout << "viewdir: " << viewdir.str() << std::endl;
       //std::snprintf(viewdir,createdir.size()+24,"%sview%05d/",createdir.c_str(),d);
       dir = std::filesystem::create_directory(viewdir.str());
