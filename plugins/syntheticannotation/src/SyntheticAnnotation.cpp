@@ -270,8 +270,10 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     }
 
     //check that output directory exists, if not create it
+    std::string slash = "/";
     #ifdef _WIN32
     std::replace(odir.begin(), odir.end(), '/', '\\');
+    slash = "\\";
     #endif
     bool dir = std::filesystem::create_directory(odir);
     if (!dir && !std::filesystem::exists(odir)) {
@@ -281,10 +283,6 @@ void SyntheticAnnotation::render( const char* outputdir ) {
     //std::string viewdir;
     for( int d=0; d<camera_position.size(); d++ ){
       std::stringstream viewdir;
-      std::string slash = "/";
-      #ifdef _WIN32
-      slash = "\\";
-      #endif
       viewdir << odir << "view" << std::setfill('0') << std::setw(5) << d << slash;
       std::cout << "viewdir: " << viewdir.str() << std::endl;
       //std::snprintf(viewdir,createdir.size()+24,"%sview%05d/",createdir.c_str(),d);
