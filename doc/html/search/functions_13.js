@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['unilateralgrapevineparameters_0',['UnilateralGrapevineParameters',['../struct_unilateral_grapevine_parameters.html#a1f4063470113acb28186cf92b3030283',1,'UnilateralGrapevineParameters']]],
+  ['unilateralgrapevineparameters_0',['UnilateralGrapevineParameters',['../struct_unilateral_grapevine_parameters.html#a1f4063470113acb28186cf92b3030283',1,'UnilateralGrapevineParameters::UnilateralGrapevineParameters()'],['../struct_unilateral_grapevine_parameters.html#ab85a40a1bc4bd1880f74814278ff7fd2',1,'UnilateralGrapevineParameters::UnilateralGrapevineParameters(const pugi::xml_node canopy_node)']]],
   ['updatecameraresponse_1',['updateCameraResponse',['../class_radiation_model.html#afabb4e1a6c8c67ccc9c68aab7dfd07e3',1,'RadiationModel']]],
   ['updatecameraresponsespectra_2',['updateCameraResponseSpectra',['../struct_camera_calibration.html#a900b08896dc2c3bf892311478d895883',1,'CameraCalibration']]],
   ['updatecurrentshootparameters_3',['updateCurrentShootParameters',['../class_plant_architecture.html#a2074dfe285a623833dd07b4aa0b93a7c',1,'PlantArchitecture::updateCurrentShootParameters(const std::string &amp;shoot_type_label, const ShootParameters &amp;params)'],['../class_plant_architecture.html#a4539115c4ba145fa10277d3dcfa63685',1,'PlantArchitecture::updateCurrentShootParameters(const std::map&lt; std::string, ShootParameters &gt; &amp;params)']]],

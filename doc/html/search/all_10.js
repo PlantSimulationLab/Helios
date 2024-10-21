@@ -6,7 +6,7 @@ var searchData=
   ['height_20maps_3',['2D raster height maps',['../_aerial_li_d_a_r_doc.html#AerialRasters',1,'']]],
   ['helios_4',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
   ['helios_20context_5',['The Helios Context',['../_overview.html#ContextOverview',1,'']]],
-  ['helios_20documentation_20v1_203_2019_6',['Helios Documentation v1.3.19',['../index.html',1,'']]],
+  ['helios_20documentation_20v1_203_2020_6',['Helios Documentation v1.3.20',['../index.html',1,'']]],
   ['helios_20prerequisites_7',['Helios Prerequisites',['../_overview.html#PrereqsHelios',1,'']]],
   ['helios_20programming_8',['Which platform to use for Helios programming?',['../_dependent_software.html#WhichPlatform',1,'']]],
   ['helios_20vector_20types_20tutorial_9',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],
@@ -34,6 +34,6 @@ var searchData=
   ['hittable_31',['HitTable',['../class_hit_table.html',1,'']]],
   ['homogeneous_20canopy_32',['Spatially Homogeneous Canopy',['../_canopy_generator_doc.html#CGenHomogeneous',1,'']]],
   ['homogeneous_20canopy_33',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]],
-  ['homogeneouscanopyparameters_34',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html',1,'HomogeneousCanopyParameters'],['../struct_homogeneous_canopy_parameters.html#ad5f583b7f483df9fdaf86bbdaf0e5a92',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters()']]],
+  ['homogeneouscanopyparameters_34',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html',1,'HomogeneousCanopyParameters'],['../struct_homogeneous_canopy_parameters.html#ad5f583b7f483df9fdaf86bbdaf0e5a92',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters()'],['../struct_homogeneous_canopy_parameters.html#aac168c38c41f7c11830c36707a744620',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters(const pugi::xml_node canopy_node)']]],
   ['hour_35',['hour',['../structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f',1,'helios::Time']]]
 ];

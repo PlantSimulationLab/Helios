@@ -8,5 +8,5 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
-map_Kd /Users/bnbailey/Dropbox/Helios/plugins/plantarchitecture/assets/textures/RedbudPod.png
-map_d /Users/bnbailey/Dropbox/Helios/plugins/plantarchitecture/assets/textures/RedbudPod.png
+map_Kd ../textures/RedbudPod.png
+map_d ../textures/RedbudPod.png

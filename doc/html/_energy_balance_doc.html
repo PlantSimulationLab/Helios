@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -387,9 +387,9 @@ Running the Steady-State Model</h2>
 <div class="line">}</div>
 <div class="ttc" id="a_energy_balance_model_8h_html"><div class="ttname"><a href="_energy_balance_model_8h.html">EnergyBalanceModel.h</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01882">Context.h:1882</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01207">Context.cpp:1207</a></div></div>
+<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01202">Context.cpp:1202</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00346">helios_vector_types.h:346</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00502">helios_vector_types.h:502</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --><h3><a class="anchor" id="EBRunUS"></a>
 Unsteady model with heat storage</h3>
 <p>Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity <img class="formulaInl" alt="$C_p$" src="form_68.png" width="17" height="17"/> is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The equation is discretized in time using a forward Euler scheme in order to solve for the surface temperature at time <img class="formulaInl" alt="$t+\Delta t$" src="form_83.png" width="44" height="14"/></p>

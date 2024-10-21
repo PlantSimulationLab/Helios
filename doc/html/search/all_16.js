@@ -6,7 +6,7 @@ var searchData=
   ['needle_5fwidth_3',['needle_width',['../struct_white_spruce_canopy_parameters.html#a11cc85d4a6176b908aff31b408d70cf3',1,'WhiteSpruceCanopyParameters']]],
   ['new_20project_20script_4',['New Project Script',['../_a_p_i.html#DirScript',1,'']]],
   ['normalization_5',['Setting the Radiation Source Spectral Distribution and Normalization',['../_radiation_doc.html#SourceDist',1,'']]],
-  ['normalize_6',['normalize',['../structhelios_1_1vec2.html#ad1f15c84950ca9973a3017af28f88b07',1,'helios::vec2::normalize()'],['../structhelios_1_1vec3.html#a8a845d8cc299fc8ebac57b994859e055',1,'helios::vec3::normalize()'],['../structhelios_1_1vec4.html#aa75b2696d5ee92fbf33fe91f9ca52de9',1,'helios::vec4::normalize()']]],
+  ['normalize_6',['normalize',['../structhelios_1_1vec2.html#a04c00c49095d3bbc0a19d5da3d61493f',1,'helios::vec2::normalize()'],['../structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524',1,'helios::vec3::normalize()'],['../structhelios_1_1vec4.html#a6bb8bb78aaea6e5703fd1d40dbd39865',1,'helios::vec4::normalize()']]],
   ['nphi_7',['Nphi',['../struct_scan_metadata.html#a8d9273e0fccbfc20916c284ab6c573ac',1,'ScanMetadata']]],
   ['nrays_8',['Nrays',['../struct_aerial_scan_metadata.html#a14b34575b0c5f8de6e1e203667a1d8a6',1,'AerialScanMetadata']]],
   ['ntheta_9',['Ntheta',['../struct_scan_metadata.html#a8432ab0ab545a0027bb47ce84f0a6704',1,'ScanMetadata']]],

@@ -219,7 +219,7 @@ var searchData=
   ['getvoxelsize_216',['getVoxelSize',['../classhelios_1_1_context.html#a6a3f85d4f29f8f7432b6ef605172a1cb',1,'helios::Context']]],
   ['getwindowpixelsrgb_217',['getWindowPixelsRGB',['../class_visualizer.html#a15828ea9966b9729b56c9ddfccd4c117',1,'Visualizer']]],
   ['getwindowsize_218',['getWindowSize',['../class_visualizer.html#ae6b83402c798f56334851f77b898de52',1,'Visualizer']]],
-  ['gobletgrapevineparameters_219',['GobletGrapevineParameters',['../struct_goblet_grapevine_parameters.html#a0274d6f6b1f13bbf7a383de5c2bc8726',1,'GobletGrapevineParameters']]],
+  ['gobletgrapevineparameters_219',['GobletGrapevineParameters',['../struct_goblet_grapevine_parameters.html#a0274d6f6b1f13bbf7a383de5c2bc8726',1,'GobletGrapevineParameters::GobletGrapevineParameters()'],['../struct_goblet_grapevine_parameters.html#a498ce7f62d575b0bc914e9d48d94fbb2',1,'GobletGrapevineParameters::GobletGrapevineParameters(const pugi::xml_node canopy_node)']]],
   ['gradientdescent_220',['GradientDescent',['../struct_camera_calibration.html#a5bfbb206b8271b406cda85eb5ae23a1b',1,'CameraCalibration']]],
   ['grapevinegoblet_221',['grapevineGoblet',['../class_canopy_generator.html#a8f2d498637c464ee852109e6085cde8a',1,'CanopyGenerator']]],
   ['grapevinesplit_222',['grapevineSplit',['../class_canopy_generator.html#a8747bad1af97214059c38043241f0b47',1,'CanopyGenerator']]],

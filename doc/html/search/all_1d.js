@@ -1,7 +1,7 @@
 var searchData=
 [
   ['unilateral_20vsp_20trellis_0',['Grapevine Canopy with a Unilateral VSP Trellis',['../_canopy_generator_doc.html#CGenUnilateral',1,'']]],
-  ['unilateralgrapevineparameters_1',['UnilateralGrapevineParameters',['../struct_unilateral_grapevine_parameters.html',1,'UnilateralGrapevineParameters'],['../struct_unilateral_grapevine_parameters.html#a1f4063470113acb28186cf92b3030283',1,'UnilateralGrapevineParameters::UnilateralGrapevineParameters()']]],
+  ['unilateralgrapevineparameters_1',['UnilateralGrapevineParameters',['../struct_unilateral_grapevine_parameters.html',1,'UnilateralGrapevineParameters'],['../struct_unilateral_grapevine_parameters.html#a1f4063470113acb28186cf92b3030283',1,'UnilateralGrapevineParameters::UnilateralGrapevineParameters()'],['../struct_unilateral_grapevine_parameters.html#ab85a40a1bc4bd1880f74814278ff7fd2',1,'UnilateralGrapevineParameters::UnilateralGrapevineParameters(const pugi::xml_node canopy_node)']]],
   ['unique_20universal_20identifiers_20uuids_2',['Unique Universal Identifiers (UUIDs)',['../context_primitives.html#AddPatch_UUIDs',1,'']]],
   ['unit_20of_20a_20plant_20shoot_3',['The Phytomer: Basic Unit of a plant shoot',['../_plant_architecture_doc.html#PlantArchPhytomer',1,'']]],
   ['universal_20identifiers_20uuids_4',['Unique Universal Identifiers (UUIDs)',['../context_primitives.html#AddPatch_UUIDs',1,'']]],

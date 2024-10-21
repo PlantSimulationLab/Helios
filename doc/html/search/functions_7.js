@@ -6,5 +6,5 @@ var searchData=
   ['hideobject_3',['hideObject',['../classhelios_1_1_context.html#a983606fef144a460d4b987032a8ad005',1,'helios::Context']]],
   ['hideprimitive_4',['hidePrimitive',['../classhelios_1_1_context.html#a8c68c830335865618227463fbb9d2663',1,'helios::Context']]],
   ['hidewatermark_5',['hideWatermark',['../class_visualizer.html#a90d0c5630620d30d062c0af4bace0a99',1,'Visualizer']]],
-  ['homogeneouscanopyparameters_6',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html#ad5f583b7f483df9fdaf86bbdaf0e5a92',1,'HomogeneousCanopyParameters']]]
+  ['homogeneouscanopyparameters_6',['HomogeneousCanopyParameters',['../struct_homogeneous_canopy_parameters.html#ad5f583b7f483df9fdaf86bbdaf0e5a92',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters()'],['../struct_homogeneous_canopy_parameters.html#aac168c38c41f7c11830c36707a744620',1,'HomogeneousCanopyParameters::HomogeneousCanopyParameters(const pugi::xml_node canopy_node)']]]
 ];

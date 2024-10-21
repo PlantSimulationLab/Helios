@@ -303,12 +303,14 @@ public:
     //! Sets variable directRayCount, the number of rays to be used in direct radiation model.
     /**
         \param[in] N Number of rays
+        \note Default is 100 rays/primitive.
     */
     void setDirectRayCount(const std::string &label, size_t N );
 
     //! Sets variable diffuseRayCount, the number of rays to be used in diffuse (ambient) radiation model.
     /**
         \param[in] N Number of rays
+        \note Default is 1000 rays/primitive.
     */
     void setDiffuseRayCount(const std::string &label, size_t N );
 
@@ -1651,6 +1653,13 @@ protected:
     std::vector<std::string> spectral_library_files;
 
 };
+
+//! Validates the file path for output file writing by 1) making sure the directory string has a trailing slash, 2) creating the output directory if it does not exist.
+/**
+ * \param[inout] output_directory Path to the directory where output files will be written. If the directory does not exist, it will be created.
+ * \return True if the output directory is valid, false otherwise.
+*/
+bool validateOutputPath(std::ostringstream &output_directory);
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line);
 

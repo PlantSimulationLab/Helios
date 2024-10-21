@@ -102,9 +102,6 @@ uint buildGenericLeafPrototype(helios::Context *context_ptr, uint subdivisions, 
 }
 
 uint AlmondLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
-//    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondLeaf.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
-//    uint objID = context_ptr->addPolymeshObject( UUIDs );
-//    return objID;
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/AlmondLeaf.png";
 
@@ -152,6 +149,63 @@ void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 }
 
 void AlmondPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 && phytomer->internode_length_max > 0.01 ){
+            phytomer->setVegetativeBudState( BUD_DORMANT ); //first two vegetative buds always break
+        }
+    }
+
+}
+
+uint AppleLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/AppleLeaf.png";
+
+    float leaf_aspect = 0.6; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float longitudinal_curvature = 0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = 0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
+
+    return objID;
+
+}
+
+uint AppleFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AppleFruit.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint AppleFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void AppledPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+    if( phytomer->internode_length_max < 0.01 ){ //spurs
+        phytomer->setInternodeMaxRadius( 0.005 );
+        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->scaleLeafPrototypeScale( 0.8 );
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+    //blind nodes
+    if( shoot_node_index<3 ){
+        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+}
+
+void ApplePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
 
     if( phytomer->isdormant ){
         if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 && phytomer->internode_length_max > 0.01 ){
@@ -280,6 +334,9 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
     }else{
         phytomer->setFloralBudState(BUD_DEAD);
     }
+    if( shoot_node_index<=1 && phytomer->rank == 0 ){
+        phytomer->setVegetativeBudState(BUD_ACTIVE);
+    }
 
     //set leaf and internode scale based on position along the shoot
     float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
@@ -402,6 +459,150 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
 
 }
 
+uint GrapevineLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/GrapeLeaf.png";
+
+    float leaf_aspect = 1.0; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.3; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float longitudinal_curvature = context_ptr->randu(-0.4f,0.4f); //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = 0.; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    float wave_period = 0.3f; //period factor of leaf waves
+    float wave_amplitude = 0.1f; // amplitude of leaf waves
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, false);
+    context_ptr->translateObject( objID, make_vec3(-0.3,0,0) );
+
+    return objID;
+}
+
+// Function to generate random float between min and max
+float random_float(float min, float max) {
+    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/(max-min)));
+}
+
+// Function to check if two spheres overlap
+bool spheres_overlap(const helios::vec3& center1, float radius1, const helios::vec3& center2, float radius2) {
+    float distance = std::sqrt(
+            std::pow(center1.x - center2.x, 2) +
+            std::pow(center1.y - center2.y, 2) +
+            std::pow(center1.z - center2.z, 2)
+    );
+    return distance < (radius1 + radius2);
+}
+
+uint GrapevineFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+
+    int num_grapes = 75;
+    float height = 7.0f;        // Height of the cluster
+    float base_radius = 2.5f;    // Base radius of the cluster
+    float taper_factor = 0.6f;   // Taper factor (higher means more taper)
+    float grape_radius = 0.35f;   // Fixed radius for each grape
+
+    std::vector<std::pair<helios::vec3, float>> grapes;
+    float z_step = height / num_grapes;
+
+    // Place the first grape at the bottom center
+    helios::vec3 first_center(0.0f, 0.0f, 0.0f);
+    grapes.push_back({first_center, grape_radius});
+
+    // Attempt to place each subsequent grape close to an existing grape
+    int max_attempts = 100; // Number of retries to find a tight fit
+
+    for (int i = 1; i < num_grapes; ++i) {
+        float z = i * z_step;
+        // Tapered radius based on height (denser at the top, sparser at the bottom)
+        float taper_radius = base_radius * (1.0f - taper_factor * (z / height));
+
+        bool placed = false;
+        int attempts = 0;
+        while (!placed && attempts < max_attempts) {
+            // Randomly select an existing grape as the reference point
+            int reference_idx = rand() % grapes.size();
+            const helios::vec3& reference_center = grapes[reference_idx].first;
+
+            // Pick a random offset direction from the reference grape
+            float angle = random_float(0, 2 * M_PI);
+            float distance = random_float(1.2 * grape_radius, 1.3 * grape_radius); // Keep grapes close but not overlapping
+
+            // Compute the new potential center for the grape
+            helios::vec3 new_center(
+                    reference_center.x + distance * cos(angle),
+                    reference_center.y + distance * sin(angle),
+                    random_float(z - 0.5f * z_step, z + 0.5f * z_step)
+            );
+
+            // Check that the new center is within the allowable radius (for tapering)
+            float new_center_distance = std::sqrt(new_center.x * new_center.x + new_center.y * new_center.y);
+            if (new_center_distance > taper_radius) {
+                attempts++;
+                continue; // Skip if the new position exceeds the tapered radius
+            }
+
+            // Check for collisions with existing grapes
+            bool collision = false;
+            for (const auto& grape : grapes) {
+                if (spheres_overlap(new_center, grape_radius, grape.first, grape.second)) {
+                    collision = true;
+                    break;
+                }
+            }
+
+            // If no collision, place the grape
+            if (!collision) {
+                grapes.push_back({new_center, grape_radius});
+                placed = true;
+            }
+
+            attempts++;
+        }
+
+    }
+
+    std::vector<uint> UUIDs;
+    for (const auto& grape : grapes) {
+        std::vector<uint> UUIDs_tmp = context_ptr->addSphere( 10, grape.first, grape.second, "../../../plugins/plantarchitecture/assets/textures/GrapeBerry.jpg" );
+        UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());
+    }
+
+    context_ptr->rotatePrimitive( UUIDs, -0.5*M_PI, "y");
+
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+//uint GrapevineFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+//    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+//    uint objID = context_ptr->addPolymeshObject( UUIDs );
+//    return objID;
+//}
+
+void GrapevinePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+    //blind nodes
+    if( shoot_node_index>=2 ){
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+}
+
+//void GrapevinePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+//
+//    if( phytomer->isdormant ){
+//        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-1  ){
+//            phytomer->setVegetativeBudState( BUD_DORMANT ); //first vegetative buds always break
+//        }
+//        if( phytomer->shoot_index.x <= phytomer->shoot_index.y-4  ){
+//            phytomer->setFloralBudState( BUD_DORMANT ); //first vegetative buds always break
+//        }
+//    }
+//
+//}
+
 uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/PuncturevineLeaf.png";
@@ -415,6 +616,113 @@ uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions,
     float lateral_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
     return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
+
+}
+
+uint OliveLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+//    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/OliveLeaf.png";
+//
+//    float leaf_aspect = 0.4; //ratio of leaf width to leaf length
+//
+//    float midrib_fold = 0.; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+//
+//    float longitudinal_curvature = 0.05; //curvature factor along x-direction. (+curves upward, -curved downward)
+//
+//    float lateral_curvature = 0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+//
+//    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
+
+    std::vector<uint> UUIDs_upper = context_ptr->addTile(make_vec3(0.5,0,0), make_vec2(1,0.2), nullrotation, make_int2(subdivisions,subdivisions), "plugins/plantarchitecture/assets/textures/OliveLeaf_upper.png");
+    std::vector<uint> UUIDs_lower = context_ptr->addTile(make_vec3(0.5,0,-1e-4), make_vec2(1,0.2), nullrotation, make_int2(subdivisions,subdivisions), "plugins/plantarchitecture/assets/textures/OliveLeaf_lower.png");
+    context_ptr->rotatePrimitive( UUIDs_lower, M_PI, "x" );
+
+    UUIDs_upper.insert(UUIDs_upper.end(), UUIDs_lower.begin(), UUIDs_lower.end());
+    uint objID = context_ptr->addPolymeshObject( UUIDs_upper );
+    return objID;
+}
+
+uint OliveFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/OliveFruit.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    std::vector<uint> UUIDs_fruit = context_ptr->filterPrimitivesByData( context_ptr->getObjectPrimitiveUUIDs(objID), "object_label", "fruit");
+//    context_ptr->setPrimitiveColor( UUIDs_fruit, make_RGBcolor(0.3,0.15,0.2)); //purple
+    context_ptr->setPrimitiveColor( UUIDs_fruit, make_RGBcolor(0.65,0.7,0.4)); //green
+    return objID;
+}
+
+uint OliveFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void OlivePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+}
+
+void OlivePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x < phytomer->shoot_index.y-8  ){
+            phytomer->setFloralBudState( BUD_DEAD );
+        }
+    }
+
+}
+
+uint PistachioLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/PistachioLeaf.png";
+
+    float leaf_aspect = 0.6; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float longitudinal_curvature = context_ptr->randu(-0.4f,0.4f); //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = 0.; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    float wave_period = 0.3f; //period factor of leaf waves
+    float wave_amplitude = 0.1f; // amplitude of leaf waves
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, false);
+
+    return objID;
+}
+
+uint PistachioFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/PistachioNut.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint PistachioFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void PistachioPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+    //blind nodes
+    if( shoot_node_index<2 ){
+        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+}
+
+void PistachioPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-1  ){
+            phytomer->setVegetativeBudState( BUD_DORMANT ); //first vegetative buds always break
+        }
+        if( phytomer->shoot_index.x <= phytomer->shoot_index.y-4  ){
+            phytomer->setFloralBudState( BUD_DORMANT ); //first vegetative buds always break
+        }
+    }
 
 }
 
@@ -572,8 +880,8 @@ uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, f
             z = n*height_seed/float(subdivisions-1);
         }
 
-        float angle = n * M_PI /float(subdivisions-1);
-        float dr = 0.5f * width_seed * sin(angle);
+        float angle = float(n) * M_PI /float(subdivisions-1);
+        float dr = std::fmax(0.f, 0.5f * width_seed * sin(angle));
 
         nodes_panicle.push_back(make_vec3(x, y, z));
         radius_panicle.push_back(dr);

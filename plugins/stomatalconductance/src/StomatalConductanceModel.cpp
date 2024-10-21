@@ -185,7 +185,7 @@ void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeff
 }
 
 void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species_name) {
-    BMFcoefficients coeffs;
+    BMFcoefficients coeffs = getBMFCoefficientsFromLibrary(species_name);
     BMFcoeffs = coeffs;
     BMFmodel_coefficients.clear();
     model = "BMF";

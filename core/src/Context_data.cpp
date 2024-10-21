@@ -4444,6 +4444,17 @@ size_t Context::getGlobalDataSize(const char *label) const {
 
 }
 
+std::vector<std::string> Context::listGlobalData() const{
+
+    std::vector<std::string> labels;
+    labels.reserve(globaldata.size());
+    for( auto it=globaldata.begin(); it!=globaldata.end(); it++ ){
+        labels.push_back(it->first);
+    }
+
+    return labels;
+}
+
 bool Context::doesGlobalDataExist( const char* label ) const{
 
   if( globaldata.find(label) == globaldata.end() ){

@@ -1,10 +1,14 @@
 /*! \page PlantArchitectureDoc Plant Architecture Model Plugin Documentation
 
+\image html PlantArchitecture_cover_image.png
+
 \tableofcontents
 
 <b>Known Issues</b>
 
-- Growing the plant over time is pretty slow. Nothing has been done yet to optimize efficiency. It may be helpful to lower the subdivision count on leaves and stems/branches.
+- This plug-in is under active development and changes much more frequently than other plug-ins, and backward compatability is not necessarily maintained. Please check the release notes for each version to see what has changed and how to modify your code to accommodate changes that break backward compatability.
+- The phyllochron and phenological threshold values (e.g., time to flowering) in the plant library are currently arbitrary and not necessarily reflective of reality. This will be updated in a future release.
+- Computational efficiency has been improved substantially, but some models may still be a bit slow to generate. This will be improved in the future. For now, you can decrease subdivision counts, or prevent the plant from flowering/fruiting (these take a lot of primitives and computational power).
 
 <table>
     <tr><th>Dependencies</th><td>None</td></tr>
@@ -158,9 +162,8 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **inflorescence** --- ||||
-| flowers_per_rachis | RandomParameter_int | - | Number of flowers per peduncle (rachis). |
-| flower_offset | RandomParameter_float | - | If peduncle has multiple flowers/fruit (flowers_per_rachis>1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length. |
-| flower_arrangement_pattern | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Pattern of flower arrangement on the peduncle (rachis): one of "alternate" or "opposite". Only used if flowers_per_rachis > 1. |
+| flowers_per_peduncle | RandomParameter_int | - | Number of flowers per peduncle (rachis). |
+| flower_offset | RandomParameter_float | - | If peduncle has multiple flowers/fruit (flowers_per_peduncle>1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length. |
 | pitch | RandomParameter_float | degrees | Angle of the fruit axis with respect to its parent peduncle axis. |
 | roll | RandomParameter_float | degrees | Rotation angle of the fruit about it's own axis (x-axis of fruit prototype). |
 | flower_prototype_scale | RandomParameter_float | - | Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower. |
@@ -271,7 +274,7 @@ Alternatively, a compound leaf could be created by adding a single "leaf prototy
 
 The term 'inflorescence' used to denote the peduncle and flowers together. The peduncle is the supporting structure that connects the internode to the flowers. In this model, we do not distinguish between the peduncle (part between the internode and first flower) and the rachis (part that connects adjacent flowers when there are multiple flowers per inflorescence) - this is all considered the peduncle for simplicity.
 
-If \htmlonly<font face="courier" color="blue">flowers_per_rachis</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
+If \htmlonly<font face="courier" color="blue">flowers_per_peduncle</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
 
 The sketch below shows an example of one parameter set for the infloresence.
 
@@ -304,7 +307,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | phyllochron | RandomParameter_float | 1.0 | days/leaf | Time between the emergence of successive phytomers along the shoot. |
 | leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | 1 | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
 | elongation_rate | RandomParameter_float | 0.2 | meter/meter/day | Relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. |
-| girth_growth_rate | RandomParameter_float | 0.0001 | meter/day | Rate of increase of the internode radius of the shoot. Units are meters of increase in internode radius per day. |
+| girth_area_factor | RandomParameter_float | 0 | cm^2 branch area / m^2 downstream leaf area | Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. |
 | vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
 | vegetative_bud_break_probability | RandomParameter_float | 0 | - | Probability of a bud breaking dormancy and emerging as a shoot. |
 | flower_bud_break_probability | RandomParameter_float | 0 | - | Probability of a flower bud emerging as a flower. |

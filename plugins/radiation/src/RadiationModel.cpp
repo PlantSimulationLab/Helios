@@ -1342,10 +1342,8 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -1451,10 +1449,8 @@ void RadiationModel::writeCameraImageData(const std::string &camera, const std::
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5098,10 +5094,8 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5187,10 +5181,8 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5278,10 +5270,8 @@ void RadiationModel::writeDepthImageData(const std::string &cameralabel, const s
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5332,10 +5322,8 @@ void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const s
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5400,10 +5388,8 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5507,10 +5493,8 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
 
     std::ostringstream outfile;
 
-    if( image_path.find_last_of('/')==image_path.length()-1 ) {
-        outfile << image_path;
-    }else {
-        outfile << image_path << "/";
+    if( !validateOutputPath(outfile) ){
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + outfile.str() + "'. Check that the path exists and that you have write permission.");
     }
 
     if( frame>=0 ) {
@@ -5738,6 +5722,24 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
 
 
     return cameraresponse;
+}
+
+bool validateOutputPath(std::ostringstream &output_directory){
+
+    // Make sure directory has a trailing slash
+    if( output_directory.str().find_last_of('/')!=output_directory.str().length()-1 ) {
+        output_directory << "/";
+    }
+
+    // Create the output directory if it does not exist
+    if( !std::filesystem::exists(output_directory.str()) ){
+        if( !std::filesystem::create_directory(output_directory.str()) ){
+            return false;
+        }
+    }
+
+    return true;
+
 }
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)

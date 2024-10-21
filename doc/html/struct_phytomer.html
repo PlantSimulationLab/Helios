@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -128,6 +128,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a38c6cd729c0033fcb0b4acec5089d328"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c3196c1b186e116f85d8a8514a2df40" id="r_a8c3196c1b186e116f85d8a8514a2df40"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c3196c1b186e116f85d8a8514a2df40">hasLeaf</a> () const</td></tr>
 <tr class="separator:a8c3196c1b186e116f85d8a8514a2df40"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a2257100ec06229fe39f64cc59c0289" id="r_a0a2257100ec06229fe39f64cc59c0289"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0a2257100ec06229fe39f64cc59c0289">calculateDownstreamLeafArea</a> () const</td></tr>
+<tr class="separator:a0a2257100ec06229fe39f64cc59c0289"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa463dd3dc4119bf2c8f7fa6b7a104186" id="r_aa463dd3dc4119bf2c8f7fa6b7a104186"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa463dd3dc4119bf2c8f7fa6b7a104186">setInternodeLengthScaleFraction</a> (float internode_scale_factor_fraction, bool update_context_geometry)</td></tr>
 <tr class="separator:aa463dd3dc4119bf2c8f7fa6b7a104186"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aecc6f52f3490562f4daf581bec7f4260" id="r_aecc6f52f3490562f4daf581bec7f4260"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aecc6f52f3490562f4daf581bec7f4260">scaleInternodeMaxLength</a> (float scale_factor)</td></tr>
@@ -257,7 +259,7 @@ Friends</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00637">637</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00651">651</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a588596baf890a4b4e6431096deaa8690" name="a588596baf890a4b4e6431096deaa8690"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a588596baf890a4b4e6431096deaa8690">&#9670;&#160;</a></span>Phytomer()</h2>
@@ -338,11 +340,30 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00744">744</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00775">775</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0a2257100ec06229fe39f64cc59c0289" name="a0a2257100ec06229fe39f64cc59c0289"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0a2257100ec06229fe39f64cc59c0289">&#9670;&#160;</a></span>calculateDownstreamLeafArea()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Phytomer::calculateDownstreamLeafArea </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01769">1769</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+
+</div>
+</div>
 <a id="af466d68c029f3a7a3f6a46bfbb8f30c6" name="af466d68c029f3a7a3f6a46bfbb8f30c6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af466d68c029f3a7a3f6a46bfbb8f30c6">&#9670;&#160;</a></span>calculateFruitConstructionCosts()</h2>
 
@@ -358,7 +379,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00221">221</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00223">223</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -389,7 +410,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00276">276</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00275">275</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -408,7 +429,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00265">265</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00264">264</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -427,7 +448,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00304">304</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00303">303</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -446,7 +467,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00245">245</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00244">244</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -465,7 +486,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00255">255</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00254">254</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -484,7 +505,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00300">300</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00299">299</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -503,7 +524,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00319">319</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00318">318</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -526,7 +547,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00269">269</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00268">268</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -545,7 +566,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00313">313</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00312">312</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -564,7 +585,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01735">1735</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01765">1765</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -583,7 +604,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01722">1722</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01744">1744</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -611,7 +632,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01463">1463</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01485">1485</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -638,7 +659,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01564">1564</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01586">1586</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -657,7 +678,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01678">1678</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01700">1700</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -676,7 +697,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00345">345</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00344">344</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -699,7 +720,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00365">365</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00364">364</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -727,7 +748,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00355">355</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00354">354</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -750,7 +771,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01703">1703</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01725">1725</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -773,7 +794,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01517">1517</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01539">1539</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -800,7 +821,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01575">1575</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01597">1597</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -827,7 +848,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01580">1580</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01602">1602</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -854,7 +875,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01656">1656</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01678">1678</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -881,7 +902,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01586">1586</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01608">1608</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -900,7 +921,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01428">1428</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01450">1450</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -919,7 +940,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00323">323</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00322">322</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -947,7 +968,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00331">331</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00330">330</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -970,7 +991,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00341">341</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00340">340</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -995,7 +1016,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00790">790</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00806">806</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1019,7 +1040,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00789">789</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00805">805</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1038,7 +1059,7 @@ Friends</h2></td></tr>
 
 <p>Time since the phytomer was created. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00758">758</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00774">774</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1054,7 +1075,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00766">766</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00782">782</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1070,7 +1091,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00774">774</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00790">790</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1086,7 +1107,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00773">773</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00789">789</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1123,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00763">763</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00779">779</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1139,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00764">764</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00780">780</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1134,7 +1155,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00767">767</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00783">783</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1150,7 +1171,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00741">741</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00757">757</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1166,7 +1187,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00771">771</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00787">787</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1182,7 +1203,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00732">732</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00748">748</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1198,7 +1219,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00732">732</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00748">748</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1214,7 +1235,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00769">769</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00785">785</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1230,7 +1251,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00770">770</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00786">786</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1246,7 +1267,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00761">761</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00777">777</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1262,7 +1283,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00731">731</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00747">747</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1278,7 +1299,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00745">745</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00761">761</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1294,7 +1315,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00739">739</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00755">755</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1310,7 +1331,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00738">738</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00754">754</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1326,7 +1347,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00754">754</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00770">770</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1342,7 +1363,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00755">755</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00771">771</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1358,7 +1379,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00742">742</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00758">758</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1374,7 +1395,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00737">737</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00753">753</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1390,7 +1411,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00735">735</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00751">751</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1406,7 +1427,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00744">744</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00760">760</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1422,7 +1443,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00736">736</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00752">752</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1438,7 +1459,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00734">734</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00750">750</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1456,7 +1477,7 @@ Friends</h2></td></tr>
 
 <p>Coordinates of internode tube segments. Index is tube segment within internode. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00730">730</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00746">746</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1472,7 +1493,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00640">640</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00654">654</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1488,7 +1509,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00747">747</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00763">763</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1504,7 +1525,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00753">753</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00769">769</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1520,7 +1541,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00749">749</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00765">765</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1538,7 +1559,7 @@ Friends</h2></td></tr>
 
 <p>.x = index of phytomer along shoot, .y = current number of phytomers on parent shoot, .z = maximum number of phytomers on parent shoot </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00751">751</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00767">767</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1556,7 +1577,7 @@ Friends</h2></td></tr>
 
 <p>Time since the phytomer last broke dormancy (=0 if currently dormant) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00760">760</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00776">776</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

@@ -344,6 +344,12 @@ void EnergyBalanceModel::addRadiationBand( const char* band ){
     }
 }
 
+void EnergyBalanceModel::addRadiationBand( const std::vector<std::string> &bands ){
+    for( auto &band : bands ){
+        addRadiationBand(band.c_str());
+    }
+}
+
 void EnergyBalanceModel::optionalOutputPrimitiveData( const char* label ){
 
   if( strcmp(label,"boundarylayer_conductance_out")==0 || strcmp(label,"vapor_pressure_deficit")==0 ){

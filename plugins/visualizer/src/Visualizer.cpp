@@ -82,7 +82,7 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     if (setjmp(jerr.setjmp_buffer)) {
         jpeg_destroy_decompress(&cinfo);
         fclose(infile);
-        return 0;
+        helios_runtime_error("ERROR (read_JPEG_file): Error reading JPEG file " + std::string(filename));
     }
 
     jpeg_create_decompress(&cinfo);

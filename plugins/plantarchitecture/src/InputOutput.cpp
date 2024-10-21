@@ -44,7 +44,9 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
             outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front()*phytomer->current_leaf_scale_factor ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
 
             if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
-                outstring = makeShootString(outstring, shoot_tree.at(shoot->childIDs.at(node_number)), shoot_tree );
+                for( int childID: shoot->childIDs.at(node_number) ) {
+                    outstring = makeShootString(outstring, shoot_tree.at(childID), shoot_tree);
+                }
             }
 
 //        }

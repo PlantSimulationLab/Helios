@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -158,6 +158,9 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a2d93cfc62b5e610b18411a9e87547f81" id="r_a2d93cfc62b5e610b18411a9e87547f81"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2d93cfc62b5e610b18411a9e87547f81">validateOutputPath</a> (std::ostringstream &amp;output_directory)</td></tr>
+<tr class="memdesc:a2d93cfc62b5e610b18411a9e87547f81"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validates the file path for output file writing by 1) making sure the directory string has a trailing slash, 2) creating the output directory if it does not exist.  <br /></td></tr>
+<tr class="separator:a2d93cfc62b5e610b18411a9e87547f81"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8f548814a2063dac33088c5d812a7f0a" id="r_a8f548814a2063dac33088c5d812a7f0a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f548814a2063dac33088c5d812a7f0a">sutilHandleError</a> (RTcontext context, RTresult code, const char *file, int line)</td></tr>
 <tr class="separator:a8f548814a2063dac33088c5d812a7f0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2f058fd39b7589b0d11daeddc4e7e0f4" id="r_a2f058fd39b7589b0d11daeddc4e7e0f4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f058fd39b7589b0d11daeddc4e7e0f4">sutilReportError</a> (const char *message)</td></tr>
@@ -191,7 +194,7 @@ Functions</h2></td></tr>
 <div class="line">      sutilHandleError( OptiX_Context, code, __FILE__, __LINE__ );       \</div>
 <div class="line">  } <span class="keywordflow">while</span>(0)</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l01660">1660</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l01669">1669</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -244,7 +247,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05743">5743</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05745">5745</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -263,7 +266,35 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05753">5753</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05755">5755</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2d93cfc62b5e610b18411a9e87547f81" name="a2d93cfc62b5e610b18411a9e87547f81"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d93cfc62b5e610b18411a9e87547f81">&#9670;&#160;</a></span>validateOutputPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool validateOutputPath </td>
+          <td>(</td>
+          <td class="paramtype">std::ostringstream &amp;</td>          <td class="paramname"><span class="paramname"><em>output_directory</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validates the file path for output file writing by 1) making sure the directory string has a trailing slash, 2) creating the output directory if it does not exist. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">output_directory</td><td>Path to the directory where output files will be written. If the directory does not exist, it will be created. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the output directory is valid, false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05727">5727</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>

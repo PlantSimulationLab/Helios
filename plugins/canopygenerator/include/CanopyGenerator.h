@@ -19,11 +19,63 @@
 #include "Context.h"
 #include <random>
 
+class CanopyGenerator;
+
+//! Base struct class for Canopy parameters
+struct BaseCanopyParameters{
+
+  //! Default constructor
+  BaseCanopyParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  BaseCanopyParameters(const pugi::xml_node canopy_node);
+
+  virtual ~BaseCanopyParameters() = default;
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  virtual void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) = 0;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  virtual void buildCanopy(CanopyGenerator& canopy_generator) = 0;
+
+  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
+  helios::vec3 canopy_origin;
+
+  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
+  float canopy_rotation;
+
+};
+
 //! Parameters defining the homogeneous canopy
-struct HomogeneousCanopyParameters{
+struct HomogeneousCanopyParameters : BaseCanopyParameters{
 
   //! Default constructor
   HomogeneousCanopyParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  HomogeneousCanopyParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Length of leaf in x- and y- directions (prior to rotation)
   helios::vec2 leaf_size;
@@ -49,9 +101,6 @@ struct HomogeneousCanopyParameters{
   //! Horizontal extent of the canopy in the x- and y-directions.
   helios::vec2 canopy_extent;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
   //! 
   std::vector<float> leaf_angle_PDF;
 
@@ -61,10 +110,27 @@ struct HomogeneousCanopyParameters{
 };
 
 //! Parameters defining the canopy with spherical crowns
-struct SphericalCrownsCanopyParameters{
+struct SphericalCrownsCanopyParameters : BaseCanopyParameters{
 
   //! Default constructor
   SphericalCrownsCanopyParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  SphericalCrownsCanopyParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Length of leaf in x- and y- directions (prior to rotation)
   helios::vec2 leaf_size;
@@ -96,22 +162,33 @@ struct SphericalCrownsCanopyParameters{
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
   //! 
   std::vector<float> leaf_angle_PDF;
   
 };
 
 //! Parameters defining the canopy with conical crowns
-struct ConicalCrownsCanopyParameters{
+struct ConicalCrownsCanopyParameters : BaseCanopyParameters{
 
     //! Default constructor
     ConicalCrownsCanopyParameters();
+
+    /**
+     * \param[in] canopy_node XML node containing the canopy parameters
+     */
+    ConicalCrownsCanopyParameters(const pugi::xml_node canopy_node);
+
+    //! Sets canopy parameters from the given XML node
+    /**
+     * \param[in] canopy_node XML node containing the canopy parameters
+     */
+    void readParametersFromXML(const pugi::xml_node canopy_node);
+
+    //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+    void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+    //! Makes the given Canopy generator build a canopy of our type with our parameters
+    void buildCanopy(CanopyGenerator& canopy_generator) override;
 
     //! Length of leaf in x- and y- directions (prior to rotation)
     helios::vec2 leaf_size;
@@ -146,25 +223,39 @@ struct ConicalCrownsCanopyParameters{
     //! Number of crowns/plants in the x- and y-directions.
     helios::int2 plant_count;
 
-    //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-    helios::vec3 canopy_origin;
-
-    //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-    float canopy_rotation;
-
     //!
     std::vector<float> leaf_angle_PDF;
 
 };
 
-//! Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis
-struct VSPGrapevineParameters{
+struct BaseGrapeVineParameters : BaseCanopyParameters{
 
   //! Default constructor
-  VSPGrapevineParameters();
+  BaseGrapeVineParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  BaseGrapeVineParameters(const pugi::xml_node canopy_node);
+
+  virtual ~BaseGrapeVineParameters() = default;
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
   float leaf_width;
+  //! Spread value for the maximum leaf width. With any new canopy or plant generation, the maximum leaf width would be between leaf_width - leaf_width_spread and leaf_width + leaf_width_spread.
+  float leaf_width_spread;
 
   //! Number of sub-division segments per leaf
   helios::int2 leaf_subdivisions;
@@ -177,321 +268,245 @@ struct VSPGrapevineParameters{
 
   //! Number of radial subdivisions for trunk/cordon/shoot tubes
   int wood_subdivisions;
+  //! Spread value for the number of wood subdivisions. With any new canopy or plant generation, the maximum number of wood subdivisions would be between wood_subdivisions - wood_subdivisions_spread and wood_subdivisions + wood_subdivisions_spread.
+  int wood_subdivisions_spread;
+
+  //! Probability for a plant to be dead, i.e. without any leaves or grapes
+  float dead_probability;
+
+  //! Probability for a plant to be missing
+  /**
+   * \note Only applicable when building a canopy. If you are building an individual plant, well... just don't build it.
+   */
+  float missing_plant_probability;
   
   //! Spacing between adjacent plants along the row direction.
   float plant_spacing;
+  //! Spread value for the plant spacing. The spacing between adjacent plants along a row would vary between plant_spacing - plant_spacing_spread and plant_spacing + plant_spacing_spread.
+  float plant_spacing_spread;
 
   //! Spacing between plant rows.
   float row_spacing;
+  //! Spread value for the row spacing. This allows to vary the alignment of plants along a row. The spacing between two plants of adjacent rows would be between row_spacing - row_spacing_spread and row_spacing + row_spacing_spread.
+  float row_spacing_spread;
 
   //! Distance between the ground and top of trunks
   float trunk_height;
+  //! Spread value for the trunk height. With any new canopy or plant generation, the trunk height would be between trunk_height - trunk_height_spread and trunk_height + trunk_height_spread.
+  float trunk_height_spread;
 
   //! Radius of the trunk at the widest point
   float trunk_radius;
+  //! Spread value for the trunk radius. With any new canopy or plant generation, the trunk radius would be between trunk_radius - trunk_radius_spread and trunk_radius + trunk_radius_spread.
+  float trunk_radius_spread;
+
+  //! Length of the cordons. By default, half the plant spacing.
+  float cordon_length;
+  //! Spread value for the cordon length. With any new canopy or plant generation, the cordon length would be between cordon_length - cordon_length_spread and cordon_length + cordon_length_spread.
+  float cordon_length_spread;
 
   //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
   float cordon_height;
+  //! Spread value for the cordon height. With any new canopy or plant generation, the cordon height would be between cordon_height - cordon_height_spread and cordon_height + cordon_height_spread.
+  float cordon_height_spread;
 
   //! Radius of cordon branches.
   float cordon_radius;
-  
+  //! Spread value for the cordon radius. With any new canopy or plant generation, the cordon radius would be between cordon_radius - cordon_radius_spread and cordon_radius + cordon_radius_spread.
+  float cordon_radius_spread;
+
   //! Length of shoots.
   float shoot_length;
+  //! Spread value for the shoot length. With any new canopy or plant generation, the shoot length would be between shoot_length - shoot_length_spread and shoot_length + shoot_length_spread.
+  float shoot_length_spread;
 
   //! Radius of shoot branches.
   float shoot_radius;
+  //! Spread value for the shoot radius. With any new canopy or plant generation, the shoot radius would be between shoot_radius - shoot_radius_spread and shoot_radius + shoot_radius_spread.
+  float shoot_radius_spread;
 
   //! Number of shoots on each cordon.
   uint shoots_per_cordon;
+  //! Spread value for the number of shoots per cordon. With any new canopy or plant generation, the number of shoots per cordon would be between shoots_per_cordon - shoots_per_cordon_spread and shoots_per_cordon + shoots_per_cordon_spread.
+  uint shoots_per_cordon_spread;
 
   //! Spacing between adjacent leaves as a fraction of the local leaf width. E.g., leaf_spacing_fraction = 1 would give a leaf spacing equal to the leaf width.
   float leaf_spacing_fraction;
+  //! Spread value for the leaf spacing fraction. With any new canopy or plant generation, the leaf spacing fraction would be between leaf_spacing_fraction - leaf_spacing_fraction_spread and leaf_spacing_fraction + leaf_spacing_fraction_spread.
+  float leaf_spacing_fraction_spread;
 
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
   //! Radius of grape berries
   float grape_radius;
+  //! Spread value for the grape radius. With any new canopy or plant generation, the grape radius would be between grape_radius - grape_radius_spread and grape_radius + grape_radius_spread.
+  float grape_radius_spread;
 
   //! Maximum horizontal radius of grape clusters
   float cluster_radius;
+  //! Spread value for the cluster radius. With any new canopy or plant generation, the cluster radius would be between cluster_radius - cluster_radius_spread and cluster_radius + cluster_radius_spread.
+  float cluster_radius_spread;
 
   //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
   float cluster_height_max;
+  //! Spread value for the cluster height. With any new canopy or plant generation, the cluster height would be between cluster_height - cluster_height_spread and cluster_height + cluster_height_spread.
+  float cluster_height_max_spread;
 
   //! Color of grapes
   helios::RGBcolor grape_color;
 
   //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly 2*(grape_subdivisions)^2 triangles per grape berry)
   uint grape_subdivisions;
+  //! Spread value for the number of grape subdivisions. With any new canopy or plant generation, the number of grape subdivisions would be between grape_subdivisions - grape_subdivisions_spread and grape_subdivisions + grape_subdivisions_spread.
+  uint grape_subdivisions_spread;
 
   //! 
   std::vector<float> leaf_angle_PDF;
+
+  //! Spread value for the canopy rotation. With any new canopy or plant generation, the canopy/plant rotation would be between canopy_rotation - canopy_rotation_spread and canopy_rotation + canopy_rotation_spread.
+  float canopy_rotation_spread;
+
+};
+
+//! Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis
+struct VSPGrapevineParameters : BaseGrapeVineParameters{
+
+  //! Default constructor
+  VSPGrapevineParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  VSPGrapevineParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
   
 };
 
 //! Parameters defining the grapevine canopy with a split (quad) trellis
-struct SplitGrapevineParameters{
+struct SplitGrapevineParameters : BaseGrapeVineParameters{
 
   //! Default constructor
   SplitGrapevineParameters();
 
-  //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
-  float leaf_width;
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  SplitGrapevineParameters(const pugi::xml_node canopy_node);
 
-  //! Number of sub-division segments per leaf
-  helios::int2 leaf_subdivisions;
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
 
-  //! Path to texture map file for leaves.
-  std::string leaf_texture_file;
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
 
-  //! Path to texture map file for trunks/branches.
-  std::string wood_texture_file;
-
-  //! Number of radial subdivisions for trunk/cordon/shoot tubes
-  int wood_subdivisions;
-  
-  //! Spacing between adjacent plants along the row direction.
-  float plant_spacing;
-
-  //! Spacing between plant rows.
-  float row_spacing;
-
-  //! Distance between the ground and top of trunks
-  float trunk_height;
-
-  //! Radius of the trunk at the widest point
-  float trunk_radius;
-
-  //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
-  float cordon_height;
-
-  //! Radius of cordon branches.
-  float cordon_radius;
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Spacing between two opposite cordons
   float cordon_spacing;
-  
-  //! Length of shoots.
-  float shoot_length;
-
-  //! Radius of shoot branches.
-  float shoot_radius;
-
-  //! Number of shoots on each cordon.
-  uint shoots_per_cordon;
+  //! Spread value for the cordon spacing. With any new canopy or plant generation, the cordon spacing would be between cordon_spacing - cordon_spacing_spread and cordon_spacing + cordon_spacing_spread.
+  float cordon_spacing_spread;
 
   //! Average angle of the shoot at the base (shoot_angle_base=0 points shoots upward; shoot_angle_base=M_PI points shoots downward and makes a Geneva Double Curtain)
   float shoot_angle_base;
+  //! Spread value for the base shoot angle. With any new canopy or plant generation, the base shoot angle would be between shoot_angle_base - shoot_angle_base_spread and shoot_angle_base + shoot_angle_base_spread.
+  float shoot_angle_base_spread;
   
   //! Average angle of the shoot at the tip (shoot_angle=0 is a completely vertical shoot; shoot_angle=M_PI is a downward-pointing shoot)
   float shoot_angle_tip;
-
-  //! Spacing between adjacent leaves as a fraction of the local leaf width. E.g., leaf_spacing_fraction = 1 would give a leaf spacing equal to the leaf width.
-  float leaf_spacing_fraction;
-
-  //! Number of crowns/plants in the x- and y-directions.
-  helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
-  //! Radius of grape berries
-  float grape_radius;
-
-  //! Maximum horizontal radius of grape clusters
-  float cluster_radius;
-
-  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
-  float cluster_height_max;
-
-  //! Color of grapes
-  helios::RGBcolor grape_color;
-
-  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
-  uint grape_subdivisions;
-  
-  //! 
-  std::vector<float> leaf_angle_PDF;
+  //! Spread value for the base shoot angle. With any new canopy or plant generation, the base shoot angle would be between shoot_angle_tip - shoot_angle_tip_spread and shoot_angle_tip + shoot_angle_tip_spread.
+  float shoot_angle_tip_spread;
   
 };
 
 //! Parameters defining the grapevine canopy with unilateral trellis
-struct UnilateralGrapevineParameters{
+struct UnilateralGrapevineParameters : BaseGrapeVineParameters{
 
   //! Default constructor
   UnilateralGrapevineParameters();
 
-  //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
-  float leaf_width;
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  UnilateralGrapevineParameters(const pugi::xml_node canopy_node);
 
-  //! Number of sub-division segments per leaf
-  helios::int2 leaf_subdivisions;
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
 
-  //! Path to texture map file for leaves.
-  std::string leaf_texture_file;
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
 
-  //! Path to texture map file for trunks/branches.
-  std::string wood_texture_file;
-
-  //! Number of radial subdivisions for trunk/cordon/shoot tubes
-  int wood_subdivisions;
-  
-  //! Spacing between adjacent plants along the row direction.
-  float plant_spacing;
-
-  //! Spacing between plant rows.
-  float row_spacing;
-
-  //! Distance between the ground and top of trunks
-  float trunk_height;
-
-  //! Radius of the trunk at the widest point
-  float trunk_radius;
-
-  //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
-  float cordon_height;
-
-  //! Radius of cordon branches.
-  float cordon_radius;
-  
-  //! Length of shoots.
-  float shoot_length;
-
-  //! Radius of shoot branches.
-  float shoot_radius;
-
-  //! Number of shoots on each cordon.
-  uint shoots_per_cordon;
-
-  //! Spacing between adjacent leaves as a fraction of the local leaf width. E.g., leaf_spacing_fraction = 1 would give a leaf spacing equal to the leaf width.
-  float leaf_spacing_fraction;
-
-  //! Number of crowns/plants in the x- and y-directions.
-  helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
-  //! Radius of grape berries
-  float grape_radius;
-
-  //! Maximum horizontal radius of grape clusters
-  float cluster_radius;
-
-  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
-  float cluster_height_max;
-
-  //! Color of grapes
-  helios::RGBcolor grape_color;
-
-  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
-  uint grape_subdivisions;
-
-  //! 
-  std::vector<float> leaf_angle_PDF;
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
   
 };
 
 
 //! Parameters defining the grapevine canopy with goblet (vent a taille) trellis
-struct GobletGrapevineParameters{
+struct GobletGrapevineParameters : BaseGrapeVineParameters{
 
   //! Default constructor
   GobletGrapevineParameters();
 
-  //! Maximum width of leaves. Leaf width increases logarithmically from the shoot tip, so leaf_width is the width at the base of the shoot.
-  float leaf_width;
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  GobletGrapevineParameters(const pugi::xml_node canopy_node);
 
-  //! Number of sub-division segments per leaf
-  helios::int2 leaf_subdivisions;
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
 
-  //! Path to texture map file for leaves.
-  std::string leaf_texture_file;
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
 
-  //! Path to texture map file for trunks/branches.
-  std::string wood_texture_file;
-
-  //! Number of radial subdivisions for trunk/cordon/shoot tubes
-  int wood_subdivisions;
-  
-  //! Spacing between adjacent plants along the row direction.
-  float plant_spacing;
-
-  //! Spacing between plant rows.
-  float row_spacing;
-
-  //! Distance between the ground and top of trunks
-  float trunk_height;
-
-  //! Radius of the trunk at the widest point
-  float trunk_radius;
-
-  //! Distance between the ground and cordon. Note - must be greater than or equal to the trunk height.
-  float cordon_height;
-
-  //! Radius of cordon branches.
-  float cordon_radius;
-  
-  //! Length of shoots.
-  float shoot_length;
-
-  //! Radius of shoot branches.
-  float shoot_radius;
-
-  //! Number of shoots on each cordon.
-  uint shoots_per_cordon;
-
-  //! Spacing between adjacent leaves as a fraction of the local leaf width. E.g., leaf_spacing_fraction = 1 would give a leaf spacing equal to the leaf width.
-  float leaf_spacing_fraction;
-
-  //! Number of crowns/plants in the x- and y-directions.
-  helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
-  //! Radius of grape berries
-  float grape_radius;
-
-  //! Maximum horizontal radius of grape clusters
-  float cluster_radius;
-
-  //! Maximum height of grape clusters along the shoot as a fraction of the total shoot length
-  float cluster_height_max;
-
-  //! Color of grapes
-  helios::RGBcolor grape_color;
-
-  //! Number of azimuthal and zenithal subdivisions making up berries (will result in roughly grape_subdivisions^2 triangles per grape berry)
-  uint grape_subdivisions;
-
-  //! 
-  std::vector<float> leaf_angle_PDF;
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
   
 };
 
 //! Parameters defining the white spruce
-struct WhiteSpruceCanopyParameters{
+struct WhiteSpruceCanopyParameters : BaseCanopyParameters{
 
   //! Default constructor
   WhiteSpruceCanopyParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  WhiteSpruceCanopyParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Width of needles
   float needle_width;
@@ -543,20 +558,31 @@ struct WhiteSpruceCanopyParameters{
 
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
   
 };
 
 //! Parameters defining the tomato plant canopy
-struct TomatoParameters{
+struct TomatoParameters : BaseCanopyParameters{
 
   //! Default constructor
   TomatoParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  TomatoParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Maximum width of leaves. 
   float leaf_length;
@@ -585,12 +611,6 @@ struct TomatoParameters{
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
   //! Radius of tomato fruit
   float fruit_radius;
 
@@ -603,10 +623,27 @@ struct TomatoParameters{
 };
 
 //! Parameters defining the strawberry plant canopy
-struct StrawberryParameters{
+struct StrawberryParameters : BaseCanopyParameters{
 
   //! Default constructor
   StrawberryParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  StrawberryParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Maximum width of leaves. 
   float leaf_length;
@@ -641,12 +678,6 @@ struct StrawberryParameters{
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
   //! Radius of strawberry fruit
   float fruit_radius;
 
@@ -662,10 +693,27 @@ struct StrawberryParameters{
 };
 
 //! Parameters defining the walnut tree canopy
-struct WalnutCanopyParameters{
+struct WalnutCanopyParameters : BaseCanopyParameters{
 
   //! Default constructor
   WalnutCanopyParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  WalnutCanopyParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Maximum length of leaves along midrib. 
   float leaf_length;
@@ -709,20 +757,31 @@ struct WalnutCanopyParameters{
 
   //! Number of crowns/plants in the x- and y-directions.
   helios::int2 plant_count;
-
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
   
 };
 
 //! Parameters defining Sorghum plant canopy
-struct SorghumCanopyParameters{
+struct SorghumCanopyParameters : BaseCanopyParameters{
 
 //! Default constructor
     SorghumCanopyParameters();
+
+/**
+ * \param[in] canopy_node XML node containing the canopy parameters
+ */
+    SorghumCanopyParameters(const pugi::xml_node canopy_node);
+
+//! Sets canopy parameters from the given XML node
+/**
+ * \param[in] canopy_node XML node containing the canopy parameters
+ */
+    void readParametersFromXML(const pugi::xml_node canopy_node);
+
+//! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+    void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+//! Makes the given Canopy generator build a canopy of our type with our parameters
+    void buildCanopy(CanopyGenerator& canopy_generator) override;
 
 //! Sorghum categorized into 5 stages; 1 - Three leaf stage, 2 - Five leaf stage, 3 - Panicle initiation and flag leaf emergency, 4 - Booting, and flowering, 5 - Maturity;  Input of a value other than 1-5 will output stage 5
     int sorghum_stage;
@@ -918,16 +977,30 @@ struct SorghumCanopyParameters{
 //! Number of crowns/plants in the x- and y-directions.
     helios::int2 plant_count;
 
-//! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0.
-    helios::vec3 canopy_origin;
-
 };
 
 //! Parameters defining the bean plant canopy
-struct BeanParameters{
+struct BeanParameters : BaseCanopyParameters{
 
   //! Default constructor
   BeanParameters();
+
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  BeanParameters(const pugi::xml_node canopy_node);
+
+  //! Sets canopy parameters from the given XML node
+  /**
+   * \param[in] canopy_node XML node containing the canopy parameters
+   */
+  void readParametersFromXML(const pugi::xml_node canopy_node);
+
+  //! Makes the given Canopy generator build a single plant of our canopy type with our parameters at the given position
+  void buildPlant(CanopyGenerator& canopy_generator, helios::vec3 origin) override;
+
+  //! Makes the given Canopy generator build a canopy of our type with our parameters
+  void buildCanopy(CanopyGenerator& canopy_generator) override;
 
   //! Maximum width of leaves.
   float leaf_length;
@@ -965,12 +1038,6 @@ struct BeanParameters{
   //! Probability that a plant in the canopy germinated
   float germination_probability;
 
-  //! Cartesian (x,y,z) coordinate of the bottom center point of the canopy (i.e., specifying z=0 places the bottom surface of the canopy at z=0).
-  helios::vec3 canopy_origin;
-
-  //! Azimuthal rotation of the canopy about the canopy origin. Note that if canopy_rotation is not equal to zero, the plant_spacing and plant_count parameters are defined in the x- and y-directions before rotation.
-  float canopy_rotation;
-
   //! Length of bean pods
   float pod_length;
 
@@ -994,11 +1061,21 @@ class CanopyGenerator{
   //! Unit testing routine
  int selfTest();
 
-  //! Build canopy geometries based on parameters specified in an XML file
+  //! Stores the given canopy parameters
+  template <typename CanopyType, typename... Args>
+  void storeCanopyParameters(Args&&... args);
+
+  std::vector<std::shared_ptr<BaseCanopyParameters>> getCanopyParametersList();
+
+  //! Reads the XML file of the given name and stores all the configured canopy parameters
   /**
    * \param[in] filename Path to XML file to be read
+   * \param[in] build true if we should build all the canopies for which we read parameters in the XML file
    */
-  void loadXML( const char* filename );
+  void loadXML( const char* filename, bool build = true );
+
+  //! Builds canopies for all the stored canopy parameters
+  void buildCanopies();
 
   //! Build a canopy consisting of a homogeneous volume of leaves
   /**
@@ -1164,6 +1241,15 @@ class CanopyGenerator{
 
   //---------- PLANT GEOMETRIES ------------ //
 
+  //! Builds individual plants based on the stored canopy parameters, at the given position
+  /**
+   * \note If you have multiple canopy parameters stored, this will try to build an individual plant of each type at the same position
+   */
+  void buildIndividualPlants(helios::vec3 position);
+
+  //! Builds individual plants based on the stored canopy parameters (using canopy_origin as the position)
+  void buildIndividualPlants();
+
   //! Function to add an individual grape berry cluster
   /**
    * \param[in] position Cartesian (x,y,z) position of the cluster main stem.
@@ -1263,6 +1349,9 @@ uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
  private:
 
   helios::Context* context;
+
+  //! List of stored canopy parameters, which can then be used to build individual plants or whole canopies
+  std::vector<std::shared_ptr<BaseCanopyParameters>> canopy_parameters_list;
 
   //! UUIDs for trunk primitives
   /**

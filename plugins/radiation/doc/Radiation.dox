@@ -458,7 +458,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
  
  ~~~~~~{.cpp}
- radiationmodel.setScatteringDepth( "PAR", 5); //set the number of scattering iterations
+ radiationmodel.setScatteringDepth( "PAR", 3); //set the number of scattering iterations
  ~~~~~~
 
  \subsection RadPeriodic Periodic Boundary Conditions

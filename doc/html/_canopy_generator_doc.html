@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.19</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
    </div>
   </td>
  </tr>
@@ -953,11 +953,11 @@ Example ground surface. Each black box is mapped to a single texture map, which 
 <div class="line"> </div>
 <div class="line"> }</div>
 <div class="ttc" id="a_canopy_generator_8h_html"><div class="ttname"><a href="_canopy_generator_8h.html">CanopyGenerator.h</a></div></div>
-<div class="ttc" id="aclass_canopy_generator_html"><div class="ttname"><a href="class_canopy_generator.html">CanopyGenerator</a></div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l00985">CanopyGenerator.h:985</a></div></div>
+<div class="ttc" id="aclass_canopy_generator_html"><div class="ttname"><a href="class_canopy_generator.html">CanopyGenerator</a></div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l01052">CanopyGenerator.h:1052</a></div></div>
 <div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01882">Context.h:1882</a></div></div>
 <div class="ttc" id="astructhelios_1_1int2_html"><div class="ttname"><a href="structhelios_1_1int2.html">helios::int2</a></div><div class="ttdoc">Vector of two elements of type 'int'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00044">helios_vector_types.h:44</a></div></div>
 <div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00346">helios_vector_types.h:346</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00502">helios_vector_types.h:502</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="CGenBuildPlant"></a>
 Building an Individual Plant</h1>
 <p>Maximum flexibility in creating a canopy of plants is achieved by manually adding each individual plant. An example is given below to add a single grapevine plant on VSP trellis at the point (0,0,0).</p>
@@ -980,7 +980,7 @@ Building an Individual Plant</h1>
 <div class="line">   canopygenerator.grapevineVSP( parameters, origin );</div>
 <div class="line"> </div>
 <div class="line"> }</div>
-<div class="ttc" id="astruct_v_s_p_grapevine_parameters_html"><div class="ttname"><a href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a></div><div class="ttdoc">Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis.</div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l00161">CanopyGenerator.h:161</a></div></div>
+<div class="ttc" id="astruct_v_s_p_grapevine_parameters_html"><div class="ttname"><a href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a></div><div class="ttdoc">Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis.</div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l00373">CanopyGenerator.h:373</a></div></div>
 </div><!-- fragment --><p>The function grapevineVSP() could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.</p>
 <h1><a class="anchor" id="CGenBuildCanopy"></a>
 Building a Canopy</h1>
@@ -998,9 +998,10 @@ Building a Canopy</h1>
 <div class="line">    <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a> parameters;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Add the grapevine geometry to the Context</span></div>
-<div class="line">    canopygenerator.buildCanopy( parameters );</div>
+<div class="line">    canopygenerator.<a class="code hl_function" href="struct_v_s_p_grapevine_parameters.html#ae045693dbcb6e4935b292b226b6d98d6">buildCanopy</a>( parameters );</div>
 <div class="line"> </div>
 <div class="line">  }</div>
+<div class="ttc" id="astruct_v_s_p_grapevine_parameters_html_ae045693dbcb6e4935b292b226b6d98d6"><div class="ttname"><a href="struct_v_s_p_grapevine_parameters.html#ae045693dbcb6e4935b292b226b6d98d6">VSPGrapevineParameters::buildCanopy</a></div><div class="ttdeci">void buildCanopy(CanopyGenerator &amp;canopy_generator) override</div><div class="ttdoc">Makes the given Canopy generator build a canopy of our type with our parameters.</div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8cpp_source.html#l00665">CanopyGenerator.cpp:665</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="CGenUUIDs"></a>
 Retrieving UUIDs for Primitives</h1>
 <p>The UUIDs of primitives making up the canopy geometry are grouped into four different types of elements: trunks, branches/shoots, leaves, and fruit. Not all canopy types will have all four groups of elements, for example the homogeneous canopy has no trunks, branches, or fruit. The UUIDs can be retrieved for a given plant using the appropriate getter function, as detailed in the table below. Additionally, UUIDs can be retrieved for the ground surface.</p>
@@ -1035,7 +1036,7 @@ Modifying Geometric Parameters from Default Values</h1>
 <div class="line">parameters.canopy_extent = make_vec2( 10.0, 10.0 );</div>
 <div class="line"> </div>
 <div class="line">canopygenerator.buildCanopy( parameters );</div>
-<div class="ttc" id="astruct_homogeneous_canopy_parameters_html"><div class="ttname"><a href="struct_homogeneous_canopy_parameters.html">HomogeneousCanopyParameters</a></div><div class="ttdoc">Parameters defining the homogeneous canopy.</div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l00023">CanopyGenerator.h:23</a></div></div>
+<div class="ttc" id="astruct_homogeneous_canopy_parameters_html"><div class="ttname"><a href="struct_homogeneous_canopy_parameters.html">HomogeneousCanopyParameters</a></div><div class="ttdoc">Parameters defining the homogeneous canopy.</div><div class="ttdef"><b>Definition</b> <a href="_canopy_generator_8h_source.html#l00058">CanopyGenerator.h:58</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="CGenSeed"></a>
 Seeding the Random Number Generator</h1>
 <p>Random variability is added to plant geometries using a pseudorandom number generator. By default, the random number sequence is seeded based on the system clock, which produces different results for each run.</p>
@@ -1057,7 +1058,7 @@ Seeding the Random Number Generator</h1>
 <div class="line">   canopygenerator.seedRandomGenerator( 10 );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Add the grapevine geometry to the Context</span></div>
-<div class="line">   canopygenerator.buildCanopy( parameters );</div>
+<div class="line">   canopygenerator.<a class="code hl_function" href="struct_v_s_p_grapevine_parameters.html#ae045693dbcb6e4935b292b226b6d98d6">buildCanopy</a>( parameters );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --> </div></div><!-- contents -->

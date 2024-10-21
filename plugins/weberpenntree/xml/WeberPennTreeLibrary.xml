@@ -34,7 +34,7 @@
   <nBranches>0 34 25 20</nBranches>
   <Leaves> 20 </Leaves>
   <LeafFile> plugins/weberpenntree/leaves/AlmondLeaf.png </LeafFile>
-  <LeafScale> 0.12 </LeafScale>
+  <LeafScale> 0.1 </LeafScale>
   <LeafScaleX> 0.25 </LeafScaleX>
   <WoodFile> plugins/weberpenntree/wood/wood2.jpg </WoodFile>
   <!--

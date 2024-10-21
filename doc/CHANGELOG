@@ -1848,3 +1848,46 @@ The radiation model has been re-designed, with the following primary additions:
 *Stomatal Conductance*
 *Credit to Kyle Rizzo for these updates
 - Added a stomatal conductance model (BMF) parameter library for a range of species.
+
+[1.3.20] 2024-10-21
+
+*Context*
+- Texture mapping for sphere objects was not correct. The top cap was not being properly mapped, resulting in a dark spot.
+- Added Context::listGlobalData() to list out all global data in the Context.
+- There were still issues with tube twisting when using Context::appendTubeSegment() based on the implementation from v1.3.19. This should now be fixed.
+- Modified helios vector types vec2, vec3, and vec4 normalize methods to also return the normalized vector. This allows for chaining of operations.
+
+*Energy Balance*
+- Added overloaded version of EnergyBalanceModel::addRadiationBand() to add multiple bands at the same time by passing a vector.
+
+*Stomatal Conductance*
+- Error in StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species_name) function fixed.
+
+*Plant Architecture*
+- Added capability of having evergreen plants. This is controlled through PlantArchitecture::setPlantPhenologicalThresholds();
+- Added olive, pistachio, and apple trees and grapevine (VSP) to the library.
+- 'flower_arrangement_pattern' parameter of the internode has been removed. It currently now follows the phyllotaxy of the parent shoot.
+- An error was corrected in which the first peduncle segment was being set to the internode color.
+- An error was corrected that would cause inconsistent behavior of the shoot internode when there were multiple child shoots originating from the same node.
+- Changed how girth scaling is handled. The shoot girth is now calculated based on the downstream leaf area. The new parameter is called "girth_area_factor", which is cm^2 branch area / m^2 downstream leaf area.
+- The parameter 'flowers_per_rachis' was changed to be 'flowers_per_peduncle'.
+
+*Radiation Model*
+- When writing output images, the radiation model now checks to make sure the output directory exists and creates it if it does not.
+
+*Synthetic Annotation*
+- Error (Windows OS) fixed to use the filesystem library for file management instead of mkdir. Credit to Sean Banks for this edit.
+
+*Weber-Penn Tree*
+* Credit to Corentin LEROY for these edits
+- Addition of variable range parameters for WeberPenn tree generation
+- Addition of a sample project to demonstrate how one could build tree orchards based on a WeberPenn XML configuration
+
+*Canopy Generator*
+* Credit to Corentin LEROY for these edits
+- Handling of parameters that were not parsed from a CanopyGenerator XML configuration for grapevine canopies
+- A refactoring of the way canopy types are handled. Now all canopy classes inherit from BaseCanopyParameters, and all grapevine canopy classes inherit from BaseGrapeVineParameters. On top of that, parameters read from an XML file are stored so that canopies or individual plants can be built later on. This allows client code to have no knowledge at all about the types of canopies or plants that can be built; this information is exclusively written in the configuration file.
+- Addition of variable range parameters for grapevine canopies
+- Addition of parameters to create dead plants or to have missing plants (holes) in grapevine canopies
+- Addition of parameters to set the cordon length independently from the plant spacing for grapevine canopies. Until now, the plant spacing was used so that there was no discontinuity between neighbor vine stocks. These new parameters allow to potentially have gaps between vine stocks, or even have them overlap with each other (if the cordon length is greater than the plant spacing).
+- Addition of a sample project to demonstrate how one could build realistic vineyards based on CanopyGenerator XML configuration.

@@ -1675,7 +1675,7 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
 
     auto file_extension = getFileExtension(filename);
     if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
-        throw (std::runtime_error("ERROR (Context::readJPEG): File " + filename + " is not JPEG format."));
+         helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " is not JPEG format.");
     }
 
     struct jpeg_decompress_struct cinfo;
@@ -1686,7 +1686,7 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
     int row_stride;
 
     if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
-        throw (std::runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it."));
+        helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
     cinfo.err = jpeg_std_error(&jerr.pub);
@@ -1712,7 +1712,9 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
     height=cinfo.output_height;
 
     if(cinfo.output_components!=3){
-        throw (std::runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components."));
+        helios_runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components.");
+    }else if( width==0 || height == 0 ){
+        helios_runtime_error("ERROR (Context::readJPEG): Image file is empty.");
     }
 
     pixel_data.resize(width*height);
@@ -1743,7 +1745,7 @@ helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
 
     auto file_extension = getFileExtension(filename);
     if ( file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG" ) {
-        throw (std::runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " is not JPEG format."));
+        helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " is not JPEG format.");
     }
 
     struct jpeg_decompress_struct cinfo;
@@ -1754,7 +1756,7 @@ helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
     int row_stride;
 
     if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
-        throw (std::runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it."));
+        helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
     cinfo.err = jpeg_std_error(&jerr.pub);

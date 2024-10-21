@@ -2,10 +2,10 @@ var searchData=
 [
   ['wait_0',['wait',['../group__functions.html#gad28da0b06687dc68c1212c1624e54bd0',1,'helios']]],
   ['walnut_1',['walnut',['../class_canopy_generator.html#af8b7088179f65a2d3d05a1f21207dd54',1,'CanopyGenerator']]],
-  ['walnutcanopyparameters_2',['WalnutCanopyParameters',['../struct_walnut_canopy_parameters.html#a3e9529efe557947137c49fefa450bb85',1,'WalnutCanopyParameters']]],
+  ['walnutcanopyparameters_2',['WalnutCanopyParameters',['../struct_walnut_canopy_parameters.html#a3e9529efe557947137c49fefa450bb85',1,'WalnutCanopyParameters::WalnutCanopyParameters()'],['../struct_walnut_canopy_parameters.html#ac233d993d5d15fd3fff46245a0365b93',1,'WalnutCanopyParameters::WalnutCanopyParameters(const pugi::xml_node canopy_node)']]],
   ['weberpenntree_3',['WeberPennTree',['../class_weber_penn_tree.html#a5b949a2008b9e4817f2df4b5861c49b5',1,'WeberPennTree']]],
   ['whitespruce_4',['whitespruce',['../class_canopy_generator.html#a00d9f2222a38ef4a8494aef9650d11f3',1,'CanopyGenerator']]],
-  ['whitesprucecanopyparameters_5',['WhiteSpruceCanopyParameters',['../struct_white_spruce_canopy_parameters.html#abab47c6661e734271286dbe4808f484b',1,'WhiteSpruceCanopyParameters']]],
+  ['whitesprucecanopyparameters_5',['WhiteSpruceCanopyParameters',['../struct_white_spruce_canopy_parameters.html#abab47c6661e734271286dbe4808f484b',1,'WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters()'],['../struct_white_spruce_canopy_parameters.html#a5b11a0899997319c0371c0bc89330f05',1,'WhiteSpruceCanopyParameters::WhiteSpruceCanopyParameters(const pugi::xml_node canopy_node)']]],
   ['write_5fjpeg_5ffile_6',['write_JPEG_file',['../_visualizer_8h.html#ae26724442b97caabf5cd0dca335c38a9',1,'write_JPEG_file(const char *filename, uint width, uint height, void *_window):&#160;Visualizer.cpp'],['../_visualizer_8h.html#a748ab186f7b5e0936d61bbb934977ba0',1,'write_JPEG_file(const char *filename, uint width, uint height, const std::vector&lt; helios::RGBcolor &gt; &amp;data):&#160;Visualizer.h'],['../_visualizer_8cpp.html#ae26724442b97caabf5cd0dca335c38a9',1,'write_JPEG_file(const char *filename, uint width, uint height, void *_window):&#160;Visualizer.cpp']]],
   ['writecalibratedcameraresponses_7',['writeCalibratedCameraResponses',['../struct_camera_calibration.html#a148bdc83d9f7a3d564a3aa10793a5d70',1,'CameraCalibration']]],
   ['writecameraimage_8',['writeCameraImage',['../class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de',1,'RadiationModel']]],
