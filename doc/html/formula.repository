@@ -172,8 +172,8 @@
 \_form#159=11x11:${\mu}$
 \_form#160=17x15:$k_C$
 \_form#161=41x12:$A=0$
-\_form#162=191x32:\[
-    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
+\_form#162=165x32:\[
+    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
 \]
 \_form#163=15x12:$d\theta$
 \_form#164=18x12:$dL$

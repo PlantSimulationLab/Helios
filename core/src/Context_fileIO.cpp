@@ -2676,6 +2676,14 @@ void Context::writeXML( const char* filename, const std::vector<uint> &UUIDs, bo
 
   std::string xmlfilename = filename;
 
+  if( !validateOutputPath(xmlfilename) ){
+      helios_runtime_error("ERROR (Context::writeXML): Invalid output file " + xmlfilename + ".");
+  }
+
+  if( getFileName(xmlfilename).empty() ){
+    helios_runtime_error("ERROR (Context::writeXML): Invalid output file " + xmlfilename + ". No file name was provided.");
+  }
+
   auto file_extension = getFileExtension(filename);
   if( file_extension != ".xml" && file_extension != ".XML" ) { // append xml to file name
     xmlfilename.append(".xml");
@@ -4160,7 +4168,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     }
   }
 
-  if( !std::filesystem::exists(file_path) ){
+  if( !file_path.empty() && !std::filesystem::exists(file_path) ){
     if( !std::filesystem::create_directory(file_path) ){
         std::cout << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
         return;

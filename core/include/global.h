@@ -1047,6 +1047,14 @@ namespace helios{
  */
     std::string getFilePath( const std::string &filepath, bool trailingslash = true );
 
+//! Check whether output file and/or directory is valid. Add a trailing slash if it is a directory.
+/**
+ * \param[inout] output_path
+ * \param[in] allowable_file_extensions
+ * \return True if directory/file was valid, false otherwise
+ */
+    bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
+
 //! Read values contained in a text file into a one-dimensional vector of floats
 /**
   * \param[in] filepath Path to text file

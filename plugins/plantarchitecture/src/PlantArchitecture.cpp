@@ -948,7 +948,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     }
 
     // create internode tube
-    float dt = 1.f / float(Ndiv_internode_length);
     for(int inode_segment=1; inode_segment <= Ndiv_internode_length; inode_segment++ ){
 
         //apply curvature and tortuosity
@@ -959,12 +958,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                 current_curvature_fact *= 2.f;
             }
 
-            parent_shoot->curvature_perturbation += - 0.5f*parent_shoot->curvature_perturbation*dt + 5*parent_shoot_parameters.tortuosity.val()*context_ptr->randn()*sqrt(dt);
-            float curvature_angle = deg2rad((parent_shoot->gravitropic_curvature*current_curvature_fact+parent_shoot->curvature_perturbation) * dr_internode_max);
+            float dt =  dr_internode_max / float(Ndiv_internode_length);
+
+            parent_shoot->curvature_perturbation += - 0.5f*parent_shoot->curvature_perturbation*dt + parent_shoot_parameters.tortuosity.val()*context_ptr->randn()*sqrt(dt);
+            float curvature_angle = deg2rad((parent_shoot->gravitropic_curvature*current_curvature_fact * dr_internode_max + parent_shoot->curvature_perturbation));
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, shoot_bending_axis, curvature_angle);
 
-            parent_shoot->yaw_perturbation += - 0.5f*parent_shoot->yaw_perturbation*dt + 5*parent_shoot_parameters.tortuosity.val()*context_ptr->randn()*sqrt(dt);
-            float yaw_angle = deg2rad((parent_shoot->yaw_perturbation) * dr_internode_max);
+            parent_shoot->yaw_perturbation += - 0.5f*parent_shoot->yaw_perturbation*dt + parent_shoot_parameters.tortuosity.val()*context_ptr->randn()*sqrt(dt);
+            float yaw_angle = deg2rad((parent_shoot->yaw_perturbation));
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0,0,1), yaw_angle);
         }
 
@@ -2729,7 +2730,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
         plant_instance.current_age += dt_max;
 
         if( plant_instance.current_age > plant_instance.dd_to_senescence ){
-            std::cout << "Going dormant " << plant_instance.current_age << " " << plant_instance.dd_to_senescence << std::endl;
+            std::cout << "Going dormant" << std::endl;
             for (const auto& shoot : *shoot_tree) {
                 shoot->makeDormant();
                 shoot->carbohydrate_pool_molC = 100;

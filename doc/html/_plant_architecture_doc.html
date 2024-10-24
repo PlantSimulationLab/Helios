@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.21</span>
    </div>
   </td>
  </tr>
@@ -472,7 +472,7 @@ Creating Plant Organ Prototypes</h2>
 <div class="line">std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line"><span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03734">Context_fileIO.cpp:3734</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03742">Context_fileIO.cpp:3742</a></div></div>
 <div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l05343">Context.cpp:5343</a></div></div>
 </div><!-- fragment --><p>A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
 <div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
@@ -530,7 +530,7 @@ Defining Shoots and their Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">internode_radius_initial   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.001   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Initial radius of the internode when it is created.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">internode_radius_max   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">unlimited   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely.    </td></tr>
+<td class="markdownTableBodyNone">internode_radius_max   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">unlimited   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Maximum internode radius for girth growth expansion.    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">insertion_angle_tip   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot.    </td></tr>
 <tr class="markdownTableRowEven">
@@ -548,7 +548,7 @@ Defining Shoots and their Parameters</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">gravitropic_curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">tortuosity   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Factor determining the amount of random "wiggle" in internode growth along the shoot.    </td></tr>
+<td class="markdownTableBodyNone">tortuosity   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/(meters)^0.5   </td><td class="markdownTableBodyNone">Factor determining the amount of random "wiggle" in internode growth along the shoot.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone" colspan="5">&mdash; <b>Growth Parameters</b> &mdash;    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -612,8 +612,8 @@ tortuosity</h3>
 <p>Random "wiggle" can be added to shoot growth using the  <font face="courier" color="blue">tortuosity</font> parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):</p>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
-    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
-\]" src="form_162.png" width="191" height="32"/>
+    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
+\]" src="form_162.png" width="165" height="32"/>
 </p>
 <p>where <img class="formulaInl" alt="$d\theta$" src="form_163.png" width="15" height="12"/> is the change in curvature angle of the current phytomer internode relative to the previous internode, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> is the integrated curvature angle relative to the base of the shoot, <img class="formulaInl" alt="$dL$" src="form_164.png" width="18" height="12"/> is the internode length, <img class="formulaInl" alt="$T$" src="form_165.png" width="12" height="11"/> is the tortuosity, and <img class="formulaInl" alt="$\xi (dL)$" src="form_166.png" width="38" height="17"/> is a Gaussian process with variance of <img class="formulaInl" alt="$dL$" src="form_164.png" width="18" height="12"/>.</p>
 <h2><a class="anchor" id="ShootParametersGrowth"></a>

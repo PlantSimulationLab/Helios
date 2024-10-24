@@ -1654,13 +1654,6 @@ protected:
 
 };
 
-//! Validates the file path for output file writing by 1) making sure the directory string has a trailing slash, 2) creating the output directory if it does not exist.
-/**
- * \param[inout] output_directory Path to the directory where output files will be written. If the directory does not exist, it will be created.
- * \return True if the output directory is valid, false otherwise.
-*/
-bool validateOutputPath(std::ostringstream &output_directory);
-
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line);
 
 void sutilReportError(const char* message);

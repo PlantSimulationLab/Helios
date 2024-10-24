@@ -200,7 +200,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 35.f;
+    shoot_parameters_trunk.girth_area_factor = 15.f;
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
@@ -218,7 +218,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.max_nodes = 40;
     shoot_parameters_proleptic.phyllochron = 0.9;
     shoot_parameters_proleptic.elongation_rate = 0.25;
-    shoot_parameters_proleptic.girth_area_factor = 35.f;
+    shoot_parameters_proleptic.girth_area_factor = 15.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.leaf_flush_count = 1;
@@ -335,7 +335,7 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
 
     phytomer_parameters_apple.petiole.petioles_per_internode = 1;
-    phytomer_parameters_apple.petiole.pitch.uniformDistribution(-25,-40);
+    phytomer_parameters_apple.petiole.pitch.uniformDistribution(-40,-25);
     phytomer_parameters_apple.petiole.taper = 0.1;
     phytomer_parameters_apple.petiole.curvature = 0;
     phytomer_parameters_apple.petiole.length = 0.04;
@@ -372,11 +372,11 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 16.f;
+    shoot_parameters_trunk.girth_area_factor = 12.f;
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 6;
+    shoot_parameters_trunk.tortuosity = 4;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"},{1});
@@ -395,7 +395,7 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.leaf_flush_count = 1;
     shoot_parameters_proleptic.gravitropic_curvature = 500;
-    shoot_parameters_proleptic.tortuosity = 20;
+    shoot_parameters_proleptic.tortuosity = 10;
     shoot_parameters_proleptic.internode_radius_initial = 0.006;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 20, 25);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
@@ -430,7 +430,7 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     shoot_parameters_scaffold.max_nodes = 40;
     shoot_parameters_scaffold.gravitropic_curvature = 400;
     shoot_parameters_scaffold.internode_length_max = 0.04;
-    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.tortuosity = 6;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"},{1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
@@ -1089,9 +1089,9 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_main.vegetative_bud_break_time = 1;
     shoot_parameters_main.phyllochron = 0.5;
     shoot_parameters_main.elongation_rate = 0.15;
-    shoot_parameters_main.girth_area_factor = 4.f;
+    shoot_parameters_main.girth_area_factor = 2.f;
     shoot_parameters_main.gravitropic_curvature = 300;
-    shoot_parameters_main.tortuosity = 20;
+    shoot_parameters_main.tortuosity = 10;
     shoot_parameters_main.internode_length_max.uniformDistribution(0.075,0.1);
     shoot_parameters_main.internode_length_decay_rate = 0;
     shoot_parameters_main.insertion_angle_tip = 45;
@@ -1117,7 +1117,8 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_cane.internode_radius_max = 0.1;
     shoot_parameters_cane.insertion_angle_tip.uniformDistribution(60, 120);
     shoot_parameters_cane.max_nodes = 9;
-    shoot_parameters_cane.tortuosity = 1.5;
+    shoot_parameters_cane.gravitropic_curvature.uniformDistribution(-20,20);
+    shoot_parameters_cane.tortuosity = 1;
     shoot_parameters_cane.gravitropic_curvature = 10;
     shoot_parameters_cane.vegetative_bud_break_probability = 1.0;
     shoot_parameters_cane.defineChildShootTypes({"grapevine_shoot"},{1.f});
@@ -1132,7 +1133,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_trunk.phyllochron = 1.25;
     shoot_parameters_trunk.insertion_angle_tip = 90;
     shoot_parameters_trunk.max_nodes = 18;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 0;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.defineChildShootTypes({"grapevine_shoot"},{1.f});
 
@@ -1154,8 +1155,8 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
     uint uID_stem = addBaseStemShoot(plantID, 17, make_AxisRotation(context_ptr->randu(0,0.05*M_PI), 0, 0), 0.04, 0.05, 1, 1, 0.1, "grapevine_trunk");
     //appendPhytomerToShoot( plantID, uID_stem, getCurrentShootParameters("grapevine_trunk").phytomer_parameters, 1e-3, 0.1, 1, 1 );
 
-    uint uID_cane_L = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),0,M_PI), 0.015, 0.15, 1, 1, 0.6, "grapevine_cane" );
-    uint uID_cane_R = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),M_PI,M_PI), 0.015, 0.15, 1, 1, 0.6, "grapevine_cane" );
+    uint uID_cane_L = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),0,M_PI), 0.005, 0.15, 1, 1, 0.5, "grapevine_cane" );
+    uint uID_cane_R = appendShoot( plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f*M_PI),0.52f*M_PI),M_PI,M_PI), 0.005, 0.15, 1, 1, 0.5, "grapevine_cane" );
 
 //    makePlantDormant(plantID);
 
@@ -1225,7 +1226,7 @@ void PlantArchitecture::initializeOliveTreeShoots(){
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 6;
+    shoot_parameters_trunk.tortuosity = 1;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"},{1});
@@ -1243,7 +1244,7 @@ void PlantArchitecture::initializeOliveTreeShoots(){
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.leaf_flush_count = 1;
     shoot_parameters_proleptic.gravitropic_curvature = 450;
-    shoot_parameters_proleptic.tortuosity = 25;
+    shoot_parameters_proleptic.tortuosity = 6;
     shoot_parameters_proleptic.internode_radius_initial = 0.002;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 15, 25);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 2;
@@ -1264,7 +1265,7 @@ void PlantArchitecture::initializeOliveTreeShoots(){
     shoot_parameters_scaffold.max_nodes = 12;
     shoot_parameters_scaffold.gravitropic_curvature = 700;
     shoot_parameters_scaffold.internode_length_max = 0.04;
-    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.tortuosity = 3;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"},{1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
@@ -1323,7 +1324,7 @@ void PlantArchitecture::initializePistachioTreeShoots(){
     phytomer_parameters_pistachio.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_pistachio.petiole.petioles_per_internode = 2;
-    phytomer_parameters_pistachio.petiole.pitch.uniformDistribution(-45, -60);
+    phytomer_parameters_pistachio.petiole.pitch.uniformDistribution(-60, -45);
     phytomer_parameters_pistachio.petiole.taper = 0.1;
     phytomer_parameters_pistachio.petiole.curvature.uniformDistribution(-800,800);
     phytomer_parameters_pistachio.petiole.length = 0.075;
@@ -1371,7 +1372,7 @@ void PlantArchitecture::initializePistachioTreeShoots(){
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 5;
+    shoot_parameters_trunk.tortuosity = 2;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"proleptic"},{1});
@@ -1389,7 +1390,7 @@ void PlantArchitecture::initializePistachioTreeShoots(){
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.leaf_flush_count = 1;
     shoot_parameters_proleptic.gravitropic_curvature = 500;
-    shoot_parameters_proleptic.tortuosity = 15;
+    shoot_parameters_proleptic.tortuosity = 10;
     shoot_parameters_proleptic.internode_radius_initial = 0.002;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 45, 55);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 10;
@@ -1609,9 +1610,9 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.vegetative_bud_break_time = 1;
     shoot_parameters_main.phyllochron = 1.5;
     shoot_parameters_main.elongation_rate = 0.17;
-    shoot_parameters_main.girth_area_factor = 3.f;
+    shoot_parameters_main.girth_area_factor = 5.f;
     shoot_parameters_main.gravitropic_curvature = 300;
-    shoot_parameters_main.tortuosity = 20;
+    shoot_parameters_main.tortuosity = 10;
     shoot_parameters_main.internode_length_max = 0.04;
     shoot_parameters_main.internode_length_decay_rate = 0.005;
     shoot_parameters_main.insertion_angle_tip = 75;
@@ -1635,7 +1636,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_trunk.phyllochron = 1.25;
     shoot_parameters_trunk.insertion_angle_tip = 60;
     shoot_parameters_trunk.max_nodes = 45;
-    shoot_parameters_trunk.tortuosity = 5;
+    shoot_parameters_trunk.tortuosity = 0.5;
     shoot_parameters_trunk.defineChildShootTypes({"eastern_redbud_shoot"},{1.f});
 
     defineShootType("eastern_redbud_trunk", shoot_parameters_trunk);

@@ -293,7 +293,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | --- **Geometric Parameters** --- |||||
 | max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
 | internode_radius_initial | RandomParameter_float | 0.001 | meters | Initial radius of the internode when it is created. |
-| internode_radius_max | RandomParameter_float | unlimited | meters | Maximum internode radius for girth growth. For some species like grasses, girth growth stops at some radius. By default, girth growth will continue indefinitely. |
+| internode_radius_max | RandomParameter_float | unlimited | meters | Maximum internode radius for girth growth expansion. |
 | insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
 | insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
 | internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
@@ -302,7 +302,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | base_roll | RandomParameter_float | 0 | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
 | base_yaw | RandomParameter_float | 0 | degrees | Yaw angle of the shoot relative to the parent shoot. |
 | gravitropic_curvature | RandomParameter_float | 0 | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
-| tortuosity | RandomParameter_float | 0 | - | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
+| tortuosity | RandomParameter_float | 0 | degrees/(meters)^0.5 | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
 | --- **Growth Parameters** --- |||||
 | phyllochron | RandomParameter_float | 1.0 | days/leaf | Time between the emergence of successive phytomers along the shoot. |
 | leaf_flush_count | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | 1 | - | Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count. |
@@ -364,7 +364,7 @@ The tendency of shoots to grow toward vertical is given by the parameter \htmlon
 Random "wiggle" can be added to shoot growth using the \htmlonly<font face="courier" color="blue">tortuosity</font>\endhtmlonly parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter \htmlonly<font face="courier" color="blue">gravitropic_curvature</font>\endhtmlonly. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):
 
 \f[
-    d\theta = \frac{1}{2}\left(C_g-\theta\right)dL + T\xi(dL)
+    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
 \f]
 
 where \f$d\theta\f$ is the change in curvature angle of the current phytomer internode relative to the previous internode, \f$\theta\f$ is the integrated curvature angle relative to the base of the shoot, \f$dL\f$ is the internode length, \f$T\f$ is the tortuosity, and \f$\xi (dL)\f$ is a Gaussian process with variance of \f$dL\f$.

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['v1_203_2020_0',['Helios Documentation v1.3.20',['../index.html',1,'']]],
+  ['v1_203_2021_0',['Helios Documentation v1.3.21',['../index.html',1,'']]],
   ['values_1',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
   ['vector_20types_20tutorial_2',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],
   ['version_3',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],

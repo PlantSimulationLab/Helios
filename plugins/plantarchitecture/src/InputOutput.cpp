@@ -441,7 +441,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Plant ID " + std::to_string(plantID) + " does not exist.");
     }
 
-    //\todo Check the extension of 'filename' and add .xml if needed
+    std::string output_file = filename;
+    if( !validateOutputPath(output_file,{".xml",".XML"}) ){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    }else if( getFileName(output_file).empty()){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): The output file given was a directory. This argument should be the path to a file not to a directory.");
+    }
 
     std::ofstream output_xml(filename);
 

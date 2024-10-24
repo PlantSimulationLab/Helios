@@ -1891,3 +1891,19 @@ The radiation model has been re-designed, with the following primary additions:
 - Addition of parameters to create dead plants or to have missing plants (holes) in grapevine canopies
 - Addition of parameters to set the cordon length independently from the plant spacing for grapevine canopies. Until now, the plant spacing was used so that there was no discontinuity between neighbor vine stocks. These new parameters allow to potentially have gaps between vine stocks, or even have them overlap with each other (if the cordon length is greater than the plant spacing).
 - Addition of a sample project to demonstrate how one could build realistic vineyards based on CanopyGenerator XML configuration.
+
+[1.3.21] 2024-10-24
+
+*Context*
+- There was an error introduced in the previous version for writing OBJ files. If no output directory was explicitly specified, the write would fail.
+- Added validateOutputPath() function to global.cpp to validate output files and directory paths.
+- Replaced getFile*() functions in global.cpp with more robust std::filesystem functions.
+- Added improved file validation to Context::writeXML().
+
+*Radiation*
+- There was an error introduced in the previous version for writing image output files. If no output directory was explicitly specified, the write would fail. Removed the validateOutputPath() function implemented in the previous version, and replaced it with a better version implemented in global.cpp.
+
+*Plant Architecture*
+- The 'tortuosity' shoot parameter was multiplied by a hard-coded factor of 5.0. This was removed, and all tortuosity values in the plant library were scaled by a factor of 5.
+- There were some errors with the parameters of some plants introduced in the previous version.
+- Added file validation to PlantArchitecture::writePlantStructureXML().
