@@ -4,6 +4,8 @@
 
 For complete documentation of this software, please consult <a href="https://baileylab.ucdavis.edu/software/helios">https://baileylab.ucdavis.edu/software/helios, or open the file doc/html/index.html in a web browser.
 
-Helios is a C++ API for 3D physical simulation of plant and environmental systems. In order to build and compile the core library, you will need to install a C/C++ compiler (recommended are the GNU C compilers version 5.5+), and CMake. In order to run many of the model plug-ins, you will need to install NVIDIA CUDA 9.0+, and a GPU with compute capability 3.5+. The software has been tested on Linux, Mac, and Windows platforms.
+Helios is a C++ library for 3D physical simulation of plant and environmental systems. It can generate and manipulate plant and other geometric objects, which can feed into biophysical model plug-ins such as radiation transfer, photosynthesis, and evapotranspiration, among others. 
+
+In order to build and compile the core library, you will need to install a C/C++ compiler (recommended are the GNU C compilers version 7.0+), and CMake. In order to run many of the model plug-ins, you will need to install NVIDIA CUDA 10.2+, and a GPU with compute capability 5.0+. The software has been tested on Linux, Mac, and Windows platforms. The YouTube channel linked above has a number of tutorials for getting started.
 
 ![Almond Reconstruction](doc/images/AlmondVarietyReconstruction.png)

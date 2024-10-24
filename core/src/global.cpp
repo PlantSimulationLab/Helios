@@ -2991,73 +2991,78 @@ float helios::point_distance( const helios::vec3 &p1 , const helios::vec3 &p2){
 }
 
 std::string helios::getFileExtension( const std::string &filepath ){
-  std::string ext;
-
-  if( filepath.find_last_of('.')<filepath.size() ){
-    ext = filepath.substr(filepath.find_last_of('.'));
-  }else { // does not contain any .'s
-    return "";
-  }
-
-  //edge case when filepath starts with '.' and there is no file extension (e.g., './myfile')
-  if( filepath.find_last_of('.')==0 ){
-    ext = "";
-
-  //edge case when file is in a hidden directory AND there is no file extension (return empty string)
-  }else if( filepath.find_last_of('/')<filepath.size() && filepath.at(filepath.find_last_of('.')-1)=='/' ){
-    ext = "";
-  }
-
-  //edge case when file is in a hidden directory AND there is no file extension AND file path starts with '.' (return empty string)
-  if( filepath.find_last_of('.')==0 ){
-    ext = "";
-  }
-
-  return ext;
+    std::filesystem::path output_path_fs = filepath;
+    return output_path_fs.extension().string();
 }
 
 std::string helios::getFileStem( const std::string &filepath ){
-  std::string fn = filepath;
-  if( filepath.find('/')<filepath.size() ) {
-    fn = filepath.substr(filepath.find_last_of('/') + 1);
-  }else if( filepath.find('\\')<filepath.size() ){
-    fn = filepath.substr(filepath.find_last_of('\\') + 1);
-  }
-
-  if( fn.find('.')<fn.size() ) {
-    fn = fn.substr( 0, fn.find_last_of('.') );
-  }
-
-  return fn;
+    std::filesystem::path output_path_fs = filepath;
+    return output_path_fs.stem().string();
 }
 
 std::string helios::getFileName( const std::string &filepath ){
-  if( filepath.find('/')<filepath.size() ) {
-    return filepath.substr(filepath.find_last_of('/') + 1);
-  }else if( filepath.find('\\')==filepath.size() ) {
-    return filepath.substr(filepath.find_last_of('\\') + 1);
-  }else{
-    return filepath;
-  }
-
+    std::filesystem::path output_path_fs = filepath;
+    return output_path_fs.filename().string();
 }
 
 std::string helios::getFilePath( const std::string &filepath, bool trailingslash ){
-  if( filepath.find('/')==filepath.size() ){
-    if( trailingslash ){
-      std::string str = "/";
-      return str;
-    }else {
-      std::string str;
-      return str;
-    }
-  }else{
+    std::filesystem::path output_path_fs = filepath;
+    std::string output_path = output_path_fs.parent_path().string();
     if( trailingslash ) {
-      return filepath.substr(0, filepath.find_last_of('/') + 1);
-    }else{
-      return filepath.substr(0, filepath.find_last_of('/'));
+        if (output_path.find_last_of('/') != output_path.length() - 1) {
+            output_path += "/";
+        }
     }
-  }
+
+    return output_path;
+}
+
+bool helios::validateOutputPath(std::string &output_path, const std::vector<std::string> &allowable_file_extensions){
+
+    if( output_path.empty() ){ //path was empty
+        return false;
+    }
+
+    std::filesystem::path output_path_fs = output_path;
+
+    std::string output_file = output_path_fs.filename().string();
+    std::string output_file_ext = output_path_fs.extension().string();
+    std::string output_dir = output_path_fs.parent_path().string();
+
+    if( output_file.empty() ) { //path was a directory without a file
+
+        // Make sure directory has a trailing slash
+        if (output_dir.find_last_of('/') != output_dir.length() - 1) {
+            output_path += "/";
+        }
+
+    }
+
+    // Create the output directory if it does not exist
+    if ( !output_dir.empty() && !std::filesystem::exists(output_dir)) {
+        if (!std::filesystem::create_directory(output_dir)) {
+            return false;
+        }
+    }
+
+    if( !output_file.empty() && !allowable_file_extensions.empty() ){
+
+        //validate file extension
+        bool valid_extension = false;
+        for( const auto &ext : allowable_file_extensions ){
+            if( output_file_ext == ext ){
+                valid_extension = true;
+                break;
+            }
+        }
+        if( !valid_extension ){
+            return false;
+        }
+
+    }
+
+    return true;
+
 }
 
 std::vector<float> helios::importVectorFromFile(const std::string &filepath){

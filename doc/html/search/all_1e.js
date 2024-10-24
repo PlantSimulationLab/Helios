@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['v1_203_2020_0',['Helios Documentation v1.3.20',['../index.html',1,'']]],
-  ['validateoutputpath_1',['validateOutputPath',['../_radiation_model_8h.html#a2d93cfc62b5e610b18411a9e87547f81',1,'validateOutputPath(std::ostringstream &amp;output_directory):&#160;RadiationModel.cpp'],['../_radiation_model_8cpp.html#a2d93cfc62b5e610b18411a9e87547f81',1,'validateOutputPath(std::ostringstream &amp;output_directory):&#160;RadiationModel.cpp']]],
+  ['v1_203_2021_0',['Helios Documentation v1.3.21',['../index.html',1,'']]],
+  ['validateoutputpath_1',['validateOutputPath',['../global_8h.html#a614486c4ac0686c5b58813f03f0cedf9',1,'helios']]],
   ['values_2',['Values',['../_a_p_i.html#GetPrimData',1,'Getting Primitive Data Values'],['../_canopy_generator_doc.html#CGenParameterMod',1,'Modifying Geometric Parameters from Default Values'],['../_a_p_i.html#SetPrimData',1,'Setting Primitive Data Values']]],
   ['values_3',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
   ['variables_4',['Variables',['../_b_l_conductance_doc.html#BLPrimData',1,'Input Variables'],['../_energy_balance_doc.html#EBPrimData',1,'Input Variables'],['../_photosynthesis_doc.html#PhotoVars',1,'Summary of Empirical Model Independent Variables'],['../_photosynthesis_doc.html#FvCBPhotoVars',1,'Summary of FvCB Model Independent Variables']]],

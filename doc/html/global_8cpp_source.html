@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.20</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.21</span>
    </div>
   </td>
  </tr>
@@ -3338,96 +3338,103 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l02992" name="l02992"></a><span class="lineno"> 2992</span> </div>
 <div class="foldopen" id="foldopen02993" data-start="{" data-end="}">
 <div class="line"><a id="l02993" name="l02993"></a><span class="lineno"><a class="line" href="global_8h.html#a58e660bb08e1ce13466825ae666467ef"> 2993</a></span>std::string <a class="code hl_function" href="global_8h.html#a58e660bb08e1ce13466825ae666467ef">helios::getFileExtension</a>( <span class="keyword">const</span> std::string &amp;filepath ){</div>
-<div class="line"><a id="l02994" name="l02994"></a><span class="lineno"> 2994</span>  std::string ext;</div>
-<div class="line"><a id="l02995" name="l02995"></a><span class="lineno"> 2995</span> </div>
-<div class="line"><a id="l02996" name="l02996"></a><span class="lineno"> 2996</span>  <span class="keywordflow">if</span>( filepath.find_last_of(<span class="charliteral">&#39;.&#39;</span>)&lt;filepath.size() ){</div>
-<div class="line"><a id="l02997" name="l02997"></a><span class="lineno"> 2997</span>    ext = filepath.substr(filepath.find_last_of(<span class="charliteral">&#39;.&#39;</span>));</div>
-<div class="line"><a id="l02998" name="l02998"></a><span class="lineno"> 2998</span>  }<span class="keywordflow">else</span> { <span class="comment">// does not contain any .&#39;s</span></div>
-<div class="line"><a id="l02999" name="l02999"></a><span class="lineno"> 2999</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l03000" name="l03000"></a><span class="lineno"> 3000</span>  }</div>
-<div class="line"><a id="l03001" name="l03001"></a><span class="lineno"> 3001</span> </div>
-<div class="line"><a id="l03002" name="l03002"></a><span class="lineno"> 3002</span>  <span class="comment">//edge case when filepath starts with &#39;.&#39; and there is no file extension (e.g., &#39;./myfile&#39;)</span></div>
-<div class="line"><a id="l03003" name="l03003"></a><span class="lineno"> 3003</span>  <span class="keywordflow">if</span>( filepath.find_last_of(<span class="charliteral">&#39;.&#39;</span>)==0 ){</div>
-<div class="line"><a id="l03004" name="l03004"></a><span class="lineno"> 3004</span>    ext = <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l03005" name="l03005"></a><span class="lineno"> 3005</span> </div>
-<div class="line"><a id="l03006" name="l03006"></a><span class="lineno"> 3006</span>  <span class="comment">//edge case when file is in a hidden directory AND there is no file extension (return empty string)</span></div>
-<div class="line"><a id="l03007" name="l03007"></a><span class="lineno"> 3007</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( filepath.find_last_of(<span class="charliteral">&#39;/&#39;</span>)&lt;filepath.size() &amp;&amp; filepath.at(filepath.find_last_of(<span class="charliteral">&#39;.&#39;</span>)-1)==<span class="charliteral">&#39;/&#39;</span> ){</div>
-<div class="line"><a id="l03008" name="l03008"></a><span class="lineno"> 3008</span>    ext = <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l03009" name="l03009"></a><span class="lineno"> 3009</span>  }</div>
-<div class="line"><a id="l03010" name="l03010"></a><span class="lineno"> 3010</span> </div>
-<div class="line"><a id="l03011" name="l03011"></a><span class="lineno"> 3011</span>  <span class="comment">//edge case when file is in a hidden directory AND there is no file extension AND file path starts with &#39;.&#39; (return empty string)</span></div>
-<div class="line"><a id="l03012" name="l03012"></a><span class="lineno"> 3012</span>  <span class="keywordflow">if</span>( filepath.find_last_of(<span class="charliteral">&#39;.&#39;</span>)==0 ){</div>
-<div class="line"><a id="l03013" name="l03013"></a><span class="lineno"> 3013</span>    ext = <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l03014" name="l03014"></a><span class="lineno"> 3014</span>  }</div>
-<div class="line"><a id="l03015" name="l03015"></a><span class="lineno"> 3015</span> </div>
-<div class="line"><a id="l03016" name="l03016"></a><span class="lineno"> 3016</span>  <span class="keywordflow">return</span> ext;</div>
-<div class="line"><a id="l03017" name="l03017"></a><span class="lineno"> 3017</span>}</div>
+<div class="line"><a id="l02994" name="l02994"></a><span class="lineno"> 2994</span>    std::filesystem::path output_path_fs = filepath;</div>
+<div class="line"><a id="l02995" name="l02995"></a><span class="lineno"> 2995</span>    <span class="keywordflow">return</span> output_path_fs.extension().string();</div>
+<div class="line"><a id="l02996" name="l02996"></a><span class="lineno"> 2996</span>}</div>
 </div>
-<div class="line"><a id="l03018" name="l03018"></a><span class="lineno"> 3018</span> </div>
-<div class="foldopen" id="foldopen03019" data-start="{" data-end="}">
-<div class="line"><a id="l03019" name="l03019"></a><span class="lineno"><a class="line" href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed"> 3019</a></span>std::string <a class="code hl_function" href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed">helios::getFileStem</a>( <span class="keyword">const</span> std::string &amp;filepath ){</div>
-<div class="line"><a id="l03020" name="l03020"></a><span class="lineno"> 3020</span>  std::string fn = filepath;</div>
-<div class="line"><a id="l03021" name="l03021"></a><span class="lineno"> 3021</span>  <span class="keywordflow">if</span>( filepath.find(<span class="charliteral">&#39;/&#39;</span>)&lt;filepath.size() ) {</div>
-<div class="line"><a id="l03022" name="l03022"></a><span class="lineno"> 3022</span>    fn = filepath.substr(filepath.find_last_of(<span class="charliteral">&#39;/&#39;</span>) + 1);</div>
-<div class="line"><a id="l03023" name="l03023"></a><span class="lineno"> 3023</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( filepath.find(<span class="charliteral">&#39;\\&#39;</span>)&lt;filepath.size() ){</div>
-<div class="line"><a id="l03024" name="l03024"></a><span class="lineno"> 3024</span>    fn = filepath.substr(filepath.find_last_of(<span class="charliteral">&#39;\\&#39;</span>) + 1);</div>
-<div class="line"><a id="l03025" name="l03025"></a><span class="lineno"> 3025</span>  }</div>
-<div class="line"><a id="l03026" name="l03026"></a><span class="lineno"> 3026</span> </div>
-<div class="line"><a id="l03027" name="l03027"></a><span class="lineno"> 3027</span>  <span class="keywordflow">if</span>( fn.find(<span class="charliteral">&#39;.&#39;</span>)&lt;fn.size() ) {</div>
-<div class="line"><a id="l03028" name="l03028"></a><span class="lineno"> 3028</span>    fn = fn.substr( 0, fn.find_last_of(<span class="charliteral">&#39;.&#39;</span>) );</div>
-<div class="line"><a id="l03029" name="l03029"></a><span class="lineno"> 3029</span>  }</div>
-<div class="line"><a id="l03030" name="l03030"></a><span class="lineno"> 3030</span> </div>
-<div class="line"><a id="l03031" name="l03031"></a><span class="lineno"> 3031</span>  <span class="keywordflow">return</span> fn;</div>
-<div class="line"><a id="l03032" name="l03032"></a><span class="lineno"> 3032</span>}</div>
+<div class="line"><a id="l02997" name="l02997"></a><span class="lineno"> 2997</span> </div>
+<div class="foldopen" id="foldopen02998" data-start="{" data-end="}">
+<div class="line"><a id="l02998" name="l02998"></a><span class="lineno"><a class="line" href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed"> 2998</a></span>std::string <a class="code hl_function" href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed">helios::getFileStem</a>( <span class="keyword">const</span> std::string &amp;filepath ){</div>
+<div class="line"><a id="l02999" name="l02999"></a><span class="lineno"> 2999</span>    std::filesystem::path output_path_fs = filepath;</div>
+<div class="line"><a id="l03000" name="l03000"></a><span class="lineno"> 3000</span>    <span class="keywordflow">return</span> output_path_fs.stem().string();</div>
+<div class="line"><a id="l03001" name="l03001"></a><span class="lineno"> 3001</span>}</div>
 </div>
+<div class="line"><a id="l03002" name="l03002"></a><span class="lineno"> 3002</span> </div>
+<div class="foldopen" id="foldopen03003" data-start="{" data-end="}">
+<div class="line"><a id="l03003" name="l03003"></a><span class="lineno"><a class="line" href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902"> 3003</a></span>std::string <a class="code hl_function" href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902">helios::getFileName</a>( <span class="keyword">const</span> std::string &amp;filepath ){</div>
+<div class="line"><a id="l03004" name="l03004"></a><span class="lineno"> 3004</span>    std::filesystem::path output_path_fs = filepath;</div>
+<div class="line"><a id="l03005" name="l03005"></a><span class="lineno"> 3005</span>    <span class="keywordflow">return</span> output_path_fs.filename().string();</div>
+<div class="line"><a id="l03006" name="l03006"></a><span class="lineno"> 3006</span>}</div>
+</div>
+<div class="line"><a id="l03007" name="l03007"></a><span class="lineno"> 3007</span> </div>
+<div class="foldopen" id="foldopen03008" data-start="{" data-end="}">
+<div class="line"><a id="l03008" name="l03008"></a><span class="lineno"><a class="line" href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8"> 3008</a></span>std::string <a class="code hl_function" href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8">helios::getFilePath</a>( <span class="keyword">const</span> std::string &amp;filepath, <span class="keywordtype">bool</span> trailingslash ){</div>
+<div class="line"><a id="l03009" name="l03009"></a><span class="lineno"> 3009</span>    std::filesystem::path output_path_fs = filepath;</div>
+<div class="line"><a id="l03010" name="l03010"></a><span class="lineno"> 3010</span>    std::string output_path = output_path_fs.parent_path().string();</div>
+<div class="line"><a id="l03011" name="l03011"></a><span class="lineno"> 3011</span>    <span class="keywordflow">if</span>( trailingslash ) {</div>
+<div class="line"><a id="l03012" name="l03012"></a><span class="lineno"> 3012</span>        <span class="keywordflow">if</span> (output_path.find_last_of(<span class="charliteral">&#39;/&#39;</span>) != output_path.length() - 1) {</div>
+<div class="line"><a id="l03013" name="l03013"></a><span class="lineno"> 3013</span>            output_path += <span class="stringliteral">&quot;/&quot;</span>;</div>
+<div class="line"><a id="l03014" name="l03014"></a><span class="lineno"> 3014</span>        }</div>
+<div class="line"><a id="l03015" name="l03015"></a><span class="lineno"> 3015</span>    }</div>
+<div class="line"><a id="l03016" name="l03016"></a><span class="lineno"> 3016</span> </div>
+<div class="line"><a id="l03017" name="l03017"></a><span class="lineno"> 3017</span>    <span class="keywordflow">return</span> output_path;</div>
+<div class="line"><a id="l03018" name="l03018"></a><span class="lineno"> 3018</span>}</div>
+</div>
+<div class="line"><a id="l03019" name="l03019"></a><span class="lineno"> 3019</span> </div>
+<div class="foldopen" id="foldopen03020" data-start="{" data-end="}">
+<div class="line"><a id="l03020" name="l03020"></a><span class="lineno"><a class="line" href="global_8h.html#a614486c4ac0686c5b58813f03f0cedf9"> 3020</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="global_8h.html#a614486c4ac0686c5b58813f03f0cedf9">helios::validateOutputPath</a>(std::string &amp;output_path, <span class="keyword">const</span> std::vector&lt;std::string&gt; &amp;allowable_file_extensions){</div>
+<div class="line"><a id="l03021" name="l03021"></a><span class="lineno"> 3021</span> </div>
+<div class="line"><a id="l03022" name="l03022"></a><span class="lineno"> 3022</span>    <span class="keywordflow">if</span>( output_path.empty() ){ <span class="comment">//path was empty</span></div>
+<div class="line"><a id="l03023" name="l03023"></a><span class="lineno"> 3023</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03024" name="l03024"></a><span class="lineno"> 3024</span>    }</div>
+<div class="line"><a id="l03025" name="l03025"></a><span class="lineno"> 3025</span> </div>
+<div class="line"><a id="l03026" name="l03026"></a><span class="lineno"> 3026</span>    std::filesystem::path output_path_fs = output_path;</div>
+<div class="line"><a id="l03027" name="l03027"></a><span class="lineno"> 3027</span> </div>
+<div class="line"><a id="l03028" name="l03028"></a><span class="lineno"> 3028</span>    std::string output_file = output_path_fs.filename().string();</div>
+<div class="line"><a id="l03029" name="l03029"></a><span class="lineno"> 3029</span>    std::string output_file_ext = output_path_fs.extension().string();</div>
+<div class="line"><a id="l03030" name="l03030"></a><span class="lineno"> 3030</span>    std::string output_dir = output_path_fs.parent_path().string();</div>
+<div class="line"><a id="l03031" name="l03031"></a><span class="lineno"> 3031</span> </div>
+<div class="line"><a id="l03032" name="l03032"></a><span class="lineno"> 3032</span>    <span class="keywordflow">if</span>( output_file.empty() ) { <span class="comment">//path was a directory without a file</span></div>
 <div class="line"><a id="l03033" name="l03033"></a><span class="lineno"> 3033</span> </div>
-<div class="foldopen" id="foldopen03034" data-start="{" data-end="}">
-<div class="line"><a id="l03034" name="l03034"></a><span class="lineno"><a class="line" href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902"> 3034</a></span>std::string <a class="code hl_function" href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902">helios::getFileName</a>( <span class="keyword">const</span> std::string &amp;filepath ){</div>
-<div class="line"><a id="l03035" name="l03035"></a><span class="lineno"> 3035</span>  <span class="keywordflow">if</span>( filepath.find(<span class="charliteral">&#39;/&#39;</span>)&lt;filepath.size() ) {</div>
-<div class="line"><a id="l03036" name="l03036"></a><span class="lineno"> 3036</span>    <span class="keywordflow">return</span> filepath.substr(filepath.find_last_of(<span class="charliteral">&#39;/&#39;</span>) + 1);</div>
-<div class="line"><a id="l03037" name="l03037"></a><span class="lineno"> 3037</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( filepath.find(<span class="charliteral">&#39;\\&#39;</span>)==filepath.size() ) {</div>
-<div class="line"><a id="l03038" name="l03038"></a><span class="lineno"> 3038</span>    <span class="keywordflow">return</span> filepath.substr(filepath.find_last_of(<span class="charliteral">&#39;\\&#39;</span>) + 1);</div>
-<div class="line"><a id="l03039" name="l03039"></a><span class="lineno"> 3039</span>  }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l03040" name="l03040"></a><span class="lineno"> 3040</span>    <span class="keywordflow">return</span> filepath;</div>
-<div class="line"><a id="l03041" name="l03041"></a><span class="lineno"> 3041</span>  }</div>
-<div class="line"><a id="l03042" name="l03042"></a><span class="lineno"> 3042</span> </div>
-<div class="line"><a id="l03043" name="l03043"></a><span class="lineno"> 3043</span>}</div>
+<div class="line"><a id="l03034" name="l03034"></a><span class="lineno"> 3034</span>        <span class="comment">// Make sure directory has a trailing slash</span></div>
+<div class="line"><a id="l03035" name="l03035"></a><span class="lineno"> 3035</span>        <span class="keywordflow">if</span> (output_dir.find_last_of(<span class="charliteral">&#39;/&#39;</span>) != output_dir.length() - 1) {</div>
+<div class="line"><a id="l03036" name="l03036"></a><span class="lineno"> 3036</span>            output_path += <span class="stringliteral">&quot;/&quot;</span>;</div>
+<div class="line"><a id="l03037" name="l03037"></a><span class="lineno"> 3037</span>        }</div>
+<div class="line"><a id="l03038" name="l03038"></a><span class="lineno"> 3038</span> </div>
+<div class="line"><a id="l03039" name="l03039"></a><span class="lineno"> 3039</span>    }</div>
+<div class="line"><a id="l03040" name="l03040"></a><span class="lineno"> 3040</span> </div>
+<div class="line"><a id="l03041" name="l03041"></a><span class="lineno"> 3041</span>    <span class="comment">// Create the output directory if it does not exist</span></div>
+<div class="line"><a id="l03042" name="l03042"></a><span class="lineno"> 3042</span>    <span class="keywordflow">if</span> ( !output_dir.empty() &amp;&amp; !std::filesystem::exists(output_dir)) {</div>
+<div class="line"><a id="l03043" name="l03043"></a><span class="lineno"> 3043</span>        <span class="keywordflow">if</span> (!std::filesystem::create_directory(output_dir)) {</div>
+<div class="line"><a id="l03044" name="l03044"></a><span class="lineno"> 3044</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03045" name="l03045"></a><span class="lineno"> 3045</span>        }</div>
+<div class="line"><a id="l03046" name="l03046"></a><span class="lineno"> 3046</span>    }</div>
+<div class="line"><a id="l03047" name="l03047"></a><span class="lineno"> 3047</span> </div>
+<div class="line"><a id="l03048" name="l03048"></a><span class="lineno"> 3048</span>    <span class="keywordflow">if</span>( !output_file.empty() &amp;&amp; !allowable_file_extensions.empty() ){</div>
+<div class="line"><a id="l03049" name="l03049"></a><span class="lineno"> 3049</span> </div>
+<div class="line"><a id="l03050" name="l03050"></a><span class="lineno"> 3050</span>        <span class="comment">//validate file extension</span></div>
+<div class="line"><a id="l03051" name="l03051"></a><span class="lineno"> 3051</span>        <span class="keywordtype">bool</span> valid_extension = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03052" name="l03052"></a><span class="lineno"> 3052</span>        <span class="keywordflow">for</span>( <span class="keyword">const</span> <span class="keyword">auto</span> &amp;ext : allowable_file_extensions ){</div>
+<div class="line"><a id="l03053" name="l03053"></a><span class="lineno"> 3053</span>            <span class="keywordflow">if</span>( output_file_ext == ext ){</div>
+<div class="line"><a id="l03054" name="l03054"></a><span class="lineno"> 3054</span>                valid_extension = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l03055" name="l03055"></a><span class="lineno"> 3055</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l03056" name="l03056"></a><span class="lineno"> 3056</span>            }</div>
+<div class="line"><a id="l03057" name="l03057"></a><span class="lineno"> 3057</span>        }</div>
+<div class="line"><a id="l03058" name="l03058"></a><span class="lineno"> 3058</span>        <span class="keywordflow">if</span>( !valid_extension ){</div>
+<div class="line"><a id="l03059" name="l03059"></a><span class="lineno"> 3059</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03060" name="l03060"></a><span class="lineno"> 3060</span>        }</div>
+<div class="line"><a id="l03061" name="l03061"></a><span class="lineno"> 3061</span> </div>
+<div class="line"><a id="l03062" name="l03062"></a><span class="lineno"> 3062</span>    }</div>
+<div class="line"><a id="l03063" name="l03063"></a><span class="lineno"> 3063</span> </div>
+<div class="line"><a id="l03064" name="l03064"></a><span class="lineno"> 3064</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l03065" name="l03065"></a><span class="lineno"> 3065</span> </div>
+<div class="line"><a id="l03066" name="l03066"></a><span class="lineno"> 3066</span>}</div>
 </div>
-<div class="line"><a id="l03044" name="l03044"></a><span class="lineno"> 3044</span> </div>
-<div class="foldopen" id="foldopen03045" data-start="{" data-end="}">
-<div class="line"><a id="l03045" name="l03045"></a><span class="lineno"><a class="line" href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8"> 3045</a></span>std::string <a class="code hl_function" href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8">helios::getFilePath</a>( <span class="keyword">const</span> std::string &amp;filepath, <span class="keywordtype">bool</span> trailingslash ){</div>
-<div class="line"><a id="l03046" name="l03046"></a><span class="lineno"> 3046</span>  <span class="keywordflow">if</span>( filepath.find(<span class="charliteral">&#39;/&#39;</span>)==filepath.size() ){</div>
-<div class="line"><a id="l03047" name="l03047"></a><span class="lineno"> 3047</span>    <span class="keywordflow">if</span>( trailingslash ){</div>
-<div class="line"><a id="l03048" name="l03048"></a><span class="lineno"> 3048</span>      std::string str = <span class="stringliteral">&quot;/&quot;</span>;</div>
-<div class="line"><a id="l03049" name="l03049"></a><span class="lineno"> 3049</span>      <span class="keywordflow">return</span> str;</div>
-<div class="line"><a id="l03050" name="l03050"></a><span class="lineno"> 3050</span>    }<span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03051" name="l03051"></a><span class="lineno"> 3051</span>      std::string str;</div>
-<div class="line"><a id="l03052" name="l03052"></a><span class="lineno"> 3052</span>      <span class="keywordflow">return</span> str;</div>
-<div class="line"><a id="l03053" name="l03053"></a><span class="lineno"> 3053</span>    }</div>
-<div class="line"><a id="l03054" name="l03054"></a><span class="lineno"> 3054</span>  }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l03055" name="l03055"></a><span class="lineno"> 3055</span>    <span class="keywordflow">if</span>( trailingslash ) {</div>
-<div class="line"><a id="l03056" name="l03056"></a><span class="lineno"> 3056</span>      <span class="keywordflow">return</span> filepath.substr(0, filepath.find_last_of(<span class="charliteral">&#39;/&#39;</span>) + 1);</div>
-<div class="line"><a id="l03057" name="l03057"></a><span class="lineno"> 3057</span>    }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l03058" name="l03058"></a><span class="lineno"> 3058</span>      <span class="keywordflow">return</span> filepath.substr(0, filepath.find_last_of(<span class="charliteral">&#39;/&#39;</span>));</div>
-<div class="line"><a id="l03059" name="l03059"></a><span class="lineno"> 3059</span>    }</div>
-<div class="line"><a id="l03060" name="l03060"></a><span class="lineno"> 3060</span>  }</div>
-<div class="line"><a id="l03061" name="l03061"></a><span class="lineno"> 3061</span>}</div>
-</div>
-<div class="line"><a id="l03062" name="l03062"></a><span class="lineno"> 3062</span> </div>
-<div class="foldopen" id="foldopen03063" data-start="{" data-end="}">
-<div class="line"><a id="l03063" name="l03063"></a><span class="lineno"><a class="line" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368"> 3063</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368">helios::importVectorFromFile</a>(<span class="keyword">const</span> std::string &amp;filepath){</div>
-<div class="line"><a id="l03064" name="l03064"></a><span class="lineno"> 3064</span> </div>
-<div class="line"><a id="l03065" name="l03065"></a><span class="lineno"> 3065</span>  std::ifstream stream(filepath.c_str());</div>
-<div class="line"><a id="l03066" name="l03066"></a><span class="lineno"> 3066</span> </div>
-<div class="line"><a id="l03067" name="l03067"></a><span class="lineno"> 3067</span>  <span class="keywordflow">if</span>( !stream.is_open() ){</div>
-<div class="line"><a id="l03068" name="l03068"></a><span class="lineno"> 3068</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::importVectorFromFile): File &quot;</span> + filepath + <span class="stringliteral">&quot; could not be opened for reading. Check that it exists and that you have permission to read it.&quot;</span>);</div>
-<div class="line"><a id="l03069" name="l03069"></a><span class="lineno"> 3069</span>  }</div>
-<div class="line"><a id="l03070" name="l03070"></a><span class="lineno"> 3070</span> </div>
-<div class="line"><a id="l03071" name="l03071"></a><span class="lineno"> 3071</span>  std::istream_iterator&lt;float&gt; start(stream), end;</div>
-<div class="line"><a id="l03072" name="l03072"></a><span class="lineno"> 3072</span>  std::vector&lt;float&gt; vec(start, end);</div>
-<div class="line"><a id="l03073" name="l03073"></a><span class="lineno"> 3073</span>  <span class="keywordflow">return</span> vec;</div>
-<div class="line"><a id="l03074" name="l03074"></a><span class="lineno"> 3074</span> </div>
-<div class="line"><a id="l03075" name="l03075"></a><span class="lineno"> 3075</span>}</div>
+<div class="line"><a id="l03067" name="l03067"></a><span class="lineno"> 3067</span> </div>
+<div class="foldopen" id="foldopen03068" data-start="{" data-end="}">
+<div class="line"><a id="l03068" name="l03068"></a><span class="lineno"><a class="line" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368"> 3068</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368">helios::importVectorFromFile</a>(<span class="keyword">const</span> std::string &amp;filepath){</div>
+<div class="line"><a id="l03069" name="l03069"></a><span class="lineno"> 3069</span> </div>
+<div class="line"><a id="l03070" name="l03070"></a><span class="lineno"> 3070</span>  std::ifstream stream(filepath.c_str());</div>
+<div class="line"><a id="l03071" name="l03071"></a><span class="lineno"> 3071</span> </div>
+<div class="line"><a id="l03072" name="l03072"></a><span class="lineno"> 3072</span>  <span class="keywordflow">if</span>( !stream.is_open() ){</div>
+<div class="line"><a id="l03073" name="l03073"></a><span class="lineno"> 3073</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::importVectorFromFile): File &quot;</span> + filepath + <span class="stringliteral">&quot; could not be opened for reading. Check that it exists and that you have permission to read it.&quot;</span>);</div>
+<div class="line"><a id="l03074" name="l03074"></a><span class="lineno"> 3074</span>  }</div>
+<div class="line"><a id="l03075" name="l03075"></a><span class="lineno"> 3075</span> </div>
+<div class="line"><a id="l03076" name="l03076"></a><span class="lineno"> 3076</span>  std::istream_iterator&lt;float&gt; start(stream), end;</div>
+<div class="line"><a id="l03077" name="l03077"></a><span class="lineno"> 3077</span>  std::vector&lt;float&gt; vec(start, end);</div>
+<div class="line"><a id="l03078" name="l03078"></a><span class="lineno"> 3078</span>  <span class="keywordflow">return</span> vec;</div>
+<div class="line"><a id="l03079" name="l03079"></a><span class="lineno"> 3079</span> </div>
+<div class="line"><a id="l03080" name="l03080"></a><span class="lineno"> 3080</span>}</div>
 </div>
 <div class="ttc" id="aglobal_8h_html"><div class="ttname"><a href="global_8h.html">global.h</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a0209e53a2bdd31c9977de93b27e968b6"><div class="ttname"><a href="global_8h.html#a0209e53a2bdd31c9977de93b27e968b6">helios::parse_double</a></div><div class="ttdeci">bool parse_double(const std::string &amp;input_string, double &amp;converted_double)</div><div class="ttdoc">Convert a string into a double with error checking.</div><div class="ttdef"><b>Definition</b> <a href="#l00779">global.cpp:779</a></div></div>
@@ -3435,7 +3442,7 @@ $(function(){ initResizable(false); });
 <div class="ttc" id="aglobal_8h_html_a07b0dda8b9aee4100e9f6332dbfe7f64"><div class="ttname"><a href="global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64">helios::PNGHasAlpha</a></div><div class="ttdeci">bool PNGHasAlpha(const char *filename)</div><div class="ttdoc">Check whether PNG image file has an alpha/transparency channel.</div><div class="ttdef"><b>Definition</b> <a href="#l01352">global.cpp:1352</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a08c21d08fc1e1dd07ff612f8b503e295"><div class="ttname"><a href="global_8h.html#a08c21d08fc1e1dd07ff612f8b503e295">helios::XMLloadint4</a></div><div class="ttdeci">helios::int4 XMLloadint4(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into a int4.</div><div class="ttdef"><b>Definition</b> <a href="#l02850">global.cpp:2850</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a09ae9efe6ba5dddb144519931bcf94b5"><div class="ttname"><a href="global_8h.html#a09ae9efe6ba5dddb144519931bcf94b5">helios::rotatePointAboutLine</a></div><div class="ttdeci">vec3 rotatePointAboutLine(const vec3 &amp;point, const vec3 &amp;line_base, const vec3 &amp;line_direction, float theta)</div><div class="ttdoc">Rotate a 3D vector about an arbitrary line.</div><div class="ttdef"><b>Definition</b> <a href="#l00140">global.cpp:140</a></div></div>
-<div class="ttc" id="aglobal_8h_html_a125e8bef86fb7272d4d66898afb7d368"><div class="ttname"><a href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368">helios::importVectorFromFile</a></div><div class="ttdeci">std::vector&lt; float &gt; importVectorFromFile(const std::string &amp;filepath)</div><div class="ttdoc">Read values contained in a text file into a one-dimensional vector of floats.</div><div class="ttdef"><b>Definition</b> <a href="#l03063">global.cpp:3063</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a125e8bef86fb7272d4d66898afb7d368"><div class="ttname"><a href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368">helios::importVectorFromFile</a></div><div class="ttdeci">std::vector&lt; float &gt; importVectorFromFile(const std::string &amp;filepath)</div><div class="ttdoc">Read values contained in a text file into a one-dimensional vector of floats.</div><div class="ttdef"><b>Definition</b> <a href="#l03068">global.cpp:3068</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a148e80cd6b8477c0704e642243ab2547"><div class="ttname"><a href="global_8h.html#a148e80cd6b8477c0704e642243ab2547">helios::XMLloadrgba</a></div><div class="ttdeci">helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into an RGBA color vector.</div><div class="ttdef"><b>Definition</b> <a href="#l02880">global.cpp:2880</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a162c3d8c139c75bac9607b512768b937"><div class="ttname"><a href="global_8h.html#a162c3d8c139c75bac9607b512768b937">helios::parse_float</a></div><div class="ttdeci">bool parse_float(const std::string &amp;input_string, float &amp;converted_float)</div><div class="ttdoc">Convert a string into a float with error checking.</div><div class="ttdef"><b>Definition</b> <a href="#l00763">global.cpp:763</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a192c018f83c0598738e048212904202d"><div class="ttname"><a href="global_8h.html#a192c018f83c0598738e048212904202d">helios::blend</a></div><div class="ttdeci">RGBcolor blend(const RGBcolor &amp;color0, const RGBcolor &amp;color1, float weight)</div><div class="ttdoc">Blend two RGB colors together.</div><div class="ttdef"><b>Definition</b> <a href="#l00060">global.cpp:60</a></div></div>
@@ -3452,7 +3459,8 @@ $(function(){ initResizable(false); });
 <div class="ttc" id="aglobal_8h_html_a4d55bb8abc86cb7dabab1d4e6201a754"><div class="ttname"><a href="global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754">helios::point_distance</a></div><div class="ttdeci">float point_distance(const helios::vec3 &amp;p1, const helios::vec3 &amp;p2)</div><div class="ttdoc">Function to calculate the distance between two points.</div><div class="ttdef"><b>Definition</b> <a href="#l02989">global.cpp:2989</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a51430e9e359c2aad9d22d41650b2221a"><div class="ttname"><a href="global_8h.html#a51430e9e359c2aad9d22d41650b2221a">helios::parse_uint</a></div><div class="ttdeci">bool parse_uint(const std::string &amp;input_string, uint &amp;converted_uint)</div><div class="ttdoc">Convert a string into an unsigned integer with error checking.</div><div class="ttdef"><b>Definition</b> <a href="#l00809">global.cpp:809</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a58e660bb08e1ce13466825ae666467ef"><div class="ttname"><a href="global_8h.html#a58e660bb08e1ce13466825ae666467ef">helios::getFileExtension</a></div><div class="ttdeci">std::string getFileExtension(const std::string &amp;filepath)</div><div class="ttdoc">Parse a file string to get the extension.</div><div class="ttdef"><b>Definition</b> <a href="#l02993">global.cpp:2993</a></div></div>
-<div class="ttc" id="aglobal_8h_html_a63bd49091fdab0e262b051f61fb9a902"><div class="ttname"><a href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902">helios::getFileName</a></div><div class="ttdeci">std::string getFileName(const std::string &amp;filepath)</div><div class="ttdoc">Parse a file string to get the filename including extension.</div><div class="ttdef"><b>Definition</b> <a href="#l03034">global.cpp:3034</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a614486c4ac0686c5b58813f03f0cedf9"><div class="ttname"><a href="global_8h.html#a614486c4ac0686c5b58813f03f0cedf9">helios::validateOutputPath</a></div><div class="ttdeci">bool validateOutputPath(std::string &amp;output_directory, const std::vector&lt; std::string &gt; &amp;allowable_file_extensions={})</div><div class="ttdoc">Check whether output file and/or directory is valid. Add a trailing slash if it is a directory.</div><div class="ttdef"><b>Definition</b> <a href="#l03020">global.cpp:3020</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a63bd49091fdab0e262b051f61fb9a902"><div class="ttname"><a href="global_8h.html#a63bd49091fdab0e262b051f61fb9a902">helios::getFileName</a></div><div class="ttdeci">std::string getFileName(const std::string &amp;filepath)</div><div class="ttdoc">Parse a file string to get the filename including extension.</div><div class="ttdef"><b>Definition</b> <a href="#l03003">global.cpp:3003</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a672182e7d8beb63c7cf256fa8294dc86"><div class="ttname"><a href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86">helios::helios_runtime_error</a></div><div class="ttdeci">void helios_runtime_error(const std::string &amp;error_message)</div><div class="ttdoc">Function to throw a runtime error.</div><div class="ttdef"><b>Definition</b> <a href="#l00029">global.cpp:29</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a6b9de37fd00d939cb9e049a9002e8db0"><div class="ttname"><a href="global_8h.html#a6b9de37fd00d939cb9e049a9002e8db0">helios::parse_int</a></div><div class="ttdeci">bool parse_int(const std::string &amp;input_string, int &amp;converted_int)</div><div class="ttdoc">Convert a string into an integer with error checking.</div><div class="ttdef"><b>Definition</b> <a href="#l00794">global.cpp:794</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a6d4fc938af8d1e0db7836a610b7feda0"><div class="ttname"><a href="global_8h.html#a6d4fc938af8d1e0db7836a610b7feda0">helios::parse_xml_tag_vec2</a></div><div class="ttdeci">vec2 parse_xml_tag_vec2(const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</div><div class="ttdoc">Parse an XML tag containing a vec2 value (i.e., two space delimited floats)</div><div class="ttdef"><b>Definition</b> <a href="#l00884">global.cpp:884</a></div></div>
@@ -3465,11 +3473,11 @@ $(function(){ initResizable(false); });
 <div class="ttc" id="aglobal_8h_html_a94c80cbffdccaea7991b439acf8e9eb4"><div class="ttname"><a href="global_8h.html#a94c80cbffdccaea7991b439acf8e9eb4">helios::getImageResolutionJPEG</a></div><div class="ttdeci">helios::int2 getImageResolutionJPEG(const std::string &amp;filename)</div><div class="ttdoc">Function to read a JPEG image file into pixel data array.</div><div class="ttdef"><b>Definition</b> <a href="#l01744">global.cpp:1744</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a95600894b45bcc627d66c3dd8c202cd8"><div class="ttname"><a href="global_8h.html#a95600894b45bcc627d66c3dd8c202cd8">helios::writeJPEG</a></div><div class="ttdeci">void writeJPEG(const std::string &amp;filename, uint width, uint height, const std::vector&lt; helios::RGBcolor &gt; &amp;pixel_data)</div><div class="ttdoc">Function to write a JPEG image based on pixel data.</div><div class="ttdef"><b>Definition</b> <a href="#l01786">global.cpp:1786</a></div></div>
 <div class="ttc" id="aglobal_8h_html_a99f41f50ffe7f2c092e16377f5cef979"><div class="ttname"><a href="global_8h.html#a99f41f50ffe7f2c092e16377f5cef979">helios::readPNG</a></div><div class="ttdeci">void readPNG(const std::string &amp;filename, uint &amp;width, uint &amp;height, std::vector&lt; helios::RGBAcolor &gt; &amp;pixel_data)</div><div class="ttdoc">Function to read a PNG image file into pixel data array.</div><div class="ttdef"><b>Definition</b> <a href="#l01505">global.cpp:1505</a></div></div>
-<div class="ttc" id="aglobal_8h_html_a9fff8cb6c3474de479f81c12f173d3ed"><div class="ttname"><a href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed">helios::getFileStem</a></div><div class="ttdeci">std::string getFileStem(const std::string &amp;filepath)</div><div class="ttdoc">Parse a file string to get the filename without extension.</div><div class="ttdef"><b>Definition</b> <a href="#l03019">global.cpp:3019</a></div></div>
+<div class="ttc" id="aglobal_8h_html_a9fff8cb6c3474de479f81c12f173d3ed"><div class="ttname"><a href="global_8h.html#a9fff8cb6c3474de479f81c12f173d3ed">helios::getFileStem</a></div><div class="ttdeci">std::string getFileStem(const std::string &amp;filepath)</div><div class="ttdoc">Parse a file string to get the filename without extension.</div><div class="ttdef"><b>Definition</b> <a href="#l02998">global.cpp:2998</a></div></div>
 <div class="ttc" id="aglobal_8h_html_aa4c58cabe7bc5244435613ffdb00cf34"><div class="ttname"><a href="global_8h.html#aa4c58cabe7bc5244435613ffdb00cf34">helios::XMLloadvec3</a></div><div class="ttdeci">helios::vec3 XMLloadvec3(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into a vec3.</div><div class="ttdef"><b>Definition</b> <a href="#l02790">global.cpp:2790</a></div></div>
 <div class="ttc" id="aglobal_8h_html_ab044c22f6798031f34744e63d95ca614"><div class="ttname"><a href="global_8h.html#ab044c22f6798031f34744e63d95ca614">helios::makeIdentityMatrix</a></div><div class="ttdeci">void makeIdentityMatrix(float(&amp;T)[16])</div><div class="ttdoc">Construct an identity matrix.</div><div class="ttdef"><b>Definition</b> <a href="#l00555">global.cpp:555</a></div></div>
 <div class="ttc" id="aglobal_8h_html_acb80e4e13497682968468c596a9b3690"><div class="ttname"><a href="global_8h.html#acb80e4e13497682968468c596a9b3690">helios::XMLloadrgb</a></div><div class="ttdeci">helios::RGBcolor XMLloadrgb(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into an RGB color vector.</div><div class="ttdef"><b>Definition</b> <a href="#l02865">global.cpp:2865</a></div></div>
-<div class="ttc" id="aglobal_8h_html_ad76f15d03b511d1bf5123d64d804d6e8"><div class="ttname"><a href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8">helios::getFilePath</a></div><div class="ttdeci">std::string getFilePath(const std::string &amp;filepath, bool trailingslash=true)</div><div class="ttdoc">Parse a file string to get the path (i.e., portion of the string before the file name).</div><div class="ttdef"><b>Definition</b> <a href="#l03045">global.cpp:3045</a></div></div>
+<div class="ttc" id="aglobal_8h_html_ad76f15d03b511d1bf5123d64d804d6e8"><div class="ttname"><a href="global_8h.html#ad76f15d03b511d1bf5123d64d804d6e8">helios::getFilePath</a></div><div class="ttdeci">std::string getFilePath(const std::string &amp;filepath, bool trailingslash=true)</div><div class="ttdoc">Parse a file string to get the path (i.e., portion of the string before the file name).</div><div class="ttdef"><b>Definition</b> <a href="#l03008">global.cpp:3008</a></div></div>
 <div class="ttc" id="aglobal_8h_html_adcd5a98ec7c45292736ec8e19ce9de51"><div class="ttname"><a href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a></div><div class="ttdeci">SphericalCoord nullrotation</div><div class="ttdoc">Default null SphericalCoord that applies no rotation.</div><div class="ttdef"><b>Definition</b> <a href="#l00057">global.cpp:57</a></div></div>
 <div class="ttc" id="aglobal_8h_html_ade5b9b8370f50d8c2002ba48d47521f5"><div class="ttname"><a href="global_8h.html#ade5b9b8370f50d8c2002ba48d47521f5">helios::readPNGAlpha</a></div><div class="ttdeci">std::vector&lt; std::vector&lt; bool &gt; &gt; readPNGAlpha(const std::string &amp;filename)</div><div class="ttdoc">Function to read the alpha channel from a PNG image.</div><div class="ttdef"><b>Definition</b> <a href="#l01406">global.cpp:1406</a></div></div>
 <div class="ttc" id="aglobal_8h_html_ae4661a50a9f13eb6fb645e9f767b51a2"><div class="ttname"><a href="global_8h.html#ae4661a50a9f13eb6fb645e9f767b51a2">helios::XMLloadint3</a></div><div class="ttdeci">helios::int3 XMLloadint3(pugi::xml_node node, const char *field)</div><div class="ttdoc">Function to load and convert a field in a pugi XML node into a int3.</div><div class="ttdef"><b>Definition</b> <a href="#l02835">global.cpp:2835</a></div></div>
