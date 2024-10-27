@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 
-DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq") # Universal PATH dependencies
+#
+# base: GCC, G++, and CMake are required to run Helios.
+# vis:  X11/xorg are required to use Visualizer plugin.
+# cuda: CUDA is required for 1. Radiation, 2. Energy Balance, 3. LiDAR, 4. Aerial LiDAR, and 5. Voxel Intersection plugins.
+# all:  install all possible dependencies
+
+DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq") # Base PATH dependencies
+
+# Run bash script as root
+if command -v nvcc &> /dev/null; then
+    ROOT="sudo"
+else
+    echo "'sudo' command not found. Please run this script as root."
+    ROOT=""
+fi
 
 # Define function to run command and clear output from terminal after completion
 run_command_clear_output() {
@@ -18,22 +32,81 @@ run_command_clear_output() {
     rm "$out_file"
 }
 
+# Define function to check if element is in a list
+is_in_list() {
+    search="$1"
+    shift
+    list=("$@")
+    for element in "${list[@]}"; do
+        if [[ "$element" == "$search" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+arg=$(echo "$1" | tr '[:upper:]' '[:lower:]') # case-insensitive command-line argument
+
+ARGS=("base" "vis" "cuda" "all") # valid arguments; default is 'all'
+
+# Determine packages to install (base, vis, cuda, or all)
+if [ -z "$1" ]; then
+    MODE="all"
+else
+    if is_in_list "$arg" "${ARGS[@]}"; then
+        MODE="$arg"
+    else
+        MODE="all"
+    fi
+fi
+
 # Check if the host is Windows, macOS, or Linux
 if [[ "$(uname -s)" == *"MINGW"* || "$(uname -s)" == *"CYGWIN"* ]]; then
-    echo "Host is Windows."
-    echo -e "Please install \e]8;;https://visualstudio.microsoft.com/downloads/\aVisual Studio\e]8;;\a and \e]8;;https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64\aCUDA\e]8;;\a."
+    echo -e "Host is Windows. Dependencies need to be installed manually."
+    echo -e "Please install Visual Studio: https://visualstudio.microsoft.com/downloads/"
+    echo -e "Please install CUDA: https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64"
     exit 0
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "Host is macOS."
+    echo -e "Installing $MODE dependencies for macOS host...\n"
     PACKAGE_MANAGER="brew"
-    DEPENDENCIES_VIS=("Caskroom" "xquartz" "cuda") # required for visualizer + radiation
+    if [[ "$MODE" == "all" || "$MODE" == "cuda" || "$MODE" == "vis" ]]; then
+        DEPENDENCIES_PATH+=("Caskroom" "cask")
+    fi
+    if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
+        DEPENDENCIES_PATH+=("xquartz")
+    fi
+    if [[ "$MODE" == "all" || "$MODE" == "cuda" ]]; then
+        DEPENDENCIES_PATH+=("cuda")
+    fi
     CHECK_EXISTS="brew list"
     FLAG=""
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "Host is Linux."
-    PACKAGE_MANAGER="sudo apt-get"
-    DEPENDENCIES_VIS=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev") # required for visualizer
-    CHECK_EXISTS="dpkg -l | grep -w -m 1"
+    echo -e "Installing $MODE dependencies for Linux host...\n"
+    if command -v apt &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT apt-get"
+        CHECK_EXISTS="dpkg -l | grep -w -m 1"
+    elif command -v yum &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT yum"
+        CHECK_EXISTS="rpm -qa | grep -w -m 1"
+    elif command -v dnf &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT dnf"
+        CHECK_EXISTS="rpm -qa | grep -w -m 1"
+    elif command -v tdnf &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT tdnf"
+        CHECK_EXISTS="rpm -qa | grep -w -m 1"
+    elif command -v zypper &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT zypper"
+        CHECK_EXISTS="zypper se --installed-only | grep -w -m 1"
+    elif command -v pacman &> /dev/null; then
+        PACKAGE_MANAGER="$ROOT pacman"
+        CHECK_EXISTS="pacman -Qs | grep -w -m 1"
+    else
+        echo "No package manager detected. Exiting."
+        exit 1
+    fi
+    if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
+        DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev")
+    fi
     FLAG="-y"
     export DEBIAN_FRONTEND=noninteractive # Avoid timezone prompts
 else
@@ -48,34 +121,30 @@ run_command_clear_output "$PACKAGE_MANAGER update $FLAG"
 for package in "${DEPENDENCIES_PATH[@]}"; do
     if command -v "$package" &> /dev/null; then
         echo "$package already installed at: $(command -v $package)"
-    else
-        echo "Installing $package..."
-        run_command_clear_output "$PACKAGE_MANAGER install $FLAG $package"
-        echo "$package installed at: $(command -v $package)"
-    fi
-done
-
-# Install visualizer dependencies
-for package in "${DEPENDENCIES_VIS[@]}"; do
-    if eval "$CHECK_EXISTS \"$package\" &> /dev/null"; then
+    elif eval "$CHECK_EXISTS \"$package\" &> /dev/null"; then
         echo "$package already installed."
     else
         echo "Installing $package..."
         run_command_clear_output "$PACKAGE_MANAGER install $FLAG $package"
-        echo "$package installed."
+        if command -v "$package" &> /dev/null; then
+            echo "$package installed at: $(command -v $package)"
+        else
+            echo "$package installed."
+        fi
     fi
 done
 
-# If host is macOS, dependencies installed successfully.
-if [[ "$OSTYPE" == "darwin"* ]]; then
+# If host is macOS or host is Linux and CUDA not needed, dependencies already installed successfully.
+if [[ "$OSTYPE" == "darwin"* || "$MODE" == "base" || "$MODE" == "vis" ]]; then
   echo "Finished installing dependencies."
   exit 0
 fi
 
 # Get Linux distribution & version
-os_name=$(cat /etc/os-release | grep "^NAME=" | cut -d '"' -f 2)
+os_name=$(cat /etc/os-release | grep "^NAME=" | cut -d '"' -f 2 | awk '{print $1}')
 version_id=$(cat /etc/os-release | grep "^VERSION_ID=" | cut -d '"' -f 2)
-distro="${os_name}_${version_id}"
+architecture=$(uname -m)
+distro="${os_name}_${version_id}_${architecture}"
 if cat /proc/version | grep -o WSL &> /dev/null; then
     if cat /proc/version | grep -o WSL2 &> /dev/null; then
         distro="WSL"
@@ -89,23 +158,36 @@ fi
 if command -v nvcc &> /dev/null; then
     echo "CUDA version $( nvcc --version | grep -oP 'V\d+\.\d+\.\d+' | awk -F'V' '{print $2}' ) already installed at $(command -v nvcc)"
 else
-    echo "Installing CUDA..."
+    echo "Installing CUDA for $distro..."
     mapfile -t CUDA_COMMANDS < <(jq -r ".\"$distro\"[]" CUDA_install.json)
 
     # Verify that CUDA_COMMANDS were loaded correctly
     if [ ${#CUDA_COMMANDS[@]} -eq 0 ]; then
-        echo "Can't install CUDA"
+        echo "Error: No CUDA installation for $distro found in CUDA_install.json. Exiting..."
         exit 1
     fi
 
     # Install CUDA
     for install_command in "${CUDA_COMMANDS[@]}"; do
-        run_command_clear_output "$install_command"
+        run_command_clear_output "$ROOT $install_command"
     done
-
-    # Add nvcc to path
-    export PATH=/usr/local/cuda/bin:$PATH
 fi
 
-echo "Finished installing dependencies."
+# Add nvcc to path
+export PATH=/usr/local/cuda/bin:$PATH
+
+# Fix OptiX drivers for WSL
+if [[ "$distro" == "WSL" ]]; then
+    LXSS="/mnt/c/Windows/System32/lxss/lib/"
+    DRIVERS=("libnvoptix.so.1" "libnvidia-ptxjitcompiler.so.1")
+    if [[ ! -f "$LXSS/libnvidia-ptxjitcompiler.so.1" || ! -f "$LXSS/libnvoptix.so.1" ]]; then
+        mkdir -p "$LXSS"
+        eval "$ROOT cp -r plugins/radiation/optix_drivers/* $LXSS"
+        ln -s "$LXSS"libnvidia-ptxjitcompiler.so.470.256.02 "$LXSS"libnvidia-ptxjitcompiler.so.1
+        ln -s "$LXSS"libnvoptix.so.470.256.02 "$LXSS"libnvoptix.so.1
+        export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH
+    fi
+fi
+
+echo "Finished installing $MODE dependencies."
 exit 0
