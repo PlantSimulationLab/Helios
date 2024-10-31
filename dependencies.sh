@@ -1,10 +1,32 @@
 #!/usr/bin/env bash
 
+################################################
+##  Install package dependencies for Helios.  ##
 #
-# base: GCC, G++, and CMake are required to run Helios.
-# vis:  X11/xorg are required to use Visualizer plugin.
-# cuda: CUDA is required for 1. Radiation, 2. Energy Balance, 3. LiDAR, 4. Aerial LiDAR, and 5. Voxel Intersection plugins.
-# all:  install all possible dependencies
+## Use one of the following arguments to choose
+## which dependencies to install. Default (if
+## no argument provided) is "all".
+#
+# ARGUMENT
+#   option: Choice of which dependencies to
+#           install (default is "all").
+#           See below.
+#
+# OPTIONS
+#   BASE: Install GCC, G++, and CMake
+#         Required to run Helios.
+#   VIS:  Install base dependencies + X11/xorg
+#         Required for Visualizer plugin.
+#   CUDA: Install base dependencies + CUDA
+#         Required for 1. Radiation, 2. Energy
+#         Balance, 3. LiDAR, 4. Aerial LiDAR,
+#         and 5. Voxel Intersection plugins.
+#   ALL:  Install dependencies for ALL plugins
+#
+# EXAMPLE
+#   source dependencies.sh BASE
+#
+################################################
 
 DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq") # Base PATH dependencies
 
@@ -16,7 +38,7 @@ else
     ROOT=""
 fi
 
-# Define function to run command and clear output from terminal after completion
+# Runs command and clears output from terminal after completion.
 run_command_clear_output() {
     run_command="$1"
     out_file=$(mktemp)
@@ -32,7 +54,7 @@ run_command_clear_output() {
     rm "$out_file"
 }
 
-# Define function to check if element is in a list
+# Checks if element is in a list
 is_in_list() {
     search="$1"
     shift
@@ -101,7 +123,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         PACKAGE_MANAGER="$ROOT pacman"
         CHECK_EXISTS="pacman -Qs | grep -w -m 1"
     else
-        echo "No package manager detected. Exiting."
+        echo "No package manager detected. Exiting..."
         exit 1
     fi
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
@@ -179,12 +201,13 @@ export PATH=/usr/local/cuda/bin:$PATH
 # Fix OptiX drivers for WSL
 if [[ "$distro" == "WSL" ]]; then
     LXSS="/mnt/c/Windows/System32/lxss/lib/"
+    OPTIX_DRIVERS_PATH="/plugins/radiation/optix_drivers/"
     DRIVERS=("libnvoptix.so.1" "libnvidia-ptxjitcompiler.so.1")
     if [[ ! -f "$LXSS/libnvidia-ptxjitcompiler.so.1" || ! -f "$LXSS/libnvoptix.so.1" ]]; then
         mkdir -p "$LXSS"
-        eval "$ROOT cp -r plugins/radiation/optix_drivers/* $LXSS"
-        ln -s "$LXSS"libnvidia-ptxjitcompiler.so.470.256.02 "$LXSS"libnvidia-ptxjitcompiler.so.1
-        ln -s "$LXSS"libnvoptix.so.470.256.02 "$LXSS"libnvoptix.so.1
+        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-rtcore.so.470.256.02" "$LXSS/libnvidia-rtcore.so.470.256.02"
+        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-ptxjitcompiler.so.470.256.02" "$LXSS/libnvidia-ptxjitcompiler.so.1"
+        ln -s "$OPTIX_DRIVERS_PATH/libnvoptix.so.470.256.02" "$LXSS/libnvoptix.so.1"
         export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH
     fi
 fi
