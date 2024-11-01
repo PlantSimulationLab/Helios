@@ -1463,6 +1463,69 @@ inline bool Time::operator!=( const Time &c ) const{
    return c.hour!=hour || c.minute!=minute || c.second!=second;
 }
 
+//! Location vector
+/**
+ * \ingroup vectors
+*/
+    struct Location{
+
+        //! Latitude in degrees (+northern hemisphere, -southern hemisphere)
+        float latitude_deg;
+        //! Longitude in degrees (+western hemisphere, -eastern hemisphere)
+        float longitude_deg;
+        //! Offset from UTC in hours (+moving West)
+        float UTC_offset;
+
+        //! Default constructor
+        Location(){
+            latitude_deg = 38.55f;
+            longitude_deg = 121.76f;
+            UTC_offset = 8;
+        }
+
+        //! latitude/longitude/UTC constructor
+        /**
+         * \param[in] hour Hour of day (0-23)
+         * \param[in] minute Minute of hour (0-59)
+        */
+        Location( float latitude_deg, float longitude_deg, float UTC_offset ){
+
+            this->latitude_deg = latitude_deg;
+            this->longitude_deg = longitude_deg;
+            this->UTC_offset = UTC_offset;
+
+        }
+
+        //! check for equality of two locations
+        bool operator==( const helios::Location &c ) const;
+        //! check for inequality of two locations
+        bool operator!=( const helios::Location &c ) const;
+
+        //! Write Location to output stream
+        friend std::ostream &operator<<(std::ostream &os, helios::Location const &t) {
+            return os << "<" << t.latitude_deg << "," << t.longitude_deg << "," << t.UTC_offset << ">";
+        }
+
+    };
+
+//! Make a Location vector
+/**
+ * \param[in] latitude_deg Latitude in degrees (+northern hemisphere, -southern hemisphere)
+ * \param[in] longitude_deg Longitude in degrees (+western hemisphere, -eastern hemisphere)
+ * \param[in] UTC_offset Offset from UTC in hours (+moving West)
+ * \ingroup vectors
+*/
+    inline Location make_Location( float latitude_deg, float longitude_deg, float UTC_offset ){
+        return {latitude_deg,longitude_deg,UTC_offset};
+    }
+
+    inline bool Location::operator==( const Location &c ) const{
+        return c.latitude_deg==latitude_deg && c.longitude_deg==longitude_deg && c.UTC_offset==UTC_offset;
+    }
+
+    inline bool Location::operator!=( const Location &c ) const{
+        return c.latitude_deg!=latitude_deg || c.longitude_deg!=longitude_deg || c.UTC_offset!=UTC_offset;
+    }
 
 //! Vector of spherical coordinates (elevation,azimuth)
 /**

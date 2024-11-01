@@ -25,6 +25,8 @@ Context::Context(){
 
     sim_time = make_Time(12,0);
 
+    sim_location = make_Location(38.55, 121.76, 8);
+
     // --- Initialize random number generator ---- //
 
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -1165,6 +1167,14 @@ Time Context::getTime() const{
     return sim_time;
 }
 
+void Context::setLocation( const helios::Location &location ){
+    sim_location = location;
+}
+
+helios::Location Context::getLocation() const{
+    return sim_location;
+}
+
 float Context::randu(){
     return unif_distribution(generator);
 }
@@ -2022,6 +2032,16 @@ bool Context::doesTimeseriesVariableExist( const char* label ) const{
     }
 
 }
+
+std::vector<std::string> Context::listTimeseriesVariables() const{
+    std::vector<std::string> labels;
+    labels.reserve( timeseries_data.size() );
+    for( const auto& it : timeseries_data ){
+        labels.push_back(it.first);
+    }
+    return labels;
+}
+
 
 void Context::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zbounds ) const{
 

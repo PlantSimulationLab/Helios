@@ -1414,11 +1414,15 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     float value, A;
     float sum = 0.f;
     float area = 0;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
             getPrimitiveData(UUID,label.c_str(),value);
             A = getPrimitiveArea(UUID);
+            if( A!=A ){
+                nan_warning = true;
+            }
             sum += value*A;
             area += A;
         }
@@ -1428,6 +1432,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     if( area==0 ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
+    }else if(nan_warning){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }else{
         awt_mean = sum/area;
     }
@@ -1438,11 +1444,15 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     float A;
     double sum = 0.f;
     double area = 0;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
             getPrimitiveData(UUID,label.c_str(),value);
             A = getPrimitiveArea(UUID);
+            if( A!=A ){
+                nan_warning = true;
+            }
             sum += value*double(A);
             area += A;
         }
@@ -1452,6 +1462,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     if( area==0 ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
+    }else if(nan_warning){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }else{
         awt_mean = sum/area;
     }
@@ -1462,11 +1474,15 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     float A;
     vec2 sum(0.f,0.f);
     float area = 0;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC2 ){
             getPrimitiveData(UUID,label.c_str(),value);
             A = getPrimitiveArea(UUID);
+            if( A!=A ){
+                nan_warning = true;
+            }
             sum = sum + (value*A);
             area += A;
         }
@@ -1476,6 +1492,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     if( area==0 ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec2(0,0);
+    }else if(nan_warning){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }else{
         awt_mean = sum/area;
     }
@@ -1486,11 +1504,15 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     float A;
     vec3 sum(0.f,0.f,0.f);
     float area = 0;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC3 ){
             getPrimitiveData(UUID,label.c_str(),value);
             A = getPrimitiveArea(UUID);
+            if( A!=A ){
+                nan_warning = true;
+            }
             sum = sum + (value*A);
             area += A;
         }
@@ -1500,6 +1522,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     if( area==0 ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec3(0,0,0);
+    }else if(nan_warning){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }else{
         awt_mean = sum/area;
     }
@@ -1510,11 +1534,15 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     float A;
     vec4 sum(0.f,0.f,0.f,0.f);
     float area = 0;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC4 ){
             getPrimitiveData(UUID,label.c_str(),value);
             A = getPrimitiveArea(UUID);
+            if( A!=A ){
+                nan_warning = true;
+            }
             sum = sum + (value*A);
             area += A;
         }
@@ -1524,6 +1552,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean( const std::vector<uint> &U
     if( area==0 ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec4(0,0,0,0);
+    }else if(nan_warning){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }else{
         awt_mean = sum/area;
     }
@@ -1639,10 +1669,15 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
     float value;
     awt_sum = 0.f;
     bool added_to_sum = false;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_FLOAT ){
             float area = getPrimitiveArea(UUID);
+            if( area!=area ){
+                nan_warning = true;
+                continue;
+            }
             getPrimitiveData(UUID,label.c_str(),value);
             awt_sum += value*area;
             added_to_sum = true;
@@ -1652,6 +1687,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
 
     if( !added_to_sum ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 
 }
@@ -1661,10 +1698,15 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
     double value;
     awt_sum = 0.f;
     bool added_to_sum = false;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_DOUBLE ){
             float area = getPrimitiveArea(UUID);
+            if( area!=area ){
+                nan_warning = true;
+                continue;
+            }
             getPrimitiveData(UUID,label.c_str(),value);
             awt_sum += value*area;
             added_to_sum = true;
@@ -1674,6 +1716,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
 
     if( !added_to_sum ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 
 }
@@ -1683,10 +1727,15 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
     vec2 value;
     awt_sum = make_vec2(0.f,0.f);
     bool added_to_sum = false;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC2 ){
             float area = getPrimitiveArea(UUID);
+            if( area!=area ){
+                nan_warning = true;
+                continue;
+            }
             getPrimitiveData(UUID,label.c_str(),value);
             awt_sum = awt_sum + value*area;
             added_to_sum = true;
@@ -1696,6 +1745,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
 
     if( !added_to_sum ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 
 }
@@ -1705,10 +1756,15 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
     vec3 value;
     awt_sum = make_vec3(0.f,0.f,0.f);
     bool added_to_sum = false;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC3 ){
             float area = getPrimitiveArea(UUID);
+            if( area!=area ){
+                nan_warning = true;
+                continue;
+            }
             getPrimitiveData(UUID,label.c_str(),value);
             awt_sum = awt_sum + value*area;
             added_to_sum = true;
@@ -1718,6 +1774,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
 
     if( !added_to_sum ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 
 }
@@ -1727,10 +1785,15 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
     vec4 value;
     awt_sum = make_vec4(0.f,0.f,0.f,0.F);
     bool added_to_sum = false;
+    bool nan_warning = false;
     for( uint UUID : UUIDs ){
 
         if( doesPrimitiveExist(UUID)  && doesPrimitiveDataExist(UUID,label.c_str()) && getPrimitiveDataType(UUID,label.c_str())==HELIOS_TYPE_VEC4 ){
             float area = getPrimitiveArea(UUID);
+            if( area!=area ){
+                nan_warning = true;
+                continue;
+            }
             getPrimitiveData(UUID,label.c_str(),value);
             awt_sum = awt_sum + value*area;
             added_to_sum = true;
@@ -1740,6 +1803,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UU
 
     if( !added_to_sum ) {
         std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 
 }
@@ -2202,11 +2267,19 @@ void Context::aggregatePrimitiveDataProduct( const std::vector<uint> &UUIDs, con
 float Context::sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const{
 
     bool primitive_warning = false;
+    bool nan_warning = false;
     float area = 0;
     for( uint UUID : UUIDs ){
 
+        float A = getPrimitiveArea(UUID);
+
+        if( A!=A ){
+            nan_warning = true;
+            continue;
+        }
+
         if( doesPrimitiveExist(UUID) ){
-            area += getPrimitiveArea(UUID);
+            area += A;
         }else{
             primitive_warning = true;
         }
@@ -2214,7 +2287,9 @@ float Context::sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const{
     }
 
     if( primitive_warning ){
-        std::cout << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives reference in the UUID vector did not exist.";
+        std::cout << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives reference in the UUID vector did not exist." << std::endl;
+    }else if( nan_warning ){
+        std::cout << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives had an area of NaN." << std::endl;
     }
 
     return area;

@@ -97,6 +97,17 @@ std::map<std::string, ShootParameters> PlantArchitecture::getCurrentShootParamet
     return shoot_types;
 }
 
+std::map<std::string, PhytomerParameters> PlantArchitecture::getCurrentPhytomerParameters( ){
+    if( shoot_types.empty() ){
+        std::cerr << "WARNING (PlantArchitecture::getCurrentPhytomerParameters): No plant models have been loaded. You need to first load a plant model from the library (see loadPlantModelFromLibrary()) or manually add shoot parameters (see updateCurrentShootParameters())." << std::endl;
+    }
+    std::map<std::string, PhytomerParameters> phytomer_parameters;
+    for( const auto & type : shoot_types ){
+        phytomer_parameters[type.first] = type.second.phytomer_parameters;
+    }
+    return phytomer_parameters;
+}
+
 void PlantArchitecture::updateCurrentShootParameters( const std::string &shoot_type_label, const ShootParameters &params ){
     shoot_types[shoot_type_label] = params;
 }
@@ -204,7 +215,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_trunk.internode_radius_initial = 0.01;
     shoot_parameters_trunk.vegetative_bud_break_probability = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 6;
+    shoot_parameters_trunk.tortuosity = 1;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"},{1});
@@ -535,8 +546,7 @@ void PlantArchitecture::initializeAsparagusShoots() {
     shoot_parameters.phytomer_parameters.phytomer_creation_function = AsparagusPhytomerCreationFunction;
 
     shoot_parameters.max_nodes = 20;
-    shoot_parameters.internode_radius_initial = 0.0001;
-    shoot_parameters.internode_radius_max = 0.0003;
+    shoot_parameters.internode_radius_initial = 0.00025;
     shoot_parameters.insertion_angle_tip.uniformDistribution(40, 70);
 //    shoot_parameters.child_insertion_angle_decay_rate = 0; (default)
     shoot_parameters.internode_length_max = 0.015;
@@ -730,6 +740,7 @@ void PlantArchitecture::initializeBeanShoots() {
     phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 40);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
     phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(-500, 500);
+    phytomer_parameters_trifoliate.peduncle.color = phytomer_parameters_trifoliate.petiole.color;
     phytomer_parameters_trifoliate.peduncle.length_segments = 1;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
@@ -763,8 +774,7 @@ void PlantArchitecture::initializeBeanShoots() {
     shoot_parameters_trifoliate.phytomer_parameters.phytomer_creation_function = BeanPhytomerCreationFunction;
 
     shoot_parameters_trifoliate.max_nodes = 25;
-    shoot_parameters_trifoliate.internode_radius_initial = 0.0005;
-    shoot_parameters_trifoliate.internode_radius_max = 0.003;
+    shoot_parameters_trifoliate.internode_radius_initial = 0.00025;
     shoot_parameters_trifoliate.insertion_angle_tip.uniformDistribution(40,60);
 //    shoot_parameters_trifoliate.child_insertion_angle_decay_rate = 0; (default)
     shoot_parameters_trifoliate.internode_length_max = 0.03;
@@ -776,8 +786,8 @@ void PlantArchitecture::initializeBeanShoots() {
 
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
-    shoot_parameters_trifoliate.elongation_rate = 0.1;
-    shoot_parameters_trifoliate.girth_area_factor = 25.f;
+    shoot_parameters_trifoliate.elongation_rate = 0.25;
+    shoot_parameters_trifoliate.girth_area_factor = 5.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.2;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
@@ -842,7 +852,7 @@ void PlantArchitecture::initializeCheeseweedShoots() {
 
     phytomer_parameters_cheeseweed.petiole.petioles_per_internode = 1;
     phytomer_parameters_cheeseweed.petiole.pitch.uniformDistribution(45, 75);
-    phytomer_parameters_cheeseweed.petiole.radius = 0.00075;
+    phytomer_parameters_cheeseweed.petiole.radius = 0.0005;
     phytomer_parameters_cheeseweed.petiole.length.uniformDistribution(0.02,0.06);
     phytomer_parameters_cheeseweed.petiole.taper = 0;
     phytomer_parameters_cheeseweed.petiole.curvature = -300;
@@ -863,10 +873,9 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     shoot_parameters_base.vegetative_bud_break_probability = 0.2;
     shoot_parameters_base.vegetative_bud_break_time = 3;
     shoot_parameters_base.internode_radius_initial = 0.0005;
-    shoot_parameters_base.internode_radius_max = 0.001;
     shoot_parameters_base.phyllochron = 1;
     shoot_parameters_base.elongation_rate = 0.2;
-    shoot_parameters_base.girth_area_factor = 20.f;
+    shoot_parameters_base.girth_area_factor = 10.f;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.0015;
     shoot_parameters_base.internode_length_decay_rate = 0;
@@ -972,7 +981,6 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     shoot_parameters_trifoliate.max_nodes = 20;
     shoot_parameters_trifoliate.internode_radius_initial = 0.00025;
-    shoot_parameters_trifoliate.internode_radius_max = 0.0025;
     shoot_parameters_trifoliate.insertion_angle_tip.uniformDistribution(40,70);
 //    shoot_parameters_trifoliate.child_insertion_angle_decay_rate = 0; (default)
     shoot_parameters_trifoliate.internode_length_max = 0.02;
@@ -984,8 +992,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
-    shoot_parameters_trifoliate.elongation_rate = 0.1;
-    shoot_parameters_trifoliate.girth_area_factor = 20.f;
+    shoot_parameters_trifoliate.elongation_rate = 0.25;
+    shoot_parameters_trifoliate.girth_area_factor = 5.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.5;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
@@ -1097,7 +1105,6 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_main.insertion_angle_tip = 45;
     shoot_parameters_main.insertion_angle_decay_rate = 0;
     shoot_parameters_main.internode_radius_initial = 0.003;
-    shoot_parameters_main.internode_radius_max = 0.02;
     shoot_parameters_main.flowers_require_dormancy = false;
     shoot_parameters_main.growth_requires_dormancy = false;
     shoot_parameters_main.determinate_shoot_growth = false;
@@ -1114,7 +1121,6 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_cane.phytomer_parameters.internode.radial_subdivisions = 15;
     shoot_parameters_cane.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
     shoot_parameters_cane.phytomer_parameters.internode.phyllotactic_angle = 0;
-    shoot_parameters_cane.internode_radius_max = 0.1;
     shoot_parameters_cane.insertion_angle_tip.uniformDistribution(60, 120);
     shoot_parameters_cane.max_nodes = 9;
     shoot_parameters_cane.gravitropic_curvature.uniformDistribution(-20,20);
@@ -1129,7 +1135,6 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 25;
     shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
-    shoot_parameters_trunk.internode_radius_max = 1;
     shoot_parameters_trunk.phyllochron = 1.25;
     shoot_parameters_trunk.insertion_angle_tip = 90;
     shoot_parameters_trunk.max_nodes = 18;
@@ -1618,7 +1623,6 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.insertion_angle_tip = 75;
     shoot_parameters_main.insertion_angle_decay_rate = 10;
     shoot_parameters_main.internode_radius_initial = 0.0015;
-    shoot_parameters_main.internode_radius_max = 0.02;
     shoot_parameters_main.flowers_require_dormancy = true;
     shoot_parameters_main.growth_requires_dormancy = true;
     shoot_parameters_main.determinate_shoot_growth = false;
@@ -1632,7 +1636,6 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 15;
     shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
-    shoot_parameters_trunk.internode_radius_max = 1;
     shoot_parameters_trunk.phyllochron = 1.25;
     shoot_parameters_trunk.insertion_angle_tip = 60;
     shoot_parameters_trunk.max_nodes = 45;
@@ -1790,7 +1793,6 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.15;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
-    shoot_parameters_mainstem.internode_radius_max = 0.015;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000,-400);
     shoot_parameters_mainstem.internode_length_max = 0.26;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
@@ -1859,10 +1861,11 @@ void PlantArchitecture::initializeSoybeanShoots() {
     phytomer_parameters_trifoliate.leaf.unique_prototypes = 5;
 
     phytomer_parameters_trifoliate.peduncle.length = 0.01;
-    phytomer_parameters_trifoliate.peduncle.radius = 0.001;
+    phytomer_parameters_trifoliate.peduncle.radius = 0.0005;
     phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 40);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
     phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(-500, 500);
+    phytomer_parameters_trifoliate.peduncle.color = phytomer_parameters_trifoliate.internode.color;
     phytomer_parameters_trifoliate.peduncle.length_segments = 1;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
@@ -1897,7 +1900,6 @@ void PlantArchitecture::initializeSoybeanShoots() {
 
     shoot_parameters_trifoliate.max_nodes = 20;
     shoot_parameters_trifoliate.internode_radius_initial = 0.001;
-    shoot_parameters_trifoliate.internode_radius_max = 0.004;
     shoot_parameters_trifoliate.insertion_angle_tip.uniformDistribution(40,60);
 //    shoot_parameters_trifoliate.child_insertion_angle_decay_rate = 0; (default)
     shoot_parameters_trifoliate.internode_length_max = 0.035;
@@ -1909,8 +1911,8 @@ void PlantArchitecture::initializeSoybeanShoots() {
 
     shoot_parameters_trifoliate.phyllochron = 1;
 //    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
-    shoot_parameters_trifoliate.elongation_rate = 0.15;
-    shoot_parameters_trifoliate.girth_area_factor = 25.f;
+    shoot_parameters_trifoliate.elongation_rate = 0.2;
+    shoot_parameters_trifoliate.girth_area_factor = 10.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
     shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.25;
 //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
@@ -1935,116 +1937,6 @@ void PlantArchitecture::initializeSoybeanShoots() {
 
     defineShootType("unifoliate",shoot_parameters_unifoliate);
     defineShootType("trifoliate",shoot_parameters_trifoliate);
-
-//    PhytomerParameters phytomer_parameters_trifoliate(context_ptr->getRandomGenerator());
-//
-//    phytomer_parameters_trifoliate.internode.pitch = 20;
-//    phytomer_parameters_trifoliate.internode.phyllotactic_angle.uniformDistribution(145, 215);
-//    phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;
-//    phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;
-//    phytomer_parameters_trifoliate.internode.color = make_RGBcolor(0.2,0.25,0.05);
-//    phytomer_parameters_trifoliate.internode.length_segments = 5;
-//
-//    phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;
-//    phytomer_parameters_trifoliate.petiole.pitch.uniformDistribution(30,70);
-//    phytomer_parameters_trifoliate.petiole.radius = 0.003;
-//    phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.12,0.16);
-//    phytomer_parameters_trifoliate.petiole.taper = 0.25;
-//    phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-100,200);
-//    phytomer_parameters_trifoliate.petiole.color = make_RGBcolor(0.28,0.35,0.07);
-//    phytomer_parameters_trifoliate.petiole.length_segments = 5;
-//    phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;
-//
-//    phytomer_parameters_trifoliate.leaf.leaves_per_petiole = 3;
-//    phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 10);
-//    phytomer_parameters_trifoliate.leaf.yaw = 10;
-//    phytomer_parameters_trifoliate.leaf.roll = -15;
-//    phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.2;
-//    phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
-//    phytomer_parameters_trifoliate.leaf.prototype_function = SoybeanLeafPrototype_trifoliate;
-//    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.11,0.13);
-//    phytomer_parameters_trifoliate.leaf.subdivisions = 10;
-//    phytomer_parameters_trifoliate.leaf.unique_prototypes = 5;
-//
-//    phytomer_parameters_trifoliate.peduncle.length = 0.04;
-//    phytomer_parameters_trifoliate.peduncle.radius = 0.001;
-//    phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 40);
-//    phytomer_parameters_trifoliate.peduncle.roll = 90;
-//    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(-500, 500);
-//    phytomer_parameters_trifoliate.peduncle.length_segments = 1;
-//    phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
-//
-//    phytomer_parameters_trifoliate.inflorescence.flowers_per_rachis.uniformDistribution(1, 4);
-//    phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.2;
-//    phytomer_parameters_trifoliate.inflorescence.flower_arrangement_pattern = "opposite";
-//    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);
-//    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);
-//    phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.015;
-//    phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = BeanFlowerPrototype;
-//    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.08,0.1);
-//    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = BeanFruitPrototype;
-//    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.8,1.0);
-//
-//    PhytomerParameters phytomer_parameters_unifoliate = phytomer_parameters_trifoliate;
-//    phytomer_parameters_unifoliate.internode.pitch = 0;
-//    phytomer_parameters_unifoliate.internode.max_vegetative_buds_per_petiole = 0;
-//    phytomer_parameters_unifoliate.internode.max_floral_buds_per_petiole = 0;
-//    phytomer_parameters_unifoliate.petiole.petioles_per_internode = 2;
-//    phytomer_parameters_unifoliate.petiole.length = 0.001;
-//    phytomer_parameters_unifoliate.petiole.radius = 0.0004;
-//    phytomer_parameters_unifoliate.petiole.pitch.uniformDistribution(60,80);
-//    phytomer_parameters_unifoliate.leaf.leaves_per_petiole = 1;
-//    phytomer_parameters_unifoliate.leaf.prototype_scale = 0.02;
-//    phytomer_parameters_unifoliate.leaf.pitch.uniformDistribution(-10, 10);
-//    phytomer_parameters_unifoliate.leaf.prototype_function = BeanLeafPrototype_unifoliate;
-//
-//    // ---- Shoot Parameters ---- //
-//
-//    ShootParameters shoot_parameters_trifoliate(context_ptr->getRandomGenerator());
-//    shoot_parameters_trifoliate.phytomer_parameters = phytomer_parameters_trifoliate;
-//    shoot_parameters_trifoliate.phytomer_parameters.phytomer_creation_function = BeanPhytomerCreationFunction;
-//
-//    shoot_parameters_trifoliate.max_nodes = 25;
-//    shoot_parameters_trifoliate.internode_radius_initial = 0.0005;
-//    shoot_parameters_trifoliate.internode_radius_max = 0.003;
-//    shoot_parameters_trifoliate.insertion_angle_tip.uniformDistribution(40,60);
-////    shoot_parameters_trifoliate.child_insertion_angle_decay_rate = 0; (default)
-//    shoot_parameters_trifoliate.internode_length_max = 0.03;
-////    shoot_parameters_trifoliate.child_internode_length_min = 0.0; (default)
-////    shoot_parameters_trifoliate.child_internode_length_decay_rate = 0; (default)
-//    shoot_parameters_trifoliate.base_roll = 90;
-//    shoot_parameters_trifoliate.base_yaw.uniformDistribution(-20,20);
-//    shoot_parameters_trifoliate.gravitropic_curvature = 300;
-//
-//    shoot_parameters_trifoliate.phyllochron = 1;
-////    shoot_parameters_trifoliate.leaf_flush_count = 1; (default)
-//    shoot_parameters_trifoliate.elongation_rate = 0.1;
-//    shoot_parameters_trifoliate.girth_growth_rate = 0.00025;
-//    shoot_parameters_trifoliate.vegetative_bud_break_time = 3;
-//    shoot_parameters_trifoliate.vegetative_bud_break_probability = 0.25;
-////    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
-//    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.8,1.0);
-//    shoot_parameters_trifoliate.fruit_set_probability = 0.4;
-////    shoot_parameters_trifoliate.flowers_require_dormancy = false; (default)
-////    shoot_parameters_trifoliate.growth_requires_dormancy = false; (default)
-////    shoot_parameters_trifoliate.determinate_shoot_growth = true; (default)
-//
-//    shoot_parameters_trifoliate.defineChildShootTypes({"trifoliate"},{1.0});
-//
-//
-//    ShootParameters shoot_parameters_unifoliate = shoot_parameters_trifoliate;
-//    shoot_parameters_unifoliate.phytomer_parameters = phytomer_parameters_unifoliate;
-//    shoot_parameters_unifoliate.max_nodes = 1;
-//    shoot_parameters_unifoliate.vegetative_bud_break_probability = 0;
-//    shoot_parameters_unifoliate.flower_bud_break_probability = 0;
-//    shoot_parameters_unifoliate.insertion_angle_tip = 0;
-//    shoot_parameters_unifoliate.insertion_angle_decay_rate = 0;
-//    shoot_parameters_unifoliate.vegetative_bud_break_time = 1;
-//    shoot_parameters_unifoliate.defineChildShootTypes({"trifoliate"},{1.0});
-//
-//    defineShootType("unifoliate",shoot_parameters_unifoliate);
-//    defineShootType("trifoliate",shoot_parameters_trifoliate);
-
 
 }
 
@@ -2127,7 +2019,6 @@ void PlantArchitecture::initializeStrawberryShoots() {
 
     shoot_parameters.max_nodes = 15;
     shoot_parameters.internode_radius_initial = 0.001;
-    shoot_parameters.internode_radius_max = 0.005;
     shoot_parameters.insertion_angle_tip = 40;
     shoot_parameters.insertion_angle_decay_rate = 0;
     shoot_parameters.internode_length_max = 0.01;
@@ -2303,7 +2194,6 @@ void PlantArchitecture::initializeTomatoShoots() {
 
     shoot_parameters.max_nodes = 20;
     shoot_parameters.internode_radius_initial = 0.001;
-    shoot_parameters.internode_radius_max = 0.009;
     shoot_parameters.insertion_angle_tip = 30;
     shoot_parameters.insertion_angle_decay_rate = 0;
     shoot_parameters.internode_length_max = 0.04;
@@ -2407,7 +2297,6 @@ void PlantArchitecture::initializeWheatShoots() {
     shoot_parameters_mainstem.phyllochron = 1;
     shoot_parameters_mainstem.elongation_rate = 0.15;
     shoot_parameters_mainstem.girth_area_factor = 7.f;
-    shoot_parameters_mainstem.internode_radius_max = 0.0025;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-2000,-800);
     shoot_parameters_mainstem.internode_length_max = 0.025;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;

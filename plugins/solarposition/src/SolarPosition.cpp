@@ -18,15 +18,15 @@
 using namespace std;
 using namespace helios;
 
-SolarPosition::SolarPosition( helios::Context* __context ){
-  context = __context;
-  UTC = 8;
-  latitude = 38.55;
-  longitude = 121.76;
+SolarPosition::SolarPosition( helios::Context* context_ptr ){
+  context = context_ptr;
+  UTC = context->getLocation().UTC_offset;
+  latitude = context->getLocation().latitude_deg;
+  longitude = context->getLocation().longitude_deg;
 }
 
 
-SolarPosition::SolarPosition( int UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr ){
+SolarPosition::SolarPosition( float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr ){
   context = context_ptr;
   UTC = UTC_hrs;
   latitude = latitude_deg;
@@ -71,7 +71,7 @@ SphericalCoord SolarPosition::calculateSunDirection( const helios::Time &time, c
 
   time_dec=time.hour+time.minute/60.f;  //(hours) 
 
-  LSTM=15.f*float(UTC); //degrees
+  LSTM=15.f*UTC; //degrees
 
   TC=4.f*(LSTM-longitude)+EoT; //minutes
   LST=time_dec+TC/60.f; //hours

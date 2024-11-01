@@ -888,7 +888,10 @@ void Visualizer::printWindow() {
 
 void Visualizer::printWindow( const char* outfile ){
 
-    write_JPEG_file( outfile, Wframebuffer, Hframebuffer, window );
+    std::string outfile_str = outfile;
+    validateOutputPath( outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"} );
+
+    write_JPEG_file( outfile_str.c_str(), Wframebuffer, Hframebuffer, window );
 
 }
 

@@ -806,6 +806,39 @@ bool helios::parse_int( const std::string &input_string, int &converted_int ){
 
 }
 
+bool helios::parse_int2( const std::string &input_string, int2 &converted_int2 ){
+
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(2);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    int2 tmp;
+    if (!parse_int(tmp_s[0], tmp.x) || !parse_int(tmp_s[1], tmp.y)) {
+        return false;
+    } else {
+        converted_int2 = tmp;
+    }
+    return true;
+
+}
+
+bool helios::parse_int3( const std::string &input_string, int3 &converted_int3 ){
+
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(3);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    vecstream >> tmp_s[2];
+    int3 tmp;
+    if (!parse_int(tmp_s[0], tmp.x) || !parse_int(tmp_s[1], tmp.y) || !parse_int(tmp_s[2], tmp.z) ) {
+        return false;
+    } else {
+        converted_int3 = tmp;
+    }
+    return true;
+
+}
+
 bool helios::parse_uint( const std::string &input_string, uint &converted_uint ){
 
   try {
@@ -853,6 +886,55 @@ bool helios::parse_vec3( const std::string &input_string, vec3 &converted_vec3 )
     } else {
         converted_vec3 = tmp;
     }
+    return true;
+
+}
+
+bool helios::parse_RGBcolor( const std::string &input_string, RGBcolor &converted_rgb ){
+
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(3);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    vecstream >> tmp_s[2];
+    RGBcolor tmp;
+    if (!parse_float(tmp_s[0], tmp.r) || !parse_float(tmp_s[1], tmp.g) || !parse_float(tmp_s[2], tmp.b)) {
+        return false;
+    } else {
+        if( tmp.r<0 || tmp.g<0 || tmp.b<0 || tmp.r>1.f || tmp.g>1.f || tmp.b>1.f ){
+            return false;
+        }
+        converted_rgb = tmp;
+    }
+    return true;
+
+}
+
+bool helios::open_xml_file( const std::string &xml_file, pugi::xml_document &xmldoc, std::string &error_string ) {
+
+    const std::string& fn = xml_file;
+    std::string ext = getFileExtension(xml_file);
+    if (ext != ".xml" && ext != ".XML") {
+        error_string = "XML file " + fn + " is not XML format.";
+        return false;
+    }
+
+    //load file
+    pugi::xml_parse_result load_result = xmldoc.load_file(xml_file.c_str());
+
+    //error checking
+    if (!load_result) {
+        error_string = "XML file " + xml_file + " parsed with errors: " + load_result.description();
+        return false;
+    }
+
+    pugi::xml_node helios = xmldoc.child("helios");
+
+    if (helios.empty()) {
+        error_string = "XML file " + xml_file + " does not have tag '<helios> ... </helios>' bounding all other tags.";
+        return false;
+    }
+
     return true;
 
 }

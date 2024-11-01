@@ -2012,6 +2012,9 @@ private:
      \sa setTime(), getTime()
      */
     helios::Time sim_time;
+
+    //! Simulation location (latitude, longitude, UTC offset)
+    helios::Location sim_location;
     
     //! Random number generation engine
     std::minstd_rand0 generator;
@@ -5660,6 +5663,9 @@ public:
      */
     bool doesTimeseriesVariableExist( const char* label ) const;
 
+    //! List all existing timeseries variables
+    std::vector<std::string> listTimeseriesVariables() const;
+
     //! Load tabular weather data from text file into timeseries
     void loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format="YYYYMMDD", uint headerlines=0 );
     
@@ -6024,6 +6030,18 @@ public:
      * \sa setTime()
      */
     helios::Time getTime() const;
+
+    //! Set the location of the simulation (latitude, longitude, and UTC offset)
+    /**
+     * \param[in] location Location vector
+     */
+    void setLocation( const helios::Location &location );
+
+    //! Get the location of the simulation (latitude, longitude, and UTC offset)
+    /**
+     * \return Location vector
+     */
+    helios::Location getLocation() const;
     
     //! Draw a random number from a uniform distribution between 0 and 1
     /**
