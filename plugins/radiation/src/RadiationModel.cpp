@@ -25,6 +25,14 @@ RadiationModel::RadiationModel( helios::Context* context_a ){
 
     message_flag = true;
 
+    directRayCount_default = 100;
+    diffuseRayCount_default = 1000;
+
+    diffuseFlux_default = -1.f;
+
+    minScatterEnergy_default = 0.1;
+    scatteringDepth_default = 0;
+
     rho_default = 0.f;
     tau_default = 0.f;
     eps_default = 1.f;
@@ -38,7 +46,10 @@ RadiationModel::RadiationModel( helios::Context* context_a ){
 
     spectral_library_files.push_back("plugins/radiation/spectral_data/camera_spectral_library.xml");
     spectral_library_files.push_back("plugins/radiation/spectral_data/light_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/soil_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/bark_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/fruit_surface_spectral_library.xml");
     spectral_library_files.push_back("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml");
     spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml");
     spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml");
@@ -187,7 +198,7 @@ void RadiationModel::addRadiationBand(const std::string &label ){
         return;
     }
 
-    RadiationBand band(label);
+    RadiationBand band(label, directRayCount_default, diffuseRayCount_default, diffuseFlux_default, scatteringDepth_default, minScatterEnergy_default);
 
     radiation_bands.emplace(label,band);
 
@@ -210,7 +221,7 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
 
     }
 
-    RadiationBand band(label);
+    RadiationBand band(label, directRayCount_default, diffuseRayCount_default, diffuseFlux_default, scatteringDepth_default, minScatterEnergy_default);
 
     band.wavebandBounds = make_vec2(wavelength1,wavelength2);
 

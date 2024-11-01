@@ -21,11 +21,11 @@
 class SolarPosition{
  public:
 
-  //! Solar position model default constructor
+  //! Solar position model default constructor. Initializes location based on the location set in the Context.
   /**
    * \param[in] context Pointer to the Helios context
   */
-  SolarPosition( helios::Context* context );
+  explicit SolarPosition( helios::Context* context_ptr );
   
   //! Solar position model constructor
   /**
@@ -34,7 +34,7 @@ class SolarPosition{
    * \param[in] latitude_deg Latitude in degrees for location of interest.  Convention is latitude is positive for Northern hemisphere.
    * \param[in] longitude_deg Longitude in degrees for location of interest. Convention is longitude is positive for Western hemisphere.
   */
-  SolarPosition(int UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr );
+  SolarPosition(float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr );
 
   //! Function to perform a self-test of model functions
   int selfTest() const;
@@ -142,7 +142,7 @@ class SolarPosition{
 
   helios::Context* context;
 
-  int UTC;
+  float UTC;
   float latitude;
   float longitude;
 

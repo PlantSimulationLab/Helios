@@ -162,7 +162,6 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
     max_nodes.initialize( 10, generator );
 
     internode_radius_initial.initialize(0.001,generator);
-    internode_radius_max.initialize(1e6, generator);
 
     insertion_angle_tip.initialize(20, generator);
     insertion_angle_decay_rate.initialize(0, generator);
@@ -404,7 +403,7 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud ) {
 
 }
 
-int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction) {
+int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
 
     auto shoot_tree_ptr = &plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree;
 
@@ -428,7 +427,7 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         internode_base_position = shoot_internode_vertices.back().back();
     }
 
-    std::shared_ptr<Phytomer> phytomer = std::make_shared<Phytomer>(shoot_parameters.phytomer_parameters, this, phytomers.size(), parent_internode_axis, parent_petiole_axis, internode_base_position, this->base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, rank, plantarchitecture_ptr, context_ptr);
+    std::shared_ptr<Phytomer> phytomer = std::make_shared<Phytomer>(phytomer_parameters, this, phytomers.size(), parent_internode_axis, parent_petiole_axis, internode_base_position, this->base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, rank, plantarchitecture_ptr, context_ptr);
 
     //Initialize phytomer vegetative bud types and state
     for( auto& petiole : phytomer->axillary_vegetative_buds ) {
@@ -494,7 +493,7 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
 
     //Set output object data 'age'
     phytomer->age = 0;
-    if( plantarchitecture_ptr->build_context_geometry_internode ) {
+    if( plantarchitecture_ptr->build_context_geometry_internode && context_ptr->doesObjectExist(internode_tube_objID) ) {
         //\todo This really only needs to be done once when the shoot is first created.
         if( plantarchitecture_ptr->output_object_data.at("age") ) {
             context_ptr->setObjectData(internode_tube_objID, "age", phytomer->age);
@@ -535,8 +534,8 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         }
     }
 
-    if( shoot_parameters.phytomer_parameters.phytomer_creation_function != nullptr ) {
-        shoot_parameters.phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
+    if( phytomer_parameters.phytomer_creation_function != nullptr ) {
+        phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
     }
 
     //calculate fully expanded/elongated carbon costs
@@ -657,10 +656,9 @@ float Shoot::calculateShootInternodeVolume() const{
 
     float shoot_volume = 0;
     for( const auto &phytomer : phytomers ) {
-//        for (uint internode_objID : phytomer->internode_objID) {
-//            shoot_volume += context_ptr->getConeObjectVolume(internode_objID);
-//        }
-        shoot_volume += context_ptr->getTubeObjectVolume(internode_tube_objID);
+        if( context_ptr->doesObjectExist(internode_tube_objID) ) {
+            shoot_volume += context_ptr->getTubeObjectVolume(internode_tube_objID);
+        }
     }
     return shoot_volume;
 
@@ -782,7 +780,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     ShootParameters parent_shoot_parameters = parent_shoot->shoot_parameters;
 
     this->internode_radius_initial = internode_radius;
-    this->internode_radius_max = parent_shoot_parameters.internode_radius_max.val();
     this->internode_length_max = internode_length_max;
     this->shoot_index = make_int3(phytomer_index, parent_shoot->current_node_number, parent_shoot_parameters.max_nodes.val()); //.x is the index of the phytomer along the shoot, .y is the current number of phytomers on the parent shoot, .z is the maximum number of phytomers on the parent shoot.
     this->rank = parent_shoot->rank;
@@ -1804,7 +1801,7 @@ void Shoot::buildShootPhytomers(float internode_radius, float internode_length, 
         }
 
         //Adding the phytomer(s) to the shoot
-        int pID = appendPhytomer(internode_radius * taper, internode_length, internode_length_scale_factor_fraction, leaf_scale_factor_fraction);
+        int pID = appendPhytomer(internode_radius * taper, internode_length, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, shoot_parameters.phytomer_parameters);
 
     }
 
@@ -2070,7 +2067,7 @@ int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const P
 
     auto current_shoot_ptr = plant_instances.at(plantID).shoot_tree.at(shootID);
 
-    int pID = current_shoot_ptr->appendPhytomer(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction);
+    int pID = current_shoot_ptr->appendPhytomer(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, phytomer_parameters);
 
     current_shoot_ptr->current_node_number ++;
 
@@ -2135,50 +2132,6 @@ void PlantArchitecture::enableGroundClipping( float ground_height ){
     ground_clipping_height = ground_height;
 }
 
-//void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float girth_change, bool update_context_geometry) {
-//
-//    if( girth_change==0 ){
-//        return;
-//    }
-//
-//    if( plant_instances.find(plantID) == plant_instances.end() ){
-//        helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-//    }
-//
-//    auto shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
-//
-//    if( shootID>=plant_instances.at(plantID).shoot_tree.size() ){
-//        helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
-//    }else if( node_number>=shoot->current_node_number ){
-//        helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Cannot scale internode " + std::to_string(node_number) + " because there are only " + std::to_string(shoot->current_node_number) + " nodes in this shoot.");
-//    }
-//
-//    auto phytomer = shoot->phytomers.at(node_number);
-//
-//    // Scale the girth of the internode
-//    auto &segment = shoot->shoot_internode_radii.at(node_number);
-//    for( float &radius : segment  ) {
-//
-//        float taper = 1.f - 0.5f * float(node_number) / float(shoot->current_node_number);
-//
-//        if (radius * girth_change > phytomer->internode_radius_max) {
-//            girth_change = phytomer->internode_radius_max / radius;
-//            radius = phytomer->internode_radius_max;
-//        }else if( girth_change>1.f ) {
-//            radius *= 1.f + (girth_change - 1.f) * taper;
-//        }else{
-//            radius *= girth_change;
-//        }
-//
-//    }
-//
-//
-//    if( update_context_geometry ){
-//        context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii) );
-//    }
-//
-//}
-
 void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -2209,7 +2162,7 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
         }
     }
 
-    if( update_context_geometry ){
+    if( update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID) ){
         context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii) );
     }
 
@@ -2403,7 +2356,9 @@ std::vector<uint> PlantArchitecture::getAllPlantObjectIDs(uint plantID) const{
     std::vector<uint> objIDs;
 
     for( const auto& shoot: plant_instances.at(plantID).shoot_tree ){
-        objIDs.push_back(shoot->internode_tube_objID);
+        if( context_ptr->doesObjectExist(shoot->internode_tube_objID) ) {
+            objIDs.push_back(shoot->internode_tube_objID);
+        }
         for( const auto& phytomer: shoot->phytomers ){
             std::vector<uint> petiole_objIDs_flat = flatten(phytomer->petiole_objIDs);
             objIDs.insert(objIDs.end(), petiole_objIDs_flat.begin(), petiole_objIDs_flat.end() );
@@ -2439,7 +2394,9 @@ std::vector<uint> PlantArchitecture::getPlantInternodeObjectIDs(uint plantID) co
     auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
 
     for( auto &shoot : shoot_tree ){
-        objIDs.push_back( shoot->internode_tube_objID );
+        if( context_ptr->doesObjectExist(shoot->internode_tube_objID) ) {
+            objIDs.push_back(shoot->internode_tube_objID);
+        }
     }
 
     return objIDs;
@@ -2566,6 +2523,84 @@ std::vector<uint> PlantArchitecture::getPlantFruitObjectIDs(uint plantID) const{
 
 }
 
+std::vector<uint> PlantArchitecture::getAllUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> UUIDs = getAllPlantUUIDs(instance.first);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllLeafUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantLeafObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllInternodeUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantInternodeObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllPetioleUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantPetioleObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllPeduncleUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantPeduncleObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllFlowerUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantFlowerObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllFruitUUIDs() const{
+    std::vector<uint> UUIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getPlantFruitObjectIDs(instance.first);
+        std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objIDs);
+        UUIDs_all.insert(UUIDs_all.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return UUIDs_all;
+}
+
+std::vector<uint> PlantArchitecture::getAllObjectIDs() const{
+    std::vector<uint> objIDs_all;
+    for( const auto& instance : plant_instances ){
+        std::vector<uint> objIDs = getAllPlantObjectIDs(instance.first);
+        objIDs_all.insert(objIDs_all.end(), objIDs.begin(), objIDs.end());
+    }
+    return objIDs_all;
+}
+
 uint PlantArchitecture::addPlantInstance(const helios::vec3 &base_position, float current_age) {
 
     if( current_age<0 ){
@@ -2655,7 +2690,7 @@ void PlantArchitecture::deletePlantInstance( const std::vector<uint> &plantIDs )
 
 }
 
-void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence, bool is_evergreen) {
+void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,float max_leaf_lifespan, bool is_evergreen) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalThresholds): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2666,7 +2701,8 @@ void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_
     plant_instances.at(plantID).dd_to_flower_opening = time_to_flower_opening;
     plant_instances.at(plantID).dd_to_fruit_set = time_to_fruit_set;
     plant_instances.at(plantID).dd_to_fruit_maturity = time_to_fruit_maturity;
-    plant_instances.at(plantID).dd_to_senescence = time_to_senescence;
+    plant_instances.at(plantID).dd_to_dormancy = time_to_dormancy;
+    plant_instances.at(plantID).max_leaf_lifespan = max_leaf_lifespan;
     plant_instances.at(plantID).is_evergreen = is_evergreen;
 
 }
@@ -2677,7 +2713,7 @@ void PlantArchitecture::disablePlantPhenology( uint plantID ){
     plant_instances.at(plantID).dd_to_flower_opening = -1;
     plant_instances.at(plantID).dd_to_fruit_set = -1;
     plant_instances.at(plantID).dd_to_fruit_maturity = -1;
-    plant_instances.at(plantID).dd_to_senescence = 1e6;
+    plant_instances.at(plantID).dd_to_dormancy = 1e6;
 }
 
 void PlantArchitecture::advanceTime( float dt ){
@@ -2729,7 +2765,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
 
         plant_instance.current_age += dt_max;
 
-        if( plant_instance.current_age > plant_instance.dd_to_senescence ){
+        if( plant_instance.current_age > plant_instance.dd_to_dormancy ){
             std::cout << "Going dormant" << std::endl;
             for (const auto& shoot : *shoot_tree) {
                 shoot->makeDormant();
@@ -2769,6 +2805,16 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
             }
 
             for (auto &phytomer: shoot->phytomers) {
+
+//                for( auto &petiole : phytomer->leaf_objIDs ) {
+//                    float age;
+//                    assert( context_ptr->doesObjectDataExist( petiole.front(), "age" ) );
+//                    context_ptr->getObjectData( petiole.front(), "age", age );
+//                    if ( age>plant_instance.max_leaf_lifespan ) {
+//                        phytomer->removeLeaf();
+//                        break;
+//                    }
+//                }
 
                 if (!shoot->isdormant) {
                     phytomer->time_since_dormancy += dt_max;
@@ -2865,7 +2911,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
 
                 //scale internode girth
                 float inode_radius = phytomer->getInternodeRadius();
-                if (inode_radius < phytomer->internode_radius_max && shoot->shoot_parameters.girth_area_factor.val()>0.f ) {
+                if ( shoot->shoot_parameters.girth_area_factor.val()>0.f ) {
                     incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, false);
                 }
 
@@ -3048,7 +3094,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
             // **** subtract maintenance carbon costs **** //
             subtractShootMaintenanceCarbon(dt_max);
 
-            if( output_object_data.find("carbohydrate_concentration")!=output_object_data.end() ){
+            if( output_object_data.find("carbohydrate_concentration")!=output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID) ){
                 float shoot_volume = shoot->calculateShootInternodeVolume();
                 context_ptr->setObjectData( shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume );
             }

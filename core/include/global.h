@@ -253,6 +253,22 @@ namespace helios{
  */
     bool parse_int( const std::string &input_string, int &converted_int );
 
+//! Convert a string into an int2 with error checking
+/**
+ * \param[in] input_string String to be converted to numerical value
+ * \param[out] converted_int2 Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+    bool parse_int2( const std::string &input_string, int2 &converted_int2 );
+
+//! Convert a string into an int3 with error checking
+/**
+ * \param[in] input_string String to be converted to numerical value
+ * \param[out] converted_int3 Output numerical value converted from input string
+ * \return True if conversion was successful, false if unsuccessful
+ */
+    bool parse_int3( const std::string &input_string, int3 &converted_int3 );
+
 //! Convert a string into an unsigned integer with error checking
 /**
  * \param[in] input_string String to be converted to numerical value
@@ -276,6 +292,16 @@ namespace helios{
      * \return True if conversion was successful, false if unsuccessful
      */
     bool parse_vec3( const std::string &input_string, vec3 &converted_vec3 );
+
+    //! Convert a string into an RGBcolor with error checking
+    /**
+     * \param[in] input_string String to be converted to numerical value
+     * \param[out] converted_rgb Output numerical value converted from input string
+     * \return True if conversion was successful, false if unsuccessful
+     */
+    bool parse_RGBcolor( const std::string &input_string, RGBcolor &converted_rgb );
+
+    bool open_xml_file( const std::string &xml_file, pugi::xml_document &xmldoc, std::string &error_string );
 
     //! Parse an XML tag containing an integer value
     /**

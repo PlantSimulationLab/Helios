@@ -532,8 +532,6 @@ struct ShootParameters{
     // Radius of phytomer internodes when they are first created
     RandomParameter_float internode_radius_initial;
 
-    RandomParameter_float internode_radius_max; //meters
-
     RandomParameter_float girth_area_factor; //cm^2 branch area / m^2 downstream leaf area
 
     // Insertion angle of the most apical child shoot bud at the time it breaks
@@ -594,8 +592,6 @@ struct ShootParameters{
         this->elongation_rate.resample();
         this->girth_area_factor = a.girth_area_factor;
         this->girth_area_factor.resample();
-        this->internode_radius_max = a.internode_radius_max;
-        this->internode_radius_max.resample();
         this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
         this->vegetative_bud_break_probability.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
@@ -822,7 +818,7 @@ struct Shoot {
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      * \return Number of phytomers in the shoot after the new phytomer is appended
      */
-    int appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
+    int appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters);
 
     //! Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters
     /**
@@ -928,7 +924,8 @@ struct PlantInstance{
     float dd_to_flower_opening = 0;
     float dd_to_fruit_set = 0;
     float dd_to_fruit_maturity = 0;
-    float dd_to_senescence = 0;
+    float dd_to_dormancy = 0;
+    float max_leaf_lifespan = 1e6;
     bool is_evergreen = false;
 
 };
@@ -996,6 +993,12 @@ public:
      */
     std::map<std::string, ShootParameters> getCurrentShootParameters( );
 
+    //! Get the phytomer parameters structure for all shoot types in the current plant model
+    /**
+     * \return Map of phytomer parameters for all type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding PhytomerParameters structure.
+     */
+    std::map<std::string, PhytomerParameters> getCurrentPhytomerParameters( );
+
     //! Update the parameters of a single shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
@@ -1046,16 +1049,17 @@ public:
     //! Specify the threshold values for plant phenological stages
     /**
      * \param[in] plantID ID of the plant.
-     * \param[in] time_to_dormancy_break Time from last scenescence required for breaking dormancy.
+     * \param[in] time_to_dormancy_break Length of the dormancy period.
      * \param[in] time_to_flower_initiation Time from emergence/dormancy required to reach flower creation (closed flowers).
      * \param[in] time_to_flower_opening Time from flower initiation to flower opening.
      * \param[in] time_to_fruit_set Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
      * \param[in] time_to_fruit_maturity Time from fruit set date required to reach fruit maturity.
-     * \param[in] time_to_senescence Time from emergence/dormancy required to reach senescence.
+     * \param[in] time_to_dormancy Time from emergence/dormancy break required to enter the next dormancy period.
+     * \param[in] max_leaf_lifespan [OPTIONAL] Maximum lifespan of a leaf in days.
      * \param[in] is_evergreen [OPTIONAL] True if the plant is evergreen (i.e., does not lose all leaves during senescence).
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_senescence, bool is_evergreen=false);
+    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy, float max_leaf_lifespan = 1e6, bool is_evergreen= false);
 
     void disablePlantPhenology( uint plantID );
 
@@ -1286,6 +1290,54 @@ public:
      * \return Vector of object IDs for all fruits in the plant.
      */
     std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
+
+    //! Get UUIDs for all existing plant primitives
+    /**
+     * \return Vector of UUIDs for all plant primitives.
+     */
+    std::vector<uint> getAllUUIDs() const;
+
+    //! Get UUIDs for all existing leaf primitives
+    /**
+     * \return Vector of UUIDs for all leaf primitives.
+     */
+    std::vector<uint> getAllLeafUUIDs() const;
+
+    //! Get UUIDs for all existing internode primitives
+    /**
+     * \return Vector of UUIDs for all internode primitives.
+     */
+    std::vector<uint> getAllInternodeUUIDs() const;
+
+    //! Get UUIDs for all existing petiole primitives
+    /**
+     * \return Vector of UUIDs for all petiole primitives.
+     */
+    std::vector<uint> getAllPetioleUUIDs() const;
+
+    //! Get UUIDs for all existing peduncle primitives
+    /**
+     * \return Vector of UUIDs for all peduncle primitives.
+     */
+    std::vector<uint> getAllPeduncleUUIDs() const;
+
+    //! Get UUIDs for all existing flower primitives
+    /**
+     * \return Vector of UUIDs for all flower primitives.
+     */
+    std::vector<uint> getAllFlowerUUIDs() const;
+
+    //! Get UUIDs for all existing fruit primitives
+    /**
+     * \return Vector of UUIDs for all fruit primitives.
+     */
+    std::vector<uint> getAllFruitUUIDs() const;
+
+    //! Get object IDs for all existing plant compound objects
+    /**
+     * \return Vector of object IDs for all plant compound objects.
+     */
+    std::vector<uint> getAllObjectIDs() const;
 
     // -- manual plant generation from input string -- //
 

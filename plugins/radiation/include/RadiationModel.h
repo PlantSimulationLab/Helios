@@ -114,7 +114,7 @@ struct RadiationBand{
 public:
 
     //! Constructor
-    explicit RadiationBand( std::string a_label ) : label(std::move(a_label)) {
+    explicit RadiationBand( std::string a_label, size_t directRayCount_default, size_t diffuseRayCount_default, float diffuseFlux_default, uint scatteringDepth_default, float minScatterEnergy_default ) : label(std::move(a_label)) {
         directRayCount = directRayCount_default;
         diffuseRayCount = diffuseRayCount_default;
         diffuseFlux = diffuseFlux_default;
@@ -168,20 +168,6 @@ public:
 
 private:
 
-    //! Default number of rays to be used in direct radiation model.
-    size_t directRayCount_default = 100;
-
-    //! Default number of rays to be used in diffuse radiation model.
-    size_t diffuseRayCount_default = 1000;
-
-    //! Default diffuse radiation flux
-    float diffuseFlux_default = -1.f;
-
-    //! Default minimum energy for scattering
-    float minScatterEnergy_default = 0.1;
-
-    //! Default scattering depth
-    uint scatteringDepth_default = 0;
 
 };
 
@@ -340,14 +326,14 @@ public:
     //! Set the integral of the diffuse spectral flux distribution across all possible wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
     /**
      * \param[in] spectrum_integral Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
-     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
     void setDiffuseSpectrumIntegral( float spectrum_integral);
 
     //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
     /**
      * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
-     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
     void setDiffuseSpectrumIntegral( float spectrum_integral, float wavelength1, float wavelength2);
 
@@ -355,7 +341,7 @@ public:
     /**
      * \param[in] band_label Label used to reference the band
      * \param[in] spectrum_integral Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
-     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
     void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral);
 
@@ -363,7 +349,7 @@ public:
     /**
      * \param[in] band_label Label used to reference the band
      * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
-     * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
+     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
     void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength1, float wavelength2);
 
@@ -1161,6 +1147,21 @@ protected:
 
     //! Default primitive temperature
     float temperature_default;
+
+    //! Default number of rays to be used in direct radiation model.
+    size_t directRayCount_default;
+
+    //! Default number of rays to be used in diffuse radiation model.
+    size_t diffuseRayCount_default;
+
+    //! Default diffuse radiation flux
+    float diffuseFlux_default;
+
+    //! Default minimum energy for scattering
+    float minScatterEnergy_default;
+
+    //! Default scattering depth
+    uint scatteringDepth_default;
 
     // --- Functions --- //
 

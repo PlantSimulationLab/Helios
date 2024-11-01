@@ -293,7 +293,6 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | --- **Geometric Parameters** --- |||||
 | max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
 | internode_radius_initial | RandomParameter_float | 0.001 | meters | Initial radius of the internode when it is created. |
-| internode_radius_max | RandomParameter_float | unlimited | meters | Maximum internode radius for girth growth expansion. |
 | insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
 | insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
 | internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |

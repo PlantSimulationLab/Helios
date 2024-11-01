@@ -366,12 +366,15 @@ void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint 
         shoot_parameters.phytomer_parameters.phytomer_creation_function = nullptr;
 
         if( base_shoot ){ //this is the first phytomer of the shoot
-            defineShootType("shoot_"+phytomer_label, shoot_parameters);
+//            defineShootType("shoot_"+phytomer_label, shoot_parameters);
+            defineShootType(phytomer_label, shoot_parameters); //*testing*
 
             if( parentID<0 ) { //this is the first shoot of the plant
-                baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label);
+//                baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label);
+                baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, phytomer_label); //*testing*
             }else{ //this is a child of an existing shoot
-                baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label, 0);
+//                baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label, 0);
+                baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, phytomer_label, 0); //*testing*
             }
 
             base_shoot = false;

@@ -1907,3 +1907,31 @@ The radiation model has been re-designed, with the following primary additions:
 - The 'tortuosity' shoot parameter was multiplied by a hard-coded factor of 5.0. This was removed, and all tortuosity values in the plant library were scaled by a factor of 5.
 - There were some errors with the parameters of some plants introduced in the previous version.
 - Added file validation to PlantArchitecture::writePlantStructureXML().
+
+[1.3.22] 2024-11-01
+
+*Context*
+- Methods Context::sumPrimitiveSurfaceArea(), Context::calculatePrimitiveDataAreaWeightedMean(), and Context::calculatePrimitiveDataAreaWeightedSum() to check if primitive area is NaN, and if so exclude it from calculations.
+- Added parse_int2(), parse_int3, and parse_RGBcolor functions to global.cpp.
+- Added open_xml_file() function to global.cpp that opens an XML file and checks for basic validity.
+- Added 'Location' type to helios_vector_types.h to store latitude, longitude, and UTC offset.
+- Added Context::listTimeseriesVariables() to return a list of all existing timeseries variables.
+
+*Plant Architecture*
+- Some updates to soybean model parameters.
+- Added methods to query UUIDs and Object IDs for all plants in the model to avoid having to loop over each plant instance.
+- Some additional checks were needed to make sure the tube internode object actually exists in the Context, otherwise there could be an out-of-bounds error.
+- Removed the Shoot Parameter 'internode_radius_max', as it is not needed anymore after the pipe-model-based internode girth scaling was added.
+- Corrected some issues with reading/writing plants using strings or XML. Namely, some parameters like the phyllotactic angle were not being applied correctly across shoots.
+- Added PlantArchitecture::getCurrentPytomerParameters() to make it easy to get all the phytomer parameters structures to pass to PlantArchitecture::generatePlantFromString().
+
+*Radiation*
+- Split spectral_data/surface_spectral_library.xml into separate files for soil, leaves, bark, and fruit, and added many new species. Credit to Kyle Rizzo for these additions.
+- Some default values were set in RadiationModel.cpp while others were set in RadiationModel.h. Everything was moved to be set in the RadiationModel constructor, which is in RadiationModel.cpp.
+
+*Solar Position*
+- Default constructor changed to load the location based on the location set in the Context.
+- UTC offset variable changed from int to float type.
+
+*Visualizer*
+- Visualizer::printWindow() now creates the output directory if it does not already exist.
