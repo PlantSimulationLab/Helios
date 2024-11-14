@@ -28,7 +28,7 @@
 #
 ################################################
 
-DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq") # Base PATH dependencies
+DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq" "pybind11") # Base PATH dependencies
 
 # Run bash script as root
 if command -v nvcc &> /dev/null; then
@@ -127,7 +127,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         exit 1
     fi
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
-        DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev")
+        DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev" "python3-dev")
     fi
     FLAG="-y"
     export DEBIAN_FRONTEND=noninteractive # Avoid timezone prompts
@@ -200,14 +200,25 @@ export PATH=/usr/local/cuda/bin:$PATH
 
 # Fix OptiX drivers for WSL
 if [[ "$distro" == "WSL" ]]; then
+    LINUX_DRIVER=$(find . -name "NVIDIA-Linux-x86_64-*.run" -print -quit)
+    if [[ -n "$LINUX_DRIVER" ]]; then
+        VERSION=$(echo "$LINUX_DRIVER" | sed -E 's/.*NVIDIA-Linux-x86_64-([0-9.]+)\.run/\1/')
+        echo "Linux Driver Version $VERSION Found. Installing..."
+        run_command_clear_output "./$LINUX_DRIVER -x"
+        LINUX_DRIVER_PATH="${LINUX_DRIVER%.run}"
+    else
+        echo "Linux Driver not found. Please place Linux Driver .run file in Helios root directory and rerun this script."
+        echo -e "Linux drivers can be downloaded \e]8;;https://www.nvidia.com/en-in/drivers/unix/\aHERE\e]8;;\a. Version \e]8;;https://www.nvidia.in/Download/driverResults.aspx/227064/en-in\a470.256.02\e]8;;\a (https://www.nvidia.in/Download/driverResults.aspx/227064/en-in) recommended."
+        exit 1
+    fi
     LXSS="/mnt/c/Windows/System32/lxss/lib/"
-    OPTIX_DRIVERS_PATH="/plugins/radiation/optix_drivers/"
+    OPTIX_DRIVERS_PATH="$(pwd)/$LINUX_DRIVER_PATH/"
     DRIVERS=("libnvoptix.so.1" "libnvidia-ptxjitcompiler.so.1")
     if [[ ! -f "$LXSS/libnvidia-ptxjitcompiler.so.1" || ! -f "$LXSS/libnvoptix.so.1" ]]; then
         mkdir -p "$LXSS"
-        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-rtcore.so.470.256.02" "$LXSS/libnvidia-rtcore.so.470.256.02"
-        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-ptxjitcompiler.so.470.256.02" "$LXSS/libnvidia-ptxjitcompiler.so.1"
-        ln -s "$OPTIX_DRIVERS_PATH/libnvoptix.so.470.256.02" "$LXSS/libnvoptix.so.1"
+        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-rtcore.so.$VERSION" "$LXSS/libnvidia-rtcore.so.$VERSION"
+        ln -s "$OPTIX_DRIVERS_PATH/libnvidia-ptxjitcompiler.so.$VERSION" "$LXSS/libnvidia-ptxjitcompiler.so.1"
+        ln -s "$OPTIX_DRIVERS_PATH/libnvoptix.so.$VERSION" "$LXSS/libnvoptix.so.1"
         export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH
     fi
 fi
