@@ -1185,7 +1185,7 @@ void StrawberryParameters::readParametersFromXML(const pugi::xml_node canopy_nod
 
     int2 new_plant_count = XMLloadint2(canopy_node, "plant_count");
     if (new_plant_count.x != nullvalue_i && new_plant_count.y != nullvalue_i) {
-        plant_count = plant_count;
+        plant_count = new_plant_count;
     }
 }
 
