@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['energy_20balance_20model_20plugin_20documentation_0',['Energy Balance Model Plugin Documentation',['../_energy_balance_doc.html',1,'PlugIns']]]
+  ['6_3a_20global_20data_0',['Tutorial 6: Global Data',['../context_globaldata.html',1,'Tutorials']]]
 ];

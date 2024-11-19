@@ -1,6 +1,6 @@
 /** \file "PhotosynthesisModel.cpp" Primary source file for photosynthesis plug-in.
 
-Copyright (C) 2016-2023 Brian Bailey
+Copyright (C) 2016-2024 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,7 +36,9 @@ PhotosynthesisModel::PhotosynthesisModel(helios::Context *a_context) {
 
 int PhotosynthesisModel::selfTest() {
 
-    std::cout << "Running photosynthesis model self-test..." << std::flush;
+    if( message_flag ) {
+        std::cout << "Running photosynthesis model self-test..." << std::flush;
+    }
 
     Context context_test;
 
@@ -50,7 +52,7 @@ int PhotosynthesisModel::selfTest() {
 
     float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
     A.resize(9);
-    std::vector<float> AQ_expected{-2.401840, 8.309921, 12.600988, 16.287579, 16.907225, 16.907225, 16.907225, 16.907225, 16.907225};
+    std::vector<float> AQ_expected{-2.37932, 8.29752, 12.5566, 16.2075, 16.7448, 16.7448, 16.7448, 16.7448, 16.7448};
 
 //Generate a light response curve using empirical model with default parmeters
     for (int i = 0; i < 9; i++) {
@@ -76,7 +78,9 @@ int PhotosynthesisModel::selfTest() {
         photomodel.run();
         context_test.getPrimitiveData(UUID, "net_photosynthesis", A[i]);
         if (fabs(A.at(i) - AQ_expected.at(i)) / fabs(AQ_expected.at(i)) > errtol) {
-            std::cout << "failed. Incorrect light response curve." << std::endl;
+            if( message_flag ) {
+                std::cout << "failed. Incorrect light response curve." << std::endl;
+            }
             return 1;
         }
     }
@@ -97,7 +101,7 @@ int PhotosynthesisModel::selfTest() {
 
 //Generate an A vs Ci curve using Farquhar model with default parameters
 
-    std::vector<float> ACi_expected{1.746968, 7.395710, 12.593264, 17.366213, 21.743221, 25.753895, 28.645109, 29.888800, 31.634666};
+    std::vector<float> ACi_expected{1.72714, 7.32672, 12.4749, 17.199, 21.5281, 25.4923, 28.4271, 29.656, 31.3813};
 
     photomodel.setModelCoefficients(fcoeffs);
     for (int i = 0; i < 9; i++) {
@@ -105,7 +109,9 @@ int PhotosynthesisModel::selfTest() {
         photomodel.run();
         context_test.getPrimitiveData(UUID, "net_photosynthesis", A[i]);
         if (fabs(A.at(i) - ACi_expected.at(i)) / fabs(ACi_expected.at(i)) > errtol) {
-            std::cout << "failed. Incorrect CO2 response curve." << std::endl;
+            if( message_flag ) {
+                std::cout << "failed. Incorrect CO2 response curve." << std::endl;
+            }
             return 1;
         }
     }
@@ -126,7 +132,7 @@ int PhotosynthesisModel::selfTest() {
 
 //Generate an A vs temperature curve using Farquhar model with default parameters
 
-    std::vector<float> AT_expected{3.930926, 8.861267, 14.569322, 17.366213, 16.240763, 11.758138, 4.073297};
+    std::vector<float> AT_expected{3.87863, 8.74928, 14.4075, 17.199, 16.0928, 11.6431, 4.00821};
 
     photomodel.setModelCoefficients(fcoeffs);
     for (int i = 0; i < 7; i++) {
@@ -134,12 +140,16 @@ int PhotosynthesisModel::selfTest() {
         photomodel.run();
         context_test.getPrimitiveData(UUID, "net_photosynthesis", A[i]);
         if (fabs(A.at(i) - AT_expected.at(i)) / fabs(AT_expected.at(i)) > errtol) {
-            std::cout << "failed. Incorrect temperature response curve." << std::endl;
-            //return 1;
+            if( message_flag ) {
+                std::cout << "failed. Incorrect temperature response curve." << std::endl;
+            }
+            return 1;
         }
     }
 
-    std::cout << "passed." << std::endl;
+    if( message_flag ) {
+        std::cout << "passed." << std::endl;
+    }
 
     return 0;
 }
@@ -322,11 +332,14 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setQuantumEfficiency_alpha(0.713);
     } else {
         defaultSpecies = true;
-        std::cout << "WARNING (PhotosynthesisModel::getModelCoefficients): unknown species " << s
-                  << ". Setting default (Almond)." << std::endl;
+        if( message_flag ) {
+            std::cout << "WARNING (PhotosynthesisModel::getModelCoefficients): unknown species " << s << ". Setting default (Almond)." << std::endl;
+        }
     }
     if (!defaultSpecies) {
-        std::cout << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
+        if( message_flag ) {
+            std::cout << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
+        }
     }
     return fmc;
 }
@@ -347,8 +360,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                     4.57f; //umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
             if (i_PAR < 0) {
                 i_PAR = 0;
-                std::cout << "WARNING (runPhotosynthesis): PAR flux value provided was negative.  Clipping to zero."
-                          << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (runPhotosynthesis): PAR flux value provided was negative.  Clipping to zero." << std::endl;
+                }
             }
         } else {
             i_PAR = i_PAR_default;
@@ -359,8 +373,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             context->getPrimitiveDataType(UUID, "temperature") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "temperature", TL);
             if (TL < 200) {
-                std::cout << "WARNING (PhotosynthesisModel::run): Primitive temperature value was very low (" << TL
-                          << "K). Assuming. Are you using absolute temperature units?" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (PhotosynthesisModel::run): Primitive temperature value was very low (" << TL << "K). Assuming. Are you using absolute temperature units?" << std::endl;
+                }
                 TL = TL_default;
             }
         } else {
@@ -373,9 +388,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             context->getPrimitiveData(UUID, "air_CO2", CO2);
             if (CO2 < 0) {
                 CO2 = 0;
-                std::cout
-                        << "WARNING (PhotosynthesisModel::run): CO2 concentration value provided was negative. Clipping to zero."
-                        << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (PhotosynthesisModel::run): CO2 concentration value provided was negative. Clipping to zero." << std::endl;
+                }
             }
         } else {
             CO2 = CO2_default;
@@ -387,9 +402,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             context->getPrimitiveData(UUID, "moisture_conductance", gM);
             if (gM < 0) {
                 gM = 0;
-                std::cout
-                        << "WARNING (PhotosynthesisModel::run): Moisture conductance value provided was negative. Clipping to zero."
-                        << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (PhotosynthesisModel::run): Moisture conductance value provided was negative. Clipping to zero." << std::endl;
+                }
             }
         } else {
             gM = gM_default;
@@ -407,9 +422,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
         if (gH < 0) {
             gH = 0;
-            std::cout
-                    << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero."
-                    << std::endl;
+            if( message_flag ) {
+                std::cout << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
+            }
         }
 
         //combine stomatal (gM) and boundary-layer (gH) conductances
@@ -444,8 +459,9 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         if (A == 0) {
-            std::cout << "WARNING (PhotosynthesisModel::run): Solution did not converge for primitive " << UUID << "."
-                      << std::endl;
+            if( message_flag ) {
+                std::cout << "WARNING (PhotosynthesisModel::run): Solution did not converge for primitive " << UUID << "." << std::endl;
+            }
         }
 
         context->setPrimitiveData(UUID, "net_photosynthesis", HELIOS_TYPE_FLOAT, 1, &A);
@@ -568,8 +584,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     float c_Ko = 20.30;
     float dH_Ko = 36.38;
 
-    float RT = R * TL;
-    float invDiffRT = (1.f / 298.15f - 1.f / TL) / RT;
+    float invDiffRT = (1.f / 298.15f - 1.f / TL) / R;
 
     if (modelcoeffs.Vcmax > 0) {
         Vcmax = modelcoeffs.Vcmax * expf(modelcoeffs.dH_Vcmax * (invDiffRT));
@@ -662,9 +677,9 @@ float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureR
         return v25;
     } else {
         float logterm = logf(dHd / dHa - 1.f);
-        float t1 = 1.f + expf(dHd / R * (1.f / Topt - 1.f / 298.f) - logterm);
+        float t1 = 1.f + expf(dHd / R * (1.f / Topt - 1.f / 298.15f) - logterm);
         float t2 = 1.f + expf(dHd / R * (1.f / Topt - 1.f / T) - logterm);
-        return v25 * exp(dHa / R * (1.f / 298 - 1.f / T)) * t1 / t2;
+        return v25 * exp(dHa / R * (1.f / 298.15f - 1.f / T)) * t1 / t2;
     }
 }
 
@@ -716,13 +731,22 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharModelCoefficients(uint
 
 }
 
+void PhotosynthesisModel::disableMessages(){
+    message_flag = false;
+}
+
+void PhotosynthesisModel::enableMessages(){
+    message_flag = true;
+}
+
 void PhotosynthesisModel::optionalOutputPrimitiveData(const char *label) {
 
     if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0) {
         output_prim_data.emplace_back(label);
     } else {
-        std::cout << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data "
-                  << label << std::endl;
+        if( message_flag ) {
+            std::cout << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+        }
     }
 
 }
@@ -732,12 +756,6 @@ void PhotosynthesisModel::printDefaultValueReport() const {
 }
 
 void PhotosynthesisModel::printDefaultValueReport(const std::vector<uint> &UUIDs) const {
-
-//    i_PAR_default = 0;
-//    TL_default = 300;
-//    CO2_default = 390;
-//    gM_default = 0.25;
-//    gH_default = 1;
 
     size_t assumed_default_i = 0;
     size_t assumed_default_TL = 0;

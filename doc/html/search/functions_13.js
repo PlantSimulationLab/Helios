@@ -8,6 +8,6 @@ var searchData=
   ['updateshootnodes_5',['updateShootNodes',['../struct_shoot.html#a19eb5d6e3248c45de08774d11cbf329b',1,'Shoot']]],
   ['useobjecttexturecolor_6',['useObjectTextureColor',['../classhelios_1_1_context.html#ad58362537512f6df9028a60181d88af0',1,'helios::Context::useObjectTextureColor(uint ObjID)'],['../classhelios_1_1_context.html#a92457a1277ce0e5918e20007193001bf',1,'helios::Context::useObjectTextureColor(const std::vector&lt; uint &gt; &amp;ObjIDs)']]],
   ['useprimitivetexturecolor_7',['usePrimitiveTextureColor',['../classhelios_1_1_context.html#a60aaa1a72ff6ebcd28c48b7dfbc3ca7c',1,'helios::Context::usePrimitiveTextureColor(uint UUID)'],['../classhelios_1_1_context.html#a563083497cce82f251e0eaf238cb3600',1,'helios::Context::usePrimitiveTextureColor(const std::vector&lt; uint &gt; &amp;UUIDs)']]],
-  ['useshader_8',['useShader',['../struct_shader.html#a6212f8a189b932362d1f6cffb31b6633',1,'Shader']]],
+  ['useshader_8',['useShader',['../struct_shader.html#a07520fd004cb1fd118597151d00e2c24',1,'Shader']]],
   ['usetexturecolor_9',['useTextureColor',['../classhelios_1_1_compound_object.html#ad40fa98ddefc9ba9d24cd45ca0df44d5',1,'helios::CompoundObject']]]
 ];

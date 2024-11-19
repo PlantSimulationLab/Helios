@@ -220,15 +220,15 @@
 \_form#205=50x17:$R_{meas,h}$
 \_form#206=38x15:$R_{clear}$
 \_form#207=149x17:\[
-   R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
-\]
+    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
+ \]
 \_form#208=206x36:\[
-   f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
-\]
+    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+ \]
 \_form#209=89x17:$0\leq f_{diff} \leq 1$
 \_form#210=162x36:\[
-  R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
-\]
+   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+ \]
 \_form#211=122x17:$(\theta-\theta_w)/(\theta_f-\theta_w)$
 \_form#212=56x17:$\theta,\,\theta_f,\,\theta_w$
 \_form#213=14x15:$h_s$

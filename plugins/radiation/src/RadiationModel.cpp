@@ -3622,7 +3622,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
             RT_CHECK_ERROR( rtVariableSet1f( camera_lens_diameter_RTvariable, camera.second.lens_diameter ) );
             RT_CHECK_ERROR( rtVariableSet1f( FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio ) );
             RT_CHECK_ERROR( rtVariableSet1f( camera_focal_length_RTvariable, camera.second.focal_length ) );
-            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 1.f/tanf(camera.second.HFOV_degrees*M_PI/180.f) ) );
+            RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 0.5f/tanf(0.5f*camera.second.HFOV_degrees*M_PI/180.f) ) );
             RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, cam ));
 
             zeroBuffer1D( radiation_in_camera_RTbuffer, camera.second.resolution.x*camera.second.resolution.y*Nbands );

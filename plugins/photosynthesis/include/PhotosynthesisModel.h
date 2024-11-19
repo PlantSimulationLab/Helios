@@ -343,6 +343,12 @@ public:
      */
     FarquharModelCoefficients getFarquharModelCoefficients(uint UUID);
 
+    //! Disable output messages to the standard output
+    void disableMessages();
+
+    //! Enable output messages to the standard output
+    void enableMessages();
+
     //! Add optional output primitive data values to the Context
     /**
     * \param[in] label Name of primitive data (e.g., Ci)
@@ -388,6 +394,8 @@ private:
     float CO2_default;
     float gM_default;
     float gH_default;
+
+    bool message_flag = true;
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;

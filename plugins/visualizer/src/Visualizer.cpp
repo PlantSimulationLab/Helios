@@ -867,6 +867,10 @@ void Visualizer::setLightingModel(LightingModel lightingmodel ){
     }
 }
 
+void Visualizer::setLightIntensityFactor( float lightintensityfactor ){
+    lightintensity = lightintensityfactor;
+}
+
 void Visualizer::setBackgroundColor(const helios::RGBcolor &color ){
     backgroundColor = color;
 }
@@ -965,6 +969,8 @@ void Visualizer::clearGeometry() {
     contextPrimitiveIDs.clear();
     depth_buffer_data.clear();
     group_start.clear();
+    colorbar_min = 0;
+    colorbar_max = 0;
 }
 
 void Visualizer::closeWindow() {
@@ -2701,6 +2707,8 @@ void Visualizer::buildContextGeometry(helios::Context* context_ptr, const std::v
     if( UUIDs.empty() ){
         std::cerr << "WARNING (Visualizer::buildContextGeometry): There is no Context geometry to build...exiting." << std::endl;
         return;
+    }else if( !colorPrimitives_UUIDs.empty() || !colorPrimitives_objIDs.empty() ){
+        std::cerr << "WARNING (Visualizer::buildContextGeometry): Existing Context geometry already exists in the Visualizer and will not be removed. You may have intended to call Visualizer::clearGeometry() first to clear old Context geometry." << std::endl;
     }
 
 
@@ -2912,7 +2920,7 @@ void Visualizer::buildContextGeometry_private() {
 
     //------- Simulation Geometry -------//
 
-    //add primiitves
+    //add primitives
 
     for(std::map<std::string,std::vector<uint> >::iterator iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
 
@@ -2968,7 +2976,7 @@ void Visualizer::buildContextGeometry_private() {
                 }else{
                     color = context->getPrimitiveColorRGBA(UUID);
                 }
-            }else if( colorPrimitivesByObjectData.size()!=0 ){
+            }else if( !colorPrimitivesByObjectData.empty() ){
                 if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
                     uint ObjID = context->getPrimitiveParentObjectID(UUID);
                     if( ObjID==0 ){
@@ -3010,13 +3018,13 @@ void Visualizer::buildContextGeometry_private() {
 
             if( ptype == helios::PRIMITIVE_TYPE_PATCH  ){
 
-                if( texture_file.size()==0 ){//Patch does not have an associated texture or we are ignoring texture
+                if( texture_file.empty() ){//Patch does not have an associated texture or we are ignoring texture
                     addRectangleByVertices( verts, color, COORDINATES_CARTESIAN );
                 }else{ //Patch has a texture
 
                     std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
 
-                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0 ){//coloring primitive based on texture
+                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.empty() ){//coloring primitive based on texture
                         if( uvs.size()==4 ){//custom (u,v) coordinates
                             if( context->isPrimitiveTextureColorOverridden(UUID) ){
                                 addRectangleByVertices( verts, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), uvs, COORDINATES_CARTESIAN );
@@ -3041,7 +3049,7 @@ void Visualizer::buildContextGeometry_private() {
 
             }else if( ptype == helios::PRIMITIVE_TYPE_TRIANGLE ){
 
-                if( texture_file.size()==0 ){//Triangle does not have an associated texture or we are ignoring texture
+                if( texture_file.empty() ){//Triangle does not have an associated texture or we are ignoring texture
                     addTriangle( verts.at(0), verts.at(1), verts.at(2), color, COORDINATES_CARTESIAN );
                 }else{ //Triangle has a texture
 
@@ -3406,6 +3414,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.enableTextureMasks();
 
         primaryShader.setLightingModel( primaryLightingModel.at(0) );
+        primaryShader.setLightIntensity( lightintensity );
 
         glBindTexture(GL_TEXTURE_2D, depthTexture);
         glUniform1i(primaryShader.shadowmapUniform,1);
@@ -3686,6 +3695,7 @@ void Visualizer::plotUpdate( bool hide_window ){
     primaryShader.enableTextureMasks();
 
     primaryShader.setLightingModel( primaryLightingModel.at(0) );
+    primaryShader.setLightIntensity( lightintensity );
 
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(primaryShader.shadowmapUniform,1);
@@ -4045,6 +4055,10 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     RboundUniform = glGetUniformLocation(shaderID, "Rbound");
     glUniform1i(RboundUniform,0);
 
+    //Lighting intensity factor
+    lightIntensityUniform = glGetUniformLocation(shaderID, "lightIntensity" );
+    glUniform1f( lightIntensityUniform, 1.f );
+
     //initialize default texture in case none are added to the scene
     glBindTexture(GL_TEXTURE_RECTANGLE,0);
     glTexImage2D(GL_TEXTURE_RECTANGLE, 0,GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -4277,23 +4291,27 @@ void Shader::enableTextureMasks() const{
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void Shader::setTransformationMatrix(const glm::mat4 &matrix ){
+void Shader::setTransformationMatrix(const glm::mat4 &matrix ) const{
     glUniformMatrix4fv(transformMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
-void Shader::setDepthBiasMatrix(const glm::mat4 &matrix ){
+void Shader::setDepthBiasMatrix(const glm::mat4 &matrix ) const{
     glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
-void Shader::setLightDirection(const helios::vec3 &direction ){
+void Shader::setLightDirection(const helios::vec3 &direction ) const{
     glUniform3f( lightDirectionUniform, direction.x, direction.y, direction.z );
 }
 
-void Shader::setLightingModel( uint lightingmodel ){
+void Shader::setLightingModel( uint lightingmodel ) const{
     glUniform1i( lightingModelUniform, lightingmodel );
 }
 
-void Shader::useShader() {
+void Shader::setLightIntensity( float lightintensity ) const{
+    glUniform1f( lightIntensityUniform, lightintensity );
+}
+
+void Shader::useShader() const {
     glUseProgram(shaderID);
 }
 

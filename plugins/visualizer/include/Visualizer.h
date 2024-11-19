@@ -111,19 +111,22 @@ public:
   void enableTextureMasks() const;
 
   //! Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices
-  void setTransformationMatrix(const glm::mat4 &matrix );
+  void setTransformationMatrix(const glm::mat4 &matrix ) const;
 
   //! Set the depth bias matrix for shadows
-  void setDepthBiasMatrix(const glm::mat4 &matrix );
+  void setDepthBiasMatrix(const glm::mat4 &matrix ) const;
 
   //! Set the direction of the light (sun)
-  void setLightDirection(const helios::vec3 &direction );
+  void setLightDirection(const helios::vec3 &direction ) const;
 
   //! Set the lighting model
-  void setLightingModel( uint lightingmodel );
+  void setLightingModel( uint lightingmodel ) const;
+
+  //! Set the intensity of the light source
+  void setLightIntensity( float lightintensity ) const;
 
   //! Set shader as current
-  void useShader();
+  void useShader() const;
   
   //! Initialize the shader
   /**
@@ -135,7 +138,7 @@ public:
   ~Shader();
   
   //Primary Shader
-  uint shaderID;  
+  uint shaderID;
   uint textureUniform;
   uint shadowmapUniform;
   uint transformMatrixUniform;
@@ -143,6 +146,7 @@ public:
   uint lightDirectionUniform;
   uint lightingModelUniform;
   uint RboundUniform;
+  float lightIntensityUniform;
   uint VertexArrayID;
   
 private:
@@ -380,6 +384,12 @@ public:
    * \sa LightingModel
   */
   void setLightingModel(LightingModel lightingmodel );
+
+  //! Set the light intensity scaling factor
+  /**
+   * \param[in] lightintensityfactor Scaling factor for light intensity. Default is 1.0
+  */
+  void setLightIntensityFactor( float lightintensityfactor );
 
   //! Set the background color for the visualizer window
   /**
@@ -966,6 +976,8 @@ private:
 
   //! Lighting model for Context object primitives (default is LIGHTING_NONE)
   std::vector<LightingModel> primaryLightingModel;
+
+  float lightintensity = 1.f;
 
   bool isWatermarkVisible;
 

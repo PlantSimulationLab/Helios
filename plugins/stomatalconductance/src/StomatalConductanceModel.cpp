@@ -53,7 +53,9 @@ int StomatalConductanceModel::selfTest(){
 
     Context context_selftest;
 
-  std::cout << "Running stomatal conductance model self-test..." << std::flush;
+    if( message_flag ) {
+        std::cout << "Running stomatal conductance model self-test..." << std::flush;
+    }
 
   float RMSE_max = 0.03;
 
@@ -122,12 +124,16 @@ int StomatalConductanceModel::selfTest(){
   }
 
   if( sqrtf(RMSE_BWB) > RMSE_max || sqrtf(RMSE_BBL) > RMSE_max || sqrtf(RMSE_MOPT) > RMSE_max || sqrtf(RMSE_BMF) > RMSE_max ){
-    std::cout << "failed." << std::endl;
-    std::cout << sqrtf(RMSE_BWB) << " " << sqrtf(RMSE_BBL) << " " << sqrtf(RMSE_MOPT) << " " << sqrtf(RMSE_BMF) << std::endl;
+      if( message_flag ) {
+          std::cout << "failed." << std::endl;
+          std::cout << sqrtf(RMSE_BWB) << " " << sqrtf(RMSE_BBL) << " " << sqrtf(RMSE_MOPT) << " " << sqrtf(RMSE_BMF) << std::endl;
+      }
         return 1;
   }
 
-  std::cout << "passed." << std::endl;
+    if( message_flag ) {
+        std::cout << "passed." << std::endl;
+    }
   return 0;
 
 }
@@ -290,15 +296,16 @@ BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const st
         coeffs.k = 1.387e+05;
         coeffs.b = 1.051e-06;
     } else {
-        std::cout << "WARNING (StomatalConductanceModel::getModelCoefficients): unknown species " << s
-                  << ". Returning default (Almond)." << std::endl;
+        if( message_flag ) {
+            std::cout << "WARNING (StomatalConductanceModel::getModelCoefficients): unknown species " << s << ". Returning default (Almond)." << std::endl;
+        }
         defaultSpecies = true;
         coeffs.Em = 865.52;
         coeffs.i0 = 38.65;
         coeffs.k = 780320.1;
         coeffs.b = 2086.07;
     }
-    if (!defaultSpecies) {
+    if (!defaultSpecies && message_flag ) {
         std::cout << "Returning Stomatal Model Coefficients to " << s << std::endl;
     }
     return coeffs;
@@ -352,7 +359,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
     for( uint UUID : UUIDs){
 
         if( !context->doesPrimitiveExist(UUID) ){
-            std::cout << "WARNING (StomatalConductance::run): primitive " << UUID << " does not exist in the Context." << std::endl;
+            if( message_flag ) {
+                std::cout << "WARNING (StomatalConductance::run): primitive " << UUID << " does not exist in the Context." << std::endl;
+            }
             continue;
         }
 
@@ -368,7 +377,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(UUID,"temperature") && context->getPrimitiveDataType(UUID,"temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"temperature",TL); //Kelvin
             if( TL<250.f ) {
-              std::cout << "WARNING (StomatalConductanceModel::run): Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (StomatalConductanceModel::run): Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+                }
               TL = TL_default;
             }
         }
@@ -378,7 +389,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(UUID,"air_pressure") && context->getPrimitiveDataType(UUID,"air_pressure")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_pressure",press); //Pa
             if( press<50000 ) {
-              std::cout << "WARNING (StomatalConductanceModel::run): Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?" << std::endl;
+                }
               press = pressure_default;
             }
         }
@@ -388,7 +401,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(UUID,"air_temperature") && context->getPrimitiveDataType(UUID,"air_temperature")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_temperature",Ta); //Kelvin
             if( Ta<250.f ) {
-              std::cout << "WARNING (StomatalConductanceModel::run): Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
+                }
               Ta = air_temperature_default;
             }
         }
@@ -404,7 +419,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
         }
         if( gbw<0 ){
             gbw = 0;
-            std::cout << "WARNING (StomatalConductanceModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
+            if( message_flag ) {
+                std::cout << "WARNING (StomatalConductanceModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
+            }
         }
 
         //beta soil moisture factor
@@ -418,7 +435,9 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
         if( context->doesPrimitiveDataExist(UUID,"air_humidity") && context->getPrimitiveDataType(UUID,"air_humidity")==HELIOS_TYPE_FLOAT ){
             context->getPrimitiveData(UUID,"air_humidity",rh);
             if( rh>1.f ) {
-              std::cout << "WARNING (StomatalConductanceModel::run): Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?" << std::endl;
+                }
               rh = 1.f;
             }
         }
@@ -628,23 +647,32 @@ void StomatalConductanceModel::run( const std::vector<uint>& UUIDs, float dt ){
 
     }
 
-    if( model == "BWB" && assumed_default_An>0 ){
-      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Woodrow-Berry stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
-    }else if( model == "BBL" && assumed_default_An>0 ){
-      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
-    }
-    if( model == "BBL" && assumed_default_Gamma>0 ){
-      std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point ""Gamma"", but primitive data ""Gamma_CO2"" could not be found for " << assumed_default_An << " primitives. Did you forget to set optional output primitive data ""Gamma_CO2"" in the photosynthesis model?" << std::endl;
-    }
+    if( message_flag ) {
+        if (model == "BWB" && assumed_default_An > 0) {
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Woodrow-Berry stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+        } else if (model == "BBL" && assumed_default_An > 0) {
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data ""net_photosynthesis"" could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+        }
+        if (model == "BBL" && assumed_default_Gamma > 0) {
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point ""Gamma"", but primitive data ""Gamma_CO2"" could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to set optional output primitive data ""Gamma_CO2"" in the photosynthesis model?" << std::endl;
+        }
 
-    if( warn_dt_too_large ){
-        std::cout << "WARNING (StomatalConductanceModel::run): The specified time step is larger than the dynamic stomatal conductance time constant. This may result in inaccurate stomatal conductance values." << std::endl;
-    }
-    if( warn_old_gs_unspecified ){
-        std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the previous stomatal conductance value, but primitive data ""moisture_conductance"" could not be found for one or more primitives. Dynamic model was not run for these primitives this time step." << std::endl;
-    }
-    if( warn_tau_unspecified ){
-        std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the time constants to be specified using the StomatalConductance::setDynamicTimeConstants() method, but these were not specified for one or more primitives. Dynamic model was not run for these primitives." << std::endl;
+        if (warn_dt_too_large) {
+            std::cout << "WARNING (StomatalConductanceModel::run): The specified time step is larger than the dynamic stomatal conductance time constant. This may result in inaccurate stomatal conductance values." << std::endl;
+        }
+        if (warn_old_gs_unspecified) {
+            std::cout
+                    << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the previous stomatal conductance value, but primitive data ""moisture_conductance"" could not be found for one or more primitives. Dynamic model was not run for these primitives this time step."
+                    << std::endl;
+        }
+        if (warn_tau_unspecified) {
+            std::cout
+                    << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the time constants to be specified using the StomatalConductance::setDynamicTimeConstants() method, but these were not specified for one or more primitives. Dynamic model was not run for these primitives."
+                    << std::endl;
+        }
     }
 
 }
@@ -773,12 +801,22 @@ float StomatalConductanceModel::evaluate_BBmodel( float gs, std::vector<float> &
 
 }
 
+void StomatalConductanceModel::disableMessages(){
+    message_flag = false;
+}
+
+void StomatalConductanceModel::enableMessages(){
+    message_flag = true;
+}
+
 void StomatalConductanceModel::optionalOutputPrimitiveData( const char* label ){
 
   if( strcmp(label,"vapor_pressure_deficit")==0 ){
     output_prim_data.emplace_back(label );
   }else{
-    std::cout << "WARNING (StomatalConductanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+    if( message_flag ) {
+        std::cout << "WARNING (StomatalConductanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+    }
   }
 
 }
