@@ -331,18 +331,20 @@ private:
         uint radial_subdivisions;
 
         InternodeParameters& operator=(const InternodeParameters &a){
-            this->pitch = a.pitch;
-            this->pitch.resample();
-            this->phyllotactic_angle = a.phyllotactic_angle;
-            this->phyllotactic_angle.resample();
-            this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
-            this->max_vegetative_buds_per_petiole.resample();
-            this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
-            this->max_floral_buds_per_petiole.resample();
-            this->color = a.color;
-            this->image_texture = a.image_texture;
-            this->length_segments = a.length_segments;
-            this->radial_subdivisions = a.radial_subdivisions;
+            if (this != &a) {
+                this->pitch = a.pitch;
+                this->pitch.resample();
+                this->phyllotactic_angle = a.phyllotactic_angle;
+                this->phyllotactic_angle.resample();
+                this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
+                this->max_vegetative_buds_per_petiole.resample();
+                this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
+                this->max_floral_buds_per_petiole.resample();
+                this->color = a.color;
+                this->image_texture = a.image_texture;
+                this->length_segments = a.length_segments;
+                this->radial_subdivisions = a.radial_subdivisions;
+            }
             return *this;
         }
     };
@@ -359,20 +361,22 @@ private:
         uint radial_subdivisions;
 
         PetioleParameters& operator=(const PetioleParameters &a){
-            this->petioles_per_internode = a.petioles_per_internode;
-            this->pitch = a.pitch;
-            this->pitch.resample();
-            this->radius = a.radius;
-            this->radius.resample();
-            this->length = a.length;
-            this->length.resample();
-            this->curvature = a.curvature;
-            this->curvature.resample();
-            this->taper = a.taper;
-            this->taper.resample();
-            this->color = a.color;
-            this->length_segments = a.length_segments;
-            this->radial_subdivisions = a.radial_subdivisions;
+            if (this != &a) {
+                this->petioles_per_internode = a.petioles_per_internode;
+                this->pitch = a.pitch;
+                this->pitch.resample();
+                this->radius = a.radius;
+                this->radius.resample();
+                this->length = a.length;
+                this->length.resample();
+                this->curvature = a.curvature;
+                this->curvature.resample();
+                this->taper = a.taper;
+                this->taper.resample();
+                this->color = a.color;
+                this->length_segments = a.length_segments;
+                this->radial_subdivisions = a.radial_subdivisions;
+            }
             return *this;
         }
     };
@@ -390,23 +394,25 @@ private:
         uint (*prototype_function)(helios::Context *, uint subdivisions, int compound_leaf_index) = nullptr;
 
         LeafParameters& operator=(const LeafParameters &a){
-            this->leaves_per_petiole = a.leaves_per_petiole;
-            this->leaves_per_petiole.resample();
-            this->pitch = a.pitch;
-            this->pitch.resample();
-            this->yaw = a.yaw;
-            this->yaw.resample();
-            this->roll = a.roll;
-            this->roll.resample();
-            this->leaflet_offset = a.leaflet_offset;
-            this->leaflet_offset.resample();
-            this->leaflet_scale = a.leaflet_scale;
-            this->leaflet_scale.resample();
-            this->prototype_scale = a.prototype_scale;
-            this->prototype_scale.resample();
-            this->subdivisions = a.subdivisions;
-            this->unique_prototypes = a.unique_prototypes;
-            this->prototype_function = a.prototype_function;
+            if (this != &a) {
+                this->leaves_per_petiole = a.leaves_per_petiole;
+                this->leaves_per_petiole.resample();
+                this->pitch = a.pitch;
+                this->pitch.resample();
+                this->yaw = a.yaw;
+                this->yaw.resample();
+                this->roll = a.roll;
+                this->roll.resample();
+                this->leaflet_offset = a.leaflet_offset;
+                this->leaflet_offset.resample();
+                this->leaflet_scale = a.leaflet_scale;
+                this->leaflet_scale.resample();
+                this->prototype_scale = a.prototype_scale;
+                this->prototype_scale.resample();
+                this->subdivisions = a.subdivisions;
+                this->unique_prototypes = a.unique_prototypes;
+                this->prototype_function = a.prototype_function;
+            }
             return *this;
         }
     };
@@ -422,19 +428,21 @@ private:
         uint radial_subdivisions;
 
         PeduncleParameters &operator=(const PeduncleParameters &a) {
-            this->length = a.length;
-            this->length.resample();
-            this->radius = a.radius;
-            this->radius.resample();
-            this->pitch = a.pitch;
-            this->pitch.resample();
-            this->roll = a.roll;
-            this->roll.resample();
-            this->curvature = a.curvature;
-            this->curvature.resample();
-            this->color = a.color;
-            this->length_segments = a.length_segments;
-            this->radial_subdivisions = a.radial_subdivisions;
+            if (this != &a) {
+                this->length = a.length;
+                this->length.resample();
+                this->radius = a.radius;
+                this->radius.resample();
+                this->pitch = a.pitch;
+                this->pitch.resample();
+                this->roll = a.roll;
+                this->roll.resample();
+                this->curvature = a.curvature;
+                this->curvature.resample();
+                this->color = a.color;
+                this->length_segments = a.length_segments;
+                this->radial_subdivisions = a.radial_subdivisions;
+            }
             return *this;
         }
     };
@@ -452,23 +460,25 @@ private:
         uint unique_prototypes;
 
         InflorescenceParameters &operator=(const InflorescenceParameters &a) {
-            this->flowers_per_peduncle = a.flowers_per_peduncle;
-            this->flowers_per_peduncle.resample();
-            this->flower_offset = a.flower_offset;
-            this->flower_offset.resample();
-            this->pitch = a.pitch;
-            this->pitch.resample();
-            this->roll = a.roll;
-            this->roll.resample();
-            this->flower_prototype_scale = a.flower_prototype_scale;
-            this->flower_prototype_scale.resample();
-            this->flower_prototype_function = a.flower_prototype_function;
-            this->fruit_prototype_scale = a.fruit_prototype_scale;
-            this->fruit_prototype_scale.resample();
-            this->fruit_prototype_function = a.fruit_prototype_function;
-            this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
-            this->fruit_gravity_factor_fraction.resample();
-            this->unique_prototypes = a.unique_prototypes;
+            if (this != &a) {
+                this->flowers_per_peduncle = a.flowers_per_peduncle;
+                this->flowers_per_peduncle.resample();
+                this->flower_offset = a.flower_offset;
+                this->flower_offset.resample();
+                this->pitch = a.pitch;
+                this->pitch.resample();
+                this->roll = a.roll;
+                this->roll.resample();
+                this->flower_prototype_scale = a.flower_prototype_scale;
+                this->flower_prototype_scale.resample();
+                this->flower_prototype_function = a.flower_prototype_function;
+                this->fruit_prototype_scale = a.fruit_prototype_scale;
+                this->fruit_prototype_scale.resample();
+                this->fruit_prototype_function = a.fruit_prototype_function;
+                this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
+                this->fruit_gravity_factor_fraction.resample();
+                this->unique_prototypes = a.unique_prototypes;
+            }
             return *this;
         }
     };
@@ -551,7 +561,7 @@ struct ShootParameters{
 
     // ---- Growth Parameters ---- //
 
-    RandomParameter_float phyllochron; //phytomers/day
+    RandomParameter_float phyllochron; //days/phytomer
     uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
 
     RandomParameter_float elongation_rate; //length/day
@@ -865,7 +875,7 @@ struct Shoot {
     const uint rank;
     const uint parent_petiole_index;
 
-    float carbohydrate_pool_molC;  // mol C
+    float carbohydrate_pool_molC = 0.01;  // mol C
     float old_shoot_volume = 0;
 
     uint days_with_negative_carbon_balance = 0;
@@ -976,9 +986,10 @@ public:
      * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy.
+     * \param[in] germination_rate Probability that a plant in the canopy germinates and a plant is created.
      * \return Vector of plant instance IDs.
      */
-    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age );
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f);
 
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
@@ -1412,6 +1423,8 @@ protected:
     // --- Carbohydrate Model --- //
 
     void accumulateShootPhotosynthesis();
+
+    void accumulateHourlyLeafPhotosynthesis();
 
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();

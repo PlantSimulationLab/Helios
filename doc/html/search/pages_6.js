@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['file_20input_2foutput_0',['File Input/Output',['../_i_o.html',1,'']]]
+  ['7_3a_20visualizer_20basics_0',['Tutorial 7: Visualizer Basics',['../visualizer_basics.html',1,'Tutorials']]]
 ];

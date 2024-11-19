@@ -3607,7 +3607,7 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
 
     for (int i = 0; i < node_count; i++) { // Looping over tube segments
         if (radius.at(i) < 0) {
-            helios_runtime_error("ERROR (Context::appendTubeSegment): Radius of tube must be positive.");
+            helios_runtime_error("ERROR (Context::addTubeObject): Radius of tube must be positive.");
         }
 
         if (i == 0) {
@@ -3628,10 +3628,18 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
             if (rotation_axis.magnitude() > 1e-6) {
-                float angle = acos(previous_axial_vector * axial_vector);
-                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+                float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Handle the case of nearly parallel vectors
+                // Ensure previous_radial_dir remains orthogonal to axial_vector
+                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+                if (previous_radial_dir.magnitude() < 1e-6) {
+                    // If still degenerate, choose another orthogonal direction
+                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+                }
+                previous_radial_dir.normalize();
             }
-            previous_radial_dir.normalize();
         }
 
         previous_axial_vector = axial_vector;
@@ -3719,7 +3727,7 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
     for (int i = 0; i < node_count; i++) { // Looping over tube segments
         if (radius.at(i) < 0) {
-            helios_runtime_error("ERROR (Context::appendTubeSegment): Radius of tube must be positive.");
+            helios_runtime_error("ERROR (Context::addTubeObject): Radius of tube must be positive.");
         }
 
         if (i == 0) {
@@ -3740,10 +3748,18 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
             if (rotation_axis.magnitude() > 1e-6) {
-                float angle = acos(previous_axial_vector * axial_vector);
-                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+                float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Handle the case of nearly parallel vectors
+                // Ensure previous_radial_dir remains orthogonal to axial_vector
+                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+                if (previous_radial_dir.magnitude() < 1e-6) {
+                    // If still degenerate, choose another orthogonal direction
+                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+                }
+                previous_radial_dir.normalize();
             }
-            previous_radial_dir.normalize();
         }
 
         previous_axial_vector = axial_vector;
@@ -4773,10 +4789,18 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
             if (rotation_axis.magnitude() > 1e-6) {
-                float angle = acos(previous_axial_vector * axial_vector);
-                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+                float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Handle the case of nearly parallel vectors
+                // Ensure previous_radial_dir remains orthogonal to axial_vector
+                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+                if (previous_radial_dir.magnitude() < 1e-6) {
+                    // If still degenerate, choose another orthogonal direction
+                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+                }
+                previous_radial_dir.normalize();
             }
-            previous_radial_dir.normalize();
         }
 
         previous_axial_vector = axial_vector;
@@ -4895,10 +4919,18 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
             if (rotation_axis.magnitude() > 1e-6) {
-                float angle = acos(previous_axial_vector * axial_vector);
-                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, vec3(0.0f, 0.0f, 0.0f), rotation_axis, angle);
+                float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Handle the case of nearly parallel vectors
+                // Ensure previous_radial_dir remains orthogonal to axial_vector
+                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+                if (previous_radial_dir.magnitude() < 1e-6) {
+                    // If still degenerate, choose another orthogonal direction
+                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+                }
+                previous_radial_dir.normalize();
             }
-            previous_radial_dir.normalize();
         }
 
         previous_axial_vector = axial_vector;

@@ -1935,3 +1935,35 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Visualizer*
 - Visualizer::printWindow() now creates the output directory if it does not already exist.
+
+[1.3.23] 2024-11-19
+
+*Context*
+- Still some lingering issues with Context::addTubeObject() in which tube creation could fail.
+
+*Visualizer*
+- Added warning in Visualizer::buildContextGeometry() if there is existing Context geometry already in the Visualizer that may have needed to be cleared.
+- When calling Visualizer::clearGeometry(), the colorbar range was not being reset, which could cause unexpected behavior.
+- Changed default lighting intensity to be brighter in order to better match the default behavior of 3rd party renderers such as Blender.
+- Added method Visualizer::setLightIntensityFactor() to allow users to adjust the intensity of the lighting in the scene.
+
+*Plant Architecture*
+- Some updates to bean, cowpea, and apple model parameters and assets.
+- Changed PlantArchitecture::buildPlantCanopyFromLibrary() to accept an optional argument specifying the germination rate.
+- Fixed error in which fruit could potentially become disconnected from their peducle over time.
+- Fixed error that was causing flowers not to open.
+- Added optional phenological parameter 'max_leaf_lifespan' to allow leaves to die based on age, which is especially important for evergreen plants.
+- Updates to carbohydrate model. Credit to Ethan Frehner
+
+*Photosynthesis*
+- Error corrected that could cause an incorrect temperature response depending on how model parameters are set. Thanks to Kyle Rizzo for this fix.
+- Added methods to disable output messages.
+
+*Stomatal Conductance*
+- Added methods to disable output messages.
+
+*Canopy Generator*
+- Error fixed when parsing XML files for strawberry canopies. Thanks to Heesup Yun for the fix.
+
+*Radiation*
+- Error corrected in the camera model related to the field of view and aspect ratio. Thanks to Peng Wei for this fix.

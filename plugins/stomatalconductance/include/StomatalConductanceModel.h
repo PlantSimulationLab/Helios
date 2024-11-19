@@ -240,6 +240,12 @@ public:
      */
     void run( const std::vector<uint> &UUIDs, float dt );
 
+    //! Disable output messages to the standard output
+    void disableMessages();
+
+    //! Ensable output messages to the standard output
+    void enableMessages();
+
     //! Add optional output primitive data values to the Context
     /**
         * \param[in] label Name of primitive data (e.g., Ci)
@@ -293,6 +299,7 @@ private:
     static float evaluate_BMFmodel( float esurf, std::vector<float> &variables, const void* parameters );
     static float evaluate_BBmodel( float gs, std::vector<float> &variables, const void* parameters );
 
+    bool message_flag = true;
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;

@@ -212,18 +212,21 @@ void ShootParameters::defineChildShootTypes( const std::vector<std::string> &a_c
 
 }
 
-std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age ){
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate) {
 
     if( plant_count_xy.x<=0 || plant_count_xy.y<=0 ){
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantCanopyFromLibrary): Plant count must be greater than zero.");
     }
 
-    vec2 canopy_extent(plant_spacing_xy.x*(plant_count_xy.x-1), plant_spacing_xy.y*(plant_count_xy.y-1));
+    vec2 canopy_extent(plant_spacing_xy.x*float(plant_count_xy.x-1), plant_spacing_xy.y*float(plant_count_xy.y-1));
 
-    std::vector<uint> plantIDs(plant_count_xy.x*plant_count_xy.y);
+    std::vector<uint> plantIDs;
+    plantIDs.reserve(plant_count_xy.x*plant_count_xy.y);
     for( int j=0; j<plant_count_xy.y; j++ ){
         for( int i=0; i<plant_count_xy.x; i++ ){
-            plantIDs.at(i+j*plant_count_xy.x) = buildPlantInstanceFromLibrary( canopy_center_position + make_vec3(-0.5f*canopy_extent.x+float(i)*plant_spacing_xy.x, -0.5f*canopy_extent.y+float(j)*plant_spacing_xy.y, 0), age );
+            if( context_ptr->randu()<germination_rate ) {
+                plantIDs.push_back( buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), age) );
+            }
         }
     }
 
@@ -382,6 +385,7 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud ) {
     // Delete geometry from previous reproductive state (if present)
     context_ptr->deleteObject( fbud.inflorescence_objIDs );
     fbud.inflorescence_objIDs.resize(0);
+    fbud.inflorescence_bases.resize(0);
 
     if( plantarchitecture_ptr->build_context_geometry_peduncle ) {
         context_ptr->deleteObject(fbud.peduncle_objIDs);
@@ -775,7 +779,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                    helios::Context *context_ptr)
         : context_ptr(context_ptr), plantarchitecture_ptr(plantarchitecture_ptr), rank(rank) {
 
-    phytomer_parameters = params; //note this needs to be an assignment operation not a copy in order to re-randomize all the parameters
+    this->phytomer_parameters = params; //note this needs to be an assignment operation not a copy in order to re-randomize all the parameters
 
     ShootParameters parent_shoot_parameters = parent_shoot->shoot_parameters;
 
@@ -870,7 +874,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     leaf_objIDs.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_size_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_rotation.resize(phytomer_parameters.petiole.petioles_per_internode);
-    uint leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
+    int leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
     phytomer_parameters.leaf.leaves_per_petiole.resample();
     for( uint petiole=0; petiole<phytomer_parameters.petiole.petioles_per_internode; petiole++ ) {
         leaf_size_max.at(petiole).resize(leaves_per_petiole);
@@ -1298,7 +1302,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         if( phytomer_parameters.inflorescence.flower_prototype_function!= nullptr && plantarchitecture_ptr->unique_open_flower_prototype_objIDs.find(parent_shoot_type_label) == plantarchitecture_ptr->unique_open_flower_prototype_objIDs.end() ) {
             plantarchitecture_ptr->unique_open_flower_prototype_objIDs[parent_shoot_type_label].resize(phytomer_parameters.inflorescence.unique_prototypes);
             for( int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++ ) {
-                uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, false);
+                uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, true);
                 plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(parent_shoot_type_label).at(prototype) = objID_flower;
                 context_ptr->hideObject({objID_flower});
             }
@@ -1761,7 +1765,7 @@ void Phytomer::removeLeaf(){
 }
 
 bool Phytomer::hasLeaf() const{
-    return !leaf_bases.empty();
+    return (!leaf_bases.empty() && !leaf_bases.front().empty() );
 }
 
 float Phytomer::calculateDownstreamLeafArea() const{
@@ -2702,7 +2706,11 @@ void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_
     plant_instances.at(plantID).dd_to_fruit_set = time_to_fruit_set;
     plant_instances.at(plantID).dd_to_fruit_maturity = time_to_fruit_maturity;
     plant_instances.at(plantID).dd_to_dormancy = time_to_dormancy;
-    plant_instances.at(plantID).max_leaf_lifespan = max_leaf_lifespan;
+    if( max_leaf_lifespan==0 ){
+        plant_instances.at(plantID).max_leaf_lifespan = 1e6;
+    }else {
+        plant_instances.at(plantID).max_leaf_lifespan = max_leaf_lifespan;
+    }
     plant_instances.at(plantID).is_evergreen = is_evergreen;
 
 }
@@ -2806,15 +2814,9 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
 
             for (auto &phytomer: shoot->phytomers) {
 
-//                for( auto &petiole : phytomer->leaf_objIDs ) {
-//                    float age;
-//                    assert( context_ptr->doesObjectDataExist( petiole.front(), "age" ) );
-//                    context_ptr->getObjectData( petiole.front(), "age", age );
-//                    if ( age>plant_instance.max_leaf_lifespan ) {
-//                        phytomer->removeLeaf();
-//                        break;
-//                    }
-//                }
+                if ( phytomer->age>plant_instance.max_leaf_lifespan ) { //delete old leaves that exceed maximum lifespan
+                    phytomer->removeLeaf();
+                }
 
                 if (!shoot->isdormant) {
                     phytomer->time_since_dormancy += dt_max;
@@ -3021,6 +3023,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
                                 if ( detectGroundCollision(objID) ) {
                                     context_ptr->deleteObject(objID);
                                     fbud.inflorescence_objIDs.erase( fbud.inflorescence_objIDs.begin()+p );
+                                    fbud.inflorescence_bases.erase( fbud.inflorescence_bases.begin()+p );
                                 }
                             }
                             for( int p=fbud.peduncle_objIDs.size()-1; p>=0; p-- ){
@@ -3030,6 +3033,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
                                     context_ptr->deleteObject(fbud.inflorescence_objIDs);
                                     fbud.peduncle_objIDs.clear();
                                     fbud.inflorescence_objIDs.clear();
+                                    fbud.inflorescence_bases.clear();
                                     break;
                                 }
                             }

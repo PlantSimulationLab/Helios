@@ -733,19 +733,19 @@ RT_PROGRAM void camera_raygen(){
     float PPointsRatioy =1.f;
     float Rx = rnd(prd.seed);
     float Ry = rnd(prd.seed);
-    //    float Rx = 0.5;
-    //    float Ry = 0.5;
 
     // Map sample to pixel
+    float half_HFOV_radians = atanf(0.5f/camera_viewplane_length);
+    float multiplier = tanf(half_HFOV_radians/FOV_aspect_ratio) / tanf(half_HFOV_radians);
     sp.y = (-0.5f * PPointsRatioy + (ii+Rx)/float(camera_resolution.x));
-    sp.z = (0.5f * PPointsRatiox - (jj+Ry)/float(camera_resolution.y))/FOV_aspect_ratio;
+    sp.z = (0.5f * PPointsRatiox - (jj+Ry)/float(camera_resolution.y))*multiplier;
     sp.x = camera_viewplane_length;
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
 
     float3 p = make_float3(camera_focal_length,sp.y/camera_viewplane_length*camera_focal_length,sp.z/camera_viewplane_length*camera_focal_length);
 
-    // *** Sample point on lens (view direction coordinate aligned *** //
+    // *** Sample point on lens (view direction coordinate aligned) *** //
 
     float3 ray_origin = make_float3(0,0,0);
     if( camera_lens_diameter>0 ) {
@@ -799,8 +799,10 @@ RT_PROGRAM void pixel_label_raygen(){
     size_t origin_ID = jj*launch_dim.y + ii; //global pixel index
 
     // Map sample to center of pixel
+    float half_HFOV_radians = atanf(0.5f/camera_viewplane_length);
+    float multiplier = tanf(half_HFOV_radians/FOV_aspect_ratio) / tanf(half_HFOV_radians);
     sp.y = (-0.5f + (ii+0.5f)/float(camera_resolution.x));
-    sp.z = (0.5f - (jj+0.5f)/float(camera_resolution.y))/FOV_aspect_ratio;
+    sp.z = (0.5f - (jj+0.5f)/float(camera_resolution.y))*multiplier;
     sp.x = camera_viewplane_length;
 
 

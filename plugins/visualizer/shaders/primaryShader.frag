@@ -16,6 +16,8 @@ uniform vec3 lightDirection;
 
 uniform int lightingModel;
 
+uniform float lightIntensity;
+
 uniform int Rbound;
 
 flat in int textureFlag;
@@ -49,7 +51,7 @@ void main(){
     
     for (int i=0;i<4;i++){
       if ( texture( shadowMap, (ShadowCoord.xy/ShadowCoord.w+poissonDisk[i]/140000.0) ).x  <  (ShadowCoord.z/ShadowCoord.w) ){
-	visibility-=0.4;
+	    visibility-=0.35;
       }
     } 
   }
@@ -82,7 +84,7 @@ void main(){
   }
 
   if( lightingModel>0 && coordinateFlag==1 ){ //Simplified Phong lighting model
-    color = vec4( 0.5*color.rgb + visibility*(0.5*dot(normal,ld)*color.rgb) , color.a );
+    color = vec4( lightIntensity*( 0.75*color.rgb + visibility*(0.75*dot(normal,ld)*color.rgb) ) , color.a );
   }
 
 }

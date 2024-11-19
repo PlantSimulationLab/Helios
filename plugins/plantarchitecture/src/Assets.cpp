@@ -164,9 +164,9 @@ uint AppleLeafPrototype( helios::Context* context_ptr, uint subdivisions, int co
 
     float leaf_aspect = 0.6; //ratio of leaf width to leaf length
 
-    float midrib_fold = 0.2; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+    float midrib_fold = 0.4; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float longitudinal_curvature = 0.1; //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = -0.3; //curvature factor along x-direction. (+curves upward, -curved downward)
 
     float lateral_curvature = 0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
 
@@ -334,23 +334,23 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
     }else{
         phytomer->setFloralBudState(BUD_DEAD);
     }
-    if( shoot_node_index<=1 && phytomer->rank == 0 ){
-        phytomer->setVegetativeBudState(BUD_ACTIVE);
-    }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    float leaf_scale = fmin(1.f, 0.6 + 0.4 * plant_age / 8.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
-    float inode_scale = fmin(1.f, 0.1 + 0.9 * plant_age / 15.f);
-    phytomer->scaleInternodeMaxLength(inode_scale);
+    if( phytomer->rank==0 ) {
+        float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 10.f);
+        phytomer->scaleInternodeMaxLength(inode_scale);
+    }
 
 }
 
 uint BindweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BindweedLeaf.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
+    std::cout << "Adding bindweed leaf prototype" << std::endl;
     return objID;
 }
 
@@ -386,9 +386,9 @@ uint CowpeaLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivisi
     if( compound_leaf_index==0 ){
         leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_tip_centered.png";
     }else if( compound_leaf_index<0 ){
-        leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_left.png";
+        leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_left_centered.png";
     }else{
-        leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_right.png";
+        leaf_texture = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_right_centered.png";
     }
 
     float leaf_aspect = 0.8; //ratio of leaf width to leaf length
@@ -450,12 +450,14 @@ void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     }
 
     //set leaf and internode scale based on position along the shoot
-    float leaf_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 15.f);
+    float leaf_scale = fmin(1.f, 0.6 + 0.4 * plant_age / 8.f);
     phytomer->scaleLeafPrototypeScale(leaf_scale);
 
     //set internode length based on position along the shoot
-    float inode_scale = fmin(1.f, 0.1 + 0.9 * plant_age / 15.f);
-    phytomer->scaleInternodeMaxLength(inode_scale);
+    if( phytomer->rank==0 ) {
+        float inode_scale = fmin(1.f, 0.2 + 0.8 * plant_age / 10.f);
+        phytomer->scaleInternodeMaxLength(inode_scale);
+    }
 
 }
 
@@ -666,6 +668,9 @@ void OlivePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
     if( phytomer->isdormant ){
         if( phytomer->shoot_index.x < phytomer->shoot_index.y-8  ){
             phytomer->setFloralBudState( BUD_DEAD );
+        }
+        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-1 ){
+            phytomer->setVegetativeBudState( BUD_DORMANT ); //first vegetative buds always break
         }
     }
 

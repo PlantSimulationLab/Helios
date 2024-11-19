@@ -1,7 +1,7 @@
 var searchData=
 [
   ['camera_5fresolution_0',['camera_resolution',['../struct_camera_properties.html#a2806b640deeab5fbcd9dda8ea240f345',1,'CameraProperties']]],
-  ['canopy_5fconfiguration_1',['canopy_configuration',['../struct_spherical_crowns_canopy_parameters.html#acb6042ba8355cae63a24a1b98ca3aa58',1,'SphericalCrownsCanopyParameters::canopy_configuration()'],['../struct_conical_crowns_canopy_parameters.html#a72eaaa43483eb64d79780418e726f749',1,'ConicalCrownsCanopyParameters::canopy_configuration()'],['../struct_white_spruce_canopy_parameters.html#aff224456a6befb2203c9f225ad6e4fe7',1,'WhiteSpruceCanopyParameters::canopy_configuration()']]],
+  ['canopy_5fconfiguration_1',['canopy_configuration',['../struct_spherical_crowns_canopy_parameters.html#acb6042ba8355cae63a24a1b98ca3aa58',1,'SphericalCrownsCanopyParameters::canopy_configuration'],['../struct_conical_crowns_canopy_parameters.html#a72eaaa43483eb64d79780418e726f749',1,'ConicalCrownsCanopyParameters::canopy_configuration'],['../struct_white_spruce_canopy_parameters.html#aff224456a6befb2203c9f225ad6e4fe7',1,'WhiteSpruceCanopyParameters::canopy_configuration']]],
   ['canopy_5fextent_2',['canopy_extent',['../struct_homogeneous_canopy_parameters.html#a68c488e6bd2f209af3a46ce8aca4bf60',1,'HomogeneousCanopyParameters']]],
   ['canopy_5fheight_3',['canopy_height',['../struct_homogeneous_canopy_parameters.html#a80df27cc13e2b7f113d52e405ddb2737',1,'HomogeneousCanopyParameters']]],
   ['canopy_5forigin_4',['canopy_origin',['../struct_base_canopy_parameters.html#a0b5eb48ff33aaab57a3ea0616bc8d5eb',1,'BaseCanopyParameters']]],
@@ -24,5 +24,5 @@ var searchData=
   ['cordon_5fspacing_21',['cordon_spacing',['../struct_split_grapevine_parameters.html#a6d65cd7d6a101ce083020c08f7237dcb',1,'SplitGrapevineParameters']]],
   ['cordon_5fspacing_5fspread_22',['cordon_spacing_spread',['../struct_split_grapevine_parameters.html#abe4c3510d79f5543ea86ec9d4c5baf81',1,'SplitGrapevineParameters']]],
   ['crown_5fheight_23',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
-  ['crown_5fradius_24',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius()'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius()'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius()']]]
+  ['crown_5fradius_24',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
 ];
