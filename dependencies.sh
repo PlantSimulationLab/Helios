@@ -201,6 +201,11 @@ export PATH=/usr/local/cuda/bin:$PATH
 
 # Fix OptiX drivers for WSL
 if [[ "$distro" == "WSL" ]]; then
+    # Automatically install Linux drivers version 470.256.02
+    DRIVER_URL="https://us.download.nvidia.com/XFree86/Linux-x86_64/470.256.02/NVIDIA-Linux-x86_64-470.256.02.run"
+    DRIVER_FILE="NVIDIA-Linux-x86_64-470.256.02.run"
+    wget -O $DRIVER_FILE $DRIVER_URL
+
     LINUX_DRIVER=$(find . -name "NVIDIA-Linux-x86_64-*.run" -print -quit)
     if [[ -n "$LINUX_DRIVER" ]]; then
         VERSION=$(echo "$LINUX_DRIVER" | sed -E 's/.*NVIDIA-Linux-x86_64-([0-9.]+)\.run/\1/')
