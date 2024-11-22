@@ -98,7 +98,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
         DEPENDENCIES_PATH+=("xquartz")
     fi
     if [[ "$MODE" == "all" || "$MODE" == "cuda" ]]; then
-        DEPENDENCIES_PATH+=("cuda")
+#        DEPENDENCIES_PATH+=("cuda")
+        echo "Host is macOS. CUDA cannot be installed."
     fi
     CHECK_EXISTS="brew list"
     FLAG=""
