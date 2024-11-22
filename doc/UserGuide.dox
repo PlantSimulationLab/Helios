@@ -225,7 +225,7 @@ $ git pull
 
   \subsubsection Automatically Installing Helios Dependencies
 
-  Running Helios requires several packages to be installed. To install all required packages for all plugins automatically, simply run the following source script with the argument "ALL" (or with no arguments): `source dependencies.sh`
+  Running Helios requires several packages to be installed. To install all required packages for all plugins automatically, simply run the following shell script with the argument "ALL" (or with no arguments): `source dependencies.sh`
 
   There are a few additional options for installing dependencies if it is not necessary to use all plugins.
 
