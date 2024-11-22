@@ -223,7 +223,7 @@ $ git pull
   4. Double-click TdrDelay and add 600 for the Value data and make it a Decimal (instead of Hexadecimal). Click OK. If you encounter the same "Display driver stopped responding and has recovered" error in the future, increase the value.
   5. Close the registry editor and restart the computer for the changes to take effect.
 
-  \subsubsection Automatically Installing Dependencies
+  \subsubsection Automatically Installing Helios Dependencies
 
   Running Helios requires several packages to be installed. To install all required packages for all plugins automatically, simply run the following source script with the argument "ALL" (or with no arguments): `source dependencies.sh`
 
@@ -241,7 +241,9 @@ $ git pull
 
   OptiX is normally packaged with Helios, such that you do not have to worry about installing it. However, if you are using Windows Subsystem for Linux (WSL), you will need to manually install OptiX since the version included with Helios does not have the required drivers for WSL. You can follow the instructions on this site to perform the installation: <a href="https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7">https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7</a>.
 
-  Alternatively, simply run the dependencies script, which will automatically install Linux drivers version 470.256.02 and configure the drivers accordingly: `source dependencies.sh`
+  Alternatively, simply run the dependencies script: `source dependencies.sh`
+
+  This will automatically install and configure the Linux drivers (version 470.256.02) to run OptiX.
 
   \section SetupLinux Set-up on Linux
 
