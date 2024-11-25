@@ -22,6 +22,7 @@
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include <GLFW/glfw3.h>
 #include "glm/gtx/transform.hpp"
 
 //! Function to create a texture map from a JPEG image
@@ -905,6 +906,8 @@ public:
   //! Close the graphics window
   void closeWindow();
 
+  void* getWindow();
+
 private:
 
     void openWindow();
@@ -1056,5 +1059,8 @@ private:
 
 int checkerrors();
 
+void mouseCallback( GLFWwindow* window, int button, int action, int mods );
+void cursorCallback( GLFWwindow* window, double x, double y);
+void scrollCallback( GLFWwindow* window, double xoffset, double yoffset );
 
 #endif

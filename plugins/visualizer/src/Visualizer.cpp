@@ -965,6 +965,8 @@ void Visualizer::clearGeometry() {
     contextPrimitiveIDs.clear();
     depth_buffer_data.clear();
     group_start.clear();
+    colorbar_min = 0;
+    colorbar_max = 0;
 }
 
 void Visualizer::closeWindow() {
@@ -3281,7 +3283,12 @@ void Visualizer::colorContextObjectsRandomly(){
 
 
 
-
+float dphi = 0.0;
+float dtheta = 0.0;
+float dx = 0.0;
+float dy = 0.0;
+float dz = 0.0;
+float dscroll = 0.0;
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
 
@@ -3373,6 +3380,9 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     std::vector<vec3> camera_output;
 
     glfwShowWindow( (GLFWwindow*) window);
+    glfwSetMouseButtonCallback( (GLFWwindow*) window, mouseCallback );
+    glfwSetCursorPosCallback( (GLFWwindow*) window, cursorCallback );
+    glfwSetScrollCallback( (GLFWwindow*) window, scrollCallback );
 
     do{
 
@@ -3414,6 +3424,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
         glfwPollEvents();
         getViewKeystrokes( camera_eye_location, camera_lookat_center );
+
 
         glfwSwapBuffers((GLFWwindow*)window);
 
@@ -3564,6 +3575,12 @@ void Visualizer::render( bool shadow ){
     }
 
 }
+
+void* Visualizer::getWindow()
+{
+    return window;
+}
+
 
 void Visualizer::plotUpdate() {
     plotUpdate( false );
@@ -4297,6 +4314,52 @@ void Shader::useShader() {
     glUseProgram(shaderID);
 }
 
+bool lbutton_down = false;
+bool mbutton_down = false;
+double startX, startY;
+double scrollX, scrollY;
+bool scroll = false;
+
+void mouseCallback( GLFWwindow *window, int button, int action, int mods ){
+    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE){
+    //     lbutton_down = false;
+    // }
+    // if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
+    //     lbutton_down = true;
+    // }
+    if (button == GLFW_MOUSE_BUTTON_LEFT){
+        if (GLFW_PRESS == action) {lbutton_down = true;}
+        else if (GLFW_RELEASE == action) {lbutton_down = false;}
+    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE){
+        if (GLFW_PRESS == action) {mbutton_down = true;}
+        else if (GLFW_RELEASE == action) {mbutton_down = false;}
+    }
+}
+
+void cursorCallback( GLFWwindow* window, double xpos, double ypos ){
+    if (lbutton_down){
+        dphi = (float) xpos - startX;
+        dtheta = (float) ypos - startY;
+        // std::cout << dphi << std::endl;
+        // std::cout << dtheta << std::endl;
+    } else {dphi = 0; dtheta = 0;}
+    if (mbutton_down){
+        dx = (float) xpos - startX;
+        dy = (float) ypos - startY;
+    } else {dx = 0; dy = 0;}
+    startX = xpos;
+    startY = ypos;
+}
+
+void scrollCallback( GLFWwindow* window, double xoffset, double yoffset ){
+    dscroll = (float) yoffset;
+    // std::cout << yoffset << std::endl;
+    scrollY = yoffset;
+    if (yoffset > 0.0 or yoffset < 0.0){
+        scroll = true;
+    } else {scroll = false;}
+}
+
 void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
 
@@ -4304,6 +4367,25 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     float radius = Spherical.radius;
     float theta = Spherical.elevation;
     float phi = Spherical.azimuth;
+
+    phi+=M_PI * (dphi/160.f);
+    if( dtheta > 0 && theta + M_PI/80.f < 0.49f*M_PI ){
+        theta+=M_PI * (dtheta/120.f);
+    } else if( dtheta < 0 && theta>-0.25*M_PI ){
+        theta+=M_PI * (dtheta/120.f);
+    }
+    if (mbutton_down){
+        center.x += 0.1 * dx * sin(phi);
+        center.y += 0.1 * dx * cos(phi);
+        // center.x += 0.1 * dx;
+        // center.y += 0.1 * dx;
+        center.z += 0.05 * dy;
+    }
+    if (scroll){
+        center.x += 0.1 * dscroll * sin(phi);
+        center.y += 0.1 * dscroll * cos(phi);
+    }
+    scroll = false;
 
     GLFWwindow* _window = (GLFWwindow*) window;
 
@@ -4331,7 +4413,6 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
         //----- Not Holding SPACEBAR -----//
     }else{
-
         //   Orbit left - LEFT ARROW KEY
         if (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){
             phi+=M_PI/40.f;
