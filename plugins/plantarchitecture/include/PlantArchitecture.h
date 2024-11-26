@@ -562,9 +562,11 @@ struct ShootParameters{
     // ---- Growth Parameters ---- //
 
     RandomParameter_float phyllochron; //days/phytomer
+    RandomParameter_float phyllochron_min; //days/phytomer
     uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
 
     RandomParameter_float elongation_rate; //length/day
+    RandomParameter_float elongation_max; //length/day
 
     // Probability that bud with this shoot type will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability;
@@ -862,6 +864,8 @@ struct Shoot {
 
     float sumShootLeafArea( uint start_node_index = 0 ) const;
 
+    float sumChildVolume( uint start_node_index = 0) const;
+
     uint current_node_number;
 
     helios::vec3 base_position;
@@ -875,8 +879,16 @@ struct Shoot {
     const uint rank;
     const uint parent_petiole_index;
 
-    float carbohydrate_pool_molC = 0.01;  // mol C
-    float old_shoot_volume = 0;
+    float carbohydrate_pool_molC = 0;  // mol C
+    float old_shoot_volume;
+
+    float phyllochron_increase = 2;
+    float phyllochron_recovery = phyllochron_increase * 1.5;
+
+    float elongation_decay = 0.5;
+    float elongation_recovery = elongation_decay /1.5 ;
+
+
 
     uint days_with_negative_carbon_balance = 0;
 
@@ -889,6 +901,8 @@ struct Shoot {
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
+    float phyllochron_min = 6;
+    float elongation_max = .25;
 
     float curvature_perturbation = 0;
     float yaw_perturbation = 0;
@@ -1073,6 +1087,8 @@ public:
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy, float max_leaf_lifespan = 1e6, bool is_evergreen= false);
 
     void disablePlantPhenology( uint plantID );
+
+    void accumulateHourlyLeafPhotosynthesis();
 
     //! Advance plant growth by a specified time interval for all plants
     /**
@@ -1424,12 +1440,12 @@ protected:
 
     void accumulateShootPhotosynthesis();
 
-    void accumulateHourlyLeafPhotosynthesis();
-
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortbuds();
+    void checkCarbonPool_abortBuds();
+    void checkCarbonPool_adjustPhyllochron();
+    void checkCarbonPool_transferCarbon();
 
     // --- Plant Library --- //
 

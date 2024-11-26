@@ -179,9 +179,11 @@ ShootParameters::ShootParameters( std::minstd_rand0 *generator ) {
     // ---- Growth Parameters ---- //
 
     phyllochron.initialize(1, generator);
+    phyllochron_min.initialize(1, generator);
     leaf_flush_count = 1;
 
     elongation_rate.initialize(0.2, generator);
+    elongation_max.initialize(0.2, generator);
     girth_area_factor.initialize(0, generator);
 
     vegetative_bud_break_time.initialize(5, generator);
@@ -771,6 +773,29 @@ float Shoot::sumShootLeafArea( uint start_node_index ) const{
     }
 
     return area;
+
+}
+
+
+float Shoot::sumChildVolume( uint start_node_index ) const{
+
+    if( start_node_index>=phytomers.size() ){
+        helios_runtime_error("ERROR (Shoot::sumChildVolume): Start node index out of range.");
+    }
+
+    float volume = 0;
+
+    for( uint p=start_node_index; p<phytomers.size(); p++ ){
+        //call recursively for child shoots
+        if( childIDs.find(p)!=childIDs.end() ){
+            for( int child_shoot_ID : childIDs.at(p) ) {
+                volume += plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
+            }
+        }
+
+    }
+
+    return volume;
 
 }
 
@@ -2771,13 +2796,16 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
             dt_max = remainder_time;
         }
 
+        // **** accumulate photosynthate **** //
+        accumulateShootPhotosynthesis();
+
         plant_instance.current_age += dt_max;
 
         if( plant_instance.current_age > plant_instance.dd_to_dormancy ){
             std::cout << "Going dormant" << std::endl;
             for (const auto& shoot : *shoot_tree) {
                 shoot->makeDormant();
-                shoot->carbohydrate_pool_molC = 100;
+                //shoot->carbohydrate_pool_molC = 100;
                 plant_instance.current_age = 0;
             }
             harvestPlant(plantID);
@@ -2805,7 +2833,7 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
             if (shoot->isdormant && plant_instance.current_age >= plant_instance.dd_to_dormancy_break) {
                 shoot->breakDormancy();
                 dormancy_broken_this_timestep = true;
-                shoot->carbohydrate_pool_molC = 1e6;
+                //shoot->carbohydrate_pool_molC = 1e6;
             }
 
             if (shoot->isdormant) { //dormant, don't do anything
@@ -3097,6 +3125,10 @@ void PlantArchitecture::advanceTime( uint plantID, float dt ) {
 
             // **** subtract maintenance carbon costs **** //
             subtractShootMaintenanceCarbon(dt_max);
+            subtractShootGrowthCarbon();
+            checkCarbonPool_adjustPhyllochron();
+            checkCarbonPool_abortBuds();
+            checkCarbonPool_transferCarbon();
 
             if( output_object_data.find("carbohydrate_concentration")!=output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID) ){
                 float shoot_volume = shoot->calculateShootInternodeVolume();
