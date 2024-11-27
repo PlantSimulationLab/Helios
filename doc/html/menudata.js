@@ -32,6 +32,7 @@ var menudata={children:[
 {text:"Tutorials",url:"_tutorials.html"}]},
 {text:"Plug-ins",url:"_plug_ins.html"},
 {text:"Related Pages",url:"pages.html"},
+{text:"Modules",url:"modules.html"},
 {text:"Data Structures",url:"annotated.html",children:[
 {text:"Data Structures",url:"annotated.html"},
 {text:"Data Structure Index",url:"classes.html"},
@@ -113,7 +114,7 @@ var menudata={children:[
 {text:"z",url:"functions_vars_z.html#index_z"}]},
 {text:"Enumerations",url:"functions_enum.html"},
 {text:"Enumerator",url:"functions_eval.html"},
-{text:"Related Symbols",url:"functions_rela.html"}]}]},
+{text:"Related Functions",url:"functions_rela.html"}]}]},
 {text:"Files",url:"files.html",children:[
 {text:"File List",url:"files.html"},
 {text:"Globals",url:"globals.html",children:[

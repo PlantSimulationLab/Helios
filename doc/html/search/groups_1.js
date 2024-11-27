@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['functions_0',['Utility functions',['../group__functions.html',1,'']]]
+  ['geometric_20primitives_0',['Geometric Primitives',['../group__primitives.html',1,'']]]
 ];

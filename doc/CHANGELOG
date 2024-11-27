@@ -1967,3 +1967,22 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Radiation*
 - Error corrected in the camera model related to the field of view and aspect ratio. Thanks to Peng Wei for this fix.
+
+[1.3.24] 2024-11-27
+
+* Added utilities/dependencies.sh script to automatically install all dependent libraries on Linux and MacOS. Credit to Sean Banks for creating this script.
+
+*Context*
+- Seemed to still have an issue with tube objects, where there was severe twisting.
+
+*Plant Architecture*
+- Numerous model improvements via parameter tuning and texture adjustments
+- Added rice, maize, and walnut models
+- Changed map structures that hold organ prototypes to use the prototype function pointer as the key rather than a string, which allows different prototypes along a single shoot.
+- Peduncles were not correctly lining up with their parent petioles.
+
+*Radiation*
+- Error corrected in radiation camera documentation example code.
+
+*Photosynthesis*
+- Updated code to include stomatal sidedness option (this was already described in the documentation, although it had not been implemented).

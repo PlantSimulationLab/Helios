@@ -1106,13 +1106,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 leaf_rotation_axis = cross(internode_axis, petiole_tip_axis );
 
         // Create unique leaf prototypes for each shoot type so we can simply copy them for each leaf
-        if( phytomer_parameters.leaf.unique_prototypes>0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(parent_shoot->shoot_type_label) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() ) {
-            plantarchitecture_ptr->unique_leaf_prototype_objIDs[parent_shoot->shoot_type_label].resize(phytomer_parameters.leaf.unique_prototypes);
+        if( phytomer_parameters.leaf.unique_prototypes>0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype_function) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() ) {
+            plantarchitecture_ptr->unique_leaf_prototype_objIDs[phytomer_parameters.leaf.prototype_function].resize(phytomer_parameters.leaf.unique_prototypes);
             for( int prototype = 0; prototype < phytomer_parameters.leaf.unique_prototypes; prototype++ ) {
                 for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                     float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                     uint objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr, phytomer_parameters.leaf.subdivisions, ind_from_tip);
-                    plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(parent_shoot->shoot_type_label).at(prototype).push_back(objID_leaf);
+                    plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype_function).at(prototype).push_back(objID_leaf);
                     std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData( context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule" );
                     context_ptr->setPrimitiveColor( petiolule_UUIDs, phytomer_parameters.petiole.color );
                     context_ptr->hideObject({objID_leaf});
@@ -1127,7 +1127,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             uint objID_leaf;
             if( phytomer_parameters.leaf.unique_prototypes>0 ) { //copy the existing prototype
                 int prototype = context_ptr->randu(0, phytomer_parameters.leaf.unique_prototypes - 1);
-                objID_leaf = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(parent_shoot->shoot_type_label).at(prototype).at(leaf));
+                objID_leaf = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype_function).at(prototype).at(leaf));
             }else{ //load a new prototype
                 objID_leaf = phytomer_parameters.leaf.prototype_function(context_ptr, phytomer_parameters.leaf.subdivisions, ind_from_tip);
             }
@@ -1258,7 +1258,8 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     vec3 parent_petiole_base_axis = getPetioleAxisVector(0.f, fbud.parent_index);
     float parent_petiole_azimuth = -std::atan2(parent_petiole_base_axis.y, parent_petiole_base_axis.x);
     float current_peduncle_azimuth = -std::atan2(peduncle_axis.y, peduncle_axis.x);
-    peduncle_axis = rotatePointAboutLine( peduncle_axis, nullorigin, internode_axis, (current_peduncle_azimuth-parent_petiole_azimuth) + fbud.base_rotation.yaw );
+    peduncle_axis = rotatePointAboutLine( peduncle_axis, nullorigin, internode_axis, (current_peduncle_azimuth-parent_petiole_azimuth)  );
+
 
     float theta_base = fabs(cart2sphere(peduncle_axis).zenith);
 
@@ -1290,29 +1291,29 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     std::string parent_shoot_type_label = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(parent_shoot_ID)->shoot_type_label;
     if( phytomer_parameters.inflorescence.unique_prototypes>0 ){
         //closed flowers
-        if( phytomer_parameters.inflorescence.flower_prototype_function!= nullptr && plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.find(parent_shoot_type_label) == plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.end() ) {
-            plantarchitecture_ptr->unique_closed_flower_prototype_objIDs[parent_shoot_type_label].resize(phytomer_parameters.inflorescence.unique_prototypes);
+        if( phytomer_parameters.inflorescence.flower_prototype_function!= nullptr && plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.find(phytomer_parameters.inflorescence.flower_prototype_function) == plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.end() ) {
+            plantarchitecture_ptr->unique_closed_flower_prototype_objIDs[phytomer_parameters.inflorescence.flower_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
             for( int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++ ) {
                 uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, false);
-                plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(parent_shoot_type_label).at(prototype) = objID_flower;
+                plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
                 context_ptr->hideObject({objID_flower});
             }
         }
         //open flowers
-        if( phytomer_parameters.inflorescence.flower_prototype_function!= nullptr && plantarchitecture_ptr->unique_open_flower_prototype_objIDs.find(parent_shoot_type_label) == plantarchitecture_ptr->unique_open_flower_prototype_objIDs.end() ) {
-            plantarchitecture_ptr->unique_open_flower_prototype_objIDs[parent_shoot_type_label].resize(phytomer_parameters.inflorescence.unique_prototypes);
+        if( phytomer_parameters.inflorescence.flower_prototype_function!= nullptr && plantarchitecture_ptr->unique_open_flower_prototype_objIDs.find(phytomer_parameters.inflorescence.flower_prototype_function) == plantarchitecture_ptr->unique_open_flower_prototype_objIDs.end() ) {
+            plantarchitecture_ptr->unique_open_flower_prototype_objIDs[phytomer_parameters.inflorescence.flower_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
             for( int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++ ) {
                 uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, true);
-                plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(parent_shoot_type_label).at(prototype) = objID_flower;
+                plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
                 context_ptr->hideObject({objID_flower});
             }
         }
         //fruit
-        if( phytomer_parameters.inflorescence.fruit_prototype_function!= nullptr && plantarchitecture_ptr->unique_fruit_prototype_objIDs.find(parent_shoot_type_label) == plantarchitecture_ptr->unique_fruit_prototype_objIDs.end() ) {
-            plantarchitecture_ptr->unique_fruit_prototype_objIDs[parent_shoot_type_label].resize(phytomer_parameters.inflorescence.unique_prototypes);
+        if( phytomer_parameters.inflorescence.fruit_prototype_function!= nullptr && plantarchitecture_ptr->unique_fruit_prototype_objIDs.find(phytomer_parameters.inflorescence.fruit_prototype_function) == plantarchitecture_ptr->unique_fruit_prototype_objIDs.end() ) {
+            plantarchitecture_ptr->unique_fruit_prototype_objIDs[phytomer_parameters.inflorescence.fruit_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
             for( int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++ ) {
                 uint objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1, false);
-                plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(parent_shoot_type_label).at(prototype) = objID_fruit;
+                plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(phytomer_parameters.inflorescence.fruit_prototype_function).at(prototype) = objID_fruit;
                 context_ptr->hideObject({objID_fruit});
             }
         }
@@ -1326,7 +1327,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         if(fbud.state == BUD_FRUITING ){
             if( phytomer_parameters.inflorescence.unique_prototypes>0 ) { //copy existing prototype
                 int prototype = context_ptr->randu(0, int(phytomer_parameters.inflorescence.unique_prototypes - 1));
-                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(parent_shoot_type_label).at(prototype));
+                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(phytomer_parameters.inflorescence.fruit_prototype_function).at(prototype));
             }else{ //load new prototype
                 objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1, fbud.time_counter);
             }
@@ -1338,7 +1339,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
                 flower_is_open = false;
                 if( phytomer_parameters.inflorescence.unique_prototypes>0 ) { //copy existing prototype
                     int prototype = context_ptr->randu(0, int(phytomer_parameters.inflorescence.unique_prototypes - 1));
-                    objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(parent_shoot_type_label).at(prototype));
+                    objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype));
                 }else{ //load new prototype
                     objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, flower_is_open);
                 }
@@ -1346,7 +1347,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
                 flower_is_open = true;
                 if( phytomer_parameters.inflorescence.unique_prototypes>0 ) { //copy existing prototype
                     int prototype = context_ptr->randu(0, int(phytomer_parameters.inflorescence.unique_prototypes - 1));
-                    objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(parent_shoot_type_label).at(prototype));
+                    objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype));
                 }else{ //load new prototype
                     objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, flower_is_open);
                 }
@@ -1469,9 +1470,10 @@ void Phytomer::setPetioleBase( const helios::vec3 &base_position ){
         for (auto &leaf_base: leaf_bases.at(petiole)) {
             leaf_base += shift;
         }
+    }
+    for( int petiole=0; petiole<floral_buds.size(); petiole++ ) {
         for ( auto &fbud : floral_buds.at(petiole) ) {
-            assert( !fbud.isterminal );
-            fbud.base_position = petiole_vertices.at(petiole).front();
+            fbud.base_position = petiole_vertices.front().front();
             context_ptr->translateObject( fbud.inflorescence_objIDs, shift);
             for( auto &base : fbud.inflorescence_bases ) {
                 base += shift;

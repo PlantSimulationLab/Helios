@@ -389,16 +389,23 @@ A number of plant models are available in the plant architecture library, which 
 | Plant Type/Species | Variety/Variation | Plant type string argument | Shoot types | Image at time = 0 | Image at flowering | Image at (reproductive) maturity |
 | ------| ------ | ------ | ------ | ------ | ------ | ------ |
 | Almond Tree (*Prunus dulcis*) | Nonpareil | "almond" | trunk, scaffold, proleptic, sylleptic | | | |
+| Apple Tree (*Malus pumila*) | Fuji | "apple" | trunk, proleptic | | | |
 | Bindweed (*Convolvulus arvensis*) | generic | "bindweed" | base, offshoots, children | | | |
+| Butter Lettuce (*Lactuca sativa*) | generic | "butterlettuce" | mainstem | | | |
 | Cheeseweed (*Malva neglecta*) | generic | "cheeseweed" | mainstem | | | |
 | Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate | | | |
 | Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate | | | |
 | Eastern Redbud (*Cercis canadensis*) | generic | "easternredbud" | eastern_redubud_trunk, eastern_redbud_shoot | | | |
+| Grapevine (*Vitis vinifera*) | VSP trellis | "grapevine_VSP" | grapevine_trunk, grapevine_cane, grapevine_shoot | | | |
+| Maize (*Zea mays*) | generic | "maize" | mainstem | | | |
+| Olive Tree (*Olea europaea*) | generic | "olive" | trunk, scaffold, proleptic | | | |
 | Puncturevine (*Tribulus terrestris*) | generic | "puncturevine" | base, offshoots, children | | | |
+| Rice (*Oryza sativa*) | generic | "rice" | mainstem | | | |
 | Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem | | | |
 | Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate | | | |
 | Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem | | | |
 | Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem | | | |
+| Wheat (*Triticum aestivum*) | generic | "wheat" | mainstem | | | |
 
 \subsection PlantArchBuild_default Loading a Plant with Default Parameters
 

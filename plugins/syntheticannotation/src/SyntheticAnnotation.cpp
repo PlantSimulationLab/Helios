@@ -317,7 +317,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
 
         vis_RGB.plotUpdate( true );
 
-        wait(5);
+        helios::wait(5);
 
         outfile.clear();
         outfile.str("");

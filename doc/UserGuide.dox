@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.23
+/*! \mainpage Helios Documentation v1.3.24
 
   <p> <br> </p>
 
@@ -175,6 +175,20 @@ $ git pull
 
   As Helios is simply C++ code, it can be used on any platform that supports C++ programming. If you prefer to use an interactive development environment (IDE), two great options are <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains (recommended) and <a href="https://code.visualstudio.com">VS Code</a>. These IDEs are available on Windows, Linux, and Mac, and make setting up Helios projects relatively easy. CLion is free for educational purposes, and is loaded with very nice features for C++ development such as direct display of Helios documentation. VS Code also works, but is a little more clunky. Building and compiling from the command-line and using any text editor such as Vim or Emacs also works just fine.
 
+  \subsubsection Automatically Installing Helios Dependencies
+
+  Running Helios requires several dependent packages to be installed, depending on the plug-ins you are using. The sections below detail manual installation of dependent packages for Windows, Linux, and MacOS.
+
+  For Linux and MacOS, there is also a script that can be used to install all required packages for all plugins automatically, simply run the following shell script 'utilities/dependencies.sh' with the argument "ALL" (or with no arguments) as follows: `source dependencies.sh`
+
+  There are a few additional options for installing dependencies if it is not necessary to use all plugins.
+
+  To install only the dependencies required to run Helios with no plugins (or plugins that require no packages), use the argument "BASE": `source dependencies.sh BASE`
+
+  To install only the dependencies required to run Helios with the visualizer plugin, use the argument "VIS": `source dependencies.sh VIS`
+
+  To install only the dependencies required to run Helios with CUDA (required for the Radiation, Energy Balance, LiDAR, Aerial LiDAR, and Voxel Intersection plugins), use the argument "CUDA": `source dependencies.sh CUDA`
+
   \section SetupPC Set-up on Windows PC
 
   \subsection SetupPCMSVC Install Microsoft Visual Studio C++ compiler tools
@@ -226,6 +240,10 @@ $ git pull
   \subsubsection OptiXWSL Manually installing OptiX if using Windows Subsystem for Linux (WSL)
 
   OptiX is normally packaged with Helios, such that you do not have to worry about installing it. However, if you are using Windows Subsystem for Linux (WSL), you will need to manually install OptiX since the version included with Helios does not have the required drivers for WSL. You can follow the instructions on this site to perform the installation: <a href="https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7">https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7</a>.
+
+  Alternatively, simply run the dependencies script found in the utilities/ folder: `source dependencies.sh`
+
+  This will automatically install and configure the Linux drivers (version 470.256.02) to run OptiX.
 
   \section SetupLinux Set-up on Linux
 

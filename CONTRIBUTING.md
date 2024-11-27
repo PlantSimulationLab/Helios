@@ -10,7 +10,13 @@ If you have comments or suggestions, please feel free to [open an issue](https:/
 
 Documentation source files for the Helios core can be found in `doc/UserGuide.dox`, and for each plugin in the corresponding plug-in directory sub-folder `doc/*.dox`. These files are written in [Doxygen](https://www.doxygen.nl/index.html) format. Additionally, documentation for data structures, functions, methods, etc. is written directly in the corresponding header file, and also uses Doxygen syntax.
 
-If you edit the documentation and want to view the changes, you can build the documentation HTML files. To do this, you need to have Doxygen installed on your system. Then, navigate to the Helios root directory and run:
+If you edit the documentation and want to view the changes, you can build the documentation HTML files. To do this, you need to have Doxygen, LaTeX and ghostscript installed on your system. For Linux:
+
+```bash
+sudo apt-get install doxygen texlive-full ghostscript
+```
+
+To build the documentation, navigate to the Helios root directory and run:
 
 ```bash
 doxygen doc/Doxyfile

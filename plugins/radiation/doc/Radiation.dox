@@ -829,10 +829,12 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
     radiationmodel.updateGeometry();
 
+    float camera_height = 2;
     CameraProperties properties; //default camera properties
-    properties.focal_plane_distance = 1.25;
+    properties.focal_plane_distance = camera_height-0.75;
+    properties.HFOV = std::atan(1.5f/camera_height)*180.f/M_PI*2.f; //exactly frame the ground
 
-    vec3 camera_position(0,0,2);
+    vec3 camera_position(0,0,camera_height);
     vec3 camera_lookat(0,0,0);
     uint antialiasing_samples = 100;
 
@@ -851,7 +853,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage" );
 
     // writing image labels based on primitive data 'bunny'
-    radiationmodel.writePrimitiveDataLabelMap( "visible", "labels", "bunny" );
+    radiationmodel.writePrimitiveDataLabelMap( "visible", "bunny", "bunny" );
 
     return 0;
  }

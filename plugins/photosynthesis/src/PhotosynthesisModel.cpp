@@ -410,6 +410,21 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             gM = gM_default;
         }
 
+        //Number of sides
+        uint Nsides = 2; //default is 2
+        if( context->doesPrimitiveDataExist(UUID,"twosided_flag") && context->getPrimitiveDataType(UUID,"twosided_flag")==HELIOS_TYPE_UINT ){
+            uint flag;
+            context->getPrimitiveData(UUID,"twosided_flag",flag);
+            if( flag==0 ){
+                Nsides=1;
+            }
+        }
+
+        float stomatal_sidedness = 0.f; //default all stomata on one side (hypostomatous)
+        if( Nsides==2 && context->doesPrimitiveDataExist(UUID,"stomatal_sidedness") && context->getPrimitiveDataType(UUID,"stomatal_sidedness")==HELIOS_TYPE_FLOAT ){
+            context->getPrimitiveData(UUID,"stomatal_sidedness",stomatal_sidedness);
+        }
+
         float gH;
         if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") &&
             context->getPrimitiveDataType(UUID, "boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
@@ -428,7 +443,11 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         //combine stomatal (gM) and boundary-layer (gH) conductances
-        gM = 1.08f * gH * gM / (1.08f * gH + gM);
+        if( gH==0 && gM==0 ){//if somehow both go to zero, can get NaN
+            gM = 0;
+        }else {
+            gM = 1.08f * gH * gM * (stomatal_sidedness / (1.08f * gH + gM * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gM * (1.f - stomatal_sidedness)));
+        }
 
         float A, Ci, Gamma;
         int limitation_state, TPU_flag = 0;

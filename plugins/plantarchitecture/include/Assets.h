@@ -62,6 +62,11 @@ uint GrapevineFruitPrototype( helios::Context* context_ptr, uint subdivisions, f
 void GrapevinePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 //void GrapevinePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
 
+uint MaizeLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+uint MaizeTasselPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
+uint MaizeEarPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
+void MaizePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+
 uint OliveLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
 uint OliveFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
 uint OliveFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
@@ -83,8 +88,12 @@ uint RedbudFruitPrototype( helios::Context* context_ptr, uint subdivisions, floa
 void RedbudPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 void RedbudPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
 
-uint RomaineLettuceLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
-void RomaineLettucePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+uint RiceLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+uint RiceSpikePrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
+void RicePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+
+uint ButterLettuceLeafPrototype(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 
 uint SorghumLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
 uint SorghumPaniclePrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
@@ -107,6 +116,12 @@ uint TomatoLeafPrototype( helios::Context* context_ptr, uint subdivisions, int c
 uint TomatoFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
 uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+
+uint WalnutLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+uint WalnutFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );
+uint WalnutFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
+void WalnutPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+void WalnutPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
 
 uint WheatLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
 uint WheatSpikePrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set );

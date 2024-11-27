@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['helios_0',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
-  ['helios_20documentation_20v1_203_2023_1',['Helios Documentation v1.3.23',['../index.html',1,'']]],
-  ['helios_20vector_20types_20tutorial_2',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],
-  ['homogeneous_20canopy_3',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]]
+  ['user_2fapi_20guide_0',['User/API Guide',['../_a_p_i.html',1,'']]],
+  ['using_20the_20clion_20ide_20with_20helios_1',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]]
 ];

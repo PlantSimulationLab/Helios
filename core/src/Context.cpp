@@ -3630,16 +3630,17 @@ void Tube::appendTubeSegment( const helios::vec3 &node_position, float node_radi
             if (rotation_axis.magnitude() > 1e-6) {
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
-            } else {
-                // Handle the case of nearly parallel vectors
-                // Ensure previous_radial_dir remains orthogonal to axial_vector
-                previous_radial_dir = cross(axial_vector, previous_radial_dir);
-                if (previous_radial_dir.magnitude() < 1e-6) {
-                    // If still degenerate, choose another orthogonal direction
-                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
-                }
-                previous_radial_dir.normalize();
             }
+//            else {
+//                // Handle the case of nearly parallel vectors
+//                // Ensure previous_radial_dir remains orthogonal to axial_vector
+//                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+//                if (previous_radial_dir.magnitude() < 1e-6) {
+//                    // If still degenerate, choose another orthogonal direction
+//                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+//                }
+//                previous_radial_dir.normalize();
+//            }
         }
 
         previous_axial_vector = axial_vector;
@@ -3750,16 +3751,17 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             if (rotation_axis.magnitude() > 1e-6) {
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
-            } else {
-                // Handle the case of nearly parallel vectors
-                // Ensure previous_radial_dir remains orthogonal to axial_vector
-                previous_radial_dir = cross(axial_vector, previous_radial_dir);
-                if (previous_radial_dir.magnitude() < 1e-6) {
-                    // If still degenerate, choose another orthogonal direction
-                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
-                }
-                previous_radial_dir.normalize();
             }
+//            else {
+//                // Handle the case of nearly parallel vectors
+//                // Ensure previous_radial_dir remains orthogonal to axial_vector
+//                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+//                if (previous_radial_dir.magnitude() < 1e-6) {
+//                    // If still degenerate, choose another orthogonal direction
+//                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+//                }
+//                previous_radial_dir.normalize();
+//            }
         }
 
         previous_axial_vector = axial_vector;
@@ -4791,16 +4793,17 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             if (rotation_axis.magnitude() > 1e-6) {
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
-            } else {
-                // Handle the case of nearly parallel vectors
-                // Ensure previous_radial_dir remains orthogonal to axial_vector
-                previous_radial_dir = cross(axial_vector, previous_radial_dir);
-                if (previous_radial_dir.magnitude() < 1e-6) {
-                    // If still degenerate, choose another orthogonal direction
-                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
-                }
-                previous_radial_dir.normalize();
             }
+//            else {
+//                // Handle the case of nearly parallel vectors
+//                // Ensure previous_radial_dir remains orthogonal to axial_vector
+//                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+//                if (previous_radial_dir.magnitude() < 1e-6) {
+//                    // If still degenerate, choose another orthogonal direction
+//                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+//                }
+//                previous_radial_dir.normalize();
+//            }
         }
 
         previous_axial_vector = axial_vector;
@@ -4921,16 +4924,17 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             if (rotation_axis.magnitude() > 1e-6) {
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
-            } else {
-                // Handle the case of nearly parallel vectors
-                // Ensure previous_radial_dir remains orthogonal to axial_vector
-                previous_radial_dir = cross(axial_vector, previous_radial_dir);
-                if (previous_radial_dir.magnitude() < 1e-6) {
-                    // If still degenerate, choose another orthogonal direction
-                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
-                }
-                previous_radial_dir.normalize();
             }
+//            else {
+//                // Handle the case of nearly parallel vectors
+//                // Ensure previous_radial_dir remains orthogonal to axial_vector
+//                previous_radial_dir = cross(axial_vector, previous_radial_dir);
+//                if (previous_radial_dir.magnitude() < 1e-6) {
+//                    // If still degenerate, choose another orthogonal direction
+//                    previous_radial_dir = cross(axial_vector, vec3(1.0f, 0.0f, 0.0f));
+//                }
+//                previous_radial_dir.normalize();
+//            }
         }
 
         previous_axial_vector = axial_vector;

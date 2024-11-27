@@ -2829,7 +2829,7 @@ void Visualizer::buildContextGeometry_private() {
         colorbar_min = INFINITY;
         colorbar_max = -INFINITY;
 
-        for(std::map<std::string,std::vector<uint> >::iterator iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
+        for(auto iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
 
             std::vector<uint> UUIDs = iter->second;
 
@@ -2838,7 +2838,7 @@ void Visualizer::buildContextGeometry_private() {
                 uint UUID = UUIDs.at(u);
 
                 float colorValue=-9999;
-                if( colorPrimitivesByData.size()!=0 ){
+                if( !colorPrimitivesByData.empty() ){
                     if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
                         if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
                             HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );
@@ -2863,7 +2863,7 @@ void Visualizer::buildContextGeometry_private() {
                             colorValue = 0;
                         }
                     }
-                }else if( colorPrimitivesByObjectData.size()!=0 ){
+                }else if( !colorPrimitivesByObjectData.empty() ){
                     if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
                         uint ObjID = context->getPrimitiveParentObjectID(UUID);
                         if( ObjID==0 ){
@@ -2922,7 +2922,7 @@ void Visualizer::buildContextGeometry_private() {
 
     //add primitives
 
-    for(std::map<std::string,std::vector<uint> >::iterator iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
+    for(auto iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
 
         std::vector<uint> UUIDs = iter->second;
 
@@ -2942,7 +2942,7 @@ void Visualizer::buildContextGeometry_private() {
 
             RGBAcolor color;
             float colorValue;
-            if( colorPrimitivesByData.size()!=0 ){
+            if( !colorPrimitivesByData.empty() ){
                 if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()  ){
                     if( context->doesPrimitiveDataExist( UUID, colorPrimitivesByData.c_str() ) ){
                         HeliosDataType type = context->getPrimitiveDataType( UUID, colorPrimitivesByData.c_str() );

@@ -1381,15 +1381,15 @@ protected:
 
     std::map<std::string,ShootParameters> shoot_types;
 
-    // Key is the shoot string label; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
-    std::map<std::string,std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
+    // Key is the prototype function pointer; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
+    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
 
-    // Key is the shoot string label; value index is the unique flower prototype
-    std::map<std::string,std::vector<uint> > unique_open_flower_prototype_objIDs;
-    // Key is the shoot string label; value index is the unique flower prototype
-    std::map<std::string,std::vector<uint> > unique_closed_flower_prototype_objIDs;
-    // Key is the shoot string label; value index is the unique fruit prototype
-    std::map<std::string,std::vector<uint> > unique_fruit_prototype_objIDs;
+    // Key is the prototype function pointer; value index is the unique flower prototype
+    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_open_flower_prototype_objIDs;
+    // Key is the prototype function pointer; value index is the unique flower prototype
+    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_closed_flower_prototype_objIDs;
+    // Key is the prototype function pointer; value index is the unique fruit prototype
+    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set),std::vector<uint> > unique_fruit_prototype_objIDs;
 
     bool build_context_geometry_internode = true;
     bool build_context_geometry_petiole = true;
@@ -1465,6 +1465,10 @@ protected:
 
     uint buildGrapevineVSP( const helios::vec3 &base_position );
 
+    void initializeMaizeShoots();
+
+    uint buildMaizePlant( const helios::vec3 &base_position );
+
     void initializeOliveTreeShoots();
 
     uint buildOliveTree( const helios::vec3 &base_position );
@@ -1481,9 +1485,13 @@ protected:
 
     uint buildEasternRedbudPlant( const helios::vec3 &base_position );
 
-    void initializeRomaineLettuceShoots();
+    void initializeRiceShoots();
 
-    uint buildRomaineLettucePlant( const helios::vec3 &base_position );
+    uint buildRicePlant( const helios::vec3 &base_position );
+
+    void initializeButterLettuceShoots();
+
+    uint buildButterLettucePlant(const helios::vec3 &base_position );
 
     void initializeSoybeanShoots();
 
@@ -1504,6 +1512,10 @@ protected:
     void initializeTomatoShoots();
 
     uint buildTomatoPlant( const helios::vec3 &base_position );
+
+    void initializeWalnutTreeShoots();
+
+    uint buildWalnutTree( const helios::vec3 &base_position );
 
     void initializeWheatShoots();
 

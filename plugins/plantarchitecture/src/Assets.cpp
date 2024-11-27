@@ -499,11 +499,11 @@ bool spheres_overlap(const helios::vec3& center1, float radius1, const helios::v
 
 uint GrapevineFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
 
-    int num_grapes = 75;
-    float height = 7.0f;        // Height of the cluster
-    float base_radius = 2.5f;    // Base radius of the cluster
+    int num_grapes = 60;
+    float height = 6.0f;        // Height of the cluster
+    float base_radius = 2.f;    // Base radius of the cluster
     float taper_factor = 0.6f;   // Taper factor (higher means more taper)
-    float grape_radius = 0.35f;   // Fixed radius for each grape
+    float grape_radius = 0.25f;   // Fixed radius for each grape
 
     std::vector<std::pair<helios::vec3, float>> grapes;
     float z_step = height / num_grapes;
@@ -567,7 +567,8 @@ uint GrapevineFruitPrototype( helios::Context* context_ptr, uint subdivisions, f
 
     std::vector<uint> UUIDs;
     for (const auto& grape : grapes) {
-        std::vector<uint> UUIDs_tmp = context_ptr->addSphere( 10, grape.first, grape.second, "../../../plugins/plantarchitecture/assets/textures/GrapeBerry.jpg" );
+//        std::vector<uint> UUIDs_tmp = context_ptr->addSphere( 10, grape.first, grape.second, "../../../plugins/plantarchitecture/assets/textures/GrapeBerry.jpg" );
+        std::vector<uint> UUIDs_tmp = context_ptr->addSphere( 10, grape.first, grape.second, make_RGBcolor(0.053,0.076,0.098) );
         UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());
     }
 
@@ -618,6 +619,72 @@ uint PuncturevineLeafPrototype( helios::Context* context_ptr, uint subdivisions,
     float lateral_curvature = 0.4; //curvature factor along y-direction. (+curves upward, -curved downward)
 
     return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, false);
+
+}
+
+uint MaizeLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+
+    float leaf_aspect = 0.2; //ratio of leaf width to leaf length
+
+    float midrib_fold_fraction = 0.3;
+
+    float longitudinal_curvature = context_ptr->randu(-1.2f,-0.8f);
+    float lateral_curvature = -0.3;
+
+    float petiole_roll = 0.04f;
+
+    //parameters for leaf wave/wrinkles
+    float wave_period = 0.1f; //period factor of leaf waves
+    float wave_amplitude = 0.1f; // amplitude of leaf waves
+
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
+
+}
+
+uint MaizeTasselPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/MaizeTassel.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    return context_ptr->addPolymeshObject( UUIDs );
+
+}
+
+uint MaizeEarPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/MaizeEar.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    return context_ptr->addPolymeshObject( UUIDs );
+
+}
+
+void MaizePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    //set leaf scale based on position along the shoot
+    float scale;
+    if( shoot_node_index<=5 ) {
+        scale = fmin(1.f, 0.7 + 0.3 * float(shoot_node_index) / 5.f);
+        phytomer->scaleInternodeMaxLength(scale);
+    }else if( shoot_node_index>=phytomer->shoot_index.z-5 ){
+        scale = fmin(1.f, 0.65 + 0.35 * float(phytomer->shoot_index.z-shoot_node_index) / 3.f);
+    }
+
+    phytomer->scaleLeafPrototypeScale(scale);
+
+    if( shoot_node_index>8 && shoot_node_index<12 ){
+        phytomer->phytomer_parameters.inflorescence.flowers_per_peduncle = 1;
+        phytomer->phytomer_parameters.inflorescence.fruit_prototype_function = MaizeEarPrototype;
+        phytomer->phytomer_parameters.inflorescence.fruit_prototype_scale = 0.2;
+        phytomer->phytomer_parameters.peduncle.length = 0.05f;
+        phytomer->phytomer_parameters.peduncle.radius = 0.01;
+        phytomer->phytomer_parameters.peduncle.pitch = 5;
+        phytomer->setFloralBudState( BUD_ACTIVE );
+    }else{
+        phytomer->phytomer_parameters.inflorescence.fruit_prototype_function = MaizeTasselPrototype;
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+//    phytomer->setFloralBudState( BUD_DEAD );
+
 
 }
 
@@ -790,7 +857,45 @@ void RedbudPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
 
 }
 
-uint RomaineLettuceLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint RiceLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+
+    float leaf_aspect = 0.06; //ratio of leaf width to leaf length
+
+    float midrib_fold_fraction = 0.3;
+
+    float longitudinal_curvature = context_ptr->randu(-0.2f,0.f);
+    float lateral_curvature = -0.3;
+
+    float petiole_roll = 0.0f;
+
+    //parameters for leaf wave/wrinkles
+    float wave_period = 0.1f; //period factor of leaf waves
+    float wave_amplitude = 0.05f; // amplitude of leaf waves
+
+    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold_fraction, longitudinal_curvature, lateral_curvature, petiole_roll, wave_period, wave_amplitude, false);
+
+}
+
+uint RiceSpikePrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/RiceGrain.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void RicePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    //set leaf scale based on position along the shoot
+    float scale = fmin(1.f, 0.7 + 0.3*float(shoot_node_index)/5.f);
+    phytomer->scaleLeafPrototypeScale(scale);
+
+    //set internode length based on position along the shoot
+    phytomer->scaleInternodeMaxLength(scale);
+
+}
+
+uint ButterLettuceLeafPrototype(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
 
     std::string leaf_texture = "plugins/plantarchitecture/assets/textures/RomaineLettuceLeaf.png";
 
@@ -816,7 +921,7 @@ uint RomaineLettuceLeafPrototype( helios::Context* context_ptr, uint subdivision
 
 }
 
-void RomaineLettucePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
     float fact = float(shoot_max_nodes-shoot_node_index)/float(shoot_max_nodes);
 
@@ -966,9 +1071,9 @@ uint SoybeanLeafPrototype_trifoliate(helios::Context* context_ptr, uint subdivis
 
     float midrib_fold = 0.1; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
 
-    float longitudinal_curvature = context_ptr->randu(-0.2f,0.f); //curvature factor along x-direction. (+curves upward, -curved downward)
+    float longitudinal_curvature = context_ptr->randu(0.1,0.2f); //curvature factor along x-direction. (+curves upward, -curved downward)
 
-    float lateral_curvature = -0.25; //curvature factor along y-direction. (+curves upward, -curved downward)
+    float lateral_curvature = 0.45; //curvature factor along y-direction. (+curves upward, -curved downward)
 
    return buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, 0, 0, true);
 
@@ -1021,8 +1126,8 @@ uint StrawberryLeafPrototype( helios::Context* context_ptr, uint subdivisions, i
 
     float midrib_fold_fraction = 0.2;
 
-    float longitudinal_curvature = -0.01;
-    float lateral_curvature = -0.2;
+    float longitudinal_curvature = 0.15;
+    float lateral_curvature = 0.4;
 
     //parameters for leaf wave/wrinkles
     float wave_period = 0.3f; //period factor of leaf waves
@@ -1117,6 +1222,59 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     //set internode length based on position along the shoot
     float inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
+
+}
+
+uint WalnutLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+
+    std::string leaf_texture = "plugins/plantarchitecture/assets/textures/WalnutLeaf.png";
+
+    float leaf_aspect = 0.5; //ratio of leaf width to leaf length
+
+    float midrib_fold = 0.15; //fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)
+
+    float longitudinal_curvature = -0.2; //curvature factor along x-direction. (+curves upward, -curved downward)
+
+    float lateral_curvature = 0.1; //curvature factor along y-direction. (+curves upward, -curved downward)
+
+    float wave_period = context_ptr->randu( 0.08f, 0.15f); //period factor of leaf waves
+    float wave_amplitude = context_ptr->randu(0.02f,0.04f); // amplitude of leaf waves
+
+    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, longitudinal_curvature, lateral_curvature, 0, wave_period, wave_amplitude, false);
+
+    return objID;
+
+}
+
+uint WalnutFruitPrototype( helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondHull_lowres.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+uint WalnutFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+    uint objID = context_ptr->addPolymeshObject( UUIDs );
+    return objID;
+}
+
+void WalnutPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ) {
+
+    //blind nodes
+    if( shoot_node_index<4 ){
+        phytomer->setVegetativeBudState( BUD_DEAD );
+        phytomer->setFloralBudState( BUD_DEAD );
+    }
+
+}
+
+void WalnutPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    if( phytomer->isdormant ){
+        if( phytomer->shoot_index.x >= phytomer->shoot_index.y-3 && phytomer->internode_length_max > 0.01 ){
+            phytomer->setVegetativeBudState( BUD_DORMANT ); //first two vegetative buds always break
+        }
+    }
 
 }
 
