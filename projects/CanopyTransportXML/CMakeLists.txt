@@ -19,6 +19,7 @@ set(SOURCE_FILES
     BuildGeometry.cpp
     InitializeRadiation.cpp
     InitializeEnergyBalance.cpp
+#    tinyfiledialogs.c
     ${BASE_DIRECTORY}/imgui/imgui.cpp
     ${BASE_DIRECTORY}/imgui/imgui_draw.cpp
     ${BASE_DIRECTORY}/imgui/imgui_widgets.cpp

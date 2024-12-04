@@ -662,6 +662,10 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     assert(checkerrors());
 
+    glfwSetMouseButtonCallback( (GLFWwindow*) window, mouseCallback );
+    glfwSetCursorPosCallback( (GLFWwindow*) window, cursorCallback );
+    glfwSetScrollCallback( (GLFWwindow*) window, scrollCallback );
+
     if( message_flag ){
         std::cout << "done." << std::endl;
     }
@@ -3380,9 +3384,9 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     std::vector<vec3> camera_output;
 
     glfwShowWindow( (GLFWwindow*) window);
-    glfwSetMouseButtonCallback( (GLFWwindow*) window, mouseCallback );
-    glfwSetCursorPosCallback( (GLFWwindow*) window, cursorCallback );
-    glfwSetScrollCallback( (GLFWwindow*) window, scrollCallback );
+    // glfwSetMouseButtonCallback( (GLFWwindow*) window, mouseCallback );
+    // glfwSetCursorPosCallback( (GLFWwindow*) window, cursorCallback );
+    // glfwSetScrollCallback( (GLFWwindow*) window, scrollCallback );
 
     do{
 
@@ -4494,4 +4498,44 @@ int checkerrors() {
         return 1;
     }
 
+}
+
+std::vector<uint> Visualizer::getFrameBufferSize(){
+    std::vector<uint> frameBufferSize = {Wframebuffer, Hframebuffer};
+    return frameBufferSize;
+}
+
+void Visualizer::setFrameBufferSize(int width, int height){
+    Wframebuffer = width;
+    Hframebuffer = height;
+}
+
+helios::RGBcolor Visualizer::getBackgroundColor(){
+    return backgroundColor;
+}
+
+Shader Visualizer::getPrimaryShader(){
+    return primaryShader;
+}
+
+std::vector<helios::vec3> Visualizer::getCameraPosition(){
+    std::vector<helios::vec3> cameraPosition = {camera_lookat_center, camera_eye_location};
+    return cameraPosition;
+}
+
+glm::mat4 Visualizer::getPerspectiveTransformationMatrix(){
+    return perspectiveTransformationMatrix;
+}
+
+std::vector<Visualizer::LightingModel> Visualizer::getPrimaryLightingModel(){
+    return primaryLightingModel;
+}
+
+uint Visualizer::getDepthTexture(){
+    return depthTexture;
+}
+
+void Visualizer::clearColor()
+{
+    colorPrimitivesByData = "";
 }

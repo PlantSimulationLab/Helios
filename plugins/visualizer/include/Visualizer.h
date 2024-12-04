@@ -908,13 +908,35 @@ public:
 
   void* getWindow();
 
+  std::vector<uint> getFrameBufferSize();
+
+  void setFrameBufferSize(int width, int height);
+
+  helios::RGBcolor getBackgroundColor();
+
+  Shader getPrimaryShader();
+
+  std::vector<helios::vec3> getCameraPosition();
+
+  glm::mat4 getPerspectiveTransformationMatrix();
+
+  std::vector<LightingModel> getPrimaryLightingModel();
+
+  uint getDepthTexture();
+
+  void getViewKeystrokes( helios::vec3& eye, helios::vec3& center );
+
+  void updatePerspectiveTransformation(const helios::vec3 &center, const helios::vec3 &eye );
+
+  void render( bool shadow );
+
+  void clearColor();
+
 private:
 
     void openWindow();
 
   void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations );
-
-  void render( bool shadow );
 
   void setupPlot();
   
@@ -928,8 +950,6 @@ private:
   std::vector<float> depth_buffer_data;
 
   std::map<uint,helios::int2> group_start;
-
-  void getViewKeystrokes( helios::vec3& eye, helios::vec3& center );
 
   //! Add a Colorbar given its center position
   void addColorbarByCenter(const char* title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap );
@@ -1006,8 +1026,6 @@ private:
   uint positionBuffer, colorBuffer, normalBuffer, uvBuffer, textureFlagBuffer, coordinateFlagBuffer;
   std::map<std::string,std::vector<float> > positionData, colorData, normalData, uvData;
   std::map<std::string,std::vector<int> > coordinateFlagData, textureFlagData, textureIDData;
-
-  void updatePerspectiveTransformation(const helios::vec3 &center, const helios::vec3 &eye );
 
   glm::mat4 perspectiveTransformationMatrix;
 
