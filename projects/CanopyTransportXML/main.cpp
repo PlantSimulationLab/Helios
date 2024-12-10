@@ -16,6 +16,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "misc/cpp/imgui_stdlib.h"
 #include "GLFW/glfw3.h"
 
 #include <chrono>
@@ -25,21 +26,35 @@
 using namespace helios;
 
 void key_callback(GLFWwindow*, int, int, int, int);
+std::map<std::string, int> get_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
 void get_xml_value(const std::string&, const std::string&, int&);
 void get_xml_value(const std::string&, const std::string&, float&);
 void get_xml_value(const std::string&, const std::string&, std::string&);
 void get_xml_value(const std::string&, const std::string&, vec2&);
 void get_xml_value(const std::string&, const std::string&, vec3&);
 void get_xml_value(const std::string&, const std::string&, int2&);
+void get_xml_values(const std::string&, const std::string&, std::vector<vec2>&);
+void get_xml_values(const std::string&, const std::string&, std::vector<vec3>&);
+void get_xml_values(const std::string&, const std::string&, std::vector<int2>&);
+void get_xml_values(const std::string&, const std::string&, std::vector<std::string>&);
+void get_xml_values(const std::string&, const std::string&, std::vector<float>&);
 std::string vec_to_string(const vec2&);
 std::string vec_to_string(const vec3&);
 std::string vec_to_string(const int2&);
+std::map<std::string, int> set_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
 void set_xml_value(const std::string&, const std::string&, int&);
 void set_xml_value(const std::string&, const std::string&, float&);
 void set_xml_value(const std::string&, const std::string&, std::string&);
 void set_xml_value(const std::string&, const std::string&, vec2&);
 void set_xml_value(const std::string&, const std::string&, vec3&);
 void set_xml_value(const std::string&, const std::string&, int2&);
+void set_xml_values(const std::string&, const std::string&, std::vector<vec2>&);
+void set_xml_values(const std::string&, const std::string&, std::vector<vec3>&);
+void set_xml_values(const std::string&, const std::string&, std::vector<int2>&);
+void set_xml_values(const std::string&, const std::string&, int2&);
+void set_xml_values(const std::string&, const std::string&, std::vector<std::string>&);
+void set_xml_values(const std::string&, const std::string&, std::vector<int>&);
+void set_xml_values(const std::string&, const std::string&, std::vector<float>&);
 void recalculate_values(Context&, float&, float&, float&);
 // void OpenFileDialog();
 
@@ -54,6 +69,9 @@ std::string xml_input_file = "../inputs/inputs_2.xml";
 int main(){
 
     xml_input_file = "../inputs/inputs_2.xml"; //\todo Will eventually make this passable from a command-line argument
+
+    // std::vector<std::string> labels;
+    // get_node_labels("label", "canopy_block", labels);
 
     Context context;
 
@@ -206,18 +224,26 @@ int main(){
     get_xml_value("ground_resolution", "helios", ground_resolution);
     get_xml_value("ground_texture_file", "helios", ground_texture_file);
     // CANOPY BLOCK
-    vec3 canopy_origin(0,0,0);
-    int2 plant_count(1,1);
-    vec2 plant_spacing(0.5,0.5);
-    std::string plant_library_name = "cowpea";
-    float plant_age = 0;
-    float ground_clipping_height = 0;
+    std::vector<std::string> labels;
+    vec3 canopy_origin(0,0,0); std::vector<vec3> canopy_origins;
+    int2 plant_count(1,1); std::vector<int2> plant_counts;
+    vec2 plant_spacing(0.5,0.5); std::vector<vec2> plant_spacings;
+    std::string plant_library_name = "cowpea"; std::vector<std::string> plant_library_names;
+    float plant_age = 0; std::vector<float> plant_ages;
+    float ground_clipping_height = 0; std::vector<float> ground_clipping_heights;
+    std::map<std::string, int> canopy_labels = get_node_labels("label", "canopy_block", labels);
     get_xml_value("canopy_origin", "canopy_block", canopy_origin);
     get_xml_value("plant_count", "canopy_block", plant_count);
     get_xml_value("plant_spacing", "canopy_block", plant_spacing);
     get_xml_value("plant_library_name", "canopy_block", plant_library_name);
     get_xml_value("plant_age", "canopy_block", plant_age);
     get_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
+    get_xml_values("canopy_origin", "canopy_block", canopy_origins);
+    get_xml_values("plant_count", "canopy_block", plant_counts);
+    get_xml_values("plant_spacing", "canopy_block", plant_spacings);
+    get_xml_values("plant_library_name", "canopy_block", plant_library_names);
+    get_xml_values("plant_age", "canopy_block", plant_ages);
+    get_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
     // RADIATION BLOCK
     int direct_ray_count = 100;
     int diffuse_ray_count = 1000;
@@ -382,7 +408,40 @@ int main(){
             if (ImGui::BeginMenu("File"))
             {
                 if (ImGui::MenuItem("Open..", "Ctrl+O")) { /* Do stuff */ }
-                if (ImGui::MenuItem("Save", "Ctrl+S"))   { /* Do stuff */ }
+                if (ImGui::MenuItem("Save", "Ctrl+S")){
+                    // MAIN BLOCK
+                    set_xml_value("latitude", "helios", latitude);
+                    set_xml_value("longitude", "helios", longitude);
+                    set_xml_value("UTC_offset", "helios", UTC_offset);
+                    set_xml_value("csv_weather_file", "helios", csv_weather_file);
+                    set_xml_value("domain_origin", "helios", domain_origin);
+                    set_xml_value("domain_extent", "helios", domain_extent);
+                    set_xml_value("ground_resolution", "helios", ground_resolution);
+                    set_xml_value("ground_texture_file", "helios", ground_texture_file);
+                    // Canopy Block
+                    canopy_labels = set_node_labels("label", "canopy_block", labels);
+                    set_xml_values("canopy_origin", "canopy_block", canopy_origins);
+                    set_xml_values("plant_count", "canopy_block", plant_counts);
+                    set_xml_values("plant_spacing", "canopy_block", plant_spacings);
+                    set_xml_values("plant_library_name", "canopy_block", plant_library_names);
+                    set_xml_values("plant_age", "canopy_block", plant_ages);
+                    set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
+                    // Radiation Block
+                    set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
+                    set_xml_value("direct_ray_count", "radiation", direct_ray_count);
+                    set_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
+                    set_xml_value("scattering_depth", "radiation", scattering_depth);
+                    set_xml_value("air_turbidity", "radiation", air_turbidity);
+                    set_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
+                    set_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
+                    set_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
+                    set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
+                    set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
+                    set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+                    // BuildGeometry(xml_input_file, &plantarchitecture, &context);
+                    // xmldoc.save_file("../inputs/inputs.xml");
+                    xmldoc.save_file(xml_input_file.c_str());
+                }
                 if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
                 ImGui::EndMenu();
             }
@@ -437,12 +496,13 @@ int main(){
             set_xml_value("ground_resolution", "helios", ground_resolution);
             set_xml_value("ground_texture_file", "helios", ground_texture_file);
             // Canopy Block
-            set_xml_value("canopy_origin", "canopy_block", canopy_origin);
-            set_xml_value("plant_count", "canopy_block", plant_count);
-            set_xml_value("plant_spacing", "canopy_block", plant_spacing);
-            set_xml_value("plant_library_name", "canopy_block", plant_library_name);
-            set_xml_value("plant_age", "canopy_block", plant_age);
-            set_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
+            canopy_labels = set_node_labels("label", "canopy_block", labels);
+            set_xml_values("canopy_origin", "canopy_block", canopy_origins);
+            set_xml_values("plant_count", "canopy_block", plant_counts);
+            set_xml_values("plant_spacing", "canopy_block", plant_spacings);
+            set_xml_values("plant_library_name", "canopy_block", plant_library_names);
+            set_xml_values("plant_age", "canopy_block", plant_ages);
+            set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
             // Radiation Block
             set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
             set_xml_value("direct_ray_count", "radiation", direct_ray_count);
@@ -486,11 +546,11 @@ int main(){
                 ImGui::InputInt("UTC Offset", &UTC_offset);
                 // ####### CSV Weather File ####### //
                 ImGui::SetNextItemWidth(60);
-                if (ImGui::Button(csv_weather_file.c_str())){
+                if (ImGui::Button("CSV Weather File")){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text("CSV Weather File");
+                ImGui::Text(csv_weather_file.c_str());
                 // ####### DOMAIN ORIGIN ####### //
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
@@ -520,41 +580,101 @@ int main(){
                 ImGui::Text("Ground Resolution");
                 // ####### GROUND TEXTURE File ####### //
                 ImGui::SetNextItemWidth(60);
-                if (ImGui::Button(ground_texture_file.c_str())){
+                if (ImGui::Button("Ground Texture File")){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text("Ground Texture File");
+                ImGui::Text(ground_texture_file.c_str());
 
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Canopy")){
                 current_tab = "Canopy";
                 // ####### CANOPY ORIGIN ####### //
+                static const char* current_item = "canopy_0";
+                if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+                {
+                    for (int n = 0; n < labels.size(); n++)
+                    {
+                        bool is_selected = (current_item == labels[n]); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(labels[n].c_str(), is_selected))
+                            current_item = labels[n].c_str();
+                        if (is_selected)
+                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                }
+                    ImGui::EndCombo();
+                }
+                ImGui::SetNextItemWidth(100);
+                ImGui::InputText("##canopy_name", &labels[canopy_labels[(std::string) current_item]]);
+                ImGui::SameLine();
+                if (ImGui::Button("Add Canopy")){
+                    std::string default_canopy_label = "NEW_CANOPY";
+                    std::string new_canopy_label = "NEW_CANOPY_0";
+                    int count = 0;
+                    while (canopy_labels.find(new_canopy_label) != canopy_labels.end()){
+                        count++;
+                        new_canopy_label = default_canopy_label + "_" + std::to_string(count);
+                    }
+                    canopy_labels.insert({new_canopy_label, labels.size()});
+                    canopy_origins.push_back(canopy_origin);
+                    plant_counts.push_back(plant_count);
+                    plant_spacings.push_back(plant_spacing);
+                    plant_library_names.push_back(plant_library_name);
+                    plant_ages.push_back(plant_age);
+                    ground_clipping_heights.push_back(ground_clipping_height);
+                    labels.push_back(new_canopy_label);
+                    current_item = new_canopy_label.c_str();
+                    std::string parent = "canopy_block";
+                    pugi::xml_node canopy_block = helios.child(parent.c_str());
+                    pugi::xml_node new_canopy_node = helios.append_copy(canopy_block);
+                    // pugi::xml_node new_canopy_node = helios.append_child(pugi::node_pcdata);
+                    // pugi::xml_node node;
+                    std::string name = "canopy_origin";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(vec_to_string(canopy_origin).c_str());
+                    // name = "plant_count";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(vec_to_string(plant_count).c_str());
+                    // name = "plant_spacing";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(vec_to_string(plant_spacing).c_str());
+                    // name = "plant_library_name";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(plant_library_name.c_str());
+                    // name = "plant_age";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(std::to_string(plant_age).c_str());
+                    // name = "ground_clipping_height";
+                    // node = new_canopy_node.child(name.c_str());
+                    // node.text().set(std::to_string(ground_clipping_height).c_str());
+                    name = "label";
+                    pugi::xml_attribute node_label = new_canopy_node.attribute(name.c_str());
+                    node_label.set_value(new_canopy_label.c_str());
+                }
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_x", &canopy_origin.x);
+                ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels[(std::string) current_item]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_y", &canopy_origin.y);
+                ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels[(std::string) current_item]].y);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_z", &canopy_origin.z);
+                ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels[(std::string) current_item]].z);
                 ImGui::SameLine();
                 ImGui::Text("Canopy Origin");
                 // ####### PLANT COUNT ####### //
                 ImGui::SetNextItemWidth(70);
-                ImGui::InputInt("##plant_count_x", &plant_count.x);
+                ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[current_item]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(70);
-                ImGui::InputInt("##plant_count_y", &plant_count.y);
+                ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels[current_item]].y);
                 ImGui::SameLine();
                 ImGui::Text("Plant Count");
                 // ####### PLANT SPACING ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("##plant_spacing_x", &plant_spacing.x);
+                ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels[current_item]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("##plant_spacing_y", &plant_spacing.y);
+                ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels[current_item]].y);
                 ImGui::SameLine();
                 ImGui::Text("Plant Spacing");
                 // ####### PLANT LIBRARY NAME ####### //
@@ -562,10 +682,10 @@ int main(){
                 // ImGui::InputText("Plant Library", &plant_library_name);
                 // ####### PLANT AGE ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Plant Age", &plant_age);
+                ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[current_item]]);
                 // ####### GROUND CLIPPING HEIGHT ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Ground Clipping Height", &ground_clipping_height);
+                ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[current_item]]);
 
                 ImGui::EndTabItem();
             }
@@ -588,11 +708,11 @@ int main(){
                 ImGui::InputFloat("Air Turbidity", &air_turbidity);
                 // ####### LOAD XML LIBRARY FILE ####### //
                 ImGui::SetNextItemWidth(60);
-                if (ImGui::Button(load_xml_library_file.c_str())){
+                if (ImGui::Button("XML Library File")){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text("XML Library File");
+                ImGui::Text(load_xml_library_file.c_str());
                 // ####### SOLAR DIRECT SPECTRUM ####### //
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
@@ -662,6 +782,25 @@ std::string vec_to_string(const vec3& v) {
     oss << v.x << " " << v.y << " " << v.z;
     return oss.str();
 }
+
+
+std::map<std::string, int> get_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+    int counter = 0;
+    std::map<std::string, int> labels_dict = {};
+    pugi::xml_node helios = xmldoc.child("helios");
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        std::string default_value = "canopy_0";
+        if (!p.attribute(name.c_str()).empty()){
+            const char *node_str = p.attribute(name.c_str()).value();
+            default_value = (std::string) node_str;
+        }
+        labels_vec.push_back(default_value);
+        labels_dict.insert({default_value, counter});
+        counter++;
+    }
+    return labels_dict;
+}
+
 
 void get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     pugi::xml_node helios = xmldoc.child("helios");
@@ -777,6 +916,123 @@ void get_xml_value(const std::string& name, const std::string& parent, int2 &def
     }
 }
 
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            vec2 default_value;
+            if (!parse_vec2(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else if( default_value.x<=0 || default_value.y<=0 ){
+                helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than 0.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            vec3 default_value;
+            if (!parse_vec3(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            std::string default_value = node_str;
+            default_vec.push_back(default_value);
+        }
+    }
+}
+
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            float default_value;
+            if (!parse_float(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else if( default_value<0 ){
+                helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than or equal to 0.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            int2 default_value;
+            if (!parse_int2(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else if( default_value.x<=0 || default_value.y<=0 ){
+                helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than or equal to 0.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
+std::map<std::string, int> set_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+    int i = 0;
+    pugi::xml_node helios = xmldoc.child("helios");
+    std::map<std::string, int> labels_dict = {};
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_attribute node_label = p.attribute(name.c_str());
+        node_label.set_value(labels_vec[i].c_str());
+        labels_dict.insert({labels_vec[i], i});
+        i++;
+    }
+    return labels_dict;
+}
+
+
 void set_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     pugi::xml_node helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
@@ -842,6 +1098,79 @@ void set_xml_value(const std::string& name, const std::string& parent, vec3 &def
     node = p.child(name.c_str());
     node.text().set(vec_to_string(default_value).c_str());
 }
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(vec_to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(vec_to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(vec_to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(default_values[i].c_str());
+        i++;
+    }
+}
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<int>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(std::to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
+
+void set_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_values){
+    pugi::xml_node helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        node.text().set(std::to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
 
 void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorbed, float &LW_absorbed) {
     PlantArchitecture plantarchitecture(&context);

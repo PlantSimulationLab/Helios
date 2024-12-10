@@ -27,6 +27,7 @@ set(SOURCE_FILES
     ${BASE_DIRECTORY}/imgui/imgui_tables.cpp  # Table features
     ${BASE_DIRECTORY}/imgui/backends/imgui_impl_glfw.cpp
     ${BASE_DIRECTORY}/imgui/backends/imgui_impl_opengl3.cpp
+    ${BASE_DIRECTORY}/imgui/misc/cpp/imgui_stdlib.cpp
 )
 
 set(IMGUI_DIR "${BASE_DIRECTORY}/imgui")
