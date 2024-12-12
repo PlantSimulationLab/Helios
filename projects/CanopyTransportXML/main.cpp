@@ -246,7 +246,8 @@ int main(){
     visualizer.buildContextGeometry(&context);
     // visualizer.colorContextPrimitivesByData("radiation_flux_PAR");
 
-    visualizer.plotInteractive();
+    // Uncomment below for interactive
+    // visualizer.plotInteractive();
 
     visualizer.plotUpdate();
 
@@ -707,7 +708,13 @@ int main(){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text(csv_weather_file.c_str());
+                ImGui::SameLine();
+                std::string shorten_weather_file = csv_weather_file;
+                size_t last_weather_file = csv_weather_file.rfind('/');
+                if (last_weather_file != std::string::npos){
+                    shorten_weather_file = csv_weather_file.substr(last_weather_file + 1);
+                }
+                ImGui::Text(shorten_weather_file.c_str());
                 // ####### DOMAIN ORIGIN ####### //
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
@@ -741,7 +748,12 @@ int main(){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text(ground_texture_file.c_str());
+                std::string shorten = ground_texture_file;
+                size_t last = ground_texture_file.rfind('/');
+                if (last != std::string::npos){
+                    shorten = ground_texture_file.substr(last + 1);
+                }
+                ImGui::Text(shorten.c_str());
 
                 ImGui::EndTabItem();
             }
@@ -869,7 +881,12 @@ int main(){
                     // OpenFileDialog();
                 }
                 ImGui::SameLine();
-                ImGui::Text(load_xml_library_file.c_str());
+                std::string shorten_ground_texture_file = ground_texture_file;
+                size_t last_ground_texture_file = ground_texture_file.rfind('/');
+                if (last_ground_texture_file != std::string::npos){
+                    shorten_ground_texture_file = ground_texture_file.substr(last_ground_texture_file + 1);
+                }
+                ImGui::Text(shorten_ground_texture_file.c_str());
                 // ####### SOLAR DIRECT SPECTRUM ####### //
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
