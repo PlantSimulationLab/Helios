@@ -28,7 +28,7 @@
 #
 ################################################
 
-DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq" "pybind11") # Base PATH dependencies
+DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq" "texlive" "texlive-latex-extra" "ghostscript" "pybind11") # Base PATH dependencies
 
 # Run bash script as root
 if command -v nvcc &> /dev/null; then
