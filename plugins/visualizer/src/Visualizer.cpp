@@ -3699,6 +3699,8 @@ void Visualizer::plotUpdate( bool hide_window ){
 
     glm::mat4 DepthBiasMVP = biasMatrix*depthMVP;
 
+    setDepthMVP(DepthBiasMVP);
+
     primaryShader.setDepthBiasMatrix( DepthBiasMVP );
 
     primaryShader.setTransformationMatrix( perspectiveTransformationMatrix );
@@ -4538,4 +4540,12 @@ uint Visualizer::getDepthTexture(){
 void Visualizer::clearColor()
 {
     colorPrimitivesByData = "";
+}
+
+glm::mat4 Visualizer::getDepthMVP(){
+    return depthMVP;
+}
+
+void Visualizer::setDepthMVP(glm::mat4 MVP){
+    depthMVP = MVP;
 }

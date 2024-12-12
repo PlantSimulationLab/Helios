@@ -932,6 +932,10 @@ public:
 
   void clearColor();
 
+  glm::mat4 getDepthMVP();
+
+  void setDepthMVP(glm::mat4);
+
 private:
 
     void openWindow();
@@ -1072,6 +1076,7 @@ private:
 
   bool message_flag;
 
+  glm::mat4 depthMVP;
 
 };
 

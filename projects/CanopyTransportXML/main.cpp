@@ -55,7 +55,9 @@ void set_xml_values(const std::string&, const std::string&, int2&);
 void set_xml_values(const std::string&, const std::string&, std::vector<std::string>&);
 void set_xml_values(const std::string&, const std::string&, std::vector<int>&);
 void set_xml_values(const std::string&, const std::string&, std::vector<float>&);
-void recalculate_values(Context&, float&, float&, float&);
+void recalculate_values(Context&, float&, float&, float&, std::vector<std::string>&, std::vector<vec3>&,
+                        std::vector<vec3>&, std::vector<std::string>&, std::vector<int2>&, std::vector<float>&,
+                        std::vector<float>&, std::vector<float>&, std::vector<float>&);
 // void OpenFileDialog();
 
 pugi::xml_document xmldoc;
@@ -183,7 +185,39 @@ int main(){
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
+        // RIG BLOCK
+        radiation.addRadiationBand("red");
+        radiation.disableEmission("red");
+        radiation.setSourceFlux(sun_ID, "red", 2.f);
+        radiation.setScatteringDepth("red", 2);
 
+        radiation.copyRadiationBand("red", "green");
+        radiation.copyRadiationBand("red", "blue");
+
+        std::vector<std::string> bandlabels = {"red", "green", "blue"};
+        std::string cameralabel = "RGB";
+
+        vec3 camera_position = make_vec3(-0.1, 0, 1);
+        vec3 camera_lookat = make_vec3(0, 0, 0);
+        CameraProperties cameraproperties;
+        cameraproperties.camera_resolution = make_int2(1024, 1024);
+        cameraproperties.focal_plane_distance = 0.4;
+        cameraproperties.lens_diameter = 0.02f;
+        cameraproperties.FOV_aspect_ratio = 1.4;
+        cameraproperties.HFOV = 50.f;
+
+
+        radiation.addRadiationCamera(cameralabel, bandlabels, camera_position, camera_lookat, cameraproperties, 100);
+
+        context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+        radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
+        radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
+        radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+
+        radiation.updateGeometry();
+
+        radiation.runBand({"red", "green", "blue"});
+        // RIG BLOCK END
     }
 
     Visualizer visualizer(800);
@@ -267,6 +301,34 @@ int main(){
     get_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
     get_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
     get_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+    // RIG BLOCK
+    std::vector<std::string> rig_labels;
+    vec3 camera_position(0,0,0); std::vector<vec3> camera_positions;
+    // camera_positions = {camera_position}; std::vector<std::vector<vec3>> camera_position_list;
+    vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
+    std::string camera_label = "RGB"; std::vector<std::string> camera_labels;
+    int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
+    float focal_plane_distance = 0.4; std::vector<float> focal_plane_distances;
+    float lens_diameter = 0.02; std::vector<float> lens_diameters;
+    float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
+    float HFOV = 1.4; std::vector<float> HFOVs;
+    std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
+    get_xml_value("camera_position", "rig", camera_position);
+    get_xml_value("camera_lookat", "rig", camera_lookat);
+    get_xml_value("camera_label", "rig", camera_label);
+    get_xml_value("camera_resolution", "rig", camera_resolution);
+    get_xml_value("focal_plane_distance", "rig", focal_plane_distance);
+    get_xml_value("lens_diameter", "rig", lens_diameter);
+    get_xml_value("FOV_aspect_ratio", "rig", FOV_aspect_ratio);
+    get_xml_value("HFOV", "rig", HFOV);
+    get_xml_values("camera_position", "rig", camera_positions);
+    get_xml_values("camera_lookat", "rig", camera_lookats);
+    get_xml_values("camera_label", "rig", camera_labels);
+    get_xml_values("camera_resolution", "rig", camera_resolutions);
+    get_xml_values("focal_plane_distance", "rig", focal_plane_distances);
+    get_xml_values("lens_diameter", "rig", lens_diameters);
+    get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
+    get_xml_values("HFOV", "rig", HFOVs);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -367,6 +429,15 @@ int main(){
         //
         // glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+
+        // glBegin(GL_POINTS);
+        // glVertex3f((GLfloat) canopy_origin.x, (GLfloat) canopy_origin.y, (GLfloat) canopy_origin.z);
+        // glEnd();
+
+        // glm::mat4 perspectiveTransformationMatrix = visualizer.getPerspectiveTransformationMatrix();
+        // glm::vec4 canopy_origin_position = glm::vec4(camera_position.x, camera_position.y, camera_position.z, 1.0);
+        // canopy_origin_position = perspectiveTransformationMatrix * canopy_origin_position;
+
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -393,9 +464,37 @@ int main(){
 
         // ImGui::SetNextWindowSize(ImVec2(500, 400));
         ImVec2 windowSize = ImGui::GetWindowSize();
+
+        // TEST
+        glm::mat4 perspectiveTransformationMatrix = visualizer.getPerspectiveTransformationMatrix();
+        glm::vec4 origin_position;
+        std::string current_label;
+        glm::mat4 depthMVP = visualizer.getDepthMVP();
+        for (int n = 0; n < labels.size(); n++){
+            current_label = labels[n];
+            vec3 canopy_origin_ = canopy_origins[canopy_labels[(std::string) current_label]];
+            origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
+            origin_position = perspectiveTransformationMatrix * origin_position;
+            ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
+                                            windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+            ImGui::Begin(current_label.c_str(), &my_tool_active);
+            ImGui::End();
+        }
+        for (int n = 0; n < rig_labels.size(); n++){
+            current_label = rig_labels[n];
+            vec3 camera_position_ = camera_positions[rig_dict[(std::string) current_label]];
+            origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
+            origin_position = perspectiveTransformationMatrix * origin_position;
+            ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
+                                            windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+            ImGui::Begin(current_label.c_str(), &my_tool_active);
+            ImGui::End();
+        }
+        //
+
         // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
         ImGui::Begin("Editor", &my_tool_active, window_flags);  // Begin a new window
-        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 100.0f, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 100.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
         current_position = ImGui::GetWindowPos();
         currently_collapsed = ImGui::IsWindowCollapsed();
 
@@ -438,6 +537,16 @@ int main(){
                     set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
                     set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
                     set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+                    // RIG BLOCK
+                    rig_dict = set_node_labels("label", "rig", rig_labels);
+                    set_xml_values("camera_position", "rig", camera_positions);
+                    set_xml_values("camera_lookat", "rig", camera_lookats);
+                    set_xml_values("camera_label", "rig", camera_labels);
+                    set_xml_values("camera_resolution", "rig", camera_resolutions);
+                    set_xml_values("focal_plane_distances", "rig", focal_plane_distances);
+                    set_xml_values("lens_diameter", "rig", lens_diameters);
+                    set_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
+                    set_xml_values("HFOV", "rig", HFOVs);
                     // BuildGeometry(xml_input_file, &plantarchitecture, &context);
                     // xmldoc.save_file("../inputs/inputs.xml");
                     xmldoc.save_file(xml_input_file.c_str());
@@ -515,6 +624,16 @@ int main(){
             set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
             set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
             set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+            // RIG BLOCK
+            rig_dict = set_node_labels("label", "rig", rig_labels);
+            set_xml_values("camera_position", "rig", camera_positions);
+            set_xml_values("camera_lookat", "rig", camera_lookats);
+            set_xml_values("camera_label", "rig", camera_labels);
+            set_xml_values("camera_resolution", "rig", camera_resolutions);
+            set_xml_values("focal_plane_distances", "rig", focal_plane_distances);
+            set_xml_values("lens_diameter", "rig", lens_diameters);
+            set_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
+            set_xml_values("HFOV", "rig", HFOVs);
             // BuildGeometry(xml_input_file, &plantarchitecture, &context);
             // xmldoc.save_file("../inputs/inputs.xml");
             xmldoc.save_file(xml_input_file.c_str());
@@ -522,11 +641,28 @@ int main(){
             Context context;
             visualizer.clearGeometry();
             // xml_input_file = "../inputs/inputs_2.xml";
-            recalculate_values(context, PAR_absorbed, NIR_absorbed, LW_absorbed);
+            recalculate_values(context, PAR_absorbed, NIR_absorbed, LW_absorbed, rig_labels, camera_positions,
+                                camera_lookats, camera_labels, camera_resolutions, focal_plane_distances,
+                                lens_diameters, FOV_aspect_ratios, HFOVs);
             // visualizer.clearGeometry();
             // visualizer.colorContextPrimitivesByData("radiation_flux_PAR");
             visualizer.buildContextGeometry(&context);
             visualizer.plotUpdate();
+        }
+        ImGui::SameLine();
+        std::vector<std::string> bandlabels = {"red", "green", "blue"};
+        std::string image_dir = "./saved/";
+        bool dir = std::filesystem::create_directories(image_dir);
+        if (!dir && !std::filesystem::exists(image_dir)){
+            helios_runtime_error("Error: image output directory " + image_dir + " could not be created. Exiting...");
+        }
+        if (ImGui::Button("Record")){
+            for (std::string cameralabel : camera_labels){
+                radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
+                radiation.writeDepthImageData( cameralabel, "depth", image_dir);
+                radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
+                radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
+            }
         }
         // ####### RESULTS ####### //
         ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
@@ -608,8 +744,8 @@ int main(){
                 ImGui::InputText("##canopy_name", &labels[canopy_labels[(std::string) current_item]]);
                 ImGui::SameLine();
                 if (ImGui::Button("Add Canopy")){
-                    std::string default_canopy_label = "NEW_CANOPY";
-                    std::string new_canopy_label = "NEW_CANOPY_0";
+                    std::string default_canopy_label = "canopy";
+                    std::string new_canopy_label = "canopy_0";
                     int count = 0;
                     while (canopy_labels.find(new_canopy_label) != canopy_labels.end()){
                         count++;
@@ -678,8 +814,8 @@ int main(){
                 ImGui::SameLine();
                 ImGui::Text("Plant Spacing");
                 // ####### PLANT LIBRARY NAME ####### //
-                // ImGui::SetNextItemWidth(60);
-                // ImGui::InputText("Plant Library", &plant_library_name);
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputText("Plant Library", &plant_library_names[rig_dict[(std::string) current_item]]);
                 // ####### PLANT AGE ####### //
                 ImGui::SetNextItemWidth(50);
                 ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[current_item]]);
@@ -729,6 +865,98 @@ int main(){
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Ground Reflectivity Spectrum", &solar_direct_spectrum);
 
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Rig")){
+                current_tab = "Rig";
+                static const char* current_rig = "rig_0";
+                if (ImGui::BeginCombo("##combo", current_rig)) // The second parameter is the label previewed before opening the combo.
+                {
+                    for (int n = 0; n < rig_labels.size(); n++)
+                    {
+                        bool is_rig_selected = (current_rig == rig_labels[n]); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(rig_labels[n].c_str(), is_rig_selected))
+                            current_rig = rig_labels[n].c_str();
+                        if (is_rig_selected)
+                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                }
+                    ImGui::EndCombo();
+                }
+                ImGui::SetNextItemWidth(100);
+                ImGui::InputText("##rig_name", &rig_labels[rig_dict[(std::string) current_rig]]);
+                ImGui::SameLine();
+                if (ImGui::Button("Add Rig")){
+                    std::string default_rig_label = "rig";
+                    std::string new_rig_label = "rig_0";
+                    int count = 0;
+                    while (rig_dict.find(new_rig_label) != rig_dict.end()){
+                        count++;
+                        new_rig_label = default_rig_label + "_" + std::to_string(count);
+                    }
+                    rig_dict.insert({new_rig_label, rig_labels.size()});
+                    camera_positions.push_back(camera_position);
+                    camera_lookats.push_back(camera_lookat);
+                    camera_labels.push_back(camera_label);
+                    camera_resolutions.push_back(camera_resolution);
+                    focal_plane_distances.push_back(focal_plane_distance);
+                    lens_diameters.push_back(lens_diameter);
+                    FOV_aspect_ratios.push_back(FOV_aspect_ratio);
+                    HFOVs.push_back(HFOV);
+                    rig_labels.push_back(new_rig_label);
+                    current_rig = new_rig_label.c_str();
+                    std::string parent = "rig";
+                    pugi::xml_node rig_block = helios.child(parent.c_str());
+                    pugi::xml_node new_rig_node = helios.append_copy(rig_block);
+                    std::string name = "label";
+                    pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
+                    node_label.set_value(new_rig_label.c_str());
+                }
+                // ####### CAMERA POSITION ####### //
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_position_x", &camera_positions[rig_dict[(std::string) current_rig]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_position_y", &camera_positions[rig_dict[(std::string) current_rig]].y);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_position_z", &camera_positions[rig_dict[(std::string) current_rig]].z);
+                ImGui::SameLine();
+                ImGui::Text("Camera Position");
+                // ####### CAMERA LOOKAT ####### //
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_lookat_x", &camera_lookats[rig_dict[(std::string) current_rig]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_lookat_y", &camera_lookats[rig_dict[(std::string) current_rig]].y);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("##camera_lookat_z", &camera_lookats[rig_dict[(std::string) current_rig]].z);
+                ImGui::SameLine();
+                ImGui::Text("Camera Lookat");
+                // ####### CAMERA LABEL ####### //
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
+                // ####### CAMERA RESOLUTION ####### //
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputInt("##camera_resolution_x", &camera_resolutions[rig_dict[(std::string) current_rig]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputInt("##camera_resolution_y", &camera_resolutions[rig_dict[(std::string) current_rig]].y);
+                ImGui::SameLine();
+                ImGui::Text("Camera Resolution");
+                // ####### FOCAL PLANE DISTANCE ####### //
+                ImGui::SetNextItemWidth(50);
+                ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[rig_dict[(std::string) current_rig]]);
+                // ####### LENS DIAMETER ####### //
+                ImGui::SetNextItemWidth(50);
+                ImGui::InputFloat("Lens Diameter", &lens_diameters[rig_dict[(std::string) current_rig]]);
+                // ####### FOV ASPECT RATIO ####### //
+                ImGui::SetNextItemWidth(50);
+                ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[rig_dict[(std::string) current_rig]]);
+                // ####### HFOV ####### //
+                ImGui::SetNextItemWidth(50);
+                ImGui::InputFloat("HFOV", &HFOVs[rig_dict[(std::string) current_rig]]);
+                //
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -1171,8 +1399,22 @@ void set_xml_values(const std::string& name, const std::string& parent, std::vec
     }
 }
 
+// std::vector<std::string> rig_labels;
+// vec3 camera_position(0,0,0); std::vector<vec3> camera_positions;
+// // camera_positions = {camera_position}; std::vector<std::vector<vec3>> camera_position_list;
+// vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
+// std::string camera_label = "RGB"; std::vector<std::string> camera_labels;
+// int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
+// float focal_plane_distance = 0.4; std::vector<float> focal_plane_distances;
+// float lens_diameter = 0.02; std::vector<float> lens_diameters;
+// float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
+// float HFOV = 1.4; std::vector<float> HFOVs;
 
-void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorbed, float &LW_absorbed) {
+void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorbed, float &LW_absorbed,
+                        std::vector<std::string> &rig_labels, std::vector<vec3> &camera_positions,
+                        std::vector<vec3> &camera_lookats, std::vector<std::string> &camera_labels,
+                        std::vector<int2> &camera_resolutions, std::vector<float> &focal_plane_distances,
+                        std::vector<float> &lens_diameters, std::vector<float> &FOV_aspect_ratios, std::vector<float> &HFOVs) {
     PlantArchitecture plantarchitecture(&context);
 
     InitializeSimulation(xml_input_file, &context);
@@ -1264,7 +1506,6 @@ void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorb
             radiation.setSourceFlux(sun_ID, "NIR", R_NIR_dir * (1.f - fdiff));
             radiation.setDiffuseRadiationFlux("NIR", R_NIR_dir * fdiff);
 
-
             // Run the radiation model
             radiation.runBand({"PAR","NIR","LW"});
 
@@ -1281,6 +1522,41 @@ void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorb
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
+        // RIG BLOCK
+        radiation.addRadiationBand("red");
+        radiation.disableEmission("red");
+        radiation.setSourceFlux(sun_ID, "red", 2.f);
+        radiation.setScatteringDepth("red", 2);
+
+        radiation.copyRadiationBand("red", "green");
+        radiation.copyRadiationBand("red", "blue");
+
+        std::vector<std::string> bandlabels = {"red", "green", "blue"};
+
+        for (int n = 0; n < rig_labels.size(); n++){
+            std::string cameralabel = camera_labels[n];
+
+            vec3 camera_position = camera_positions[n];
+            vec3 camera_lookat = camera_lookats[n];
+            CameraProperties cameraproperties;
+            cameraproperties.camera_resolution = camera_resolutions[n];
+            cameraproperties.focal_plane_distance = focal_plane_distances[n];
+            cameraproperties.lens_diameter = lens_diameters[n];
+            cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[n];
+            cameraproperties.HFOV = HFOVs[n];
+
+
+            radiation.addRadiationCamera(cameralabel, bandlabels, camera_position, camera_lookat, cameraproperties, 100);
+
+            context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+            radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
+            radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
+            radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+        }
+        radiation.updateGeometry();
+
+        radiation.runBand({"red", "green", "blue"});
+        // RIG BLOCK END
     }
 }
 
