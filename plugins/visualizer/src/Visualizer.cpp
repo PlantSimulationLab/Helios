@@ -3292,6 +3292,8 @@ float dtheta = 0.0;
 float dx = 0.0;
 float dy = 0.0;
 float dz = 0.0;
+float dx_m = 0.0;
+float dy_m = 0.0;
 float dscroll = 0.0;
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
@@ -4321,6 +4323,7 @@ void Shader::useShader() {
 }
 
 bool lbutton_down = false;
+bool rbutton_down = false;
 bool mbutton_down = false;
 double startX, startY;
 double scrollX, scrollY;
@@ -4339,6 +4342,9 @@ void mouseCallback( GLFWwindow *window, int button, int action, int mods ){
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE){
         if (GLFW_PRESS == action) {mbutton_down = true;}
         else if (GLFW_RELEASE == action) {mbutton_down = false;}
+    } else if (button == GLFW_MOUSE_BUTTON_RIGHT){
+        if (GLFW_PRESS == action) {rbutton_down = true;}
+        else if (GLFW_RELEASE == action) {rbutton_down = false;}
     }
 }
 
@@ -4349,10 +4355,14 @@ void cursorCallback( GLFWwindow* window, double xpos, double ypos ){
         // std::cout << dphi << std::endl;
         // std::cout << dtheta << std::endl;
     } else {dphi = 0; dtheta = 0;}
-    if (mbutton_down){
+    if (rbutton_down){
         dx = (float) xpos - startX;
         dy = (float) ypos - startY;
     } else {dx = 0; dy = 0;}
+    if (mbutton_down){
+        dx_m = (float) xpos - startX;
+        dy_m = (float) ypos - startY;
+    } else {dx_m = 0; dy_m = 0;}
     startX = xpos;
     startY = ypos;
 }
@@ -4368,6 +4378,14 @@ void scrollCallback( GLFWwindow* window, double xoffset, double yoffset ){
 
 void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
+    vec3 forward = center - eye;
+    forward = forward.normalize();
+
+    vec3 right = cross(forward, vec3(0, 0, 1));
+    right = right.normalize();
+
+    vec3 up = cross(right, forward);
+    up = up.normalize();
 
     SphericalCoord Spherical = cart2sphere( eye-center );
     float radius = Spherical.radius;
@@ -4380,16 +4398,22 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     } else if( dtheta < 0 && theta>-0.25*M_PI ){
         theta+=M_PI * (dtheta/120.f);
     }
-    if (mbutton_down){
-        center.x += 0.1 * dx * sin(phi);
-        center.y += 0.1 * dx * cos(phi);
+    if (rbutton_down){
+        // center.x += 0.1 * dx * sin(phi);
+        // center.y += 0.1 * dx * cos(phi);
         // center.x += 0.1 * dx;
         // center.y += 0.1 * dx;
-        center.z += 0.05 * dy;
+        center += 0.05 * dy * up;
+        center -= 0.05 * dx * right;
+    }
+    if (mbutton_down){
+        // center.x += 0.1 * dy_m * sin(phi);
+        // center.y += 0.1 * dy_m * cos(phi);
+        eye += 0.05 * dy_m * up;
+        eye -= 0.05 * dx_m * right;
     }
     if (scroll){
-        center.x += 0.1 * dscroll * sin(phi);
-        center.y += 0.1 * dscroll * cos(phi);
+        center -= 0.2 * dscroll * forward;
     }
     scroll = false;
 
