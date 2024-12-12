@@ -195,28 +195,49 @@ int main(){
         radiation.copyRadiationBand("red", "blue");
 
         std::vector<std::string> bandlabels = {"red", "green", "blue"};
-        std::string cameralabel = "RGB";
 
-        vec3 camera_position = make_vec3(-0.1, 0, 1);
-        vec3 camera_lookat = make_vec3(0, 0, 0);
-        CameraProperties cameraproperties;
-        cameraproperties.camera_resolution = make_int2(1024, 1024);
-        cameraproperties.focal_plane_distance = 0.4;
-        cameraproperties.lens_diameter = 0.02f;
-        cameraproperties.FOV_aspect_ratio = 1.4;
-        cameraproperties.HFOV = 50.f;
+        std::string xml_error_string;
+        if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+            helios_runtime_error(xml_error_string);
+        }
 
+        std::vector<std::string> rig_labels;
+        std::vector<vec3> camera_positions;
+        std::vector<vec3> camera_lookats;
+        std::vector<std::string> camera_labels;
+        std::vector<int2> camera_resolutions;
+        std::vector<float> focal_plane_distances;
+        std::vector<float> lens_diameters;
+        std::vector<float> FOV_aspect_ratios;
+        std::vector<float> HFOVs;
+        std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
+        get_xml_values("camera_position", "rig", camera_positions);
+        get_xml_values("camera_lookat", "rig", camera_lookats);
+        get_xml_values("camera_label", "rig", camera_labels);
+        get_xml_values("camera_resolution", "rig", camera_resolutions);
+        get_xml_values("focal_plane_distance", "rig", focal_plane_distances);
+        get_xml_values("lens_diameter", "rig", lens_diameters);
+        get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
+        get_xml_values("HFOV", "rig", HFOVs);
 
-        radiation.addRadiationCamera(cameralabel, bandlabels, camera_position, camera_lookat, cameraproperties, 100);
+        for (int i = 0; i < rig_labels.size(); i++)
+        {
+            CameraProperties cameraproperties;
+            cameraproperties.camera_resolution = camera_resolutions[i];
+            cameraproperties.focal_plane_distance = focal_plane_distances[i];
+            cameraproperties.lens_diameter = lens_diameters[i];
+            cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[i];
+            cameraproperties.HFOV = HFOVs[i];
 
-        context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
-        radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
-        radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
-        radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+            radiation.addRadiationCamera(camera_labels[i], bandlabels, camera_positions[i], camera_lookats[i], cameraproperties, 100);
 
-        radiation.updateGeometry();
-
-        radiation.runBand({"red", "green", "blue"});
+            context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+            radiation.setCameraSpectralResponse(camera_labels[i], "red", "calibrated_sun_NikonB500_spectral_response_red");
+            radiation.setCameraSpectralResponse(camera_labels[i], "green","calibrated_sun_NikonB500_spectral_response_green");
+            radiation.setCameraSpectralResponse(camera_labels[i], "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+            radiation.updateGeometry();
+            radiation.runBand({"red", "green", "blue"});
+        }
         // RIG BLOCK END
     }
 
@@ -225,7 +246,7 @@ int main(){
     visualizer.buildContextGeometry(&context);
     // visualizer.colorContextPrimitivesByData("radiation_flux_PAR");
 
-    // visualizer.plotInteractive();
+    visualizer.plotInteractive();
 
     visualizer.plotUpdate();
 
@@ -311,7 +332,7 @@ int main(){
     float focal_plane_distance = 0.4; std::vector<float> focal_plane_distances;
     float lens_diameter = 0.02; std::vector<float> lens_diameters;
     float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
-    float HFOV = 1.4; std::vector<float> HFOVs;
+    float HFOV = 50.0; std::vector<float> HFOVs;
     std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
     get_xml_value("camera_position", "rig", camera_position);
     get_xml_value("camera_lookat", "rig", camera_lookat);
