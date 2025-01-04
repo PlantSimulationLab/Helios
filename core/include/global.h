@@ -1,6 +1,6 @@
 /** \file "global.h" Header file for all global function/object definitions.
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+inline constexpr float PI_F = 3.14159265358979323846f;
 
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL

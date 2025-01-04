@@ -29,7 +29,7 @@ std::vector<std::vector<uint> > strawberryCluster(const vec3 center, const Straw
 
   U.push_back(  context->addTube( params.fruit_subdivisions, nodes, radius, params.fruit_texture_file.c_str() ) );
 
-  float azimuth = 2.f*M_PI*context->randu();
+  float azimuth = 2.f*PI_F*context->randu();
 
   if( context->randu()<0.75 ){
 
@@ -46,7 +46,7 @@ std::vector<std::vector<uint> > strawberryCluster(const vec3 center, const Straw
 
     std::vector<vec3> nodes3 = nodes;
     for( int i=0; i<nodes3.size(); i++ ){
-      nodes3.at(i) = nodes3.at(i) = sphere2cart(make_SphericalCoord(1.5*params.fruit_radius,0,azimuth+0.5*M_PI));
+      nodes3.at(i) = nodes3.at(i) = sphere2cart(make_SphericalCoord(1.5*params.fruit_radius,0,azimuth+0.5*PI_F));
     }
 
     U.push_back(  context->addTube( params.fruit_subdivisions, nodes3, radius, params.fruit_texture_file.c_str() ) );
@@ -172,8 +172,8 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
   U = context->copyPrimitive( leaf_prototype );
 
   context->scalePrimitive( U, make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
-  context->rotatePrimitive( U, 0.75*(0.6*M_PI-theta), "y" );
-  context->rotatePrimitive( U, -base_angle.azimuth+0.5*M_PI, "z" );
+  context->rotatePrimitive( U, 0.75*(0.6*PI_F-theta), "y" );
+  context->rotatePrimitive( U, -base_angle.azimuth+0.5*PI_F, "z" );
 
   context->translatePrimitive( U, nodes.back() );
 
@@ -183,8 +183,8 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
   U = context->copyPrimitive( leaf_prototype );
 
   context->scalePrimitive( U, 0.8*make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
-  context->rotatePrimitive( U, 0.75*(0.6*M_PI-theta), "y" );
-  context->rotatePrimitive( U, -base_angle.azimuth-0.05*M_PI, "z" );
+  context->rotatePrimitive( U, 0.75*(0.6*PI_F-theta), "y" );
+  context->rotatePrimitive( U, -base_angle.azimuth-0.05*PI_F, "z" );
 
   context->translatePrimitive( U, nodes.back() );
 
@@ -193,8 +193,8 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
   U = context->copyPrimitive( leaf_prototype );
 
   context->scalePrimitive( U, 0.8*make_vec3( params.leaf_length, 0.8*params.leaf_length, params.leaf_length ) );
-  context->rotatePrimitive( U, 0.75*(0.6*M_PI-theta), "y" );
-  context->rotatePrimitive( U, -base_angle.azimuth+1.05*M_PI, "z" );
+  context->rotatePrimitive( U, 0.75*(0.6*PI_F-theta), "y" );
+  context->rotatePrimitive( U, -base_angle.azimuth+1.05*PI_F, "z" );
 
   context->translatePrimitive( U, nodes.back() );
 
@@ -204,7 +204,7 @@ strawberryShoot(const StrawberryParameters &params, const helios::vec3 base_posi
 
   if( params.fruit_radius>0 && context->randu()<params.clusters_per_stem ){
 
-    vec3 cluster_position = interpolateTube( nodes, 0.35 )+ sphere2cart( make_SphericalCoord( 0.1+0.2*context->randu(), 0, 2*M_PI*context->randu() ) );
+    vec3 cluster_position = interpolateTube( nodes, 0.35 )+ sphere2cart( make_SphericalCoord( 0.1+0.2*context->randu(), 0, 2*PI_F*context->randu() ) );
 
     fruit_UUIDs.push_back(strawberryCluster( cluster_position, params, context ) );
 
@@ -222,11 +222,11 @@ uint CanopyGenerator::strawberry(const StrawberryParameters &params, const vec3 
 
   for( int i=0; i<params.stems_per_plant; i++ ){
 
-    vec3 position = origin + sphere2cart( make_SphericalCoord(0.1*context->randu()*params.plant_height,0,2*M_PI*context->randu()) ) ;
+    vec3 position = origin + sphere2cart( make_SphericalCoord(0.1*context->randu()*params.plant_height,0,2*PI_F*context->randu()) ) ;
     
-    vec3 base_direction = sphere2cart( make_SphericalCoord( 0.45*M_PI-0.15*M_PI*float(i)/float(params.stems_per_plant-1), 2*M_PI*context->randu()) );
+    vec3 base_direction = sphere2cart( make_SphericalCoord( 0.45*PI_F-0.15*PI_F*float(i)/float(params.stems_per_plant-1), 2*PI_F*context->randu()) );
 
-    float tip_angle = 0.3*M_PI*float(i)/float(params.stems_per_plant-1);
+    float tip_angle = 0.3*PI_F*float(i)/float(params.stems_per_plant-1);
 
     float length = (0.75+0.25*float(params.stems_per_plant-1-i)/float(params.stems_per_plant-1))*params.plant_height*(0.9+0.2*context->randu());
 

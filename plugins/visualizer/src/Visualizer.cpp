@@ -1,6 +1,6 @@
 /** \file "Visualizer.cpp" Visualizer plugin declarations.
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +18,10 @@
 #include <GLFW/glfw3.h>
 
 //Freetype Libraries (rendering fonts)
-#include <ft2build.h>
-#include FT_FREETYPE_H
+extern "C" {
+    #include <ft2build.h>
+    #include FT_FREETYPE_H
+}
 
 //JPEG Libraries (reading and writing JPEG images)
 #include <cstdio> //<-- note libjpeg requires this header be included before its headers.
@@ -38,7 +40,6 @@
 
 using namespace helios;
 
-/** \todo This is crap associated with the JPEG reading library need to figure out if some of it can be removed. */
 struct my_error_mgr {
 
     struct jpeg_error_mgr pub;	/* "public" fields */
@@ -126,9 +127,11 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
     return 0;
 }
 
-int write_JPEG_file ( const char* filename, uint width, uint height, void* _window ){
+int write_JPEG_file(const char *filename, uint width, uint height, void *_window, bool print_messages) {
 
-    std::cout << "writing JPEG image: " << filename << std::endl;
+    if( print_messages ) {
+        std::cout << "writing JPEG image: " << filename << std::endl;
+    }
 
     const uint bsize = 3 * width * height;
     std::vector<GLubyte> screen_shot_trans;
@@ -197,11 +200,13 @@ int write_JPEG_file ( const char* filename, uint width, uint height, void* _wind
 
 }
 
-int write_JPEG_file ( const char* filename, const uint width, const uint height, const std::vector<helios::RGBcolor>& data ){
+int write_JPEG_file(const char *filename, const uint width, const uint height, const std::vector<helios::RGBcolor> &data, bool print_messages) {
 
     assert( data.size()==width*height );
 
-    std::cout << "writing JPEG image: " << filename << std::endl;
+    if( print_messages ) {
+        std::cout << "writing JPEG image: " << filename << std::endl;
+    }
 
     const uint bsize = 3 * width * height;
     std::vector<GLubyte> screen_shot_trans;
@@ -450,10 +455,6 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     //Initialize OpenGL context and open graphic window
 
-    if( message_flag ){
-        std::cout << "Initializing graphics..." << std::flush;
-    }
-
     // Initialise GLFW
     if( !glfwInit() ){
         helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW" );
@@ -661,10 +662,6 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     colormap_current = colormap_hot;
 
     assert(checkerrors());
-
-    if( message_flag ){
-        std::cout << "done." << std::endl;
-    }
 
 }
 
@@ -895,7 +892,7 @@ void Visualizer::printWindow( const char* outfile ){
     std::string outfile_str = outfile;
     validateOutputPath( outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"} );
 
-    write_JPEG_file( outfile_str.c_str(), Wframebuffer, Hframebuffer, window );
+    write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, window, message_flag);
 
 }
 
@@ -2350,10 +2347,14 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     if( message_flag ){
         if( coordFlag==COORDINATES_WINDOW_NORMALIZED ){
             if(xt<0 || xt>1){
-                std::cout << "WARNING (Visualizer::addTextboxByCenter): text x-coordinate is outside of window area" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (Visualizer::addTextboxByCenter): text x-coordinate is outside of window area" << std::endl;
+                }
             }
             if(yt<0 || yt>1){
-                std::cout << "WARNING (Visualizer::addTextboxByCenter): text y-coordinate is outside of window area" << std::endl;
+                if( message_flag ) {
+                    std::cout << "WARNING (Visualizer::addTextboxByCenter): text y-coordinate is outside of window area" << std::endl;
+                }
             }
         }
     }
@@ -2609,10 +2610,10 @@ void Visualizer::setColorbarSize( vec2 size ){
 }
 
 void Visualizer::setColorbarRange( float cmin, float cmax ){
-    if( message_flag && cmin>cmax ){
+    if( message_flag && cmin>cmax ) {
         std::cout << "WARNING (Visualizer::setColorbarRange): Maximum colorbar value must be greater than minimum value...Ignoring command." << std::endl;
-        return;
     }
+    return;
     colorbar_min = cmin;
     colorbar_max = cmax;
 }
@@ -3772,7 +3773,7 @@ void Visualizer::plotDepthMap() {
     glfwSwapBuffers((GLFWwindow*)window);
     glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_buffer_data[0] );
 
-    //depending on the ative frame buffer, we may get all zero data and need to swap it again.
+    //depending on the active frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
     for( int i=0; i<3*Wframebuffer*Hframebuffer; i++){
         if( depth_buffer_data[i]!=0 ){

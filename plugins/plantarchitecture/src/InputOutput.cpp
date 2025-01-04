@@ -1,6 +1,6 @@
 /** \file "InputOutput.cpp" Routines for reading and writing plant geometry in the plant architecture plug-in.
 
-Copyright (C) 2016-2024 Brian Bailey
+Copyright (C) 2016-2025 Brian Bailey
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -412,9 +412,9 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
 
     ShootParameters shoot_parameters(context_ptr->getRandomGenerator());
     shoot_parameters.max_nodes = 200;
-    shoot_parameters.vegetative_bud_break_probability = 0;
+    shoot_parameters.vegetative_bud_break_probability_min = 0;
     shoot_parameters.vegetative_bud_break_time = 0;
-    shoot_parameters.phyllochron = 0;
+    shoot_parameters.phyllochron_min = 0;
 
     //assign default phytomer parameters. This can be changed later if the optional phytomer parameters label is provided in the shoot argument '{}'.
     if( phytomer_parameters.empty() ){

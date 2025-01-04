@@ -1,6 +1,6 @@
 /** \file "CanopyGenerator.h" Primary header file for canopy geometry generator plug-in.
     
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1400,12 +1400,28 @@ uint grapevineGoblet( const GobletGrapevineParameters &params, const helios::vec
 
 };
 
-//! Draw a random number from a uniform distribution between -V and V
+//! Draw a random number (float) from a uniform distribution between -V and V
+/**
+ * \param[in] V Maximum/minimum value of the distribution.
+ * \param[in] generator Random number generator.
+ * \param[in] positive If true, only positive values are returned.
+ */
+float getVariation( float V, std::minstd_rand0& generator, bool positive = false );
+
+//! Draw a random number (int) from a uniform distribution between -V and V
+/**
+ * \param[in] V Maximum/minimum value of the distribution.
+ * \param[in] generator Random number generator.
+ * \param[in] positive If true, only positive values are returned.
+ */
+int getVariation( int V, std::minstd_rand0& generator, bool positive = false );
+
+//! Draw a random number (uint) from a uniform distribution between 0 and V
 /**
  * \param[in] V Maximum/minimum value of the distribution.
  * \param[in] generator Random number generator.
  */
-float getVariation( float V, std::minstd_rand0& generator );
+uint getVariation( uint V, std::minstd_rand0& generator );
 
 //! Interpolate the position of a point along a tube
 /**

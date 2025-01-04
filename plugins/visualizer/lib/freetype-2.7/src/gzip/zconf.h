@@ -225,6 +225,7 @@ typedef unsigned long  uLong; /* 32 bits or more */
    /* Borland C/C++ and some old MSC versions ignore FAR inside typedef */
 #  define Bytef Byte FAR
 #else
+   typedef unsigned char Byte; //BNB 12/16/2024: this is needed for the latest MacOS compilers. It is not being defined on line 219 above for some reason.
    typedef Byte  FAR Bytef;
 #endif
 typedef char  FAR charf;

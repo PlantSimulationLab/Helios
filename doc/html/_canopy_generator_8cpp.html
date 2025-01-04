@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.24</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.25</span>
    </div>
   </td>
  </tr>
@@ -101,9 +101,15 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a60614fd7d73eddecc942bd86d9e11d02"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_canopy_generator_8cpp.html#a60614fd7d73eddecc942bd86d9e11d02">getVariation</a> (float V, std::minstd_rand0 &amp;generator)</td></tr>
-<tr class="memdesc:a60614fd7d73eddecc942bd86d9e11d02"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a random number from a uniform distribution between -V and V.  <br /></td></tr>
-<tr class="separator:a60614fd7d73eddecc942bd86d9e11d02"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0b21a2d6b9506b33d05047716d671e0"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_canopy_generator_8cpp.html#aa0b21a2d6b9506b33d05047716d671e0">getVariation</a> (float V, std::minstd_rand0 &amp;generator, bool positive)</td></tr>
+<tr class="memdesc:aa0b21a2d6b9506b33d05047716d671e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a random number (float) from a uniform distribution between -V and V.  <br /></td></tr>
+<tr class="separator:aa0b21a2d6b9506b33d05047716d671e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f90ba8fe8a074a822424ff748579f25"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_canopy_generator_8cpp.html#a9f90ba8fe8a074a822424ff748579f25">getVariation</a> (int V, std::minstd_rand0 &amp;generator, bool positive)</td></tr>
+<tr class="memdesc:a9f90ba8fe8a074a822424ff748579f25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a random number (int) from a uniform distribution between -V and V.  <br /></td></tr>
+<tr class="separator:a9f90ba8fe8a074a822424ff748579f25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6cdee9cb4984f78c818e46eb2a5b62e6"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_canopy_generator_8cpp.html#a6cdee9cb4984f78c818e46eb2a5b62e6">getVariation</a> (uint V, std::minstd_rand0 &amp;generator)</td></tr>
+<tr class="memdesc:a6cdee9cb4984f78c818e46eb2a5b62e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a random number (uint) from a uniform distribution between 0 and V.  <br /></td></tr>
+<tr class="separator:a6cdee9cb4984f78c818e46eb2a5b62e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d10c56b3c11e46ebfd346ce37f38612"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_canopy_generator_8cpp.html#a2d10c56b3c11e46ebfd346ce37f38612">interpolateTube</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;P, float frac)</td></tr>
 <tr class="memdesc:a2d10c56b3c11e46ebfd346ce37f38612"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interpolate the position of a point along a tube.  <br /></td></tr>
 <tr class="separator:a2d10c56b3c11e46ebfd346ce37f38612"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -116,7 +122,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Primary source file for canopy geometry generator plug-in.</p>
-<p>Copyright (C) 2016-2024 Brian Bailey</p>
+<p>Copyright (C) 2016-2025 Brian Bailey</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
@@ -164,12 +170,12 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03296">3296</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03321">3321</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a60614fd7d73eddecc942bd86d9e11d02" name="a60614fd7d73eddecc942bd86d9e11d02"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a60614fd7d73eddecc942bd86d9e11d02">&#9670;&#160;</a></span>getVariation()</h2>
+<a id="aa0b21a2d6b9506b33d05047716d671e0" name="aa0b21a2d6b9506b33d05047716d671e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0b21a2d6b9506b33d05047716d671e0">&#9670;&#160;</a></span>getVariation() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -178,6 +184,98 @@ Functions</h2></td></tr>
           <td class="memname">float getVariation </td>
           <td>(</td>
           <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>V</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::minstd_rand0 &amp;&#160;</td>
+          <td class="paramname"><em>generator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>positive</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Draw a random number (float) from a uniform distribution between -V and V. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">V</td><td>Maximum/minimum value of the distribution. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">generator</td><td>Random number generator. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">positive</td><td>If true, only positive values are returned. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03004">3004</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9f90ba8fe8a074a822424ff748579f25" name="a9f90ba8fe8a074a822424ff748579f25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f90ba8fe8a074a822424ff748579f25">&#9670;&#160;</a></span>getVariation() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int getVariation </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>V</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::minstd_rand0 &amp;&#160;</td>
+          <td class="paramname"><em>generator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>positive</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Draw a random number (int) from a uniform distribution between -V and V. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">V</td><td>Maximum/minimum value of the distribution. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">generator</td><td>Random number generator. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">positive</td><td>If true, only positive values are returned. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03016">3016</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6cdee9cb4984f78c818e46eb2a5b62e6" name="a6cdee9cb4984f78c818e46eb2a5b62e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6cdee9cb4984f78c818e46eb2a5b62e6">&#9670;&#160;</a></span>getVariation() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint getVariation </td>
+          <td>(</td>
+          <td class="paramtype">uint&#160;</td>
           <td class="paramname"><em>V</em>, </td>
         </tr>
         <tr>
@@ -194,7 +292,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Draw a random number from a uniform distribution between -V and V. </p>
+<p>Draw a random number (uint) from a uniform distribution between 0 and V. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">V</td><td>Maximum/minimum value of the distribution. </td></tr>
@@ -203,7 +301,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03003">3003</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03028">3028</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -242,7 +340,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03261">3261</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03286">3286</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -281,7 +379,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03226">3226</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03251">3251</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>

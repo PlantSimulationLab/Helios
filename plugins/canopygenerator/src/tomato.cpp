@@ -3,13 +3,13 @@
 using namespace helios;
 using namespace std;
 
-std::vector<std::vector<uint> > tomatoCluster( const vec3 center, const TomatoParameters params, Context* context ){
+std::vector<std::vector<uint> > tomatoCluster( const vec3 center, const TomatoParameters &params, Context* context ){
 
   std::vector<std::vector<uint> > U;
 
   U.push_back( context->addSphere( params.fruit_subdivisions, center, params.fruit_radius, params.fruit_color ) );
 
-  float azimuth = 2.f*M_PI*context->randu();
+  float azimuth = 2.f*PI_F*context->randu();
 
   if( context->randu()<0.75 ){
 
@@ -19,7 +19,7 @@ std::vector<std::vector<uint> > tomatoCluster( const vec3 center, const TomatoPa
 
   if( context->randu()<0.5 ){
 
-    U.push_back( context->addSphere( params.fruit_subdivisions, center+sphere2cart(make_SphericalCoord(1.5*params.fruit_radius,0,azimuth+0.5*M_PI)), params.fruit_radius, params.fruit_color ) );
+    U.push_back( context->addSphere( params.fruit_subdivisions, center+sphere2cart(make_SphericalCoord(1.5*params.fruit_radius,0,azimuth+0.5*PI_F)), params.fruit_radius, params.fruit_color ) );
 
   }
 
@@ -30,7 +30,7 @@ std::vector<std::vector<uint> > tomatoCluster( const vec3 center, const TomatoPa
 
 std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters params, const float leaf_scale, const std::vector<vec3> nodes, std::string texture, Context* context ){
 
-  float downangle = 0.1*M_PI;
+  float downangle = 0.1*PI_F;
   
   vec3 r0 = interpolateTube( nodes, bfrac);
   vec3 r1 = interpolateTube( nodes, 1.01*bfrac);
@@ -41,7 +41,7 @@ std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters param
 
   std::vector<uint> U1, U2;
   
-  U1 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U1 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U1, elevation, "x" );
   context->rotatePrimitive( U1, downangle, "y" );
@@ -49,11 +49,11 @@ std::vector<uint> lateralLeaves( const float bfrac, const TomatoParameters param
 
   context->translatePrimitive( U1, r0 + 0.6*leaf_scale*make_vec3( cosf(-azimuth), sinf(-azimuth), -0.5*sinf(downangle)) );
 
-  U2 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U2 = context->addTile( make_vec3(0,0,0), make_vec2(leaf_scale,leaf_scale*0.5), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U2, elevation, "x" );
   context->rotatePrimitive( U2, downangle, "y" );
-  context->rotatePrimitive( U2, -azimuth+M_PI, "z" );
+  context->rotatePrimitive( U2, -azimuth+PI_F, "z" );
 
   context->translatePrimitive( U2, r0 - 0.6*leaf_scale*make_vec3( cosf(-azimuth), sinf(-azimuth), 0.5*sinf(downangle)) );
 
@@ -105,10 +105,10 @@ void tomatoShoot( const TomatoParameters params, const helios::vec3 base_positio
   branch_UUIDs.insert( branch_UUIDs.end(), U.begin(), U.end() );
 
   //tip leaf
-  U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+  U = context->addTile( make_vec3(0,0,0), make_vec2(params.leaf_length,params.leaf_length*0.5), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
   context->rotatePrimitive( U, -theta, "y" );
-  context->rotatePrimitive( U, -base_angle.azimuth+0.5*M_PI, "z" );
+  context->rotatePrimitive( U, -base_angle.azimuth+0.5*PI_F, "z" );
 
   context->translatePrimitive( U, nodes.back()+sphere2cart(make_SphericalCoord(0.45*params.leaf_length,theta,base_angle.azimuth)) );
 
@@ -191,9 +191,9 @@ uint CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin 
 
     vec3 position = interpolateTube( nodes, shoot_heights.at(i) );
 
-    vec3 base_direction = sphere2cart( make_SphericalCoord( 0.2*M_PI+0.2*M_PI*float(i)/float(Nshoots-1), 2*M_PI*context->randu()) );
+    vec3 base_direction = sphere2cart( make_SphericalCoord( 0.2*PI_F+0.2*PI_F*float(i)/float(Nshoots-1), 2*PI_F*context->randu()) );
 
-    float tip_angle = 0.5*M_PI+0.2*M_PI*float(i)/float(Nshoots-1);
+    float tip_angle = 0.5*PI_F+0.2*PI_F*float(i)/float(Nshoots-1);
 
     float length = (0.3+0.5*float(i)/float(Nshoots-1))*params.plant_height;
 

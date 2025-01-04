@@ -1,6 +1,6 @@
 /** \file "rayHit.cu" Functions for object intersection.
 
-    Copyright (C) 2016-2023  Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

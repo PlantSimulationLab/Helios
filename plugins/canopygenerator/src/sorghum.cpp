@@ -41,7 +41,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             context->deletePrimitive(UUID_stem_top);
 
 
-                float angle = ((context->randu(0, 90) * M_PI) / float(180));
+                float angle = ((context->randu(0, 90) * PI_F) / float(180));
                 for (float i = 1; i < 4; i++){
                     float leaf_length, leaf_width,rotation_value1, leaf_bend, rotation_value2,frac, leaf_curve, x_adj;
 
@@ -58,7 +58,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     }else if (i == 2){
                         leaf_length =  params.s1_leaf_size2.x;
                         leaf_width =  params.s1_leaf_size2.y;
-                        rotation_value1 = M_PI;
+                        rotation_value1 = PI_F;
                         leaf_bend = leaf_length * 0.2;
                         rotation_value2 = params.s1_leaf2_angle;
                         frac= 0.9;
@@ -68,7 +68,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     }else{
                         leaf_length =  params.s1_leaf_size3.x;
                         leaf_width =  params.s1_leaf_size3.y;
-                        rotation_value1 = M_PI*0.5;
+                        rotation_value1 = PI_F*0.5;
                         leaf_bend = leaf_length * 0.2;
                         rotation_value2 = params.s1_leaf3_angle;
                         frac= 0.5;
@@ -121,11 +121,11 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                             float sx = dx;
                             float sy = dy;
 
-                            float x_i = x * M_PI /(Nx * dx);
-                            float sx_i = (x + sx) * M_PI /(Nx * dx);
+                            float x_i = x * PI_F /(Nx * dx);
+                            float sx_i = (x + sx) * PI_F /(Nx * dx);
 
-                            float z_1 = (x * M_PI) /((Nx * dx) /(A_3));
-                            float z_2 = ((x + sx) * M_PI) /((Nx * dx) /(A_3));
+                            float z_1 = (x * PI_F) /((Nx * dx) /(A_3));
+                            float z_2 = ((x + sx) * PI_F) /((Nx * dx) /(A_3));
 
                             float leaf_wave_1;
                             float leaf_wave_2;
@@ -176,7 +176,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     context->deletePrimitive(UUIDs4);
 
                     vec3 translation(-x_adj, -leaf_width*0.5, 0);
-                    float rotation_1 = -rotation_value2 * M_PI / float(180);
+                    float rotation_1 = -rotation_value2 * PI_F / float(180);
 
                     float rotation_2 = angle + rotation_value1;
                     vec3 base = interpolateTube(node_stem, frac);
@@ -232,7 +232,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             context->deletePrimitive(UUID_stem);
             context->deletePrimitive(UUID_stem_top);
 
-            float angle = ((context->randu(0, 90) * M_PI) / float(180));
+            float angle = ((context->randu(0, 90) * PI_F) / float(180));
             for (float i = 1; i < 6; i++){
                 float leaf_length, leaf_width,rotation_value1, leaf_bend,rotation_value2,frac, leaf_curve, leaf_wave_no, leaf_wave;
 
@@ -250,7 +250,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }else if (i == 2) {
                     leaf_length = params.s2_leaf_size2.x;
                     leaf_width = params.s2_leaf_size2.y;
-                    rotation_value1 = M_PI;
+                    rotation_value1 = PI_F;
                     leaf_bend = leaf_length * 0.2;
                     rotation_value2 = 50;
                     frac = 0.98;
@@ -261,7 +261,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }else if (i == 3) {
                     leaf_length = params.s2_leaf_size3.x;
                     leaf_width = params.s2_leaf_size3.y;
-                    rotation_value1 = M_PI + ((context->randu(0, 45) * M_PI) / float(180));
+                    rotation_value1 = PI_F + ((context->randu(0, 45) * PI_F) / float(180));
                     leaf_bend = leaf_length * 0.3;
                     rotation_value2 = 15;
                     frac = 0.75;
@@ -272,7 +272,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }else if (i == 4){
                     leaf_length = params.s2_leaf_size4.x;
                     leaf_width = params.s2_leaf_size4.y;
-                    rotation_value1 = ((context->randu(0, 45) * M_PI) / float(180));
+                    rotation_value1 = ((context->randu(0, 45) * PI_F) / float(180));
                     leaf_bend = leaf_length * 0.3;
                     rotation_value2 = 25;
                     frac= 0.5;
@@ -283,7 +283,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }else{
                     leaf_length = params.s2_leaf_size5.x;
                     leaf_width = params.s2_leaf_size5.y;
-                    rotation_value1 = M_PI + ((context->randu(0, 45) * M_PI) / float(180));
+                    rotation_value1 = PI_F + ((context->randu(0, 45) * PI_F) / float(180));
                     leaf_bend = leaf_length * 0.3;
                     rotation_value2 = 10;
                     frac= 0.25;
@@ -338,11 +338,11 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                         float sx = dx;
                         float sy = dy;
 
-                        float x_i = x * M_PI /(Nx * dx);
-                        float sx_i = (x + sx) * M_PI /(Nx * dx);
+                        float x_i = x * PI_F /(Nx * dx);
+                        float sx_i = (x + sx) * PI_F /(Nx * dx);
 
-                        float z_1 = (x * M_PI) /((Nx * dx) /(A_3));
-                        float z_2 = ((x + sx) * M_PI) /((Nx * dx) /(A_3));
+                        float z_1 = (x * PI_F) /((Nx * dx) /(A_3));
+                        float z_2 = ((x + sx) * PI_F) /((Nx * dx) /(A_3));
 
                         float leaf_wave_1;
                         float leaf_wave_2;
@@ -392,7 +392,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 context->deletePrimitive(UUIDs4);
 
                 vec3 translation(- 0.00015* rotation_value2, -leaf_width*0.5, 0);  // adjustment v0 amplitude,v1 radius v2 leaf_length
-                float rotation_1 = -rotation_value2 * M_PI / float(180);
+                float rotation_1 = -rotation_value2 * PI_F / float(180);
 
                 float rotation_2 = angle + rotation_value1;
                 vec3 base = interpolateTube(node_stem, frac);
@@ -440,7 +440,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             int nodes_no = params.s3_number_of_leaves;
 
-            float rotation_x1 = (context->randu(0, 360) * M_PI) / float(180);// inclination rotation, different for each plant
+            float rotation_x1 = (context->randu(0, 360) * PI_F) / float(180);// inclination rotation, different for each plant
             std::vector<std::vector<uint> > s3_UUID_leaf_plant;
 
             for (int i = 1; i < (nodes_no + 1); i++) {
@@ -498,11 +498,11 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                         float sx = dx;
                         float sy = dy;
 
-                        float x_i = x * M_PI /(Nx * dx);
-                        float sx_i = (x + sx) * M_PI /(Nx * dx);
+                        float x_i = x * PI_F /(Nx * dx);
+                        float sx_i = (x + sx) * PI_F /(Nx * dx);
 
-                        float z_1 = (x * M_PI) /((Nx * dx) /(A_3));
-                        float z_2 = ((x + sx) * M_PI) /((Nx * dx) /(A_3));
+                        float z_1 = (x * PI_F) /((Nx * dx) /(A_3));
+                        float z_2 = ((x + sx) * PI_F) /((Nx * dx) /(A_3));
 
                         float leaf_wave_1;
                         float leaf_wave_2;
@@ -563,10 +563,10 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }
 
                 vec3 base = interpolateTube(node_stem, frac);
-                float rotation_1 = - (params.s3_mean_leaf_angle * M_PI / float(180)) - (context->randu(0, 5) * M_PI) / float(180);
-                float rotation_x2 = (context->randu(0, 45) * M_PI) / float(180);
+                float rotation_1 = - (params.s3_mean_leaf_angle * PI_F / float(180)) - (context->randu(0, 5) * PI_F) / float(180);
+                float rotation_x2 = (context->randu(0, 45) * PI_F) / float(180);
                 float rotation_2 = rotation_x1 + rotation_x2;
-                float rotation_3 = rotation_2 + M_PI; //
+                float rotation_3 = rotation_2 + PI_F; //
                 vec3 translation(-params.s3_stem_radius * 2.8, -0.9 / (2 / float(params.s3_leaf_size.y)), 0);  // adjustment
 
                 if (i % 2 != 0) {
@@ -656,7 +656,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 float y = 0;
                 float dz = n * (0.01);
                 float z = dz;
-                float angle = n * M_PI /width_panicle;
+                float angle = n * PI_F /width_panicle;
                 float dr = 0.01 * sin(angle);
 
                 nodes_panicle.push_back(make_vec3(x, y, z));
@@ -705,7 +705,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
                 for (int ii = 0; ii < i_value_1; ii++) {
                     s4_UUID_panicle_plant.front().push_back(context->copyPrimitive(UUIDs2_copy));
-                    float rot2 = ii * i_value_2 * M_PI / float(180);
+                    float rot2 = ii * i_value_2 * PI_F / float(180);
                     context -> rotatePrimitive(s4_UUID_panicle_plant.front().back(), rot2, "z");
 
                 }
@@ -720,7 +720,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             int nodes_no = params.s4_number_of_leaves;
 
-            float rotation_x1 = (context->randu(0, 360) * M_PI) / float(180);// inclination rotation, different for each plant
+            float rotation_x1 = (context->randu(0, 360) * PI_F) / float(180);// inclination rotation, different for each plant
             std::vector<std::vector<uint> > s4_UUID_leaf_plant;
 
             for (int i = 1; i < (nodes_no + 1); i++) {
@@ -781,11 +781,11 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                         float sx = dx;
                         float sy = dy;
 
-                        float x_i = x * M_PI / (Nx * dx);
-                        float sx_i = (x + sx) * M_PI /(Nx * dx);
+                        float x_i = x * PI_F / (Nx * dx);
+                        float sx_i = (x + sx) * PI_F /(Nx * dx);
 
-                        float z_1 = (x * M_PI) /((Nx * dx) /A_3);
-                        float z_2 = ((x + sx) * M_PI) /((Nx * dx) /A_3);
+                        float z_1 = (x * PI_F) /((Nx * dx) /A_3);
+                        float z_2 = ((x + sx) * PI_F) /((Nx * dx) /A_3);
 
                         float leaf_wave_1;
                         float leaf_wave_2;
@@ -843,10 +843,10 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                 }
 
                 vec3 base = interpolateTube(node_stem, frac);
-                float rotation_1 = - (params.s4_mean_leaf_angle * M_PI / float(180)) - (context->randu(0, 5) * M_PI) / float(180);
-                float rotation_x2 = (context->randu(0, 45) * M_PI) / float(180);
+                float rotation_1 = - (params.s4_mean_leaf_angle * PI_F / float(180)) - (context->randu(0, 5) * PI_F) / float(180);
+                float rotation_x2 = (context->randu(0, 45) * PI_F) / float(180);
                 float rotation_2 = rotation_x1 + rotation_x2;
-                float rotation_3 = rotation_2 + M_PI; //
+                float rotation_3 = rotation_2 + PI_F; //
                 vec3 translation(-params.s4_stem_radius * 2, -0.9 / (2 / float(params.s4_leaf_size.y)), 0);  // adjustment
 
                 if (i % 2 != 0) {
@@ -886,8 +886,8 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         for (float n = 0; n < params.s5_stem_length* Nx_stem; n++) {
             float mid_height = params.s5_stem_length * 0.5;
             float nx = n * dx;
-            float i = nx * (180 / float(params.s5_stem_length)) * M_PI / float(180);
-            float i_mid = (mid_height) * (180 / float(params.s5_stem_length)) * M_PI / float(180);
+            float i = nx * (180 / float(params.s5_stem_length)) * PI_F / float(180);
+            float i_mid = (mid_height) * (180 / float(params.s5_stem_length)) * PI_F / float(180);
             float x_mid = -params.s5_stem_bend * sin(i_mid);
             float x1, x;
             if (nx <= mid_height) {
@@ -952,7 +952,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             float y = 0;
             float dz = n * (0.01);
             float z = dz;
-            float angle = n * M_PI / width_panicle;
+            float angle = n * PI_F / width_panicle;
             float dr = 0.01 * sin(angle);
 
             nodes_panicle.push_back(make_vec3(x, y, z));
@@ -1006,7 +1006,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
             for (int ii = 0; ii < i_value_1; ii++) {
                 s5_UUID_panicle_plant.front().push_back(context->copyPrimitive(UUIDs_copy));
-                float rot2 = ii * i_value_2 * M_PI / float(180);
+                float rot2 = ii * i_value_2 * PI_F / float(180);
                 context -> rotatePrimitive(s5_UUID_panicle_plant.front().back(), rot2, "z");
 
             }
@@ -1032,7 +1032,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
         int nodes_no = params.s5_number_of_leaves;
 
 
-        float rotation_x1 = (context->randu(0, 360) * M_PI) / float(180);// inclination rotation, different for each plant
+        float rotation_x1 = (context->randu(0, 360) * PI_F) / float(180);// inclination rotation, different for each plant
         std::vector<std::vector<uint> > s5_UUID_leaf_plant;
 
         for (int i = 1; i < (nodes_no + 1); i++) {
@@ -1075,11 +1075,11 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
                     float sx = dx;
                     float sy = dy;
 
-                    float x_i = x * M_PI / (Nx * dx);
-                    float sx_i = (x + sx) * M_PI / (Nx * dx);
+                    float x_i = x * PI_F / (Nx * dx);
+                    float sx_i = (x + sx) * PI_F / (Nx * dx);
 
-                    float z_1 = (x * M_PI) / ((Nx * dx) /A_3);
-                    float z_2 = ((x + sx) * M_PI) /((Nx * dx) /A_3);
+                    float z_1 = (x * PI_F) / ((Nx * dx) /A_3);
+                    float z_2 = ((x + sx) * PI_F) /((Nx * dx) /A_3);
 
                     float leaf_wave_1;
                     float leaf_wave_2;
@@ -1139,10 +1139,10 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
             }
 
             vec3 base = interpolateTube(nodes_stem, frac);
-            float rotation_1 = - (params.s5_mean_leaf_angle * M_PI / float(180)) - (context->randu(0, 10) * M_PI) / float(180);
-            float rotation_x2 = (context->randu(0, 45) * M_PI) / float(180);
+            float rotation_1 = - (params.s5_mean_leaf_angle * PI_F / float(180)) - (context->randu(0, 10) * PI_F) / float(180);
+            float rotation_x2 = (context->randu(0, 45) * PI_F) / float(180);
             float rotation_2 = rotation_x1 + rotation_x2;
-            float rotation_3 = rotation_2 + M_PI; //
+            float rotation_3 = rotation_2 + PI_F; //
             vec3 translation(0, -0.9 / (2 / float(params.s5_leaf_size.y)), 0);  // adjustment
 
             if (i % 2 != 0) {
@@ -1160,7 +1160,7 @@ uint CanopyGenerator::sorghum( const SorghumCanopyParameters &params, const vec3
 
         }
 
-        float plant_rotation = (context->randu(0, 360) * M_PI) / float(180);
+        float plant_rotation = (context->randu(0, 360) * PI_F) / float(180);
 
         context->rotatePrimitive( s5_UUID_stem_plant,plant_rotation,origin, make_vec3(0,0,1));
         context->rotatePrimitive( flatten(s5_UUID_panicle_plant),plant_rotation,origin, make_vec3(0,0,1));
