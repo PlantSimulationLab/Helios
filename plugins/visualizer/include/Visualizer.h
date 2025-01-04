@@ -1,6 +1,6 @@
 /** \file "Visualizer.h" Visualizer header.
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,8 +39,9 @@ int read_JPEG_file (const char * filename, std::vector<unsigned char> &texture, 
  * \param[in] width Width of the graphics window in pixels
  * \param[in] height Height of the graphics window in pixels
  * \param[in] window Pointer to the window object
+ * \param[in] print_messages [OPTIONAL] Flag to print output messages to the console
 */
-int write_JPEG_file (const char* filename, uint width, uint height, void* _window );
+int write_JPEG_file(const char *filename, uint width, uint height, void *_window, bool print_messages = true);
 
 
 //! Write a JPEG image file based on array of pixel data
@@ -49,8 +50,9 @@ int write_JPEG_file (const char* filename, uint width, uint height, void* _windo
  * \param[in] width Width of the graphics window in pixels
  * \param[in] height Height of the graphics window in pixels
  * \param[in] data Vector of RGB pixel data
+ * \param[in] print_messages [OPTIONAL] Flag to print output messages to the console
 */
-int write_JPEG_file (const char* filename, uint width, uint height, const std::vector<helios::RGBcolor>& data );
+int write_JPEG_file(const char *filename, const uint width, const uint height, const std::vector<helios::RGBcolor> &data, bool print_messages = true);
 
 //! Function to create a texture map from a PNG image
 /**
@@ -187,17 +189,17 @@ public:
         std::vector<float> cinds;
         cinds.resize(Ncolors);
 
-        for( int i=0; i<Ncolors; i++ ){
+        for( uint i=0; i<Ncolors; i++ ){
             cinds.at(i)=clocs.at(i)*float(cmapsize-1);
         }
 
         cmap.resize(cmapsize);
-        for( int c=0; c<Ncolors-1; c++ ){
+        for( uint c=0; c<Ncolors-1; c++ ){
 
             cmin=cinds.at(c);
             cmax=cinds.at(c+1);
 
-            for( int i=0; i<cmapsize; i++){
+            for( uint i=0; i<cmapsize; i++){
 
                 if( float(i)>=cmin && float(i)<=cmax ){
 
@@ -217,7 +219,7 @@ public:
 
         helios::RGBcolor color;
 
-        int color_ind;
+        uint color_ind;
         if( minval==maxval ){
             color_ind=0;
         }else{

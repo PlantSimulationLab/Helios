@@ -1,6 +1,6 @@
 /** \file "PlantArchitecture.h" Primary header file for plant architecture plug-in.
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -317,12 +317,148 @@ struct FloralBud{
     std::vector<uint> inflorescence_objIDs;
 };
 
+struct LeafPrototype {
+public:
+
+    //! Constructor - sets random number generator
+    explicit LeafPrototype( std::minstd_rand0 *generator );
+
+    //! Constructor - does not set random number generator
+    LeafPrototype( ){};
+
+    //! Custom prototype function for creating leaf prototypes
+    uint (*prototype_function)(helios::Context *, LeafPrototype* prototype_parameters, int compound_leaf_index) = nullptr;
+
+    //! OBJ model file to load for the leaf
+    /**
+     *\note If this is set, the leaf will be loaded from the OBJ file and the other leaf parameters will be ignored.
+     */
+    std::string OBJ_model_file;
+
+    //! Image texture file for the leaf
+    /**
+     *\note Key is the index of the compound leaf (=0 is the tip leaf, <0 increases down left side of the leaflet, >0 increases down the right side of the leaflet), value is the texture file.
+     */
+    std::map<int,std::string> leaf_texture_file;
+
+    // Ratio of leaf width to leaf length
+    RandomParameter_float leaf_aspect_ratio;
+
+    //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib.
+    RandomParameter_float midrib_fold_fraction;
+
+    // Parameters for leaf curvature
+    //! Leaf curvature factor along the longitudinal/length (x-direction). (+curves upward, -curved downward)
+    RandomParameter_float longitudinal_curvature;
+    //! Leaf curvature factor along the lateral/width (y-direction). (+curves upward, -curved downward)
+    RandomParameter_float lateral_curvature;
+
+    //! Creates a rolling at the leaf where the petiole attaches to the leaf blade
+    RandomParameter_float petiole_roll;
+
+    // Parameters for leaf wave/wrinkles
+    //! Period factor of leaf waves (sets how many waves there are along the leaf length)
+    RandomParameter_float wave_period;
+    //! Amplitude of leaf waves (sets the height of leaf waves)
+    RandomParameter_float wave_amplitude;
+
+    // Parameters for leaf buckling
+    //! Fraction of the leaf length where the leaf buckles under its weight
+    RandomParameter_float leaf_buckle_length;
+    //! Angle of the leaf buckle (degrees)
+    RandomParameter_float leaf_buckle_angle;
+
+    //! Amount to shift the leaf
+    helios::vec3 leaf_offset;
+
+    //! Leaf subdivision count in each direction
+    uint subdivisions;
+
+    //! Number of unique prototypes to generate
+    uint unique_prototypes;
+
+    //! Add a petiolule to the base of the leaflet
+    bool build_petiolule;
+
+    uint unique_prototype_identifier = 0;
+
+    void duplicate( const LeafPrototype &a){
+        this->leaf_texture_file = a.leaf_texture_file;
+        this->OBJ_model_file = a.OBJ_model_file;
+        this->leaf_aspect_ratio = a.leaf_aspect_ratio;
+        this->midrib_fold_fraction = a.midrib_fold_fraction;
+        this->longitudinal_curvature = a.longitudinal_curvature;
+        this->lateral_curvature = a.lateral_curvature;
+        this->petiole_roll = a.petiole_roll;
+        this->wave_period = a.wave_period;
+        this->wave_amplitude = a.wave_amplitude;
+        this->leaf_buckle_length = a.leaf_buckle_length;
+        this->leaf_buckle_angle = a.leaf_buckle_angle;
+        this->leaf_offset = a.leaf_offset;
+        this->subdivisions = a.subdivisions;
+        this->unique_prototypes = a.unique_prototypes;
+        this->unique_prototype_identifier = a.unique_prototype_identifier;
+        this->build_petiolule = a.build_petiolule;
+        this->prototype_function = a.prototype_function;
+        this->generator = a.generator;
+    }
+
+    //! Assignment operator
+    LeafPrototype& operator=(const LeafPrototype &a){
+        if (this != &a) {
+            this->leaf_texture_file = a.leaf_texture_file;
+            this->OBJ_model_file = a.OBJ_model_file;
+            this->leaf_aspect_ratio = a.leaf_aspect_ratio;
+            this->leaf_aspect_ratio.resample();
+            this->midrib_fold_fraction = a.midrib_fold_fraction;
+            this->midrib_fold_fraction.resample();
+            this->longitudinal_curvature = a.longitudinal_curvature;
+            this->longitudinal_curvature.resample();
+            this->lateral_curvature = a.lateral_curvature;
+            this->lateral_curvature.resample();
+            this->petiole_roll = a.petiole_roll;
+            this->petiole_roll.resample();
+            this->wave_period = a.wave_period;
+            this->wave_period.resample();
+            this->wave_amplitude = a.wave_amplitude;
+            this->wave_amplitude.resample();
+            this->leaf_buckle_length = a.leaf_buckle_length;
+            this->leaf_buckle_length.resample();
+            this->leaf_buckle_angle = a.leaf_buckle_angle;
+            this->leaf_buckle_angle.resample();
+            this->leaf_offset = a.leaf_offset;
+            this->subdivisions = a.subdivisions;
+            this->unique_prototypes = a.unique_prototypes;
+            this->unique_prototype_identifier = a.unique_prototype_identifier;
+            this->build_petiolule = a.build_petiolule;
+            this->prototype_function = a.prototype_function;
+            this->generator = a.generator;
+            if ( this->generator != nullptr ){
+                this->sampleIdentifier();
+            }
+        }
+        return *this;
+    }
+
+    void sampleIdentifier() {
+        assert(generator!=nullptr);
+        std::uniform_int_distribution<uint> unif_distribution;
+        this->unique_prototype_identifier = unif_distribution(*generator);
+    }
+
+private:
+
+    std::minstd_rand0 *generator;
+
+};
+
 struct PhytomerParameters{
 private:
 
     struct InternodeParameters{
         RandomParameter_float pitch;
         RandomParameter_float phyllotactic_angle;
+        RandomParameter_float radius_initial;
         RandomParameter_int max_vegetative_buds_per_petiole;
         RandomParameter_int max_floral_buds_per_petiole;
         helios::RGBcolor color;
@@ -336,6 +472,8 @@ private:
                 this->pitch.resample();
                 this->phyllotactic_angle = a.phyllotactic_angle;
                 this->phyllotactic_angle.resample();
+                this->radius_initial = a.radius_initial;
+                this->radius_initial.resample();
                 this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
                 this->max_vegetative_buds_per_petiole.resample();
                 this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
@@ -389,9 +527,7 @@ private:
         RandomParameter_float leaflet_offset;
         RandomParameter_float leaflet_scale;
         RandomParameter_float prototype_scale;
-        uint subdivisions;
-        uint unique_prototypes;
-        uint (*prototype_function)(helios::Context *, uint subdivisions, int compound_leaf_index) = nullptr;
+        LeafPrototype prototype;
 
         LeafParameters& operator=(const LeafParameters &a){
             if (this != &a) {
@@ -409,9 +545,7 @@ private:
                 this->leaflet_scale.resample();
                 this->prototype_scale = a.prototype_scale;
                 this->prototype_scale.resample();
-                this->subdivisions = a.subdivisions;
-                this->unique_prototypes = a.unique_prototypes;
-                this->prototype_function = a.prototype_function;
+                this->prototype.duplicate(a.prototype);
             }
             return *this;
         }
@@ -455,7 +589,7 @@ private:
         RandomParameter_float flower_prototype_scale;
         uint (*flower_prototype_function)(helios::Context *, uint subdivisions, bool flower_is_open) = nullptr;
         RandomParameter_float fruit_prototype_scale;
-        uint (*fruit_prototype_function)(helios::Context *, uint subdivisions, float time_since_fruit_set) = nullptr;
+        uint (*fruit_prototype_function)(helios::Context *, uint subdivisions) = nullptr;
         RandomParameter_float fruit_gravity_factor_fraction;
         uint unique_prototypes;
 
@@ -539,8 +673,8 @@ struct ShootParameters{
     // Maximum number of nodes along the shoot before the terminal vegetative bud dies
     RandomParameter_int max_nodes;
 
-    // Radius of phytomer internodes when they are first created
-    RandomParameter_float internode_radius_initial;
+    // Maximum number of nodes that can be produced by a shoot in a single season. By default, this is equal to max_nodes.
+    RandomParameter_int max_nodes_per_season;
 
     RandomParameter_float girth_area_factor; //cm^2 branch area / m^2 downstream leaf area
 
@@ -561,13 +695,18 @@ struct ShootParameters{
 
     // ---- Growth Parameters ---- //
 
-    RandomParameter_float phyllochron; //days/phytomer
-    uint leaf_flush_count;  //number of leaves in a 'flush' (=1 gives continuous leaf production)
+    RandomParameter_float phyllochron_min; //days/phytomer
 
     RandomParameter_float elongation_rate; //length/day
 
-    // Probability that bud with this shoot type will break and form a new shoot
-    RandomParameter_float vegetative_bud_break_probability;
+    // Minimum probability that bud with this shoot type will break and form a new shoot
+    RandomParameter_float vegetative_bud_break_probability_min;
+
+    // Decay rate of the probability that a bud will break and form a new shoot
+    /**
+     * If this value is negative, the vegetative bud break probability starts at 1 at the shoot base and decreases at a rate of vegetative_bud_break_probability_decay_rate per phytomer until it reaches vegetative_bud_break_probability_min. If this value is positive, the reverse is true starting from the shoot tip.
+     */
+    RandomParameter_float vegetative_bud_break_probability_decay_rate;
 
     // Maximum number of floral buds at the shoot apex
     RandomParameter_int max_terminal_floral_buds;
@@ -593,17 +732,16 @@ struct ShootParameters{
         this->phytomer_parameters = a.phytomer_parameters;
         this->max_nodes = a.max_nodes;
         this->max_nodes.resample();
-        this->internode_radius_initial = a.internode_radius_initial;
-        this->internode_radius_initial.resample();
-        this->phyllochron = a.phyllochron;
-        this->phyllochron.resample();
-        this->leaf_flush_count = a.leaf_flush_count;
+        this->max_nodes_per_season = a.max_nodes_per_season;
+        this->max_nodes_per_season.resample();
+        this->phyllochron_min = a.phyllochron_min;
+        this->phyllochron_min.resample();
         this->elongation_rate = a.elongation_rate;
         this->elongation_rate.resample();
         this->girth_area_factor = a.girth_area_factor;
         this->girth_area_factor.resample();
-        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
-        this->vegetative_bud_break_probability.resample();
+        this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
+        this->vegetative_bud_break_probability_min.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->flower_bud_break_probability.resample();
         this->fruit_set_probability = a.fruit_set_probability;
@@ -612,8 +750,10 @@ struct ShootParameters{
         this->gravitropic_curvature.resample();
         this->tortuosity = a.tortuosity;
         this->tortuosity.resample();
-        this->vegetative_bud_break_probability = a.vegetative_bud_break_probability;
-        this->vegetative_bud_break_probability.resample();
+        this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
+        this->vegetative_bud_break_probability_min.resample();
+        this->vegetative_bud_break_probability_decay_rate = a.vegetative_bud_break_probability_decay_rate;
+        this->vegetative_bud_break_probability_decay_rate.resample();
         this->max_terminal_floral_buds = a.max_terminal_floral_buds;
         this->max_terminal_floral_buds.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
@@ -641,6 +781,8 @@ struct ShootParameters{
         this->child_shoot_type_labels = a.child_shoot_type_labels;
         this->child_shoot_type_probabilities = a.child_shoot_type_probabilities;
         this->determinate_shoot_growth = a.determinate_shoot_growth;
+        this->child_shoot_type_labels = a.child_shoot_type_labels;
+        this->child_shoot_type_probabilities = a.child_shoot_type_probabilities;
         return *this;
     }
 
@@ -657,7 +799,7 @@ protected:
 struct Phytomer {
 public:
 
-    float phytomer_carbohydrate_cost_molC =0;
+    float phytomer_carbohydrate_cost_molC = 0;
 
     // Constructor
     Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
@@ -683,6 +825,8 @@ public:
     float getPetioleLength() const;
 
     float getInternodeRadius( float stem_fraction ) const;
+
+    float getLeafArea() const;
 
     bool hasLeaf() const;
 
@@ -778,12 +922,12 @@ public:
 
     //! Time since the phytomer was created
     float age = 0;
-    //! Time since the phytomer last broke dormancy (=0 if currently dormant)
-    float time_since_dormancy = 0;
     bool isdormant = false;
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
+
+    float downstream_leaf_area = 0;
 
     std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; //first index is petiole within internode, second index is bud within petiole
     std::vector<std::vector<FloralBud>> floral_buds; //first index is petiole within internode, second index is bud within petiole
@@ -832,10 +976,16 @@ struct Shoot {
 
     //! Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters
     /**
-     * \param[out] child_shoot_type_label Label of the randomly selected child shoot type.
-     * \return false if the bud dies, true if the bud survives and will produce a new shoot.
+     * \return Label of the randomly selected child shoot type.
      */
-    bool sampleChildShootType(std::string &child_shoot_type_label) const;
+    std::string sampleChildShootType() const;
+
+    //! Randomly sample whether a vegetative bud should break into a new shoot
+    /**
+     * \param[in] node_index Index of the node along the shoot
+     * \return True if the vegetative bud should break into a new shoot
+     */
+    bool sampleVegetativeBudBreak( uint node_index ) const;
 
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
@@ -862,7 +1012,10 @@ struct Shoot {
 
     float sumShootLeafArea( uint start_node_index = 0 ) const;
 
-    uint current_node_number;
+    void propagateDownstreamLeafArea(Shoot* shoot, uint node_index, float leaf_area);
+
+    uint current_node_number = 0;
+    uint nodes_this_season = 0;
 
     helios::vec3 base_position;
     AxisRotation base_rotation;
@@ -925,6 +1078,7 @@ struct PlantInstance{
     std::vector<std::shared_ptr<Shoot> > shoot_tree;
     helios::vec3 base_position;
     float current_age;
+    float time_since_dormancy = 0;
     helios::Context *context_ptr;
     std::pair<std::string,float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
 
@@ -937,6 +1091,8 @@ struct PlantInstance{
     float dd_to_dormancy = 0;
     float max_leaf_lifespan = 1e6;
     bool is_evergreen = false;
+
+    float max_age = 999;
 
 };
 
@@ -986,7 +1142,7 @@ public:
      * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy.
-     * \param[in] germination_rate Probability that a plant in the canopy germinates and a plant is created.
+     * \param[in] germination_rate [OPTIONAL] Probability that a plant in the canopy germinates and a plant is created.
      * \return Vector of plant instance IDs.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f);
@@ -1076,16 +1232,23 @@ public:
 
     //! Advance plant growth by a specified time interval for all plants
     /**
-     * \param[in] dt Time interval in days.
+     * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( float dt );
+    void advanceTime( float time_step_days );
+
+    //! Advance plant growth by a specified time interval for all plants
+    /**
+     * \param[in] time_step_years Number of years to advance.
+     * \param[in] time_step_days Number of days to advance (added to number of years).
+     */
+    void advanceTime( int time_step_years, float time_step_days );
 
     //! Advance plant growth by a specified time interval for a single plant
     /**
      * \param[in] plantID ID of the plant instance.
-     * \param[in] dt Time interval in days.
+     * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( uint plantID, float dt );
+    void advanceTime( uint plantID, float time_step_days );
 
     // -- plant building methods -- //
 
@@ -1377,19 +1540,20 @@ protected:
 
     std::map<uint,PlantInstance> plant_instances;
 
-    std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
+    [[nodiscard]] std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
 
     std::map<std::string,ShootParameters> shoot_types;
 
     // Key is the prototype function pointer; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
-    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
+    // std::map<uint(*)(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
+    std::map<uint,std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
 
     // Key is the prototype function pointer; value index is the unique flower prototype
     std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_open_flower_prototype_objIDs;
     // Key is the prototype function pointer; value index is the unique flower prototype
     std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_closed_flower_prototype_objIDs;
     // Key is the prototype function pointer; value index is the unique fruit prototype
-    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, float time_since_fruit_set),std::vector<uint> > unique_fruit_prototype_objIDs;
+    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions),std::vector<uint> > unique_fruit_prototype_objIDs;
 
     bool build_context_geometry_internode = true;
     bool build_context_geometry_petiole = true;

@@ -4,7 +4,7 @@ using namespace helios;
 using namespace std;
 
 
-std::vector<uint> leafPrototype( const WalnutCanopyParameters params, std::minstd_rand0 generator, Context* context ){
+std::vector<uint> leafPrototype( const WalnutCanopyParameters &params, std::minstd_rand0 generator, Context* context ){
 
   int Nx = params.leaf_subdivisions.x;
   int Ny = ceil( params.leaf_subdivisions.y*0.5 );
@@ -16,7 +16,7 @@ std::vector<uint> leafPrototype( const WalnutCanopyParameters params, std::minst
 
   std::vector<uint> UUIDs;
 
-  float fold = 0.1*M_PI;//unif_distribution(generator)*0.3*M_PI;
+  float fold = 0.1*PI_F;//unif_distribution(generator)*0.3*PI_F;
 
   for( int i=0; i<Nx; i++ ){
     for( int j=0; j<Ny; j++ ){
@@ -137,16 +137,16 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
 
         float u = 0.3 + 0.7 * float(i) / float(Nleaves - 1);
 
-        float downangle = 0.15 * M_PI + getVariation(0.1 * M_PI, generator);
+        float downangle = 0.15 * PI_F + getVariation(0.1f * PI_F, generator);
 
         vec3 r0 = interpolateTube(position_parent, u);
         vec3 r1 = interpolateTube(position_parent, 0.98 * u);
         vec3 dr = r1 - r0;
 
         //float elevation = cart2sphere(dr).elevation;
-        float azimuth = cart2sphere(dr).azimuth + getVariation(0.2 * M_PI, generator);
+        float azimuth = cart2sphere(dr).azimuth + getVariation(0.2f * PI_F, generator);
 
-        float elevation = 0.25 * M_PI + getVariation(0.1 * M_PI, generator);
+        float elevation = 0.25 * PI_F + getVariation(0.1f * PI_F, generator);
 
         std::vector<uint> UUIDs = context->copyPrimitive(leaf_prototype);
         UUID_leaf_plant.push_back(UUIDs);
@@ -166,7 +166,7 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
 
         context->rotatePrimitive(UUIDs, elevation, "x");
         context->rotatePrimitive(UUIDs, downangle, "y");
-        context->rotatePrimitive(UUIDs, -azimuth + M_PI, "z");
+        context->rotatePrimitive(UUIDs, -azimuth + PI_F, "z");
 
         context->translatePrimitive(UUIDs, r0 - 0.1 * params.leaf_length * make_vec3(cosf(-azimuth), sinf(-azimuth), -0.5 * sinf(downangle)));
 
@@ -177,11 +177,11 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
 
             context->scalePrimitive(UUIDs, make_vec3(params.leaf_length, 0.5 * params.leaf_length, 0.5 * params.leaf_length));
 
-            elevation = 0.25 * M_PI + getVariation(0.1 * M_PI, generator);
+            elevation = 0.25 * PI_F + getVariation(0.1f * PI_F, generator);
 
             context->rotatePrimitive(UUIDs, elevation, "y");
             context->rotatePrimitive(UUIDs, 0, "x");
-            context->rotatePrimitive(UUIDs, -azimuth + 0.5 * M_PI, "z");
+            context->rotatePrimitive(UUIDs, -azimuth + 0.5 * PI_F, "z");
 
             context->translatePrimitive(UUIDs, r0 - 0. * params.leaf_length * make_vec3(sinf(-azimuth), cosf(-azimuth), 0));
 
@@ -260,15 +260,15 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
   //int Nbranch = fmin(8,ceil(5*L));
 
   //random azimuthal rotation of first new branch
-  float phi0 = 2*M_PI*unif_distribution(generator);
+  float phi0 = 2*PI_F*unif_distribution(generator);
 
   for( int i=0; i<Nbranch; i++ ){
 
-    //phi0 += 0.45*M_PI*(1.f+getVariation(0.2,generator));
-    phi0 += 60*M_PI/180.f*(1.f+getVariation(0.3,generator));
+    //phi0 += 0.45*PI_F*(1.f+getVariation(0.2,generator));
+    phi0 += 60*PI_F/180.f*(1.f+getVariation(0.3f,generator));
 
     //new branch height as fraction of trunk height
-    float u = fmin(1.f, 0.2+0.8*float(i+1)/float(Nbranch)+getVariation(0.05,generator));
+    float u = fmin(1.f, 0.2+0.8*float(i+1)/float(Nbranch)+getVariation(0.05f,generator));
 
     //position of new branch base
     vec3 pbase = interpolateTube( position_parent, u );
@@ -283,12 +283,12 @@ void branchRecursion( const std::vector<vec3> position_parent, const std::vector
     vec3 pvec1 = cross( bnorm, nbase );
 
     //direction of new branch base - apply random rotation relative to parent
-    bnorm = rotatePointAboutLine( bnorm, make_vec3(0,0,0), pvec1, 0.1*M_PI+0.15*M_PI*float(i)/float(Nbranch-1) );
+    bnorm = rotatePointAboutLine( bnorm, make_vec3(0,0,0), pvec1, 0.1*PI_F+0.15*PI_F*float(i)/float(Nbranch-1) );
 
     //direction of new branch base - apply random rotation about parent
     vec3 bnorm1 = rotatePointAboutLine( bnorm, make_vec3(0,0,0), nbase, phi0 );
     bnorm1.normalize();
-    vec3 bnorm2 = rotatePointAboutLine( bnorm, make_vec3(0,0,0), nbase, phi0+M_PI+getVariation(0.5,generator) );
+    vec3 bnorm2 = rotatePointAboutLine( bnorm, make_vec3(0,0,0), nbase, phi0+PI_F+getVariation(0.5f,generator) );
     bnorm2.normalize();
 
     float L1 = (0.5+0.5*unif_distribution(generator))*L;

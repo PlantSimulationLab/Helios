@@ -1986,3 +1986,30 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Photosynthesis*
 - Updated code to include stomatal sidedness option (this was already described in the documentation, although it had not been implemented).
+
+[1.3.25] 2025-01-03
+
+*Updated copyright dates to 2025*
+
+*Plant Architecture*
+!!! Many significant changes in this release !!!
+- The way leaf prototypes are generated has changed. There is now a modifiable parameter set that controls procedural leaf generation (or loading a model from an OBJ file).
+- Changed generic leaf prototype function to be able to represent leaf "buckling", such as what happens to long leaves of grasses like maize.
+- Removed shoot parameter 'leaf_flush_count'.
+- Added shoot parameter 'max_nodes_per_season' to allow the shoot to stop growing for the season, but continue adding nodes in future seasons.
+- Phenological thresholds for plants have been changed to be realistic (e.g., the phenological cycle for perennial plants corresponds to days in a year).
+- A maximum age limit for plants has been added so users don't inadvertantly specify a very old plant that will cause the program to hang.
+- Changed the way that vegetative bud break probability is handled such that it can vary along the shoot. The relevant parameters are now 'vegetative_bud_break_probability_min' and 'vegetative_bud_break_probability_decay_rate'.
+- Changed the way that downstream leaf area is calculated to improve computational efficiency. This required some changes in the 'girth_area_factor` parameter.
+- Committed all Blender project files used to create organ OBJ models: plugins/plantarchitecture/assets/Blender_organ_models/
+- Moved initial internode radius from being a shoot parameter to a phytomer parameter, since it is constant along the shoot and over time.
+- Added overloaded PlantArchitecture::advanceTime() method that allows to specify the time step in years and days for advancing over long time periods.
+- Changed the name of the shoot parameter 'phyllochron' to 'phyllochron_min' to be consistent with how it will be used in the carbohydrate model.
+- Added actual self-test that builds all plants in the library.
+
+*Visualizer*
+- Problem fixed in freetype zconf.h file that caused build errors on latest MacOS compilers.
+- All output messages were not being properly suppressed after calling disableOutputMessages().
+
+*Canopy Generator*
+- Many edits made regarding how parameters with random variation are handled, mainly to ensure proper constraints on values (e.g., always positive).

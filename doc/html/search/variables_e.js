@@ -90,5 +90,6 @@ var searchData=
   ['stem_5fradius_87',['stem_radius',['../struct_strawberry_parameters.html#ac774348e3a59b3a79cf21e1b4634489f',1,'StrawberryParameters::stem_radius()'],['../struct_bean_parameters.html#a9636c5c02d104a795fa06b759df1f888',1,'BeanParameters::stem_radius()']]],
   ['stem_5fsubdivisions_88',['stem_subdivisions',['../struct_strawberry_parameters.html#a07bd64fa21e059f5db73fbfb9d4c9607',1,'StrawberryParameters']]],
   ['stems_5fper_5fplant_89',['stems_per_plant',['../struct_strawberry_parameters.html#a26ecd0d74e8339a2c40f05a7de926ef9',1,'StrawberryParameters']]],
-  ['strength_90',['strength',['../struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935',1,'PerRayData']]]
+  ['strength_90',['strength',['../struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935',1,'PerRayData']]],
+  ['subdivisions_91',['subdivisions',['../struct_leaf_prototype.html#a2a90483933ca70d5bd87079e607d5d38',1,'LeafPrototype']]]
 ];

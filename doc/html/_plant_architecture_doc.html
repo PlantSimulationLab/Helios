@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.24</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.25</span>
    </div>
   </td>
  </tr>
@@ -94,43 +94,49 @@ $(function() {
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#PlantArchConstructor">Class Constructor</a></li>
-<li class="level1"><a href="#PlantArchVarsAndProps">Primitive Data</a><ul><li class="level2"><a href="#PlantArchOutputData">Default Output Primitive Data</a></li>
-<li class="level2"><a href="#PlantArchOutputObjData">Default Output Object Data</a></li>
+<li class="level1"><a href="#PlantArchVarsAndProps">Primitive Data</a><ul><li class="level2"><a href="#PlantArchOutputData">Optional Output Object Data</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchDescription">Introduction</a><ul><li class="level2"><a href="#PlantArchPhytomer">The Phytomer: Basic Unit of a plant shoot</a></li>
+<li class="level1"><a href="#PlantArchOverview">Plug-in Overview</a></li>
+<li class="level1"><a href="#PlantArchGettingStarted">Getting Started with the Existing Plant Library</a><ul><li class="level2"><a href="#PlantArchBuild">Existing Plant Library</a></li>
+<li class="level2"><a href="#PlantArchBuild_default">Loading a Plant from the Library with Default Parameters</a></li>
+<li class="level2"><a href="#PlantArchGrowth">Growing the Model over Time</a></li>
+<li class="level2"><a href="#PlantArchPheno">Growth Phenology</a></li>
+<li class="level2"><a href="#PlantArchCollision">Ground Collision Detection</a></li>
+</ul>
+</li>
+<li class="level1"><a href="#PlantArchDescription">Background Theory</a><ul><li class="level2"><a href="#PlantArchPhytomer">The Phytomer: Basic unit of a plant shoot</a></li>
 <li class="level2"><a href="#PlantArchCoord">Coordinate System</a></li>
 <li class="level2"><a href="#PlantArchRandParam">Randomization of Parameters</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchPhytomerParams">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArchOrgans">Creating Plant Organ Prototypes</a></li>
+<li class="level1"><a href="#PlantArchPhytomerParams">Defining the Phytomer and its Parameters</a><ul><li class="level2"><a href="#PlantArchOrgans">Creating Plant Organ Prototypes</a><ul><li class="level3"><a href="#LeafPrototypes">Leaf Prototypes</a></li>
+<li class="level3"><a href="#FlowerPrototypes">Flower Prototypes</a></li>
+<li class="level3"><a href="#FruitPrototypes">Fruit Prototypes</a></li>
+</ul>
+</li>
 <li class="level2"><a href="#PlantArch_compound">Compound Leaves</a></li>
 <li class="level2"><a href="#PlantArch_flowers">Inflorescence</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchShoot">Defining Shoots and their Parameters</a><ul><li class="level2"><a href="#ShootParametersGeom">Geometric Parameters of the Shoot</a><ul><li class="level3"><a href="#ShootParam_max_nodes">max_nodes</a></li>
+<li class="level1"><a href="#PlantArchShoot">Defining Shoots and their Parameters</a><ul><li class="level2"><a href="#ShootParametersGeom">Geometric Parameters of the Shoot</a><ul><li class="level3"><a href="#ShootParam_max_nodes">max_nodes and max_nodes_per_season</a></li>
 <li class="level3"><a href="#ShootParam_base_roll">base_roll</a></li>
-<li class="level3"><a href="#ShootParam_inode_radius_initial">internode_radius_initial</a></li>
 <li class="level3"><a href="#ShootParam_insertion">insertion_angle_tip and insertion_angle_decay_rate</a></li>
 <li class="level3"><a href="#ShootParam_length">internode_length_max, internode_length_min, and internode_length_decay_rate</a></li>
+<li class="level3"><a href="#ShootParam_vegetative_prob">vegetative_bud_break_probability_min and vegetative_bud_break_probability_decay_rate</a></li>
 <li class="level3"><a href="#ShootParam_gravitropic">gravitropic_curvature</a></li>
 <li class="level3"><a href="#ShootParam_tortuosity">tortuosity</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#ShootParametersGrowth">Growth Parameters of the Shoot</a><ul><li class="level3"><a href="#ShootParam_phyllochron">phyllochron</a></li>
+<li class="level2"><a href="#ShootParametersGrowth">Growth Parameters of the Shoot</a><ul><li class="level3"><a href="#ShootParam_phyllochron">phyllochron_min</a></li>
 <li class="level3"><a href="#ShootParam_elongation_rate">elongation_rate</a></li>
-<li class="level3"><a href="#ShootParam_girth_growth_rate">girth_growth_rate</a></li>
+<li class="level3"><a href="#ShootParam_girth_area_factor">girth_area_factor</a></li>
+<li class="level3"><a href="#PlantArchBuild_custom">Modifying Parameters of a Plant from the Library</a></li>
 </ul>
 </li>
+<li class="level2"><a href="#PlantArchPhenoMod">Modifying Phenological Threshold Parameters</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#PlantArchBuild">Loading a Plant from the Existing Library</a><ul><li class="level2"><a href="#PlantArchBuild_default">Loading a Plant with Default Parameters</a><ul><li class="level3"><a href="#PlantArchBuild_custom">Modifying Parameters of a Plant from the Library</a></li>
-</ul>
-</li>
-<li class="level2"><a href="#PlantArchPheno">Modifying Phenological Threshold Parameters</a></li>
-</ul>
-</li>
-<li class="level1"><a href="#PlantArchGrowth">Growing the Model over Time</a></li>
 <li class="level1"><a href="#PlantArchQuery">Retrieving Information from the Model</a><ul><li class="level2"><a href="#PlantArchQueryobjIDs">Getting Object IDs and Primitive UUIDs of Model Geometry</a></li>
 <li class="level2"><a href="#PlantArchQueryUUIDs">Getting Primitive UUIDs for Organ Sub-Components</a></li>
 </ul>
@@ -143,8 +149,8 @@ $(function() {
 <p><b>Known Issues</b></p>
 <ul>
 <li>This plug-in is under active development and changes much more frequently than other plug-ins, and backward compatability is not necessarily maintained. Please check the release notes for each version to see what has changed and how to modify your code to accommodate changes that break backward compatability.</li>
-<li>The phyllochron and phenological threshold values (e.g., time to flowering) in the plant library are currently arbitrary and not necessarily reflective of reality. This will be updated in a future release.</li>
-<li>Computational efficiency has been improved substantially, but some models may still be a bit slow to generate. This will be improved in the future. For now, you can decrease subdivision counts, or prevent the plant from flowering/fruiting (these take a lot of primitives and computational power).</li>
+<li>Some plant models can be compute intensive to run, particularly growing trees over multiple years. Building in 'Release' mode should speed things up significantly.</li>
+<li>Some plant models are not entirely complete and do not contain all phenological stages.</li>
 </ul>
 <table class="doxtable">
 <tr>
@@ -167,39 +173,231 @@ Class Constructor</h1>
 <h1><a class="anchor" id="PlantArchVarsAndProps"></a>
 Primitive Data</h1>
 <h2><a class="anchor" id="PlantArchOutputData"></a>
-Default Output Primitive Data</h2>
+Optional Output Object Data</h2>
 <table class="doxtable">
 <tr>
 <th>Primitive Data Label</th><th>Data Type</th><th>Description </th></tr>
 <tr>
-<td>plantID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of plant the primitive belongs to (used for image labeling). </td></tr>
+<td>plantID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of plant the primitive belongs to (used for image labeling). </td></tr>
 <tr>
-<td>leafID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of leaf the primitive belongs to (used for image labeling). </td></tr>
+<td>leafID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of leaf the primitive belongs to (used for image labeling). </td></tr>
 <tr>
-<td>peduncleID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles. </td></tr>
+<td>peduncleID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles. </td></tr>
 <tr>
-<td>closedflowerID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers. </td></tr>
+<td>closedflowerID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers. </td></tr>
 <tr>
-<td>openflowerID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers. </td></tr>
+<td>openflowerID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers. </td></tr>
 <tr>
-<td>fruitID</td><td> <font face="courier" color="green">int</font></td><td>Unique identifier of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits. </td></tr>
-<tr>
-<td>carbohydrate_concentration</td><td> <font face="courier" color="green">int</font></td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs. </td></tr>
-</table>
-<h2><a class="anchor" id="PlantArchOutputObjData"></a>
-Default Output Object Data</h2>
-<table class="doxtable">
-<tr>
-<th>Object Data Label</th><th>Data Type</th><th>Description </th></tr>
+<td>fruitID</td><td> <font face="courier" color="green">int</font></td><td>Object ID of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits. </td></tr>
 <tr>
 <td>rank</td><td> <font face="courier" color="green">int</font></td><td>Rank of shoot object belongs to. </td></tr>
 <tr>
 <td>age</td><td> <font face="courier" color="green">float</font></td><td>Age of the organ that the object belongs to (e.g., a leaf). </td></tr>
+<tr>
+<td>carbohydrate_concentration</td><td> <font face="courier" color="green">int</font></td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs. </td></tr>
 </table>
+<p>To enable optional output object data, use:</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">plantarchitecture.optionalOutputData(<span class="stringliteral">&quot;plantID&quot;</span>); <span class="comment">//insert appropriate label from the table above</span></div>
+<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l01099">PlantArchitecture.h:1099</a></div></div>
+</div><!-- fragment --><h1><a class="anchor" id="PlantArchOverview"></a>
+Plug-in Overview</h1>
+<p>This plug-in provides a generalized framework for creating dynamic procedural plant models for a very wide range of species. The plug-in comes with a library of a number of different plant models, which have a common set of parameters that can be adjusted by the user. Parameters defining the plant can be set to constant values, or randomized based on a number of different distributions. The plant model can be grown over time, and will transition through different phenological stages such as dormancy, flowering, fruit set, and senescence. Users can also create their own plant models by changing model parameters, or build custom plants branch-by-branch.</p>
+<p>The next section provides information on how to load existing models from the library and grow them over time, which is likely how most users will interact with the plug-in. The following sections provide more detailed information on the parameters that define the plant model, the structure of the plant model, and how to modify parameters of existing models or create custom plant models from scratch.</p>
+<h1><a class="anchor" id="PlantArchGettingStarted"></a>
+Getting Started with the Existing Plant Library</h1>
+<h2><a class="anchor" id="PlantArchBuild"></a>
+Existing Plant Library</h2>
+<p>A number of plant models are available in the plant architecture library, which can be created based on default parameters, or parameters modified by the user. Plant models available in the library are given in the table below.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Plant Type/Species   </th><th class="markdownTableHeadNone">Variety/Variation   </th><th class="markdownTableHeadNone">Plant type string argument   </th><th class="markdownTableHeadNone">Shoot types    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Almond Tree (<em>Prunus dulcis</em>)   </td><td class="markdownTableBodyNone">Nonpareil   </td><td class="markdownTableBodyNone">"almond"   </td><td class="markdownTableBodyNone">trunk, scaffold, proleptic    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Apple Tree (<em>Malus pumila</em>)   </td><td class="markdownTableBodyNone">Fuji   </td><td class="markdownTableBodyNone">"apple"   </td><td class="markdownTableBodyNone">trunk, proleptic    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Bindweed (<em>Convolvulus arvensis</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"bindweed"   </td><td class="markdownTableBodyNone">base, offshoots, children    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Butter Lettuce (<em>Lactuca sativa</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"butterlettuce"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Cheeseweed (<em>Malva neglecta</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"cheeseweed"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Common Bean (<em>Phaseolus vulgaris</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"bean"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Cowpea (<em>Vigna unguiculata</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"cowpea"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Eastern Redbud (<em>Cercis canadensis</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"easternredbud"   </td><td class="markdownTableBodyNone">eastern_redubud_trunk, eastern_redbud_shoot    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Grapevine (<em>Vitis vinifera</em>)   </td><td class="markdownTableBodyNone">VSP trellis   </td><td class="markdownTableBodyNone">"grapevine_VSP"   </td><td class="markdownTableBodyNone">grapevine_trunk, grapevine_cane, grapevine_shoot    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Maize (<em>Zea mays</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"maize"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Olive Tree (<em>Olea europaea</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"olive"   </td><td class="markdownTableBodyNone">trunk, scaffold, proleptic    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Pistachio Tree (<em>Pistachia vera</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"pistachio"   </td><td class="markdownTableBodyNone">trunk, proleptic    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Puncturevine (<em>Tribulus terrestris</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"puncturevine"   </td><td class="markdownTableBodyNone">base, offshoots, children    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Rice (<em>Oryza sativa</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"rice"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Sorghum (<em>Sorghum bicolor</em>)   </td><td class="markdownTableBodyNone">grain sorghum   </td><td class="markdownTableBodyNone">"sorghum"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Soybean (<em>Glycine max</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"soybean"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Sugar Beet (<em>Beta vulgaris</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"sugarbeet"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Tomato (<em>Solanum lycopersicum</em>)   </td><td class="markdownTableBodyNone">determinate growth   </td><td class="markdownTableBodyNone">"tomato"   </td><td class="markdownTableBodyNone">mainstem    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Walnut Tree (<em>Juglans regia</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"walnut"   </td><td class="markdownTableBodyNone">trunk, scaffold, proleptic    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Wheat (<em>Triticum aestivum</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"wheat"   </td><td class="markdownTableBodyNone">mainstem   </td></tr>
+</table>
+<h2><a class="anchor" id="PlantArchBuild_default"></a>
+Loading a Plant from the Library with Default Parameters</h2>
+<p>Loading a plant from the library with default parameters is relatively simple, and requires only declaring the <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> class, loading the model using the <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a> method (which takes a string argument for the plant model as listed in the table above), and calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. The method takes two arguments: 1) the Cartesian (x,y,z) position of the plant base, and 2) the age of the plant in days. A code example is given below.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> age = 45;</div>
+<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, age );</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+<div class="ttc" id="a_plant_architecture_8h_html"><div class="ttname"><a href="_plant_architecture_8h.html">PlantArchitecture.h</a></div></div>
+<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01882">Context.h:1882</a></div></div>
+</div><!-- fragment --><p>This will create a default bean plant that is 45 days old (i.e., 45 days since emergence).</p>
+<p>Multiple plants can be created manually by calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method multiple times with different base positions. There is also a method available to build a canopy of regularly-spaced plants: <a class="el" href="class_plant_architecture.html#a9cc3b3b4f6e37fa416c139f6bf1618bd">PlantArchitecture::buildPlantCanopyFromLibrary()</a>.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> canopy_center = nullorigin;</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> plant_spacing(0.5, 0.15);</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1int2.html">int2</a> plant_count(3,3);</div>
+<div class="line">    <span class="keywordtype">float</span> age = 45;</div>
+<div class="line">    plantarchitecture.buildPlantCanopyFromLibrary( canopy_center, plant_spacing, plant_count, age );</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+<div class="ttc" id="astructhelios_1_1int2_html"><div class="ttname"><a href="structhelios_1_1int2.html">helios::int2</a></div><div class="ttdoc">Vector of two elements of type 'int'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00044">helios_vector_types.h:44</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00346">helios_vector_types.h:346</a></div></div>
+<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type 'float'.</div><div class="ttdef"><b>Definition:</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
+</div><!-- fragment --><h2><a class="anchor" id="PlantArchGrowth"></a>
+Growing the Model over Time</h2>
+<p>The model can be grown over time by calling the <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a> method after the plant instance has been created, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a>.</p>
+<div class="fragment"><div class="line">plantarchitecture.advanceTime( 10 );</div>
+</div><!-- fragment --><p>Each plant model has a maximum supported age, which is listed in the table of the next section.</p>
+<p>Annual plants generally start as seedlings and emerge from the ground at time = 0. Perennial plants typically are a few years old at time = 0, which is generally the point when management training practices (e.g., pruning, heading) have been done and the plant is allowed to grow freely.</p>
+<p>Each time <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a> is called, the geometry is updated in the Context, which incurs substantial computational cost. Therefore, it is recommended to advance time over the largest increment possible. For example, if growing over 1 year it would not be efficient to call <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a> 365 times with a timestep of 1 day, but rather with a single call with timestep of 365 days.</p>
+<h2><a class="anchor" id="PlantArchPheno"></a>
+Growth Phenology</h2>
+<p>As the plant grows over time, it will transition to different phenological stages such as breaking dormancy, flowering, fruit set, etc. Each model has a default set of values that controls how long it takes to transition to these phenological states. Each state is described in the table below.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Phenological Threshold   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">time_to_dormancy_break   </td><td class="markdownTableBodyNone">Time required to break dormancy starting from the time of entering dormancy (or since the start of the simulation if starting dormant).    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">time_to_flower_initiation   </td><td class="markdownTableBodyNone">Time from emergence/dormancy required to reach flower creation (closed flowers).    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">time_to_flower_opening   </td><td class="markdownTableBodyNone">Time from flower initiation required to reach flower opening (open flowers). (If flower initiation was skipped, time is relative to emergence/dormancy).    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">time_to_fruit_set   </td><td class="markdownTableBodyNone">Time from flower opening required to reach fruit set. (If flower opening or initiation was skipped, time is relative to previous phenological stage).    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">time_to_fruit_maturity   </td><td class="markdownTableBodyNone">Time from fruit set required to reach maturity. (If fruit set was skipped, time is relative to previous phenological stage).    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">time_to_senescence   </td><td class="markdownTableBodyNone">Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant.   </td></tr>
+</table>
+<p>Default values for each species in the plant library are given in the table below. Values are in units of days.</p>
+<p>The phenological cycle starts when the plant enters dormancy, and thus a period of  <font face="courier" color="blue">time_to_dormancy_break</font> must pass before the plant starts to actively grow.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Plant type string argument   </th><th class="markdownTableHeadNone">time_to_dormancy_break   </th><th class="markdownTableHeadNone">time_to_flower_initiation   </th><th class="markdownTableHeadNone">time_to_flower_opening   </th><th class="markdownTableHeadNone">time_to_fruit_set   </th><th class="markdownTableHeadNone">time_to_fruit_maturity   </th><th class="markdownTableHeadNone">time_to_senescence   </th><th class="markdownTableHeadNone">Age at time = 0   </th><th class="markdownTableHeadNone">Maximum age    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"almond"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1825 days (5 years)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"apple"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1460 days (4 years)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"bean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"bindweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">50 days    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"butterlettuce"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"cheeseweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40 days    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"cowpea"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"easternredbud"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">2 years   </td><td class="markdownTableBodyNone">1460 days (4 years)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"grapevine_VSP"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">45   </td><td class="markdownTableBodyNone">45   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"maize"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"olive"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1825 days (5 years)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"pistachio"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1095 days (3 years)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"puncturevine"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">45 days    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"rice"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">15   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"sorghum"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"soybean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"sugarbeet"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"tomato"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">"walnut"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1095 days (3 years)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">"wheat"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)   </td></tr>
+</table>
+<h2><a class="anchor" id="PlantArchCollision"></a>
+Ground Collision Detection</h2>
+<p>The model has the ability to detect collisions with the ground plane and clip any organs that intersect the ground. By default, the ground is assumed to be at a height of 0, but this can optionally be set to any height.</p>
+<p>By deafault, ground collision detection is disabled. To enable ground collision detection, use the following method:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    plantarchitecture.enableGroundClipping(); <span class="comment">//for a custom ground height, pass the height as argument</span></div>
+<div class="line"> </div>
+<div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 45 );</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Note that enabling collision detection incurs some computational expense. For compute-intensive plants like trees it is advisable to keep this feature disabled, as it is unlikely that branches will reach the ground anyway.</p>
+<p>Note also that organ-organ collision detection is not implemented in this plug-in. If organs intersect, they will pass through each other. Hopefully this feature will be implemented in the future.</p>
 <h1><a class="anchor" id="PlantArchDescription"></a>
-Introduction</h1>
+Background Theory</h1>
 <h2><a class="anchor" id="PlantArchPhytomer"></a>
-The Phytomer: Basic Unit of a plant shoot</h2>
+The Phytomer: Basic unit of a plant shoot</h2>
 <p>The phytomer is the basic unit of a shoot, and consists of an internode, one or more petioles, leaves, and inflorescence if present. The internode consists of a tube whose base is connected either to a parent shoot if it is the first phytomer along a shoot, or to the end of another phytomer along the same shoot.</p>
 <p>A phytomer can have one or more petioles, which are connected at the end of the internode. Each petiole has one or more leaves.</p>
 <p>At the tip of a growing shoot (i.e., end of the last phytomer on the shoot), there is an apical vegetative bud that can spawn a new phytomer along the same shoot. This is how shoot growth occurs. During a dormant period, one or more apical floral buds can also be created.</p>
@@ -207,7 +405,7 @@ The Phytomer: Basic Unit of a plant shoot</h2>
 <div class="image">
 <img src="phytomer_schematic.jpeg" alt=""/>
 <div class="caption">
-Schematic depiction of a phytomer within a shoot.</div></div>
+Schematic depiction of a phytomer within a shoot. New growth (i.e., production of new phytomers) can occur at vegetative buds (teal arrows), which may be located at the shoot tip/apex or axillary to a petiole. Flowers/fruit may be produced at floral buds, which are also located either at the shoot tip or axillary to petioles.</div></div>
 <h2><a class="anchor" id="PlantArchCoord"></a>
 Coordinate System</h2>
 <p>The coordinate system of plant organs is defined with respect to it's parent element (i.e., element it originated from), with it's default orientation being aligned with it's parent's axis. It can then be rotated based on angles of 'pitch', 'yaw', and 'roll' (in that order):</p>
@@ -228,12 +426,13 @@ Randomization of Parameters</h2>
 <div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> other_param(5);</div>
 <div class="ttc" id="astruct_random_parameter__float_html"><div class="ttname"><a href="struct_random_parameter__float.html">RandomParameter_float</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00027">PlantArchitecture.h:27</a></div></div>
 </div><!-- fragment --><p>In order to randomize the variable, member methods can be called to set the distribution type and specify the distribution parameters. It is also required to initialize the variable with a random number generator. It is recommended that this be based on the Context's generator to keep everything consistent. Below is an example.</p>
-<div class="fragment"><div class="line">Context context;</div>
+<div class="fragment"><div class="line"><a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> param(context.getRandomGenerator());</div>
+<div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> param(context.<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">getRandomGenerator</a>());</div>
 <div class="line">param.uniformDistribution(0,7.5);</div>
 <div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Random value: &quot;</span> &lt;&lt; param.val() &lt;&lt; std::endl;</div>
-</div><!-- fragment --><p>Available distributions are listed below</p>
+<div class="ttc" id="aclasshelios_1_1_context_html_a96a928fa28d3d771ba310f798b56bd63"><div class="ttname"><a href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">helios::Context::getRandomGenerator</a></div><div class="ttdeci">std::minstd_rand0 * getRandomGenerator()</div><div class="ttdoc">Get the random number generator engine.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l00049">Context.cpp:49</a></div></div>
+</div><!-- fragment --><p>Available distributions for <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> are listed below</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Distribution   </th><th class="markdownTableHeadNone">Method   </th><th class="markdownTableHeadNone">Parameters    </th></tr>
@@ -244,10 +443,19 @@ Randomization of Parameters</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Weibull   </td><td class="markdownTableBodyNone">weibullDistribution()   </td><td class="markdownTableBodyNone">shape parameter, scale parameter   </td></tr>
 </table>
+<p>and for <a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a> are:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Distribution   </th><th class="markdownTableHeadNone">Method   </th><th class="markdownTableHeadNone">Parameters    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Uniform   </td><td class="markdownTableBodyNone">uniformDistribution()   </td><td class="markdownTableBodyNone">minimum value, maximum value    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Discrete Values   </td><td class="markdownTableBodyNone">discreteValues()   </td><td class="markdownTableBodyNone">vector of discrete int values that will be randomly chosen   </td></tr>
+</table>
 <h1><a class="anchor" id="PlantArchPhytomerParams"></a>
 Defining the Phytomer and its Parameters</h1>
-<p>Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. The phytomer parameters are parameters that are constant (aside from randomization), and are usually species-specific.</p>
-<p>The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. <a class="el" href="struct_shoot.html">Shoot</a> parameters are described below in <a class="el" href="_plant_architecture_doc.html#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
+<p>Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. The phytomer parameters are parameters that are generally constant across space and time (aside from randomization), and are usually species-specific.</p>
+<p>The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary substantially with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. <a class="el" href="struct_shoot.html">Shoot</a> parameters are described below in <a class="el" href="_plant_architecture_doc.html#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Type   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Description    </th></tr>
@@ -256,107 +464,18 @@ Defining the Phytomer and its Parameters</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this &gt;0 creates a zig-zag shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">phyllotactic_angle   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">max_vegetative_buds_per_petiole   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">max_floral_buds_per_petiole   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the internode tube.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the internode tube.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radial_subdivisions   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.)    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone" colspan="4">&mdash; <b>petiole</b> &mdash;    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">petioles_per_internode   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2)    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the petiole base axis with respect to its parent phytomer axis.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of petiole cross-section. (radius = 0 does not create any petiole)    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the petiole tube. (length = 0 does not create any petiole)    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">taper   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the petiole tube.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the petiole tube.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radial_subdivisions   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.)    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone" colspan="4">&mdash; <b>leaf</b> &mdash;    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">leaves_per_petiole   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of leaves on each petiole. &gt;1 creates a compound leaf.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the leaf axis with respect to its parent petiole axis.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">yaw   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about its base along the plane of its lamina.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about it's own axis (midrib).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">leaflet_offset   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">leaflet_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (&lt;1 scales down, &gt;1 scales up).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the leaf prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, int flag ) and returns an object ID (uint).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">subdivisions   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of subdivisions to use for the leaf prototype model (if using procedurally generated prototype).    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">unique_prototypes   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of unique leaf prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone" colspan="4">&mdash; <b>peduncle</b> &mdash;    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the peduncle (inflorescence supporting structure).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of the peduncle.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the peduncle axis with respect to its parent internode axis.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the peduncle about it's own axis.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the peduncle tube.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the inflorescence supporting structure.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radial_subdivisions   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.)    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone" colspan="4">&mdash; <b>inflorescence</b> &mdash;    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">flowers_per_peduncle   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of flowers per peduncle (rachis).    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">flower_offset   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If peduncle has multiple flowers/fruit (flowers_per_peduncle&gt;1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length.    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the fruit axis with respect to its parent peduncle axis.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the fruit about it's own axis (x-axis of fruit prototype).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">flower_prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">flower_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the flower prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">fruit_prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">fruit_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the fruit prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">unique_prototypes   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model.   </td></tr>
+<td class="markdownTableBodyNone">phyllotactic_angle   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis.   </td></tr>
 </table>
+<p>| radius_initial | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | 0.001 | meters | Initial radius of the internode when it is created. | | max_vegetative_buds_per_petiole | <a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a> | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. | | max_floral_buds_per_petiole | <a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a> | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. | | color | <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> | - | Diffuse color of the internode tube. | | length_segments |  <font face="courier" color="green">uint</font> | - | Number of longitudinal segment subdivisions of the internode tube. | | radial_subdivisions |  <font face="courier" color="green">uint</font> | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) | | &mdash; <b>petiole</b> &mdash; |||| | petioles_per_internode |  <font face="courier" color="green">uint</font> | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) | | pitch | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. | | radius | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | meters | Radius of petiole cross-section. (radius = 0 does not create any petiole) | | length | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | meters | Length of the petiole tube. (length = 0 does not create any petiole) | | curvature | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. | | taper | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). | | color | <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> | - | Diffuse color of the petiole tube. | | length_segments |  <font face="courier" color="green">uint</font> | - | Number of longitudinal segment subdivisions of the petiole tube. | | radial_subdivisions |  <font face="courier" color="green">uint</font> | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) | | &mdash; <b>leaf</b> &mdash; |||| | leaves_per_petiole |  <font face="courier" color="green">uint</font> | - | Number of leaves on each petiole. &gt;1 creates a compound leaf. | | pitch | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Angle of the leaf axis with respect to its parent petiole axis. | | yaw | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Rotation angle of the leaf about its base along the plane of its lamina. | | roll | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Rotation angle of the leaf about it's own axis (midrib). | | leaflet_offset | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | If a compound leaf (leaves_per_petiole&gt;1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value. | | leaflet_scale | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | If a compound leaf (leaves_per_petiole&gt;1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (&lt;1 scales down, &gt;1 scales up). | | prototype_scale | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. | | prototype | <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> struct | - | Structure containing information to build leaf prototypes. | | &mdash; <b>peduncle</b> &mdash; |||| | length | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | meters | Length of the peduncle (inflorescence supporting structure). | | radius | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | meters | Radius of the peduncle. | | pitch | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Angle of the peduncle axis with respect to its parent internode axis. | | roll | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Rotation angle of the peduncle about it's own axis. | | curvature | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. | | color | <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> | - | Diffuse color of the peduncle tube. | | length_segments |  <font face="courier" color="green">uint</font> | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. | | radial_subdivisions |  <font face="courier" color="green">uint</font> | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) | | &mdash; <b>inflorescence</b> &mdash; |||| | flowers_per_peduncle | <a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a> | - | Number of flowers per peduncle (rachis). | | flower_offset | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | If peduncle has multiple flowers/fruit (flowers_per_peduncle&gt;1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length. | | pitch | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Angle of the fruit axis with respect to its parent peduncle axis. | | roll | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | degrees | Rotation angle of the fruit about it's own axis (x-axis of fruit prototype). | | flower_prototype_scale | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower. | | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). | | fruit_prototype_scale | <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. | | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). | | unique_prototypes |  <font face="courier" color="green">uint</font> | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |</p>
 <p>The phytomer parameters are stored in a data structure (struct) called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. This structure has sub-member structs for each of internode, leaf, petiole, and inflorescence, each containing the parameters for that element type as designated in the table above. Below is an example of how to set a few of the parameters:</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="struct_phytomer_parameters.html">PhytomerParameters</a> phytomer;</div>
-<div class="line">phytomer.internode.pitch = 0.1;</div>
+<div class="line">phytomer.internode.pitch = 20;</div>
 <div class="line">phytomer.petiole.radius = 0.001;</div>
 <div class="line">phytomer.petiole.length = 0.05;</div>
-<div class="line">phytomer.leaf.pitch = 0.1;</div>
+<div class="line">phytomer.leaf.pitch = 10;</div>
 <div class="line">phytomer.leaf.prototype_scale = 0.1;</div>
 <div class="line">phytomer.peduncle.length = 0.1;</div>
-<div class="ttc" id="astruct_phytomer_parameters_html"><div class="ttname"><a href="struct_phytomer_parameters.html">PhytomerParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00320">PlantArchitecture.h:320</a></div></div>
+<div class="ttc" id="astruct_phytomer_parameters_html"><div class="ttname"><a href="struct_phytomer_parameters.html">PhytomerParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00455">PlantArchitecture.h:455</a></div></div>
 </div><!-- fragment --><p>The figure below provides some examples of how various shoot growth patterns (e.g., alternate, opposite) can be created by varying the model parameters.</p>
 <div class="image">
 <img src="growth_pattern_schematic.jpeg" alt=""/>
@@ -364,50 +483,71 @@ Defining the Phytomer and its Parameters</h1>
 <h2><a class="anchor" id="PlantArchOrgans"></a>
 Creating Plant Organ Prototypes</h2>
 <p>The geometry of plant leaves, flowers, and fruit are defined based on &lsquo;prototype&rsquo; models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.</p>
-<p>The prototype functions must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function vary based on organ type:</p>
-<p>Leaves </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes )</div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8h_source.html#l01882">Context.h:1882</a></div></div>
-</div><!-- fragment --><p>Flowers </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
-</div><!-- fragment --><p>Fruit </p><div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">float</span> time_since_fruit_set )</div>
-</div><!-- fragment --><p>The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed.</p>
 <p>The size, position, and orientation of the prototype when it is created needs to follow a specific convention.</p>
 <ul>
 <li>Prototype size: The prototype should have a unit length, and the size of the organ is set by scaling the prototype in the prototype function. This is done to allow for consistent scaling of the organ based on the parameters of the phytomer and petiole.</li>
 <li>Prototype origin: The base of the organ should be located at the origin (0,0,0). For a leaf, the base is the point at which the leaf meets the petiole. For a flow or fruit, this is the point at which the organ meets its supporting structure (peduncle).</li>
 <li>Prototype orientation: The organ should be oriented such that its centerline axis is along the positive x-axis, with the positive z-axis pointing upward from the base of the organ.</li>
 </ul>
+<p>Flower and fruit OBJ models are usually created in 3rd party software and exported as OBJ files. The Blender project files used to create all the flower and fruit organ models are provided in the directory 'plugins/plantarchitecture/assets/Blender_organ_models'.</p>
 <div class="image">
 <img src="prototype_coordinate_schematic.png" alt=""/>
 </div>
-<p>A simple leaf prototype function is given below, which simply loads a model from an OBJ file.</p>
-<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
-<div class="line">std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondLeaf.obj&quot;</span>, make_vec3(0,0,0), 0, nullrotation, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
-<div class="line"><span class="keywordflow">return</span> context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">addPolymeshObject</a>( UUIDs );</div>
-<div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition:</b> <a href="_context__file_i_o_8cpp_source.html#l03742">Context_fileIO.cpp:3742</a></div></div>
-<div class="ttc" id="agroup__compoundobjects_html_gababf99153757527880fe3866cc23fd1b"><div class="ttname"><a href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b">helios::Context::addPolymeshObject</a></div><div class="ttdeci">uint addPolymeshObject(const std::vector&lt; uint &gt; &amp;UUIDs)</div><div class="ttdoc">Add new Polymesh Compound Object.</div><div class="ttdef"><b>Definition:</b> <a href="_context_8cpp_source.html#l05399">Context.cpp:5399</a></div></div>
-</div><!-- fragment --><p>A generic leaf prototype function is given in the file <a class="el" href="_assets_8cpp.html">Assets.cpp</a>, which creates a leaf from a mesh of triangles, and has adjustable parameters to add leaf curvature, folding, and waves. The advantage of this approach is that each leaf will have random variation, since the leaf is generated procedurally. The disadvantage is that it may not look as detailed as a leaf created outside Helios (e.g., in Blender) that has detailed sculpting of leaf texture, for example.</p>
-<div class="fragment"><div class="line">uint someLeafPrototype( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">int</span> compound_leaf_index, uint shoot_node_index, uint shoot_max_nodes ){</div>
-<div class="line"> </div>
-<div class="line">    std::string leaf_texture = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/AlmondLeaf.png&quot;</span>;</div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> leaf_aspect = 0.4; <span class="comment">//ratio of leaf width to leaf length</span></div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> midrib_fold = 0.2; <span class="comment">//fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half)</span></div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> x_curvature = -0.1; <span class="comment">//curvature factor along x-direction. (+curves upward, -curved downward)</span></div>
-<div class="line">    <span class="keywordtype">float</span> y_curvature = 0.4; <span class="comment">//curvature factor along y-direction. (+curves upward, -curved downward)</span></div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> petiole_roll = 0.f; <span class="comment">//creates a roll of the leaf near its base to more smoothly meet the petiole</span></div>
-<div class="line"> </div>
-<div class="line">    <span class="comment">//parameters for leaf wave/wrinkles</span></div>
-<div class="line">    <span class="keywordtype">float</span> wave_period = 0.1f; <span class="comment">//period factor of leaf waves</span></div>
-<div class="line">    <span class="keywordtype">float</span> wave_amplitude = 0.03f; <span class="comment">// amplitude of leaf waves</span></div>
-<div class="line"> </div>
-<div class="line">    uint objID = buildGenericLeafPrototype(context_ptr, subdivisions, leaf_texture, leaf_aspect, midrib_fold, x_curvature, y_curvature, petiole_roll, wave_period, wave_amplitude);</div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordflow">return</span> objID;</div>
-<div class="line">}</div>
+<h3><a class="anchor" id="LeafPrototypes"></a>
+Leaf Prototypes</h3>
+<p>Leaf prototypes can be generated using three primary methods: 1) using the built-in function for procedural leaf generation based on a set of parameters, 2) loading a leaf model from an OBJ file, or 3) creating a leaf manually through Helios Context methods (e.g., Context::addTileObject()).</p>
+<p>The built-in function for procedural leaf generation generates leaf geometries based on the parameter set given in the table below. The advantage of this approach is that it provides a straight-forward means of representing many leaf morphologies with random variation. The drawback is that if very high leaf detail is needed such as venation patterns, this may require using an OBJ model.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Type   </th><th class="markdownTableHeadNone">Default   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone" colspan="4">&mdash; <b>parameters for procedural parametric leaf generation</b> &mdash;    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">leaf_texture_file   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">std::string</font>   </td><td class="markdownTableBodyNone">Must be specified   </td><td class="markdownTableBodyNone">Path to the leaf texture image file.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">leaf_aspect_ratio   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">1.0   </td><td class="markdownTableBodyNone">Ratio of leaf width to leaf length.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">midrib_fold_fraction   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half).    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">longitudinal_curvature   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Curvature factor along x-direction (lengthwise). (+curves upward, -curved downward)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">lateral_curvature   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Curvature factor along y-direction (widthwise). (+curves upward, -curved downward)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">wave_period   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Period factor of leaf waves/wrinkles.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">wave_amplitude   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Amplitude of leaf waves/wrinkles.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">leaf_buckle_length   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Length along the leaf where it buckles due to its weight (as fraction of overall leaf length).    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">leaf_buckle_angle   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Angle (degrees) formed by the leaf buckling.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">unique_prototypes   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">Number of unique leaf prototypes to generate. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">leaf_offset   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">helios::vec3</font>   </td><td class="markdownTableBodyNone">(0,0,0)   </td><td class="markdownTableBodyNone">Offset/translation applied to the leaf prototype.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">petiole_roll   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">float</font>   </td><td class="markdownTableBodyNone">0.0   </td><td class="markdownTableBodyNone">Creates a roll of the leaf near its base to more smoothly meet the petiole.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">build_petiolule   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">bool</font>   </td><td class="markdownTableBodyNone">false   </td><td class="markdownTableBodyNone">Flag to build a petiolule (small petiole at leaflet base) connecting the leaf to the petiole.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone" colspan="4">&mdash; <b>building leaf from OBJ model</b> &mdash;    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">OBJ_model_file   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">std::string</font>   </td><td class="markdownTableBodyNone">empty   </td><td class="markdownTableBodyNone">Path to the OBJ file containing the leaf model.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone" colspan="4">&mdash; <b>building leaf from custom prototype function</b> &mdash;    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">null   </td><td class="markdownTableBodyNone">Pointer to a function that generates the leaf prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, LeafPrototype*, int compound_leaf_index ) and returns an object ID (uint).   </td></tr>
+</table>
+<p>If the value of  <font face="courier" color="blue">OBJ_model_file</font> is not empty, the leaf prototype function will load the leaf model from the specified OBJ file and ignore all other parameters. If the value of  <font face="courier" color="blue">prototype_function</font> is not null, the leaf prototype function will call the user-defined function to generate the leaf model. Otherwise, the model will use the default procedural leaf generation method based on the parameters given (note that the leaf texture file must be specified).</p>
+<h3><a class="anchor" id="FlowerPrototypes"></a>
+Flower Prototypes</h3>
+<p>Flower geometry is generated within the model by calling a user-defined function that generates the flower prototype. The function must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function are as follows:</p>
+<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
+</div><!-- fragment --><p>Usually, the prototype function simply load an OBJ model from file.</p>
+<p>The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed. The  <font face="courier" color="green">subdivisions</font> argument can be used to specify the level of detail of the flower model. The  <font face="courier" color="blue">flower_is_open argument</font> is a boolean that allows for generation of open and closed flower models.</p>
+<h3><a class="anchor" id="FruitPrototypes"></a>
+Fruit Prototypes</h3>
+<p>Fruit geometry creation is similar to that of flowers, except the prototype function has one less argument.</p>
+<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions )</div>
 </div><!-- fragment --><h2><a class="anchor" id="PlantArch_compound"></a>
 Compound Leaves</h2>
 <p>Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter  <font face="courier" color="blue">leaves_per_petiole</font> in the <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> structure (if  <font face="courier" color="blue">leaves_per_petiole</font> = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter  <font face="courier" color="blue">leaf_prototype_scale</font>. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter  <font face="courier" color="blue">leaflet_offset</font>, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter  <font face="courier" color="blue">leaflet_offset</font>. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter  <font face="courier" color="blue">leaflet_scale</font> (&lt;1 gets smaller, &gt;1 gets bigger).</p>
@@ -440,7 +580,7 @@ Defining Shoots and their Parameters</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">max_nodes   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers along a shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">internode_radius_initial   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.001   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Initial radius of the internode when it is created.    </td></tr>
+<td class="markdownTableBodyNone">max_nodes_per_season   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers that a shoot can produce in a single season ( <img class="formulaInl" alt="$\leq$" src="form_163.png" width="11" height="14"/> max_nodes).    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">insertion_angle_tip   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -462,17 +602,17 @@ Defining Shoots and their Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="5">&mdash; <b>Growth Parameters</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">phyllochron   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">1.0   </td><td class="markdownTableBodyNone">days/leaf   </td><td class="markdownTableBodyNone">Time between the emergence of successive phytomers along the shoot.    </td></tr>
+<td class="markdownTableBodyNone">phyllochron_min   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">1.0   </td><td class="markdownTableBodyNone">days/leaf   </td><td class="markdownTableBodyNone">Time between the emergence of successive phytomers along the shoot (minimum time or maximum growth rate).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">leaf_flush_count   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">1   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of leaves/phytomers to flush at a time. Flushes will occur at an interval of phyllochron*leaf_flush_count.    </td></tr>
-<tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">elongation_rate   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.2   </td><td class="markdownTableBodyNone">meter/meter/day   </td><td class="markdownTableBodyNone">Relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day.    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">girth_area_factor   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">cm^2 branch area / m^2 downstream leaf area   </td><td class="markdownTableBodyNone">Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">vegetative_bud_break_time   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">days   </td><td class="markdownTableBodyNone">Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break.    </td></tr>
+<td class="markdownTableBodyNone">girth_area_factor   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">cm^2 branch area / m^2 downstream leaf area   </td><td class="markdownTableBodyNone">Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">vegetative_bud_break_probability   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a bud breaking dormancy and emerging as a shoot.    </td></tr>
+<td class="markdownTableBodyNone">vegetative_bud_break_time   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">days   </td><td class="markdownTableBodyNone">Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">vegetative_bud_break_probability_decay_rate   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">1/nodes   </td><td class="markdownTableBodyNone">Rate at which the probability a bud produces a shoot changes along the shoot. If &gt;0, probability is 1 at the shoot base and decreases to a value of  <font face="courier" color="blue">vegetative_bud_break_probability_min</font>. If &lt;0, the probability is 1 at the shoot tip and decreases backward.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">vegetative_bud_break_probability_min   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a bud breaking dormancy and emerging as a shoot.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">flower_bud_break_probability   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a flower bud emerging as a flower.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -487,14 +627,12 @@ Defining Shoots and their Parameters</h1>
 <h2><a class="anchor" id="ShootParametersGeom"></a>
 Geometric Parameters of the Shoot</h2>
 <h3><a class="anchor" id="ShootParam_max_nodes"></a>
-max_nodes</h3>
+max_nodes and max_nodes_per_season</h3>
 <p> <font face="courier" color="blue">max_nodes</font> is the maximum number of phytomers that a single shoot can grow to have. Leaves will continue to emerge from the terminal bud according to the phyllochron until  <font face="courier" color="blue">max_nodes</font> is reached.</p>
+<p> <font face="courier" color="blue">max_nodes_per_season</font> is the maximum number of phytomers that a shoot can produce in a single growing season, and should be less than or equal to  <font face="courier" color="blue">max_nodes</font>. This parameter is used to limit the number of phytomers that a shoot can produce in a single growing season such that it eventually stops growing for the season, but can still put on additional phytomers in following seasons.</p>
 <h3><a class="anchor" id="ShootParam_base_roll"></a>
 base_roll</h3>
 <p> <font face="courier" color="blue">base_roll</font> is the roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. If  <font face="courier" color="blue">base_roll</font> = 0, the first petiole along the shoot will be vertical (or as vertical as is possible given the shoot direction and the specified angle of the petiole relative to the internode). This parameter is used to set the initial orientation of the shoot. For example, if  <font face="courier" color="blue">base_roll</font> = 0, the first phytomer of the shoot will be oriented vertically. If  <font face="courier" color="blue">base_roll</font> = 30, the first phytomer of the shoot will be oriented 30 degrees from vertical.</p>
-<h3><a class="anchor" id="ShootParam_inode_radius_initial"></a>
-internode_radius_initial</h3>
-<p>Will come back to this later. It is currently used in two places: 1. within appendPhytomerToShoot() to set the radius of the internode added to an existing shoot, and 2) within buildShootPhytomers() to either set the radius of the internodes if it is the trunk/base, or the radius is set as a fraction of internode_radius_iniitial.</p>
 <h3><a class="anchor" id="ShootParam_insertion"></a>
 insertion_angle_tip and insertion_angle_decay_rate</h3>
 <p>The insertion angle of child shoots is the angle that a child shoot makes with its parent shoot growth axis.</p>
@@ -514,6 +652,13 @@ internode_length_max, internode_length_min, and internode_length_decay_rate</h3>
 <div class="image">
 <img src="internode_length_schematic.jpeg" alt=""/>
 </div>
+<h3><a class="anchor" id="ShootParam_vegetative_prob"></a>
+vegetative_bud_break_probability_min and vegetative_bud_break_probability_decay_rate</h3>
+<p>The probability that a vegetative bud will break and produce a new shoot can vary along the shoot and is controlled by the parameters  <font face="courier" color="blue">vegetative_bud_break_probability_min</font> and  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>. If  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>&lt;0, the probability that the first bud on the shoot will break is 100%, and the probability decreases by  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font> at each node until it reaches a value of  <font face="courier" color="blue">vegetative_bud_break_probability_min</font>. If  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>&gt;0 (and  <font face="courier" color="blue">growth_requires_dormancy</font> is true), the probability that the last (apical) bud on the shoot at the time dormancy is broken will break is 100% and the probability decreases moving down the shoot.</p>
+<p>Special Cases: If  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>=0, the probability of bud break is always 100% along the shoot. If  <font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>&gt;0 and  <font face="courier" color="blue">growth_requires_dormancy</font> is false, the probability of bud break is always equal to  <font face="courier" color="blue">vegetative_bud_break_probability_min</font>.</p>
+<div class="image">
+<img src="vegetative_bud_break_schematic.jpeg" alt=""/>
+</div>
 <h3><a class="anchor" id="ShootParam_gravitropic"></a>
 gravitropic_curvature</h3>
 <p>The tendency of shoots to grow toward vertical is given by the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with  <font face="courier" color="blue">gravitropic_curvature</font> = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth. </p>
@@ -523,84 +668,22 @@ tortuosity</h3>
 <p class="formulaDsp">
 <img class="formulaDsp" alt="\[
     d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
-\]" src="form_162.png" width="165" height="32"/>
+\]" src="form_164.png" width="165" height="32"/>
 </p>
-<p>where <img class="formulaInl" alt="$d\theta$" src="form_163.png" width="15" height="12"/> is the change in curvature angle of the current phytomer internode relative to the previous internode, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> is the integrated curvature angle relative to the base of the shoot, <img class="formulaInl" alt="$dL$" src="form_164.png" width="18" height="12"/> is the internode length, <img class="formulaInl" alt="$T$" src="form_165.png" width="12" height="11"/> is the tortuosity, and <img class="formulaInl" alt="$\xi (dL)$" src="form_166.png" width="38" height="17"/> is a Gaussian process with variance of <img class="formulaInl" alt="$dL$" src="form_164.png" width="18" height="12"/>.</p>
+<p>where <img class="formulaInl" alt="$d\theta$" src="form_165.png" width="15" height="12"/> is the change in curvature angle of the current phytomer internode relative to the previous internode, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> is the integrated curvature angle relative to the base of the shoot, <img class="formulaInl" alt="$dL$" src="form_166.png" width="18" height="12"/> is the internode length, <img class="formulaInl" alt="$T$" src="form_167.png" width="12" height="11"/> is the tortuosity, and <img class="formulaInl" alt="$\xi (dL)$" src="form_168.png" width="38" height="17"/> is a Gaussian process with variance of <img class="formulaInl" alt="$dL$" src="form_166.png" width="18" height="12"/>.</p>
 <h2><a class="anchor" id="ShootParametersGrowth"></a>
 Growth Parameters of the Shoot</h2>
 <h3><a class="anchor" id="ShootParam_phyllochron"></a>
-phyllochron</h3>
-<p>The  <font face="courier" color="blue">phyllochron</font> parameter is the time between the emergence of successive phytomers from the shoot terminal bud. Note that if the number of nodes/phytomers along the shoot reaches  <font face="courier" color="blue">gravitropic_curvature</font>, the terminal bud will die and cease producing new phytomers.</p>
+phyllochron_min</h3>
+<p>The  <font face="courier" color="blue">phyllochron_min</font> parameter is the time between the emergence of successive phytomers from the shoot terminal bud. Note that if the number of nodes/phytomers along the shoot reaches  <font face="courier" color="blue">gravitropic_curvature</font>, the terminal bud will die and cease producing new phytomers.</p>
+<p>Note that this is called the "minimum" phyllochron because the phyllochron can be increased based on carbohydrate availability if the carbohydrate model is enabled. Thus, this is value corresponds to the maximum rate of growth.</p>
 <h3><a class="anchor" id="ShootParam_elongation_rate"></a>
 elongation_rate</h3>
 <p>The  <font face="courier" color="blue">elongation_rate</font> parameter is the rate of axial elongation of the internode of the shoot. When the phytomer is created the internode is small, and will elongate over time according to  <font face="courier" color="blue">elongation_rate</font> until it reaches its potential or maximum internode length as determined by the methodology described above. The elongation rate has units of length added to the internode per day.</p>
-<h3><a class="anchor" id="ShootParam_girth_growth_rate"></a>
-girth_growth_rate</h3>
-<p>The  <font face="courier" color="blue">girth_growth_rate</font> parameter is the rate of increase of the internode radius, given as a scaling factor applied to the current radius. The girth growth rate value is the scale factor applied to the current radius per day. For example, if  <font face="courier" color="blue">girth_growth_rate</font> = 1.01, the radius of the internode will increase by 1% per day.</p>
-<h1><a class="anchor" id="PlantArchBuild"></a>
-Loading a Plant from the Existing Library</h1>
-<p>A number of plant models are available in the plant architecture library, which can be created based on default parameters, or parameters modified by the user. Plant models available in the library are given in the table below.</p>
-<table class="markdownTable">
-<tr class="markdownTableHead">
-<th class="markdownTableHeadNone">Plant Type/Species   </th><th class="markdownTableHeadNone">Variety/Variation   </th><th class="markdownTableHeadNone">Plant type string argument   </th><th class="markdownTableHeadNone"><a class="el" href="struct_shoot.html">Shoot</a> types   </th><th class="markdownTableHeadNone">Image at time = 0   </th><th class="markdownTableHeadNone">Image at flowering   </th><th class="markdownTableHeadNone">Image at (reproductive) maturity    </th></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Almond Tree (<em>Prunus dulcis</em>)   </td><td class="markdownTableBodyNone">Nonpareil   </td><td class="markdownTableBodyNone">"almond"   </td><td class="markdownTableBodyNone">trunk, scaffold, proleptic, sylleptic   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Apple Tree (<em>Malus pumila</em>)   </td><td class="markdownTableBodyNone">Fuji   </td><td class="markdownTableBodyNone">"apple"   </td><td class="markdownTableBodyNone">trunk, proleptic   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Bindweed (<em>Convolvulus arvensis</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"bindweed"   </td><td class="markdownTableBodyNone">base, offshoots, children   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Butter Lettuce (<em>Lactuca sativa</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"butterlettuce"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Cheeseweed (<em>Malva neglecta</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"cheeseweed"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Common Bean (<em>Phaseolus vulgaris</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"bean"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Cowpea (<em>Vigna unguiculata</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"cowpea"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Eastern Redbud (<em>Cercis canadensis</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"easternredbud"   </td><td class="markdownTableBodyNone">eastern_redubud_trunk, eastern_redbud_shoot   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Grapevine (<em>Vitis vinifera</em>)   </td><td class="markdownTableBodyNone">VSP trellis   </td><td class="markdownTableBodyNone">"grapevine_VSP"   </td><td class="markdownTableBodyNone">grapevine_trunk, grapevine_cane, grapevine_shoot   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Maize (<em>Zea mays</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"maize"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Olive Tree (<em>Olea europaea</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"olive"   </td><td class="markdownTableBodyNone">trunk, scaffold, proleptic   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Puncturevine (<em>Tribulus terrestris</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"puncturevine"   </td><td class="markdownTableBodyNone">base, offshoots, children   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Rice (<em>Oryza sativa</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"rice"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Sorghum (<em>Sorghum bicolor</em>)   </td><td class="markdownTableBodyNone">grain sorghum   </td><td class="markdownTableBodyNone">"sorghum"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Soybean (<em>Glycine max</em>)   </td><td class="markdownTableBodyNone">upright growth habit (determinate)   </td><td class="markdownTableBodyNone">"soybean"   </td><td class="markdownTableBodyNone">unifoliate, trifoliate   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Sugar Beet (<em>Beta vulgaris</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"sugarbeet"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Tomato (<em>Solanum lycopersicum</em>)   </td><td class="markdownTableBodyNone">determinate growth   </td><td class="markdownTableBodyNone">"tomato"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Wheat (<em>Triticum aestivum</em>)   </td><td class="markdownTableBodyNone">generic   </td><td class="markdownTableBodyNone">"wheat"   </td><td class="markdownTableBodyNone">mainstem   </td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td><td class="markdownTableBodyNone"></td></tr>
-</table>
-<h2><a class="anchor" id="PlantArchBuild_default"></a>
-Loading a Plant with Default Parameters</h2>
-<p>Loading a plant from the library with default parameters is relatively simple, and requires only declaring the <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> class, loading the model using the <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a> method (which takes a string argument for the plant model as listed in the table above), and calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. The method takes two arguments: 1) the Cartesian (x,y,z) position of the plant base, and 2) the age of the plant in days. A code example is given below.</p>
-<div class="fragment"><div class="line"> {c++}</div>
-<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
-<div class="line"><span class="keyword">using namespace </span>helios;</div>
-<div class="line"> </div>
-<div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
-<div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
-<div class="line"> </div>
-<div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
-<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
-<div class="line"> </div>
-<div class="line">    <span class="keywordflow">return</span> 0;</div>
-<div class="line">}</div>
-<div class="ttc" id="a_plant_architecture_8h_html"><div class="ttname"><a href="_plant_architecture_8h.html">PlantArchitecture.h</a></div></div>
-<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00943">PlantArchitecture.h:943</a></div></div>
-</div><!-- fragment --><h3><a class="anchor" id="PlantArchBuild_custom"></a>
+<h3><a class="anchor" id="ShootParam_girth_area_factor"></a>
+girth_area_factor</h3>
+<p>When the shoot is created, the internode radius is set to the value of the phytomer parameter  <font face="courier" color="blue">internode.radius_initial</font>. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter  <font face="courier" color="blue">girth_area_factor</font>, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.</p>
+<h3><a class="anchor" id="PlantArchBuild_custom"></a>
 Modifying Parameters of a Plant from the Library</h3>
 <p>Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. After calling <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a>, the parameters can be queried (at the shoot level), modified, and then set.</p>
 <p>Parameters are queried based on shoot type (the names of which are given in the table above). The user can either query the <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure for a single shoot type based on its label, or for all shoot types in the particular model.</p>
@@ -613,7 +696,7 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line"> </div>
 <div class="line">plantarchitecture.updateCurrentShootParameters( <span class="stringliteral">&quot;trunk&quot;</span>, shoot_parameters );</div>
 <div class="line">plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
-<div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00527">PlantArchitecture.h:527</a></div></div>
+<div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition:</b> <a href="_plant_architecture_8h_source.html#l00661">PlantArchitecture.h:661</a></div></div>
 </div><!-- fragment --><p>Below is an example of modifying the parameters for all shoot types:</p>
 <div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>
@@ -626,35 +709,15 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line">    plantarchitecture.updateCurrentShootParameters( shoot_type, P );</div>
 <div class="line">}</div>
 <div class="line">plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
-</div><!-- fragment --><h2><a class="anchor" id="PlantArchPheno"></a>
+</div><!-- fragment --><h2><a class="anchor" id="PlantArchPhenoMod"></a>
 Modifying Phenological Threshold Parameters</h2>
 <p>Thresholds determining phenological transitions are set using the <a class="el" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301">PlantArchitecture::setPlantPhenologicalThresholds()</a> method. The thresholds are in arbitrary time units, which should be consistent with the timestep units and units of other parameters. The table below describes each of the phenological parameters. Setting any parameter to a negative value will skip that phenological stage.</p>
-<table class="markdownTable">
-<tr class="markdownTableHead">
-<th class="markdownTableHeadNone">Phenological Threshold   </th><th class="markdownTableHeadNone">Description    </th></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">time_to_dormancy_break   </td><td class="markdownTableBodyNone">Time required to break dormancy starting from the time of entering dormancy (or since the start of the simulation if starting dormant).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">time_to_flower_initiation   </td><td class="markdownTableBodyNone">Time from emergence/dormancy required to reach flower creation (closed flowers).    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">time_to_flower_opening   </td><td class="markdownTableBodyNone">Time from flower initiation required to reach flower opening (open flowers). (If flower initiation was skipped, time is relative to emergence/dormancy).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">time_to_fruit_set   </td><td class="markdownTableBodyNone">Time from flower opening required to reach fruit set. (If flower opening or initiation was skipped, time is relative to previous phenological stage).    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">time_to_fruit_maturity   </td><td class="markdownTableBodyNone">Time from fruit set required to reach maturity. (If fruit set was skipped, time is relative to previous phenological stage).    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">time_to_senescence   </td><td class="markdownTableBodyNone">Time from emergence/dormancy required to reach senescence. At senescence, leaves and fruit will be removed, and the plant will become dormant.   </td></tr>
-</table>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
 <div class="line">uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );</div>
-</div><!-- fragment --><h1><a class="anchor" id="PlantArchGrowth"></a>
-Growing the Model over Time</h1>
-<p>The model can be grown over time by calling the <a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">PlantArchitecture::advanceTime()</a> method, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to <a class="el" href="class_plant_architecture.html#afac9e51e48de17afa485128dbea39019">PlantArchitecture::advanceTime()</a>.</p>
-<div class="fragment"><div class="line">plantarchitecture.advanceTime( 1 );</div>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchQuery"></a>
 Retrieving Information from the Model</h1>
 <h2><a class="anchor" id="PlantArchQueryobjIDs"></a>

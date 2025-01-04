@@ -1,6 +1,6 @@
 /** \file "grapevine.cpp" Definitions of functions for building grapevine plant geometries.
     
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
     float z = position.z;
 
     float theta=0;
-    float RB;
+    float RB = cluster_rad;
     int N = 100;
     int count=0;
     int max_grape_levels = 13.f-4.f*unif_distribution(generator);
@@ -37,14 +37,14 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
     while( (N>3 || count<3) && count<max_grape_levels ){
 
         if(count<3){
-            RB=cluster_rad*powf(0.5f,2-count);
+            RB=cluster_rad*powf(0.5f,float(2-count));
         }else if(count==3){
             RB=cluster_rad;
         }
 
-        N=floor( M_PI*RB/grape_rad )+1;
+        N=floor( PI_F*RB/grape_rad )+1;
 
-        float dtheta=2.f*M_PI/float(N);
+        float dtheta=2.f*PI_F/float(N);
         for( int j=0; j<N; j++ ){
 
             xgrape.x = position.x+RB*sin(theta)+unif_distribution(generator)*0.25f*grape_rad;
@@ -91,7 +91,8 @@ std::vector<uint> leafPrototype( const int2 leaf_subdivisions, const char* leaf_
             float x = i*dx;
             float y = j*dy;
 
-            float mag, z;
+            float mag;
+            float z;
 
             mag = sqrt( x*x + 2*y*y );
             //z = a0*mag/(e0+mag);
@@ -165,8 +166,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     //------ trunks -------//
 
-    float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
-    float trunk_height = params.trunk_height + getVariation(params.trunk_height_spread, generator);
+    float trunk_radius = std::max( 1e-5f, params.trunk_radius + getVariation(params.trunk_radius_spread, generator));
+    float trunk_height = std::max( 0.f, params.trunk_height + getVariation(params.trunk_height_spread, generator));
 
     std::vector<float> rad_main;
     rad_main.push_back(0.75f*trunk_radius);
@@ -187,7 +188,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    int wood_subdivisions = params.wood_subdivisions + static_cast<int>(round(getVariation(params.wood_subdivisions_spread, generator)));
+    int wood_subdivisions = std::max( 3, params.wood_subdivisions +getVariation(params.wood_subdivisions_spread, generator));
 
     uint objID = context->addTubeObject(wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
     UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
@@ -197,9 +198,9 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     //---- Cordons -----//
 
-    float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
-    float cordon_radius = params.cordon_radius + getVariation(params.cordon_radius_spread, generator);
-    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
+    float cordon_height = std::max( 0.f, params.cordon_height + getVariation(params.cordon_height_spread, generator));
+    float cordon_radius = std::max( 1e-5f, params.cordon_radius + getVariation(params.cordon_radius_spread, generator));
+    float cordon_length = std::max( 0.f, params.cordon_length + getVariation(params.cordon_length_spread, generator));
 
     float diff = cordon_height-trunk_height;
 
@@ -214,7 +215,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     rad_cordw.push_back(cordon_radius);
     std::vector<vec3> pos_cordw;
     pos_cordw.push_back(make_vec3(0.01f*cordon_length*cost,0.01f*cordon_length*sint,0.95*trunk_height));
-    vec3 n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),getVariation(0.2f*M_PI,generator)));
+    vec3 n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*PI_F*(1+getVariation(0.2f,generator)),getVariation(0.2f*PI_F,generator)));
     vec3 n_end = make_vec3(0.5f*cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
@@ -238,7 +239,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     rad_corde.push_back(cordon_radius);
     std::vector<vec3> pos_corde;
     pos_corde.push_back(make_vec3(-0.01f*cordon_length*cost,-0.01f*cordon_length*sint,0.95f*trunk_height));
-    n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*M_PI*(1+getVariation(0.2,generator)),M_PI+getVariation(0.2*M_PI,generator)));
+    n_start = sphere2cart(make_SphericalCoord(cordon_height,0.4f*PI_F*(1+getVariation(0.2f,generator)),PI_F+getVariation(0.2f*PI_F,generator)));
     n_end = make_vec3(-0.5f*cordon_height,0,0);
 
     for( int i=1; i<Ncord; i++ ){
@@ -267,9 +268,9 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     std::vector<uint> leaf_ptype = leafPrototype( params.leaf_subdivisions, params.leaf_texture_file.c_str(), context );
 
-    float shoot_length = params.shoot_length + getVariation(params.shoot_length_spread, generator);
-    float shoot_radius = params.shoot_radius + getVariation(params.shoot_radius_spread, generator);
-    uint shoots_per_cordon = params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator);
+    float shoot_length = std::max(0.f, params.shoot_length + getVariation(params.shoot_length_spread, generator));
+    float shoot_radius = std::max( 1e-5f, params.shoot_radius + getVariation(params.shoot_radius_spread, generator));
+    uint shoots_per_cordon = std::max( uint(0), params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator));
 
     float height = cordon_height + shoot_length;
 
@@ -307,21 +308,21 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
             pos_pshoot.push_back( cane_base );
 
             //shoot nodes
-            float phirot = (0.5f-unif_distribution(generator))*0.5f*M_PI;
-            phirot=0.5*M_PI;
+            float phirot = (0.5f-unif_distribution(generator))*0.5f*PI_F;
+            phirot=0.5*PI_F;
             if( unif_distribution(generator)<0.5 ){
-                phirot+=M_PI;
+                phirot+=PI_F;
             }
 
             //tangent vector for start of shoot
-            vec3 n_start = sphere2cart(make_SphericalCoord( 0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)),2.f*M_PI*unif_distribution(generator)));
+            vec3 n_start = sphere2cart(make_SphericalCoord( 0.3f*height, 0.5f*PI_F*(1-unif_distribution(generator)),2.f*PI_F*unif_distribution(generator)));
             //tangent vector for middle of shoot
-            vec3 n_mid = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)*0.15),2.f*M_PI*unif_distribution(generator)));
+            vec3 n_mid = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*PI_F*(1-unif_distribution(generator)*0.15),2.f*PI_F*unif_distribution(generator)));
             //tangent vector for end of shoot
-            vec3 n_end = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*M_PI*(1-unif_distribution(generator)*0.5),2.f*M_PI*unif_distribution(generator)));
+            vec3 n_end = sphere2cart(make_SphericalCoord(0.3f*height, 0.5f*PI_F*(1-unif_distribution(generator)*0.5),2.f*PI_F*unif_distribution(generator)));
 
             uint Nz = 2*wood_subdivisions;
-            float dz = ((1+getVariation(0.1,generator))*height-cordon_height)/float(Nz);
+            float dz = ((1+getVariation(0.1f,generator))*height-cordon_height)/float(Nz);
 
             float total_cordons_length = 2 * cordon_length;
 
@@ -371,10 +372,10 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
             }
 
             //grape clusters
-            float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
-            float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
-            float cluster_height_max = params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator);
-            uint grape_subdivisions = params.grape_subdivisions + static_cast<uint>(round(getVariation(params.grape_subdivisions_spread, generator)));
+            float grape_radius = std::max(0.f, params.grape_radius + getVariation(params.grape_radius_spread, generator));
+            float cluster_radius = std::max( 0.f, params.cluster_radius + getVariation(params.cluster_radius_spread, generator));
+            float cluster_height_max = std::max(0.f, params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator));
+            uint grape_subdivisions = std::max( 3u, params.grape_subdivisions + getVariation(params.grape_subdivisions_spread, generator));
             std::vector<std::vector<uint> > UUID_grapes;
             if( grape_radius>0 && cluster_radius>0 ){
 
@@ -384,7 +385,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 if( unif_distribution(generator)<0.5 ){
                     sgn = -1;
                 }
-                vec3 offset(sgn*(0.25f*cluster_radius+getVariation(0.1,generator))*sint,sgn*(0.1f*cluster_radius+getVariation(0.1,generator))*cost,0.f);
+                vec3 offset(sgn*(0.25f*cluster_radius+getVariation(0.1f,generator))*sint,sgn*(0.1f*cluster_radius+getVariation(0.1f,generator))*cost,0.f);
                 UUID_grapes = addGrapeCluster( p_grape+offset, grape_radius, cluster_radius, params.grape_color, grape_subdivisions );
             }
             UUID_fruit_plant.push_back( UUID_grapes );
@@ -393,13 +394,13 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
             if( params.leaf_width==0 ){
                 continue;
             }
-            float leaf_width = params.leaf_width + getVariation(params.leaf_width_spread, generator);
+            float leaf_width = std::max(0.f, params.leaf_width + getVariation(params.leaf_width_spread, generator));
 
             float flip = 0;
             if( unif_distribution(generator)<0.5 ){
                 flip = 1;
             }
-            float leaf_spacing_fraction = params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction, generator);
+            float leaf_spacing_fraction = std::max(0.f, params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction, generator));
             float lfrac = 1.f;
             int iter=0;
             while( lfrac>0.5*leaf_width && iter<100 ){
@@ -411,7 +412,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
                 vec3 parent_normal = interpolateTube( pos_pshoot, fmax(0,lfrac-0.001) )-pos_leaf;
                 parent_normal.normalize();
-                vec3 leaf_offset = rotatePointAboutLine(make_vec3(getVariation(0.1f*lsize,generator),getVariation(0.75f*lsize,generator),0), make_vec3(0,0,0), parent_normal, flip*M_PI+getVariation(0.25*M_PI,generator) );
+                vec3 leaf_offset = rotatePointAboutLine(make_vec3(getVariation(0.1f*lsize,generator),getVariation(0.75f*lsize,generator),0), make_vec3(0,0,0), parent_normal, flip*PI_F+getVariation(0.25f*PI_F,generator) );
 
                 float s;
                 if( int(flip)%2==0 ){
@@ -420,8 +421,8 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                     s = -1;
                 }
 
-                float Rphi = -canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
-                float Rtheta = 0.25*M_PI*(1.f+getVariation(0.2,generator));
+                float Rphi = -canopy_rotation - s*0.5*PI_F*(1.f+getVariation(0.4f,generator));
+                float Rtheta = 0.25f*PI_F*(1.f+getVariation(0.2f,generator));
 
                 vec3 position = origin+pos_leaf+leaf_offset;
 
@@ -434,7 +435,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
                 UUID_leaf_plant.push_back( UUID_leaf );
 
-                lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
+                lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25f,generator));
 
                 flip++;
 
@@ -479,8 +480,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //------ trunks -------//
 
-    float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
-    float trunk_height = params.trunk_height + getVariation(params.trunk_height_spread, generator);
+    float trunk_radius = std::max( 1e-5f, params.trunk_radius + getVariation(params.trunk_radius_spread, generator));
+    float trunk_height = std::max(0.f, params.trunk_height + getVariation(params.trunk_height_spread, generator));
 
     std::vector<float> rad_main;
     rad_main.push_back(0.75f*trunk_radius);
@@ -501,21 +502,21 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    int wood_subdivisions = params.wood_subdivisions + static_cast<int>(round(getVariation(params.wood_subdivisions_spread, generator)));
+    int wood_subdivisions = std::max( 3, params.wood_subdivisions + getVariation(params.wood_subdivisions_spread, generator));
 
     uint objID = context->addTubeObject(wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
     UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //------ crown -------//
 
-    float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
-    float cordon_radius = params.cordon_radius + getVariation(params.cordon_radius_spread, generator);
-    float cordon_spacing = params.cordon_spacing + getVariation(params.cordon_spacing_spread, generator);
+    float cordon_height = std::max(0.f, params.cordon_height + getVariation(params.cordon_height_spread, generator));
+    float cordon_radius = std::max( 1e-5f, params.cordon_radius + getVariation(params.cordon_radius_spread, generator));
+    float cordon_spacing = std::max( 0.f, params.cordon_spacing + getVariation(params.cordon_spacing_spread, generator));
 
     float diff = cordon_height-trunk_height;
 
-    float cost = cosf(canopy_rotation+0.5f*M_PI);
-    float sint = sinf(canopy_rotation+0.5f*M_PI);
+    float cost = cosf(canopy_rotation+0.5f*PI_F);
+    float sint = sinf(canopy_rotation+0.5f*PI_F);
 
     std::vector<float> rad_crown;
     rad_crown.push_back(0.6f*trunk_radius);
@@ -556,7 +557,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //---- Cordons -----//
 
-    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
+    float cordon_length = std::max(0.f, params.cordon_length + getVariation(params.cordon_length_spread, generator));
 
     std::vector<float> rad_cord;
     rad_cord.push_back(cordon_radius);
@@ -643,11 +644,11 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
     //------- primary shoots ---------//
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
-    float shoot_length = params.shoot_length + getVariation(params.shoot_length_spread, generator);
-    float shoot_radius = params.shoot_radius + getVariation(params.shoot_radius_spread, generator);
-    uint shoots_per_cordon = params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator);
+    float shoot_length = std::max(0.f, params.shoot_length + getVariation(params.shoot_length_spread, generator));
+    float shoot_radius = std::max( 1e-5f, params.shoot_radius + getVariation(params.shoot_radius_spread, generator));
+    uint shoots_per_cordon = std::max(0u, params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator));
     float shoot_angle_base = params.shoot_angle_base + getVariation(params.shoot_angle_base_spread, generator);
     float shoot_angle_tip = params.shoot_angle_tip + getVariation(params.shoot_angle_tip_spread, generator);
 
@@ -691,9 +692,9 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                 //cane nodes
                 bool inside=false;
-                float phirot=0.5f*M_PI*(1+(-0.5f+unif_distribution(generator))*1.0)+canopy_rotation;
+                float phirot=0.5f*PI_F*(1+(-0.5f+unif_distribution(generator))*1.0)+canopy_rotation;
                 if( unif_distribution(generator)<0.5 ){
-                    phirot+=M_PI;
+                    phirot+=PI_F;
                     if( c==0 ){
                         inside= true;
                     }
@@ -705,19 +706,19 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                 float theta0;
                 if( inside ){
-                    theta0 = 0.5f*M_PI*unif_distribution(generator);//*(1.f+(-0.5+unif_distribution(generator))*0.6);
+                    theta0 = 0.5f*PI_F*unif_distribution(generator);//*(1.f+(-0.5+unif_distribution(generator))*0.6);
                 }else{
                     theta0 = shoot_angle_base*(1.f+(-0.5+unif_distribution(generator))*0.6);
                 }
                 float theta_end = shoot_angle_tip*(1.f+(-0.5+unif_distribution(generator))*0.6);
 
                 uint Nz = 2*wood_subdivisions;
-                float dz = ((1+getVariation(0.1,generator))*height-cordon_height)/float(Nz);
+                float dz = ((1+getVariation(0.1f,generator))*height-cordon_height)/float(Nz);
                 for( uint k=1; k<Nz; k++ ){
 
                     vec3 n = rotatePoint( make_vec3(0,0,dz), (theta0+(theta_end-theta0)*float(k)/float(Nz-1)), phirot );
 
-                    pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02,generator),getVariation(0.01,generator),0) );
+                    pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02f,generator),getVariation(0.01f,generator),0) );
 
                     rad_pshoot.push_back(shoot_radius);
 
@@ -741,10 +742,10 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                 }
 
                 //grape clusters
-                float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
-                float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
-                float cluster_height_max = params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator);
-                uint grape_subdivisions = params.grape_subdivisions + static_cast<uint>(round(getVariation(params.grape_subdivisions_spread, generator)));
+                float grape_radius = std::max( 0.f, params.grape_radius + getVariation(params.grape_radius_spread, generator));
+                float cluster_radius = std::max( 0.f, params.cluster_radius + getVariation(params.cluster_radius_spread, generator));
+                float cluster_height_max = std::max(0.f, params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator));
+                uint grape_subdivisions = std::max(0u, params.grape_subdivisions + getVariation(params.grape_subdivisions_spread, generator));
                 std::vector<std::vector<uint> > UUID_grapes;
                 if( grape_radius>0 && cluster_radius>0 ){
 
@@ -754,7 +755,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                     if( unif_distribution(generator)<0.5 ){
                         sgn = -1;
                     }
-                    vec3 offset(sgn*(2.2*cluster_radius+getVariation(0.1,generator))*sint,sgn*(2*cluster_radius+getVariation(0.1,generator))*cost,0.f);
+                    vec3 offset(sgn*(2.2*cluster_radius+getVariation(0.1f,generator))*sint,sgn*(2*cluster_radius+getVariation(0.1f,generator))*cost,0.f);
 
                     UUID_grapes = addGrapeCluster( p_grape+offset, grape_radius, cluster_radius, params.grape_color, grape_subdivisions );
                 }
@@ -764,13 +765,13 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                 if( params.leaf_width==0 ){
                     continue;
                 }
-                float leaf_width = params.leaf_width + getVariation(params.leaf_width_spread, generator);
+                float leaf_width = std::max(0.f, params.leaf_width + getVariation(params.leaf_width_spread, generator));
 
                 float flip = 0;
                 if( unif_distribution(generator)<0.5 ){
                     flip = 1;
                 }
-                float leaf_spacing_fraction = params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction, generator);
+                float leaf_spacing_fraction = std::max( 0.f, params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction_spread, generator));
                 float lfrac = 1.f;
                 int iter=0;
                 while( lfrac>0.5*leaf_width && iter<100 ){
@@ -782,7 +783,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                     vec3 parent_normal = interpolateTube( pos_pshoot, fmax(0,lfrac-0.001) )-pos_leaf;
                     parent_normal.normalize();
-                    vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3+getVariation(0.25,generator)),0), make_vec3(0,0,0), parent_normal, flip*M_PI+unif_distribution(generator)*0.25*M_PI );
+                    vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3+getVariation(0.25f,generator)),0), make_vec3(0,0,0), parent_normal, flip*PI_F+unif_distribution(generator)*0.25*PI_F );
 
                     float s;
                     if( int(flip)%2==0 ){
@@ -791,8 +792,8 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                         s = -1;
                     }
 
-                    float Rphi = -canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
-                    float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
+                    float Rphi = -canopy_rotation - s*0.5f*PI_F*(1.f+getVariation(0.4f,generator));
+                    float Rtheta = 0.4f*PI_F*(1.f+getVariation(0.1f,generator));
 
                     vec3 position = origin+pos_leaf+leaf_offset;
 
@@ -804,7 +805,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
                     UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
-                    lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
+                    lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25f,generator));
 
                     flip++;
 
@@ -828,7 +829,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
 
 uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &params, const vec3 &origin){
 
-    float mean_shoot_angle = 0.1*M_PI;
+    float mean_shoot_angle = 0.1*PI_F;
 
     vector<uint> U;
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;
@@ -848,12 +849,12 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         is_dead = random_draw <= params.dead_probability;
     }
 
-    float cordon_length = params.cordon_length + getVariation(params.cordon_length_spread, generator);
+    float cordon_length = std::max(0.f, params.cordon_length + getVariation(params.cordon_length_spread, generator));
 
     //------ trunks -------//
 
-    float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
-    float trunk_height = params.trunk_height + getVariation(params.trunk_height_spread, generator);
+    float trunk_radius = std::max( 1e-5f, params.trunk_radius + getVariation(params.trunk_radius_spread, generator));
+    float trunk_height = std::max(0.f, params.trunk_height + getVariation(params.trunk_height_spread, generator));
 
     std::vector<float> rad_main;
     rad_main.push_back(0.75*trunk_radius);
@@ -863,26 +864,26 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     rad_main.push_back(0.95f*trunk_radius);
     rad_main.push_back(0.1*trunk_radius);
     std::vector<vec3> pos_main;
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.0));
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.2f*trunk_height));
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.22f*trunk_height));
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.6f*trunk_height));
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,0.96f*trunk_height));
-    pos_main.push_back(make_vec3((-cordon_length+0.5*trunk_radius)*cost,(-cordon_length+0.5*trunk_radius)*sint,trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,0.0f));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,0.2f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,0.22f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,0.6f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,0.96f*trunk_height));
+    pos_main.push_back(make_vec3((-cordon_length+0.5f*trunk_radius)*cost,(-cordon_length+0.5f*trunk_radius)*sint,trunk_height));
 
     for( uint i=0; i<rad_main.size(); i++ ){
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    int wood_subdivisions = params.wood_subdivisions + static_cast<int>(round(getVariation(params.wood_subdivisions_spread, generator)));
+    int wood_subdivisions = std::max( 0, params.wood_subdivisions + getVariation(params.wood_subdivisions_spread, generator));
 
     uint objID = context->addTubeObject(wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
     UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //---- Cordons -----//
 
-    float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
-    float cordon_radius = params.cordon_radius + getVariation(params.cordon_radius_spread, generator);
+    float cordon_height = std::max(0.f, params.cordon_height + getVariation(params.cordon_height_spread, generator));
+    float cordon_radius = std::max( 1e-5f, params.cordon_radius + getVariation(params.cordon_radius_spread, generator));
 
     float total_cordons_length = 2 * cordon_length;
 
@@ -898,13 +899,13 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     rad_cord.push_back(0.6*cordon_radius);
     rad_cord.push_back(0.2f*cordon_radius);
     std::vector<vec3> pos_cord;
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.01f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.01f*total_cordons_length)*sint,0.95*trunk_height));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.05f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.05f*total_cordons_length)*sint,trunk_height+0.1f*diff));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.15f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.15f*total_cordons_length)*sint,trunk_height+0.65f*diff));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.45f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.45f*total_cordons_length)*sint,trunk_height+0.95f*diff));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.6f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.6f*total_cordons_length)*sint,trunk_height+1.05f*diff));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+0.85f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+0.85f*total_cordons_length)*sint,trunk_height+diff));
-    pos_cord.push_back(make_vec3((-cordon_length+0.5*trunk_radius+1.0f*total_cordons_length)*cost,(-cordon_length+0.5*trunk_radius+1.0f*total_cordons_length)*sint,trunk_height+diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.01f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.01f*total_cordons_length)*sint,0.95f*trunk_height));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.05f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.05f*total_cordons_length)*sint,trunk_height+0.1f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.15f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.15f*total_cordons_length)*sint,trunk_height+0.65f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.45f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.45f*total_cordons_length)*sint,trunk_height+0.95f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.6f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.6f*total_cordons_length)*sint,trunk_height+1.05f*diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+0.85f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+0.85f*total_cordons_length)*sint,trunk_height+diff));
+    pos_cord.push_back(make_vec3((-cordon_length+0.5f*trunk_radius+1.0f*total_cordons_length)*cost,(-cordon_length+0.5f*trunk_radius+1.0f*total_cordons_length)*sint,trunk_height+diff));
 
     std::vector<vec3> tmp;
     tmp.resize(pos_cord.size());
@@ -917,11 +918,11 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
 
     //------- primary shoots ---------//
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
-    float shoot_length = params.shoot_length + getVariation(params.shoot_length_spread, generator);
-    float shoot_radius = params.shoot_radius + getVariation(params.shoot_radius_spread, generator);
-    uint shoots_per_cordon = params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator);
+    float shoot_length = std::max(0.f, params.shoot_length + getVariation(params.shoot_length_spread, generator));
+    float shoot_radius = std::max(1e-5f, params.shoot_radius + getVariation(params.shoot_radius_spread, generator));
+    uint shoots_per_cordon = std::max(0u, params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator));
 
     float height = cordon_height + shoot_length;
 
@@ -941,22 +942,22 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         pos_pshoot.push_back( cane_base );
 
         //cane nodes
-        float phirot = (0.5f-unif_distribution(generator))*0.5*M_PI;
-        phirot=0.5*M_PI;
+        float phirot = (0.5f-unif_distribution(generator))*0.5*PI_F;
+        phirot=0.5*PI_F;
         if( unif_distribution(generator)<0.5 ){
-            phirot+=M_PI;
+            phirot+=PI_F;
         }
 
         float theta0 = (0.3f-unif_distribution(generator))*0.6;
         float theta_end = (0.1f-unif_distribution(generator))*0.2;
 
         uint Nz = 2*wood_subdivisions;
-        float dz = ((1+getVariation(0.1,generator))*height-cordon_height)/float(Nz);
+        float dz = ((1+getVariation(0.1f,generator))*height-cordon_height)/float(Nz);
         for( uint k=1; k<Nz; k++ ){
 
-            vec3 n = rotatePoint( make_vec3(0,0,dz), mean_shoot_angle*M_PI/180.f*(theta0+1.2*float(k)/float(Nz-1)), phirot );
+            vec3 n = rotatePoint( make_vec3(0,0,dz), mean_shoot_angle*PI_F/180.f*(theta0+1.2*float(k)/float(Nz-1)), phirot );
 
-            pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02,generator),getVariation(0.01,generator),0) );
+            pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02f,generator),getVariation(0.01f,generator),0) );
 
             rad_pshoot.push_back(shoot_radius);
 
@@ -980,10 +981,10 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         }
 
         //grape clusters
-        float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
-        float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
-        float cluster_height_max = params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator);
-        uint grape_subdivisions = params.grape_subdivisions + static_cast<uint>(round(getVariation(params.grape_subdivisions_spread, generator)));
+        float grape_radius = std::max(0.f, params.grape_radius + getVariation(params.grape_radius_spread, generator));
+        float cluster_radius = std::max(0.f, params.cluster_radius + getVariation(params.cluster_radius_spread, generator));
+        float cluster_height_max = std::max(0.f, params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator));
+        uint grape_subdivisions = std::max(0u, params.grape_subdivisions + getVariation(params.grape_subdivisions_spread, generator));
         std::vector<std::vector<uint> > UUID_grapes;
         if( grape_radius>0 && cluster_radius>0 ){
 
@@ -993,7 +994,7 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
             if( unif_distribution(generator)<0.5 ){
                 sgn = -1;
             }
-            vec3 offset(sgn*(2.2*cluster_radius+getVariation(0.1,generator))*sint,sgn*(2*cluster_radius+getVariation(0.1,generator))*cost,0.f);
+            vec3 offset(sgn*(2.2f*cluster_radius+getVariation(0.1f,generator))*sint,sgn*(2*cluster_radius+getVariation(0.1f,generator))*cost,0.f);
             UUID_grapes = addGrapeCluster( p_grape+offset, grape_radius, cluster_radius, params.grape_color, grape_subdivisions );
         }
         UUID_fruit_plant.push_back( UUID_grapes );
@@ -1002,13 +1003,13 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
         if( params.leaf_width==0 ){
             continue;
         }
-        float leaf_width = params.leaf_width + getVariation(params.leaf_width_spread, generator);
+        float leaf_width = std::max( 0.f, params.leaf_width + getVariation(params.leaf_width_spread, generator));
 
         float flip = 0;
         if( unif_distribution(generator)<0.5 ){
             flip = 1;
         }
-        float leaf_spacing_fraction = params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction, generator);
+        float leaf_spacing_fraction = std::max(0.f, params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction_spread, generator));
         float lfrac = 1.f;
         int iter=0;
         while( lfrac>0.5*leaf_width && iter<100 ){
@@ -1020,7 +1021,7 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
 
             vec3 parent_normal = interpolateTube( pos_pshoot, fmax(0,lfrac-0.001) )-pos_leaf;
             parent_normal.normalize();
-            vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3+getVariation(0.25,generator)),0), make_vec3(0,0,0), parent_normal, flip*M_PI+unif_distribution(generator)*0.25*M_PI );
+            vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3+getVariation(0.25f,generator)),0), make_vec3(0,0,0), parent_normal, flip*PI_F+unif_distribution(generator)*0.25f*PI_F );
 
             float s;
             if( int(flip)%2==0 ){
@@ -1029,8 +1030,8 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
                 s = -1;
             }
 
-            float Rphi = -canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
-            float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
+            float Rphi = -canopy_rotation - s*0.5f*PI_F*(1.f+getVariation(0.4f,generator));
+            float Rtheta = 0.4f*PI_F*(1.f+getVariation(0.1f,generator));
 
             vec3 position = origin+pos_leaf-leaf_offset;
 
@@ -1042,7 +1043,7 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
 
             UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
-            lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
+            lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25f,generator));
 
             flip++;
 
@@ -1083,8 +1084,8 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
 
     //------ trunks -------//
 
-    float trunk_radius = params.trunk_radius + getVariation(params.trunk_radius_spread, generator);
-    float trunk_height = params.trunk_height + getVariation(params.trunk_height_spread, generator);
+    float trunk_radius = std::max( 1e-5f, params.trunk_radius + getVariation(params.trunk_radius_spread, generator));
+    float trunk_height = std::max( 0.f, params.trunk_height + getVariation(params.trunk_height_spread, generator));
 
     std::vector<float> rad_main;
     rad_main.push_back(0.75*trunk_radius);
@@ -1105,20 +1106,20 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
         pos_main.at(i) = pos_main.at(i) + origin;
     }
 
-    int wood_subdivisions = params.wood_subdivisions + static_cast<int>(round(getVariation(params.wood_subdivisions_spread, generator)));
+    int wood_subdivisions = std::max(0, params.wood_subdivisions + getVariation(params.wood_subdivisions_spread, generator));
 
     uint objID = context->addTubeObject(wood_subdivisions,pos_main,rad_main, params.wood_texture_file.c_str() );
     UUID_trunk_plant = context->getObjectPrimitiveUUIDs(objID);
 
     //------- primary shoots ---------//
 
-    float cordon_height = params.cordon_height + getVariation(params.cordon_height_spread, generator);
+    float cordon_height = std::max(0.f, params.cordon_height + getVariation(params.cordon_height_spread, generator));
 
-    float shoot_length = params.shoot_length + getVariation(params.shoot_length_spread, generator);
-    float shoot_radius = params.shoot_radius + getVariation(params.shoot_radius_spread, generator);
-    uint shoots_per_cordon = params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator);
+    float shoot_length = std::max(0.f, params.shoot_length + getVariation(params.shoot_length_spread, generator));
+    float shoot_radius = std::max( 0.f, params.shoot_radius + getVariation(params.shoot_radius_spread, generator));
+    uint shoots_per_cordon = std::max(0u, params.shoots_per_cordon + getVariation(params.shoots_per_cordon_spread, generator));
 
-    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,M_PI), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,PI_F), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
 
     for( uint c=0; c<2; c++ ){
 
@@ -1137,16 +1138,16 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
             rad_pshoot.push_back( shoot_radius );
             pos_pshoot.push_back( cane_base );
 
-            float theta0 = 0.5*M_PI*(1.f-float(j-1)/float(shoots_per_cordon));
+            float theta0 = 0.5*PI_F*(1.f-float(j-1)/float(shoots_per_cordon));
             float theta_end = (0.1f-unif_distribution(generator))*0.2;
 
             uint Nz = 2*wood_subdivisions;
-            float dz = ((1+getVariation(0.1,generator))*height-cordon_height)/float(Nz);
+            float dz = ((1.f+getVariation(0.1f,generator))*height-cordon_height)/float(Nz);
             for( uint k=1; k<Nz; k++ ){
 
-                vec3 n = rotatePoint( make_vec3(0,0,dz), (theta0+(theta_end-theta0)*float(k)/float(Nz-1)), canopy_rotation+M_PI*float(c) );
+                vec3 n = rotatePoint( make_vec3(0,0,dz), (theta0+(theta_end-theta0)*float(k)/float(Nz-1)), canopy_rotation+PI_F*float(c) );
 
-                pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02,generator),getVariation(0.01,generator), 0.f ) );
+                pos_pshoot.push_back( pos_pshoot.back()+n+make_vec3(getVariation(0.02f,generator),getVariation(0.01f,generator), 0.f ) );
 
                 rad_pshoot.push_back(shoot_radius);
 
@@ -1170,10 +1171,10 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
             }
 
             //grape clusters
-            float grape_radius = params.grape_radius + getVariation(params.grape_radius_spread, generator);
-            float cluster_radius = params.cluster_radius + getVariation(params.cluster_radius_spread, generator);
-            float cluster_height_max = params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator);
-            uint grape_subdivisions = params.grape_subdivisions + static_cast<uint>(round(getVariation(params.grape_subdivisions_spread, generator)));
+            float grape_radius = std::max(0.f, params.grape_radius + getVariation(params.grape_radius_spread, generator));
+            float cluster_radius = std::max(0.f, params.cluster_radius + getVariation(params.cluster_radius_spread, generator));
+            float cluster_height_max = std::max(0.f, params.cluster_height_max + getVariation(params.cluster_height_max_spread, generator));
+            uint grape_subdivisions = std::max(0u, params.grape_subdivisions + getVariation(params.grape_subdivisions_spread, generator));
             std::vector<std::vector<uint> > UUID_grapes;
             if( grape_radius>0 && cluster_radius>0 ){
 
@@ -1183,7 +1184,7 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
                 if( unif_distribution(generator)<0.5 ){
                     sgn = -1;
                 }
-                vec3 offset(sgn*(2.2*cluster_radius+getVariation(0.1,generator))*sint,sgn*(2*cluster_radius+getVariation(0.1,generator))*cost,0.f);
+                vec3 offset(sgn*(2.2f*cluster_radius+getVariation(0.1f,generator))*sint,sgn*(2.f*cluster_radius+getVariation(0.1f,generator))*cost,0.f);
                 UUID_grapes = addGrapeCluster( p_grape+offset, grape_radius, cluster_radius, params.grape_color, grape_subdivisions );
             }
             UUID_fruit_plant.push_back( UUID_grapes );
@@ -1192,13 +1193,13 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
             if( params.leaf_width==0 ){
                 continue;
             }
-            float leaf_width = params.leaf_width + getVariation(params.leaf_width_spread, generator);
+            float leaf_width = std::max(0.f, params.leaf_width + getVariation(params.leaf_width_spread, generator));
 
             float flip = 0;
             if( unif_distribution(generator)<0.5 ){
                 flip = 1;
             }
-            float leaf_spacing_fraction = params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction, generator);
+            float leaf_spacing_fraction = std::max(0.f, params.leaf_spacing_fraction + getVariation(params.leaf_spacing_fraction_spread, generator));
             float lfrac = 1.f;
             int iter=0;
             while( lfrac>0.5*leaf_width && iter<100 ){
@@ -1210,7 +1211,7 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
 
                 vec3 parent_normal = interpolateTube( pos_pshoot, fmax(0,lfrac-0.001) )-pos_leaf;
                 parent_normal.normalize();
-                vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3+getVariation(0.25,generator)),0), make_vec3(0,0,0), parent_normal, flip*M_PI+unif_distribution(generator)*0.25*M_PI );
+                vec3 leaf_offset = rotatePointAboutLine(make_vec3(0,lsize*(0.3f+getVariation(0.25f,generator)),0), make_vec3(0,0,0), parent_normal, flip*PI_F+unif_distribution(generator)*0.25f*PI_F );
 
                 float s;
                 if( int(flip)%2==0 ){
@@ -1219,8 +1220,8 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
                     s = -1;
                 }
 
-                float Rphi = -canopy_rotation - s*0.5*M_PI*(1.f+getVariation(0.4,generator));
-                float Rtheta = 0.4*M_PI*(1.f+getVariation(0.1,generator));
+                float Rphi = -canopy_rotation - s*0.5*PI_F*(1.f+getVariation(0.4f,generator));
+                float Rtheta = 0.4f*PI_F*(1.f+getVariation(0.1f,generator));
 
                 vec3 position = origin+pos_leaf-leaf_offset;
 
@@ -1232,7 +1233,7 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
 
                 UUID_leaf_plant.push_back(context->getObjectPointer(ID)->getPrimitiveUUIDs());
 
-                lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25,generator));
+                lfrac = lfrac - leaf_spacing_fraction*lsize*(1.f+getVariation(0.25f,generator));
 
                 flip++;
 

@@ -3,7 +3,7 @@
 using namespace helios;
 using namespace std;
 
-std::vector<std::vector<uint> > beanCluster( const vec3 center, const BeanParameters params, Context* context ){
+std::vector<std::vector<uint> > beanCluster( const vec3 center, const BeanParameters &params, Context* context ){
 
     std::vector<std::vector<uint> > U;
 
@@ -34,7 +34,7 @@ std::vector<uint> leafPrototype( const BeanParameters &params, Context *context 
       float x = float(i)*dx;
       float y = float(j)*dy;
 
-      float mag, z;
+      float z;
 
       z = a0*x/(e0+x) - e0*y*y;
       vec3 v0( x, y, z );
@@ -80,7 +80,7 @@ std::vector<uint> leafPrototype( const BeanParameters &params, Context *context 
 //    std::vector<uint> UUIDs = context->loadOBJ( "../obj/leaf_new.obj", make_vec3(0.5,0,0), 0, nullrotation, RGB::green, true );
 //    context->scalePrimitive( UUIDs, make_vec3(0.4,0.5,0.5) );
 //    context->translatePrimitive( UUIDs, make_vec3(-0.25,0.6,0.06) );
-//    context->rotatePrimitive( UUIDs, -0.5*M_PI, "z" );
+//    context->rotatePrimitive( UUIDs, -0.5*PI_F, "z" );
 
 //    std::vector<uint> UUIDs = context->addTile( make_vec3(0.5,0,0), make_vec2(1,1), nullrotation, make_int2(1,1), params.leaf_texture_file.c_str() );
 
@@ -151,19 +151,19 @@ void beanLeaflet( const BeanParameters &params, const helios::vec3 base_position
 //    objID = context->addPolymeshObject(U);
 
     context->scalePrimitive( U, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length) );
-    context->rotatePrimitive( U, -(theta + getVariation( 0.3*M_PI, rand_generator )), "y" );
-    context->rotatePrimitive( U, -base_angle.azimuth+0.5f*M_PI, "z" );
+    context->rotatePrimitive( U, -(theta + getVariation( 0.3f*PI_F, rand_generator )), "y" );
+    context->rotatePrimitive( U, -base_angle.azimuth+0.5f*PI_F, "z" );
     context->translatePrimitive( U, nodes.back()-sphere2cart(make_SphericalCoord(0.001f,theta,base_angle.azimuth)) );
 //    context->scaleObject( objID, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length) );
-//    context->rotateObject( objID, -(theta + getVariation( 0.3*M_PI, rand_generator )), "y" );
-//    context->rotateObject( objID, -base_angle.azimuth+0.5f*M_PI, "z" );
+//    context->rotateObject( objID, -(theta + getVariation( 0.3*PI_F, rand_generator )), "y" );
+//    context->rotateObject( objID, -base_angle.azimuth+0.5f*PI_F, "z" );
 //    context->translateObject( objID, nodes.back()-sphere2cart(make_SphericalCoord(0.001f,theta,base_angle.azimuth)) );
 
     leaf_UUIDs.push_back(U);
 
     //lateral leaves
 
-    float leaf_downangle = 0.1*M_PI;
+    float leaf_downangle = 0.1*PI_F;
     float leaf_bfrac = 0.8;
 
     vec3 r0 = interpolateTube( nodes, leaf_bfrac);
@@ -173,34 +173,32 @@ void beanLeaflet( const BeanParameters &params, const helios::vec3 base_position
     float elevation = cart2sphere(dr).elevation;
     float azimuth = cart2sphere(dr).azimuth;
 
-    std::vector<uint> U1, U2;
-
-    U1 = context->copyPrimitive( leaf_prototype );
+    std::vector<uint> U1 = context->copyPrimitive(leaf_prototype);
 //    objID = context->addPolymeshObject(U1);
 
     context->scalePrimitive( U1, make_vec3(params.leaf_length, params.leaf_length*0.9, params.leaf_length) );
-    context->rotatePrimitive( U1, elevation + getVariation( 0.2*M_PI, rand_generator ), "x" );
-    context->rotatePrimitive( U1, leaf_downangle + getVariation( 0.2*M_PI, rand_generator ), "y" );
+    context->rotatePrimitive( U1, elevation + getVariation( 0.2f*PI_F, rand_generator ), "x" );
+    context->rotatePrimitive( U1, leaf_downangle + getVariation( 0.2f*PI_F, rand_generator ), "y" );
     context->rotatePrimitive( U1, -azimuth, "z" );
     context->translatePrimitive( U1, r0 + 0.01*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), 0) );
 //    context->scaleObject( objID, make_vec3(params.leaf_length, params.leaf_length*0.9, params.leaf_length) );
-//    context->rotateObject( objID, elevation + getVariation( 0.2*M_PI, rand_generator ), "x" );
-//    context->rotateObject( objID, leaf_downangle + getVariation( 0.2*M_PI, rand_generator ), "y" );
+//    context->rotateObject( objID, elevation + getVariation( 0.2*PI_F, rand_generator ), "x" );
+//    context->rotateObject( objID, leaf_downangle + getVariation( 0.2*PI_F, rand_generator ), "y" );
 //    context->rotateObject( objID, -azimuth, "z" );
 //    context->translateObject( objID, r0 + 0.01*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), 0) );
 
-    U2 = context->copyPrimitive( leaf_prototype );
+    std::vector<uint> U2 = context->copyPrimitive( leaf_prototype );
 //    objID = context->addPolymeshObject(U2);
 
     context->scalePrimitive( U2, make_vec3(params.leaf_length, params.leaf_length*0.9, params.leaf_length) );
-    context->rotatePrimitive( U2, -elevation + getVariation( 0.2*M_PI, rand_generator ), "x" );
-    context->rotatePrimitive( U2, leaf_downangle + getVariation( 0.2*M_PI, rand_generator ), "y" );
-    context->rotatePrimitive( U2, -azimuth+M_PI, "z" );
+    context->rotatePrimitive( U2, -elevation + getVariation( 0.2f*PI_F, rand_generator ), "x" );
+    context->rotatePrimitive( U2, leaf_downangle + getVariation( 0.2f*PI_F, rand_generator ), "y" );
+    context->rotatePrimitive( U2, -azimuth+PI_F, "z" );
     context->translatePrimitive( U2, r0 - 0.01*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), 0)  );
 //    context->scaleObject( objID, make_vec3(params.leaf_length, params.leaf_length*0.9, params.leaf_length) );
-//    context->rotateObject( objID, -elevation + getVariation( 0.2*M_PI, rand_generator ), "x" );
-//    context->rotateObject( objID, leaf_downangle + getVariation( 0.2*M_PI, rand_generator ), "y" );
-//    context->rotateObject( objID, -azimuth+M_PI, "z" );
+//    context->rotateObject( objID, -elevation + getVariation( 0.2*PI_F, rand_generator ), "x" );
+//    context->rotateObject( objID, leaf_downangle + getVariation( 0.2*PI_F, rand_generator ), "y" );
+//    context->rotateObject( objID, -azimuth+PI_F, "z" );
 //    context->translateObject( objID, r0 - 0.01*params.leaf_length*make_vec3( cosf(-azimuth), sinf(-azimuth), 0)  );
 
     leaf_UUIDs.push_back(U1);
@@ -220,8 +218,6 @@ void beanLeaflet( const BeanParameters &params, const helios::vec3 base_position
 
 void beanShoot( const BeanParameters &params, const helios::vec3 base_position, const helios::SphericalCoord &shoot_direction, float scale, std::vector<std::vector<uint> > &leaf_UUIDs,
                 std::vector<uint> &branch_UUIDs, std::vector<std::vector<std::vector<uint> > > &fruit_UUIDs, std::vector<uint> &leaf_prototype, std::minstd_rand0 &rand_generator, Context* context ){
-
-    std::vector<uint> UUIDs_stem;
     std::vector<std::vector<uint> >  UUIDs_leaf;
     std::vector<std::vector<std::vector<uint> > > UUIDs_pod;
 
@@ -234,21 +230,21 @@ void beanShoot( const BeanParameters &params, const helios::vec3 base_position, 
     std::vector<float> radius{params.stem_radius*scale,params.stem_radius*scale,params.stem_radius*scale*0.9f};
     std::vector<RGBcolor> color{params.shoot_color,params.shoot_color,params.shoot_color};
 
-    UUIDs_stem = context->addTube( params.shoot_subdivisions, nodes, radius, color );
+    std::vector<uint> UUIDs_stem = context->addTube(params.shoot_subdivisions, nodes, radius, color);
 //    uint objID = context->addTubeObject( params.shoot_subdivisions, nodes, radius, color );
 //    UUIDs_stem = context->getObjectPrimitiveUUIDs(objID);
 
   std::vector<uint> U = context->copyPrimitive( leaf_prototype );
 //  objID = context->addPolymeshObject(U);
 
-  float az0 = getVariation( 2.f*M_PI, rand_generator );
+  float az0 = getVariation( 2.f*PI_F, rand_generator );
 
   context->scalePrimitive( U, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length)*0.7 );
-  context->rotatePrimitive( U, getVariation( 0.2*M_PI, rand_generator ), "y" );
+  context->rotatePrimitive( U, getVariation( 0.2f*PI_F, rand_generator ), "y" );
   context->rotatePrimitive( U, az0, "z" );
   context->translatePrimitive( U, base_position+make_vec3(0,0, 0.75f*params.stem_length)*scale );
 //    context->scaleObject( objID, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length)*0.7 );
-//    context->rotateObject( objID, getVariation( 0.2*M_PI, rand_generator ), "y" );
+//    context->rotateObject( objID, getVariation( 0.2*PI_F, rand_generator ), "y" );
 //    context->rotateObject( objID, az0, "z" );
 //    context->translateObject( objID, base_position+make_vec3(0,0, 0.75f*params.stem_length)*scale );
 
@@ -258,26 +254,26 @@ void beanShoot( const BeanParameters &params, const helios::vec3 base_position, 
 //  objID = context->addPolymeshObject(U);
 
   context->scalePrimitive( U, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length)*0.7 );
-  context->rotatePrimitive( U, getVariation( 0.2*M_PI, rand_generator ), "y" );
-  context->rotatePrimitive( U, az0+M_PI, "z" );
+  context->rotatePrimitive( U, getVariation( 0.2f*PI_F, rand_generator ), "y" );
+  context->rotatePrimitive( U, az0+PI_F, "z" );
   context->translatePrimitive( U, base_position+make_vec3(0,0, 0.75f*params.stem_length)*scale );
 //    context->scaleObject( objID, make_vec3(params.leaf_length, params.leaf_length*0.9f, params.leaf_length)*0.7 );
-//    context->rotateObject( objID, getVariation( 0.2*M_PI, rand_generator ), "y" );
-//    context->rotateObject( objID, az0+M_PI, "z" );
+//    context->rotateObject( objID, getVariation( 0.2*PI_F, rand_generator ), "y" );
+//    context->rotateObject( objID, az0+PI_F, "z" );
 //    context->translateObject( objID, base_position+make_vec3(0,0, 0.75f*params.stem_length)*scale );
 
     leaf_UUIDs.push_back( U );
 
-    float shoot_zenith = 0.2*M_PI+getVariation(0.1*M_PI, rand_generator );
-    float shoot_azimuth = getVariation( 2.f*M_PI, rand_generator );
+    float shoot_zenith = 0.2*PI_F+getVariation(0.1f*PI_F, rand_generator );
+    float shoot_azimuth = getVariation( 2.f*PI_F, rand_generator );
 
-    vec3 leaflet_direction = sphere2cart(  make_SphericalCoord(0.5f*M_PI-shoot_zenith, shoot_azimuth + getVariation( 0.2f*M_PI, rand_generator )) );
+    vec3 leaflet_direction = sphere2cart(  make_SphericalCoord(0.5f*PI_F-shoot_zenith, shoot_azimuth + getVariation( 0.2f*PI_F, rand_generator )) );
 
-    beanLeaflet( params, nodes.back(), leaflet_direction, params.leaflet_length, 0.2*M_PI, params.stem_radius, UUIDs_leaf, UUIDs_stem, UUIDs_pod, leaf_prototype, rand_generator, context );
+    beanLeaflet( params, nodes.back(), leaflet_direction, params.leaflet_length, 0.2*PI_F, params.stem_radius, UUIDs_leaf, UUIDs_stem, UUIDs_pod, leaf_prototype, rand_generator, context );
 
-    leaflet_direction = sphere2cart(  make_SphericalCoord(0.5f*M_PI-shoot_zenith, M_PI+shoot_azimuth + getVariation( 0.2f*M_PI, rand_generator )) );
+    leaflet_direction = sphere2cart(  make_SphericalCoord(0.5f*PI_F-shoot_zenith, PI_F+shoot_azimuth + getVariation( 0.2f*PI_F, rand_generator )) );
 
-    beanLeaflet( params, nodes.back(), leaflet_direction, params.leaflet_length, 0.2*M_PI, params.stem_radius, UUIDs_leaf, UUIDs_stem, UUIDs_pod, leaf_prototype, rand_generator, context );
+    beanLeaflet( params, nodes.back(), leaflet_direction, params.leaflet_length, 0.2*PI_F, params.stem_radius, UUIDs_leaf, UUIDs_stem, UUIDs_pod, leaf_prototype, rand_generator, context );
 
     for( uint i=0; i<UUIDs_leaf.size(); i++ ) {
         context->rotatePrimitive(UUIDs_leaf.at(i), shoot_direction.zenith, "x");
@@ -300,7 +296,7 @@ uint CanopyGenerator::bean(const BeanParameters &params, const vec3 &origin ){
 
     std::vector<uint> leaf_prototype = leafPrototype(params, context);
 
-    beanShoot( params, origin, make_SphericalCoord(0.5*M_PI,0), 1, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, leaf_prototype, generator, context );
+    beanShoot( params, origin, make_SphericalCoord(0.5*PI_F,0), 1, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, leaf_prototype, generator, context );
 
     UUID_leaf.push_back( leaf_UUIDs );
     UUID_branch.push_back( branch_UUIDs );

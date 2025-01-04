@@ -38,7 +38,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.24</span>
+   <div id="projectname"><span id="projectnumber">&#160;v1.3.25</span>
    </div>
   </td>
  </tr>
@@ -123,12 +123,12 @@ Functions</h2></td></tr>
 <tr class="memitem:a1ffc8a34ba2895084c71e95ed615d10a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a1ffc8a34ba2895084c71e95ed615d10a">read_JPEG_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a1ffc8a34ba2895084c71e95ed615d10a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a JPEG image.  <br /></td></tr>
 <tr class="separator:a1ffc8a34ba2895084c71e95ed615d10a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae26724442b97caabf5cd0dca335c38a9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#ae26724442b97caabf5cd0dca335c38a9">write_JPEG_file</a> (const char *filename, uint width, uint height, void *_window)</td></tr>
-<tr class="memdesc:ae26724442b97caabf5cd0dca335c38a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <br /></td></tr>
-<tr class="separator:ae26724442b97caabf5cd0dca335c38a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a748ab186f7b5e0936d61bbb934977ba0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a748ab186f7b5e0936d61bbb934977ba0">write_JPEG_file</a> (const char *filename, uint width, uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;data)</td></tr>
-<tr class="memdesc:a748ab186f7b5e0936d61bbb934977ba0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a JPEG image file based on array of pixel data.  <br /></td></tr>
-<tr class="separator:a748ab186f7b5e0936d61bbb934977ba0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1897ed232569d651810d146af02d878"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#aa1897ed232569d651810d146af02d878">write_JPEG_file</a> (const char *filename, uint width, uint height, void *_window, bool print_messages=true)</td></tr>
+<tr class="memdesc:aa1897ed232569d651810d146af02d878"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <br /></td></tr>
+<tr class="separator:aa1897ed232569d651810d146af02d878"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a76a6dfb6593ca66bbd332f6ad6f6a1ea"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a76a6dfb6593ca66bbd332f6ad6f6a1ea">write_JPEG_file</a> (const char *filename, const uint width, const uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;data, bool print_messages=true)</td></tr>
+<tr class="memdesc:a76a6dfb6593ca66bbd332f6ad6f6a1ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a JPEG image file based on array of pixel data.  <br /></td></tr>
+<tr class="separator:a76a6dfb6593ca66bbd332f6ad6f6a1ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e60a86e54784ea9f2b178ce9540713f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f">read_png_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a0e60a86e54784ea9f2b178ce9540713f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a PNG image.  <br /></td></tr>
 <tr class="separator:a0e60a86e54784ea9f2b178ce9540713f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -137,7 +137,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> header.</p>
-<p>Copyright (C) 2016-2024 Brian Bailey</p>
+<p>Copyright (C) 2016-2025 Brian Bailey</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
@@ -175,7 +175,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04420">4420</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04421">4421</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -228,7 +228,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00061">61</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00062">62</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -281,12 +281,12 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00263">263</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00268">268</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a748ab186f7b5e0936d61bbb934977ba0" name="a748ab186f7b5e0936d61bbb934977ba0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a748ab186f7b5e0936d61bbb934977ba0">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[1/2]</span></h2>
+<a id="a76a6dfb6593ca66bbd332f6ad6f6a1ea" name="a76a6dfb6593ca66bbd332f6ad6f6a1ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a76a6dfb6593ca66bbd332f6ad6f6a1ea">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -300,20 +300,26 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint&#160;</td>
+          <td class="paramtype">const uint&#160;</td>
           <td class="paramname"><em>width</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint&#160;</td>
+          <td class="paramtype">const uint&#160;</td>
           <td class="paramname"><em>height</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>print_messages</em> = <code>true</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -330,14 +336,15 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Width of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Height of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>Vector of RGB pixel data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">print_messages</td><td>[OPTIONAL] Flag to print output messages to the console </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="ae26724442b97caabf5cd0dca335c38a9" name="ae26724442b97caabf5cd0dca335c38a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae26724442b97caabf5cd0dca335c38a9">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[2/2]</span></h2>
+<a id="aa1897ed232569d651810d146af02d878" name="aa1897ed232569d651810d146af02d878"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1897ed232569d651810d146af02d878">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -364,7 +371,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>_window</em>&#160;</td>
+          <td class="paramname"><em>_window</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>print_messages</em> = <code>true</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -381,11 +394,12 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Width of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Height of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">window</td><td>Pointer to the window object </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">print_messages</td><td>[OPTIONAL] Flag to print output messages to the console </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00129">129</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00130">130</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

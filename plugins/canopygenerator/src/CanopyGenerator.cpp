@@ -1,6 +1,6 @@
 /** \file "CanopyGenerator.cpp" Primary source file for canopy geometry generator plug-in.
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -353,6 +353,7 @@ BaseGrapeVineParameters::BaseGrapeVineParameters() : BaseCanopyParameters(){
     wood_subdivisions_spread = 0;
 
     trunk_height_spread = 0;
+    trunk_radius_spread = 0;
 
     cordon_length_spread = 0;
     cordon_height_spread = 0;
@@ -3000,11 +3001,35 @@ void CanopyGenerator::buildCanopy(const BeanParameters &params ){
 
 }
 
-float getVariation( float V, std::minstd_rand0& generator ){
+float getVariation( float V, std::minstd_rand0& generator, bool positive ){
 
     std::uniform_real_distribution<float> unif_distribution;
 
-    return -V + 2.f*unif_distribution(generator)*V;
+    if ( positive ) {
+        return unif_distribution(generator)*V;
+    } else {
+        return -V + 2.f*unif_distribution(generator)*V;
+    }
+
+}
+
+int getVariation( int V, std::minstd_rand0& generator, bool positive ){
+
+    if ( positive ) {
+        std::uniform_int_distribution<> unif_distribution(-V,V);
+        return unif_distribution(generator);
+    } else {
+        std::uniform_int_distribution<> unif_distribution(0,V);
+        return unif_distribution(generator);
+    }
+
+}
+
+uint getVariation( uint V, std::minstd_rand0& generator ){
+
+    std::uniform_int_distribution<> unif_distribution(0,V);
+
+    return static_cast<uint>(unif_distribution(generator));
 
 }
 

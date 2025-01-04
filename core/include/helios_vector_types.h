@@ -1,6 +1,6 @@
 /** \file "helios_vector_types.h" Declarations for vector types
 
-    Copyright (C) 2016-2024 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1534,8 +1534,8 @@ inline bool Time::operator!=( const Time &c ) const{
 struct SphericalCoord{
 private:
 
-    float elevation_private;
-    float zenith_private;
+  float elevation_private;
+  float zenith_private;
 
 public:
 
@@ -1556,20 +1556,20 @@ public:
 
   //! Default constructor 
   /** initializes to vertical unit vector */
-  SphericalCoord() : elevation_private(0.5*float(M_PI)), elevation(elevation_private), zenith_private(0.f), zenith(zenith_private)   {
+  SphericalCoord() : elevation_private(0.5f*float(M_PI)), zenith_private(0.f), elevation(elevation_private), zenith(zenith_private)   {
     radius=1;
     azimuth=0;
   }
   //! Initialize SphericalCoord by specifying radius, elevation, and azimuth
   /**
    * \param[in] radius Radius
-   * \param[in] elevation Elevation angle (radians)
-   * \param[in] azimuth Azimuthal angle (radians)
+   * \param[in] elevation_radians Elevation angle (radians)
+   * \param[in] azimuth_radians Azimuthal angle (radians)
   */
-  SphericalCoord(float radius, float elevation_radians, float azimuth_radians ) : elevation_private(elevation_radians), elevation(elevation_private), zenith_private(0.5f * float(M_PI) - elevation_radians), zenith(zenith_private), radius(radius), azimuth(azimuth_radians) {}
+  SphericalCoord(float radius, float elevation_radians, float azimuth_radians ) : elevation_private(elevation_radians), zenith_private(0.5f * float(M_PI) - elevation_radians), radius(radius), elevation(elevation_private), zenith(zenith_private), azimuth(azimuth_radians) {}
 
   //! Copy constructor
-  SphericalCoord( const SphericalCoord &c ) : elevation_private(c.elevation_private), elevation(elevation_private), zenith_private(c.zenith_private), zenith(zenith_private), radius(c.radius), azimuth(c.azimuth) {}
+  SphericalCoord( const SphericalCoord &c ) : elevation_private(c.elevation_private), zenith_private(c.zenith_private), radius(c.radius), elevation(c.elevation_private), zenith(c.zenith_private), azimuth(c.azimuth) {}
 
   //! Assignment operator
   SphericalCoord& operator=( const SphericalCoord &c ){

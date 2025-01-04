@@ -44,23 +44,23 @@ uint CanopyGenerator::whitespruce(const WhiteSpruceCanopyParameters &params, con
     }
     //rcrown += getVariation(0.1*rcrown,generator);
 
-    float z = fmin( params.trunk_height,params.base_height + i*params.level_spacing*(1+getVariation(0.1*params.level_spacing,generator)));
+    float z = fmin( params.trunk_height,params.base_height + i*params.level_spacing*(1+getVariation(0.1f*params.level_spacing,generator)));
 
     int Nbranches = fmax(4,params.branches_per_level*vfrac);
 
     for( int j=0; j<Nbranches; j++ ){
 
-      float phi = float(j)/float(Nbranches)*2.f*M_PI*(1+getVariation(0.1,generator));
+      float phi = float(j)/float(Nbranches)*2.f*PI_F*(1+getVariation(0.1f,generator));
 
-      float theta = -0.15*M_PI;
-      theta+=getVariation(0.2*fabs(theta),generator);
+      float theta = -0.15*PI_F;
+      theta+=getVariation(0.2f*fabs(theta),generator);
 
       std::vector<float> rad_branch;
       std::vector<vec3> pos_branch;
 
-      z += getVariation(0.5,generator);
+      z += getVariation(0.5f,generator);
 
-      float r = rcrown + getVariation(0.1*rcrown,generator);
+      float r = rcrown + getVariation(0.1f*rcrown,generator);
       
       pos_branch.push_back( origin + make_vec3(0,0,z) );
       pos_branch.push_back( origin + make_vec3(r*sinf(phi)*cosf(theta),r*cosf(phi)*cosf(theta),z+r*sinf(theta)) );
@@ -91,13 +91,13 @@ uint CanopyGenerator::whitespruce(const WhiteSpruceCanopyParameters &params, con
 	pos_subbranch.push_back( base );
 
 	float l = fmax(0.1,0.6*rcrown);
-	l+=getVariation(0.25*l,generator);
+	l+=getVariation(0.25f*l,generator);
 	
-	float bangle = 0.2*M_PI;
-	//vec3 bdir = l*make_vec3(sinf(phi)*cosf(theta+bangle),cosf(phi)*cosf(theta+0.5*M_PI),sinf(theta+bangle));
-	//bdir = rotatePointAboutLine( bdir, base, interpolateTube( pos_branch, bfrac-0.01 ), getVariation(M_PI,generator) );
+	float bangle = 0.2*PI_F;
+	//vec3 bdir = l*make_vec3(sinf(phi)*cosf(theta+bangle),cosf(phi)*cosf(theta+0.5*PI_F),sinf(theta+bangle));
+	//bdir = rotatePointAboutLine( bdir, base, interpolateTube( pos_branch, bfrac-0.01 ), getVariation(PI_F,generator) );
 
-	vec3 bdir = l*make_vec3(sinf(phi+(0.4+getVariation(0.1,generator))*M_PI*(-1+2*side)),cosf(phi-0.4*M_PI+0.8*M_PI*side),0);
+	vec3 bdir = l*make_vec3(sinf(phi+(0.4+getVariation(0.1f,generator))*PI_F*(-1+2*side)),cosf(phi-0.4*PI_F+0.8*PI_F*side),0);
 	
 	pos_subbranch.push_back( base + bdir );
 	
@@ -124,11 +124,11 @@ uint CanopyGenerator::whitespruce(const WhiteSpruceCanopyParameters &params, con
 
 	  UUID_leaf_plant.push_back( context->addTile( make_vec3(0,0,0), make_vec2(0.1*params.needle_length,params.needle_length), make_SphericalCoord(0,0), params.needle_subdivisions, params.needle_color ) );
 
-	  float downangle = 0.2*M_PI;
+	  float downangle = 0.2*PI_F;
 	  context->rotatePrimitive( UUID_leaf_plant.back(), downangle-rotation.elevation, "x" );
 	  context->translatePrimitive( UUID_leaf_plant.back(), make_vec3(0,-0.55*params.needle_length,0) );
-	  context->rotatePrimitive( UUID_leaf_plant.back(), 0.5*M_PI-rotation.azimuth, "z" );
-	  context->rotatePrimitive( UUID_leaf_plant.back(), getVariation(M_PI,generator), norm );
+	  context->rotatePrimitive( UUID_leaf_plant.back(), 0.5*PI_F-rotation.azimuth, "z" );
+	  context->rotatePrimitive( UUID_leaf_plant.back(), getVariation(PI_F,generator), norm );
 	  context->translatePrimitive( UUID_leaf_plant.back(), nbase );
 	  
 	}
