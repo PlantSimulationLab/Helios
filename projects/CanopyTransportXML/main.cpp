@@ -273,17 +273,32 @@ int main(){
     get_xml_values("lens_diameter", "rig", lens_diameters);
     get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
     get_xml_values("HFOV", "rig", HFOVs);
+    // CAMERA BLOCK
+
 
     Visualizer visualizer(800);
 
     std::string current_rig;
     for (int n = 0; n < rig_labels.size(); n++){
         current_rig = rig_labels[n];
+        vec3 camera_lookat_ = camera_lookats[rig_dict[(std::string) current_rig]];
         vec3 camera_position_ = camera_positions[rig_dict[(std::string) current_rig]];
         vec3 scale(1,1,1);
-        SphericalCoord rotation(0,0,0);
+        vec3 initial(0, 1, 0);
+        SphericalCoord rotation = cart2sphere(camera_lookat_ - camera_position_);
+        // SphericalCoord rotation = cart2sphere(camera_position_ - camera_lookat_);
+        // SphericalCoord rotation = cart2sphere(camera_lookat_ - camera_position_);
+        // SphericalCoord rotation(0,0,0);
         RGBcolor color(255,0,0);
-        context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_, scale, rotation, color, "ZUP", true);
+        context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_,
+                        scale, rotation, color, "ZUP", true);
+        if (camera_position_vec[rig_dict[(std::string) current_rig]].size() > 1){
+            vec3 arrow_direction_ = camera_position_vec[rig_dict[(std::string) current_rig]][1] - camera_position_vec[rig_dict[(std::string) current_rig]][0];
+            SphericalCoord arrow_direction = cart2sphere(arrow_direction_);
+            vec3 arrow_scale(0.25, 0.25, 0.25);
+            context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj", camera_position_ + 0.15 * arrow_direction_,
+                            arrow_scale, arrow_direction, color, "ZUP", true);
+        }
     }
     visualizer.buildContextGeometry(&context);
     // visualizer.colorContextPrimitivesByData("radiation_flux_PAR");
