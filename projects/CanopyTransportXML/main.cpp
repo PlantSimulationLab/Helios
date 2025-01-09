@@ -215,12 +215,13 @@ int main(){
         get_xml_values("camera_position", "rig", camera_positions);
         get_xml_values("camera_lookat", "rig", camera_lookats);
         get_xml_values("camera_label", "rig", camera_labels);
-        get_xml_values("camera_resolution", "rig", camera_resolutions);
-        get_xml_values("focal_plane_distance", "rig", focal_plane_distances);
-        get_xml_values("lens_diameter", "rig", lens_diameters);
-        get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
-        get_xml_values("HFOV", "rig", HFOVs);
+        // get_xml_values("camera_resolution", "rig", camera_resolutions);
+        // get_xml_values("focal_plane_distance", "rig", focal_plane_distances);
+        // get_xml_values("lens_diameter", "rig", lens_diameters);
+        // get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
+        // get_xml_values("HFOV", "rig", HFOVs);
 
+        /*
         for (int i = 0; i < rig_labels.size(); i++)
         {
             CameraProperties cameraproperties;
@@ -239,6 +240,7 @@ int main(){
             radiation.updateGeometry();
             radiation.runBand({"red", "green", "blue"});
         }
+        */
         // RIG BLOCK END
     }
     // RIG BLOCK
@@ -249,32 +251,33 @@ int main(){
     std::vector<std::vector<vec3>> camera_lookat_vec;
     vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
     std::string camera_label = "RGB"; std::vector<std::string> camera_labels;
-    int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
-    float focal_plane_distance = 0.4; std::vector<float> focal_plane_distances;
-    float lens_diameter = 0.02; std::vector<float> lens_diameters;
-    float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
-    float HFOV = 50.0; std::vector<float> HFOVs;
     std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
     get_xml_value("camera_position", "rig", camera_position);
     get_xml_value("camera_lookat", "rig", camera_lookat);
     get_xml_value("camera_label", "rig", camera_label);
-    get_xml_value("camera_resolution", "rig", camera_resolution);
-    get_xml_value("focal_plane_distance", "rig", focal_plane_distance);
-    get_xml_value("lens_diameter", "rig", lens_diameter);
-    get_xml_value("FOV_aspect_ratio", "rig", FOV_aspect_ratio);
-    get_xml_value("HFOV", "rig", HFOV);
     get_xml_values("camera_position", "rig", camera_positions);
     get_xml_values("camera_position", "rig", camera_position_vec);
     get_xml_values("camera_lookat", "rig", camera_lookats);
     get_xml_values("camera_lookat", "rig", camera_lookat_vec);
     get_xml_values("camera_label", "rig", camera_labels);
-    get_xml_values("camera_resolution", "rig", camera_resolutions);
-    get_xml_values("focal_plane_distance", "rig", focal_plane_distances);
-    get_xml_values("lens_diameter", "rig", lens_diameters);
-    get_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
-    get_xml_values("HFOV", "rig", HFOVs);
     // CAMERA BLOCK
-
+    std::vector<std::string> camera_names;
+    int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
+    float focal_plane_distance = 0.4; std::vector<float> focal_plane_distances;
+    float lens_diameter = 0.02; std::vector<float> lens_diameters;
+    float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
+    float HFOV = 50.0; std::vector<float> HFOVs;
+    std::map<std::string, int> camera_dict = get_node_labels("label", "camera", camera_names);
+    get_xml_value("camera_resolution", "camera", camera_resolution);
+    get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
+    get_xml_value("lens_diameter", "camera", lens_diameter);
+    get_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
+    get_xml_value("HFOV", "camera", HFOV);
+    get_xml_values("camera_resolution", "camera", camera_resolutions);
+    get_xml_values("focal_plane_distance", "camera", focal_plane_distances);
+    get_xml_values("lens_diameter", "camera", lens_diameters);
+    get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
+    get_xml_values("HFOV", "camera", HFOVs);
 
     Visualizer visualizer(800);
 
@@ -974,11 +977,13 @@ int main(){
                     camera_positions.push_back(camera_position);
                     camera_lookats.push_back(camera_lookat);
                     camera_labels.push_back(camera_label);
-                    camera_resolutions.push_back(camera_resolution);
-                    focal_plane_distances.push_back(focal_plane_distance);
-                    lens_diameters.push_back(lens_diameter);
-                    FOV_aspect_ratios.push_back(FOV_aspect_ratio);
-                    HFOVs.push_back(HFOV);
+                    camera_position_vec.push_back(camera_position_vec[rig_dict[(std::string) current_rig]]);
+                    camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[(std::string) current_rig]]);
+                    // camera_resolutions.push_back(camera_resolution);
+                    // focal_plane_distances.push_back(focal_plane_distance);
+                    // lens_diameters.push_back(lens_diameter);
+                    // FOV_aspect_ratios.push_back(FOV_aspect_ratio);
+                    // HFOVs.push_back(HFOV);
                     rig_labels.push_back(new_rig_label);
                     current_rig = new_rig_label.c_str();
                     std::string parent = "rig";
@@ -992,6 +997,24 @@ int main(){
                 ImGui::InputText("##rig_name", &rig_labels[rig_dict[(std::string) current_rig]]);
                 ImGui::SameLine();
                 ImGui::Text("Rig Name");
+                // ####### CAMERA LABEL ####### //
+                ImGui::SetNextItemWidth(60);
+                // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
+                if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
+                    for (int n = 0; n < camera_names.size(); n++){
+                        bool is_cam_label_selected = (camera_labels[rig_dict[(std::string) current_rig]] == camera_names[n]); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(camera_names[n].c_str(), is_cam_label_selected)){
+                            camera_labels[rig_dict[(std::string) current_rig]] = camera_names[n];
+                        }
+                        if (is_cam_label_selected)
+                            ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Camera Label");
+                ImGui::EndTabItem();
+                // ####### ADD KEYPOINT ####### //
                 if (ImGui::BeginCombo("##cam_combo", current_cam_position.c_str())){
                     for (int n = 0; n < camera_position_vec[rig_dict[(std::string) current_rig]].size(); n++){
                         std::string select_cam_position = std::to_string(n);
@@ -1035,29 +1058,67 @@ int main(){
                 ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
                 ImGui::Text("Camera Lookat");
-                // ####### CAMERA LABEL ####### //
-                ImGui::SetNextItemWidth(60);
-                ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
-                // ####### CAMERA RESOLUTION ####### //
+            }
+            if (ImGui::BeginTabItem("Camera")){
+                current_tab = "Camera";
+                static const char* current_cam = camera_names[0].c_str();
+                if (ImGui::BeginCombo("##camera_combo", current_cam)){
+                    for (int n = 0; n < camera_names.size(); n++){
+                        bool is_cam_selected = (current_cam == camera_names[n]); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(camera_names[n].c_str(), is_cam_selected))
+                            current_cam = camera_names[n].c_str();
+                        if (is_cam_selected)
+                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Add Camera")){
+                    std::string default_cam_name = "camera";
+                    std::string new_cam_name = "camera_0";
+                    int count = 0;
+                    while (camera_dict.find(new_cam_name) != camera_dict.end()){
+                        count++;
+                        new_cam_name = default_cam_name + "_" + std::to_string(count);
+                    }
+                    camera_dict.insert({new_cam_name, camera_names.size()});
+                    camera_resolutions.push_back(camera_resolution);
+                    focal_plane_distances.push_back(focal_plane_distance);
+                    lens_diameters.push_back(lens_diameter);
+                    FOV_aspect_ratios.push_back(FOV_aspect_ratio);
+                    HFOVs.push_back(HFOV);
+                    camera_names.push_back(new_cam_name);
+                    std::string parent = "camera";
+                    pugi::xml_node camera_block = helios.child(parent.c_str());
+                    pugi::xml_node new_cam_node = helios.append_copy(camera_block);
+                    std::string name = "label";
+                    pugi::xml_attribute node_label = new_cam_node.attribute(name.c_str());
+                    node_label.set_value(new_cam_name.c_str());
+                }
+                ImGui::SetNextItemWidth(100);
+                ImGui::InputText("##cam_name", &camera_names[camera_dict[(std::string) current_cam]]);
+                ImGui::SameLine();
+                ImGui::Text("Camera Label");
+               // ####### CAMERA RESOLUTION ####### //
                 ImGui::SetNextItemWidth(90);
-                ImGui::InputInt("##camera_resolution_x", &camera_resolutions[rig_dict[(std::string) current_rig]].x);
+                ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[(std::string) current_cam]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(90);
-                ImGui::InputInt("##camera_resolution_y", &camera_resolutions[rig_dict[(std::string) current_rig]].y);
+                ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[(std::string) current_cam]].y);
                 ImGui::SameLine();
                 ImGui::Text("Camera Resolution");
                 // ####### FOCAL PLANE DISTANCE ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[rig_dict[(std::string) current_rig]]);
+                ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[(std::string) current_cam]]);
                 // ####### LENS DIAMETER ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Lens Diameter", &lens_diameters[rig_dict[(std::string) current_rig]]);
+                ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[(std::string) current_cam]]);
                 // ####### FOV ASPECT RATIO ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[rig_dict[(std::string) current_rig]]);
+                ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[(std::string) current_cam]]);
                 // ####### HFOV ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("HFOV", &HFOVs[rig_dict[(std::string) current_rig]]);
+                ImGui::InputFloat("HFOV", &HFOVs[camera_dict[(std::string) current_cam]]);
                 //
                 ImGui::EndTabItem();
             }
