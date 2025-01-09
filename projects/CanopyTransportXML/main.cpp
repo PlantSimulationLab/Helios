@@ -59,6 +59,7 @@ void set_xml_values(const std::string&, const std::string&, std::vector<float>&)
 void recalculate_values(Context&, float&, float&, float&, std::vector<std::string>&, std::vector<vec3>&,
                         std::vector<vec3>&, std::vector<std::string>&, std::vector<int2>&, std::vector<float>&,
                         std::vector<float>&, std::vector<float>&, std::vector<float>&);
+std::vector<vec3> linspace(vec3, vec3, int);
 // void OpenFileDialog();
 
 pugi::xml_document xmldoc;
@@ -187,6 +188,9 @@ int main(){
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
         // RIG BLOCK
+        context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+        radiation.setSourceSpectrum( sun_ID, "solar_spectrum_ASTMG173");
+
         radiation.addRadiationBand("red");
         radiation.disableEmission("red");
         radiation.setSourceFlux(sun_ID, "red", 2.f);
@@ -194,6 +198,8 @@ int main(){
 
         radiation.copyRadiationBand("red", "green");
         radiation.copyRadiationBand("red", "blue");
+
+        radiation.enforcePeriodicBoundary("xy");
 
         std::vector<std::string> bandlabels = {"red", "green", "blue"};
 
@@ -252,6 +258,7 @@ int main(){
     vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
     std::string camera_label = "RGB"; std::vector<std::string> camera_labels;
     std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
+    int num_images = 10;
     get_xml_value("camera_position", "rig", camera_position);
     get_xml_value("camera_lookat", "rig", camera_lookat);
     get_xml_value("camera_label", "rig", camera_label);
@@ -723,12 +730,42 @@ int main(){
         // plant segmentation bounding boxes
         // plant ID bounding boxes (plant architecture->optional plant output data)
         if (ImGui::Button("Record")){
-            for (std::string cameralabel : camera_labels){
-                radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
-                radiation.writeDepthImageData( cameralabel, "depth", image_dir);
-                radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
-                radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
+            for (int i = 0; i < rig_labels.size(); i++){
+                CameraProperties cameraproperties;
+                int rig_index = rig_dict[rig_labels[i]];
+                int camera_index = camera_dict[camera_labels[rig_index]];
+                cameraproperties.camera_resolution = camera_resolutions[camera_index];
+                cameraproperties.focal_plane_distance = focal_plane_distances[camera_index];
+                cameraproperties.lens_diameter = lens_diameters[camera_index];
+                cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
+                cameraproperties.HFOV = HFOVs[camera_index];
+                std::vector<vec3> interpolated_camera_positions;
+                std::vector<vec3> interpolated_camera_lookats;
+                for (int k = 0; k < camera_position_vec[camera_index].size() - 1; k++){
+                    interpolated_camera_positions = linspace(camera_position_vec[camera_index][k], camera_position_vec[camera_index][k + 1], num_images);
+                    interpolated_camera_lookats = linspace(camera_lookat_vec[camera_index][k], camera_lookat_vec[camera_index][k + 1], num_images);
+                    for (int j = 0; j < interpolated_camera_positions.size(); j++){
+                        std::string cameralabel = camera_labels[rig_index] + "_" + std::to_string(j);
+                        radiation.addRadiationCamera(cameralabel, bandlabels, interpolated_camera_positions[j],
+                            interpolated_camera_lookats[j], cameraproperties, 100);
+                        radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
+                        radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
+                        radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+                        radiation.updateGeometry();
+                        radiation.runBand({"red", "green", "blue"});
+                        radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
+                        radiation.writeDepthImageData( cameralabel, "depth", image_dir);
+                        radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
+                        radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
+                    }
+                }
             }
+            // for (std::string cameralabel : camera_labels){
+            //     radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
+            //     radiation.writeDepthImageData( cameralabel, "depth", image_dir);
+            //     radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
+            //     radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
+            // }
         }
         // ####### RESULTS ####### //
         ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
@@ -1058,6 +1095,9 @@ int main(){
                 ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
                 ImGui::Text("Camera Lookat");
+                // ####### NUMBER OF IMAGES ####### //
+                ImGui::SetNextItemWidth(80);
+                ImGui::InputInt("Number of Images", &num_images);
             }
             if (ImGui::BeginTabItem("Camera")){
                 current_tab = "Camera";
@@ -1729,7 +1769,7 @@ void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorb
 
             radiation.addRadiationCamera(cameralabel, bandlabels, camera_position, camera_lookat, cameraproperties, 100);
 
-            context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+            // context.loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
             radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
             radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
             radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
@@ -1739,6 +1779,16 @@ void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorb
         radiation.runBand({"red", "green", "blue"});
         // RIG BLOCK END
     }
+}
+
+std::vector<vec3> linspace(vec3 a, vec3 b, int num_points){
+    std::vector<vec3> result(num_points);
+    for (int i = 0; i < num_points; i++){
+        result[i].x = a.x + i * ( (b.x - a.x) / (float)num_points );
+        result[i].y = a.y + i * ( (b.y - a.y) / (float)num_points );
+        result[i].z = a.z + i * ( (b.z - a.z) / (float)num_points );
+    }
+    return result;
 }
 
 // void OpenFileDialog(){
