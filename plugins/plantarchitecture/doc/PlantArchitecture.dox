@@ -303,7 +303,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | --- **internode** --- ||||
 | pitch | RandomParameter_float | degrees | Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this >0 creates a zig-zag shoot. |
 | phyllotactic_angle | RandomParameter_float | degrees | Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis. |
-| radius_initial | RandomParameter_float | 0.001 | meters | Initial radius of the internode when it is created. |
+| radius_initial | RandomParameter_float | meters | Initial radius of the internode when it is created. |
 | max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |

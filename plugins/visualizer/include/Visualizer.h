@@ -22,6 +22,7 @@
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include <GLFW/glfw3.h>
 #include "glm/gtx/transform.hpp"
 
 //! Function to create a texture map from a JPEG image
@@ -62,6 +63,15 @@ int write_JPEG_file(const char *filename, const uint width, const uint height, c
  * \param[out] width Width of the image/texture in pixels
 */
 void read_png_file( const char* filename, std::vector<unsigned char> &texture, uint & height, uint & width);
+
+//! Callback function for mouse button presses
+void mouseCallback( GLFWwindow* window, int button, int action, int mods );
+
+//! Callback function for mouse cursor movements
+void cursorCallback( GLFWwindow* window, double x, double y);
+
+//! Callback function for mouse scroll
+void scrollCallback( GLFWwindow* window, double xoffset, double yoffset );
 
 //! Glyph object - 2D matrix shape
 class Glyph{
@@ -1067,6 +1077,7 @@ private:
 
 
 };
+
 
 int checkerrors();
 

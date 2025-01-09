@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.25
+/*! \mainpage Helios Documentation v1.3.26
 
   <p> <br> </p>
 
@@ -537,8 +537,8 @@ $ git pull
  Note that the above colors can be directly passed to \ref helios::make_RGBAcolor() "make_RGBAcolor" to specify an alpha (transparency) value:
  
  ~~~~~~{.cpp}
-  RGBAcolor red_trans = make_RGBAcolor( RGB::red, 0.5 );
-  ~~~~~~
+ RGBAcolor red_trans = make_RGBAcolor( RGB::red, 0.5 );
+ ~~~~~~
 
  <!-- **************** COORDINATE SYSTEM ***************** -->
   \section Coord Coordinate System

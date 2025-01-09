@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['z_0',['z',['../structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641',1,'helios::int3::z()'],['../structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99',1,'helios::int4::z()'],['../structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f',1,'helios::vec3::z()'],['../structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b',1,'helios::vec4::z()']]],
-  ['zenith_1',['zenith',['../structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643',1,'helios::SphericalCoord']]]
+  ['query_20functions_0',['Primitive Data Query Functions',['../_a_p_i.html#PrimDataHelpers',1,'']]],
+  ['querytimeseriesdata_1',['queryTimeseriesData',['../group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18',1,'helios::Context::queryTimeseriesData(const char *label, const Date &amp;date, const Time &amp;time) const'],['../group__timeseries.html#gab52bde84b96d02a4d928a610794ab146',1,'helios::Context::queryTimeseriesData(const char *label) const'],['../group__timeseries.html#gadffd45c3717c9255d035ce098349ca74',1,'helios::Context::queryTimeseriesData(const char *label, uint index) const']]],
+  ['querytimeseriesdate_2',['queryTimeseriesDate',['../group__timeseries.html#gae15d53565b2a699d212de636318290b8',1,'helios::Context']]],
+  ['querytimeseriestime_3',['queryTimeseriesTime',['../group__timeseries.html#ga520b33fad86d1514ceb5eeafa52c81ef',1,'helios::Context']]]
 ];
