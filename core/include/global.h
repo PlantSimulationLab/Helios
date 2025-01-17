@@ -26,10 +26,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-inline constexpr float PI_F = 3.14159265358979323846f;
-
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
+
+constexpr float PI_F = 3.14159265358979323846f;
 
 #include <cstdlib>
 #include <cstdio>

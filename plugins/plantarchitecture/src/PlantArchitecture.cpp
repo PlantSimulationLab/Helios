@@ -2237,7 +2237,7 @@ helios::vec3 PlantArchitecture::getPlantBasePosition(uint plantID) const{
 
 float PlantArchitecture::sumPlantLeafArea(uint plantID) const{
 
-    if( plantID>=plant_instances.size() ){
+    if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::sumPlantLeafArea): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
@@ -2249,6 +2249,123 @@ float PlantArchitecture::sumPlantLeafArea(uint plantID) const{
     }
 
     return area;
+}
+
+float PlantArchitecture::getPlantStemHeight(uint plantID) const {
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantStemHeight): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    auto base_shoot_ptr = plant_instances.at(plantID).shoot_tree.front();
+
+    std::vector<uint> stem_objID{base_shoot_ptr->internode_tube_objID};
+
+    if( !context_ptr->doesObjectExist(stem_objID.front()) ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantStemHeight): The plant does not contain any geometry.");
+    }
+
+    //check if there was an appended shoot on this same shoot
+    if ( base_shoot_ptr->childIDs.find(base_shoot_ptr->current_node_number-1) != base_shoot_ptr->childIDs.end() ) {
+        auto terminal_children = base_shoot_ptr->childIDs.at(base_shoot_ptr->current_node_number-1);
+        for ( uint childID : terminal_children ) {
+            auto child_shoot_ptr = plant_instances.at(plantID).shoot_tree.at(childID);
+            if ( child_shoot_ptr->rank == base_shoot_ptr->rank ) {
+                if ( context_ptr->doesObjectExist(child_shoot_ptr->internode_tube_objID)) {
+                    stem_objID.push_back(child_shoot_ptr->internode_tube_objID);
+                }
+            }
+        }
+
+    }
+
+    vec3 min_box;
+    vec3 max_box;
+    context_ptr->getObjectBoundingBox( stem_objID, min_box, max_box);
+
+    return max_box.z - min_box.z;
+
+}
+
+
+float PlantArchitecture::getPlantHeight(uint plantID) const{
+
+    if( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantHeight): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    vec3 min_box;
+    vec3 max_box;
+    context_ptr->getObjectBoundingBox(getAllPlantObjectIDs(plantID), min_box, max_box);
+
+    return max_box.z - min_box.z;
+
+}
+
+std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins, bool normalize) const {
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantLeafInclinationAngleDistribution): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> leaf_objIDs = getPlantLeafObjectIDs(plantID);
+    std::vector<uint> leaf_UUIDs = context_ptr->getObjectPrimitiveUUIDs(leaf_objIDs);
+
+    std::vector<float> leaf_inclination_angles(Nbins);
+    float dtheta = 0.5f * PI_F / float(Nbins);
+    for( uint UUID : leaf_UUIDs ){
+        vec3 normal = context_ptr->getPrimitiveNormal(UUID);
+        float theta = acos_safe(fabs(normal.z));
+        uint bin = uint( std::floor(theta / dtheta) );
+        leaf_inclination_angles.at(bin)++;
+    }
+
+    if( normalize ){
+        float sum = helios::sum(leaf_inclination_angles);
+        for( float &angle : leaf_inclination_angles ){
+            angle /= sum;
+        }
+    }
+
+    return  leaf_inclination_angles;
+
+}
+
+
+uint PlantArchitecture::getPlantLeafCount(uint plantID) const {
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantLeafCount): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    return getPlantLeafObjectIDs(plantID).size();
+
+}
+
+void PlantArchitecture::writePlantMeshVertices(uint plantID, const std::string &filename) const{
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantMeshVertices): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> plant_UUIDs = getAllPlantUUIDs(plantID);
+
+    std::ofstream file;
+    file.open(filename);
+
+    if( !file.is_open() ){
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantMeshVertices): Could not open file " + filename + " for writing.");
+    }
+
+    for( uint UUID : plant_UUIDs ){
+        std::vector<vec3> vertex = context_ptr->getPrimitiveVertices(UUID);
+        for( vec3 &v : vertex ){
+            file << v.x << " " << v.y << " " << v.z << std::endl;
+        }
+    }
+
+    file.close();
+
 }
 
 void PlantArchitecture::setPlantAge(uint plantID, float a_current_age) {

@@ -273,7 +273,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   context.setPrimitiveData( UUID, "transmissivity_spectrum", "grape_leaf_transmissivity_0000" );
 
   // Declare the radiation model
-  %RadiationModel radiationmodel(&context);
+  RadiationModel radiationmodel(&context);
 
   // Add a band with explicit wavelength bounds (400-700nm)
   radiationmodel.addRadiationBand( "PAR", 400, 700 );

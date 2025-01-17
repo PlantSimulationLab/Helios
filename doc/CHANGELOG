@@ -2013,3 +2013,14 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Canopy Generator*
 - Many edits made regarding how parameters with random variation are handled, mainly to ensure proper constraints on values (e.g., always positive).
+
+[1.3.26] 2025-01-17
+
+*Context*
+- Definition of global PI_F variable in global.h was causing a build issue on some compilers
+
+*Visualizer*
+- Added mouse-based camera controls in the interactive visualizer. Credit to Sean Banks for this update.
+
+*Plant Architecture*
+- Added methods for querying bulk properties of a plant (total leaf count, stem height, plant height, leaf angle distribution) and write plant mesh vertices to file.

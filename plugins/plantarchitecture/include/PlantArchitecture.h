@@ -1409,6 +1409,43 @@ public:
      */
     float sumPlantLeafArea(uint plantID) const;
 
+    //! Calculate the height of the last internode on the base stem/shoot
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Height of the last internode on the base stem/shoot.
+     */
+    float getPlantStemHeight(uint plantID) const;
+
+    //! Calculate the height of the highest element in the plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Height of the highest element in the plant.
+     */
+    float getPlantHeight(uint plantID) const;
+
+    //! Calculate the leaf angle distribution of all leaves in the plant.
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] Nbins Number of bins for the histogram.
+     * \param[in] normalize [OPTIONAL] Normalize the histogram to integrate to 1.
+     * \return Histogram of leaf inclination angles. Bins are evenly spaced between 0 and 90 degrees.
+     */
+    std::vector<float> getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins, bool normalize=false) const;
+
+    //! Get the total number of leaves on the plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Total number of leaves on the plant.
+     */
+    uint getPlantLeafCount(uint plantID) const;
+
+    //! Write all vertices in the plant to a file for external processing (e.g., bounding volume, convex hull)
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] filename Name/path of the output file.
+     */
+    void writePlantMeshVertices(uint plantID, const std::string &filename) const;
+
     //! Get object IDs for all organs objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
