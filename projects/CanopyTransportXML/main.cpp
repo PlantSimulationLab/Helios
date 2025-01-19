@@ -20,6 +20,7 @@
 #include "GLFW/glfw3.h"
 
 #include <chrono>
+#include <set>
 #include <thread>
 // #include "tinyfiledialogs.h"
 
@@ -39,6 +40,7 @@ void get_xml_values(const std::string&, const std::string&, std::vector<int2>&);
 void get_xml_values(const std::string&, const std::string&, std::vector<std::string>&);
 void get_xml_values(const std::string&, const std::string&, std::vector<float>&);
 void get_xml_values(const std::string&, const std::string&, std::vector<std::vector<vec3>>&);
+void get_xml_values(const std::string&, const std::string&, std::vector<std::set<std::string>>&);
 std::string vec_to_string(const vec2&);
 std::string vec_to_string(const vec3&);
 std::string vec_to_string(const int2&);
@@ -253,6 +255,7 @@ int main(){
     std::vector<std::string> rig_labels;
     vec3 camera_position(0,0,0); std::vector<vec3> camera_positions;
     // camera_positions = {camera_position};
+    std::vector<std::vector<int>> keypoint_frames;
     std::vector<std::vector<vec3>> camera_position_vec;
     std::vector<std::vector<vec3>> camera_lookat_vec;
     vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
@@ -267,6 +270,13 @@ int main(){
     get_xml_values("camera_lookat", "rig", camera_lookats);
     get_xml_values("camera_lookat", "rig", camera_lookat_vec);
     get_xml_values("camera_label", "rig", camera_labels);
+    for (int i = 0; i < camera_position_vec.size(); i++){
+        std::vector<int> curr_vec{};
+        for (int j = 0; j < camera_position_vec[i].size(); j++){
+            curr_vec.push_back(j);
+        }
+        keypoint_frames.push_back( curr_vec );
+    }
     // CAMERA BLOCK
     std::vector<std::string> camera_names;
     int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
@@ -286,6 +296,11 @@ int main(){
     get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     get_xml_values("HFOV", "camera", HFOVs);
 
+
+    std::vector<std::set<std::string>> rig_camera_labels;
+    get_xml_values("camera_label", "rig", rig_camera_labels);
+
+    std::vector<std::vector<uint>> arrow_vec;
     Visualizer visualizer(800);
 
     std::string current_rig;
@@ -300,16 +315,43 @@ int main(){
         // SphericalCoord rotation = cart2sphere(camera_lookat_ - camera_position_);
         // SphericalCoord rotation(0,0,0);
         RGBcolor color(255,0,0);
-        context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_,
-                        scale, rotation, color, "ZUP", true);
-        if (camera_position_vec[rig_dict[(std::string) current_rig]].size() > 1){
-            vec3 arrow_direction_ = camera_position_vec[rig_dict[(std::string) current_rig]][1] - camera_position_vec[rig_dict[(std::string) current_rig]][0];
-            SphericalCoord arrow_direction = cart2sphere(arrow_direction_);
-            vec3 arrow_scale(0.25, 0.25, 0.25);
-            context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj", camera_position_ + 0.15 * arrow_direction_,
-                            arrow_scale, arrow_direction, color, "ZUP", true);
+        // context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_,
+        //                 scale, rotation, color, "ZUP", true);
+        for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
+            vec3 arrow_pos = camera_position_vec[rig_dict[(std::string) current_rig]][0];
+            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[(std::string) current_rig]][1];
+            SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
+            vec3 arrow_scale(0.35, 0.35, 0.35);
+            std::vector<uint> arrow = context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj",
+                                                    nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
+            context.rotatePrimitive(arrow, arrow_direction_sph.elevation, "x");
+            context.rotatePrimitive(arrow, -arrow_direction_sph.azimuth, "z");
+            context.translatePrimitive(arrow, arrow_pos);
+            context.setPrimitiveData(arrow, "twosided_flag", uint(3));
+            arrow_vec.push_back(arrow);
         }
     }
+    std::vector<std::string> bandlabels = {"red", "green", "blue"};
+    for (std::string rig_label : rig_labels){
+        CameraProperties cameraproperties;
+        int rig_index = rig_dict[rig_label];
+        int camera_index = camera_dict[camera_labels[rig_index]];
+        cameraproperties.camera_resolution = camera_resolutions[camera_index];
+        cameraproperties.focal_plane_distance = focal_plane_distances[camera_index];
+        cameraproperties.lens_diameter = lens_diameters[camera_index];
+        cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
+        cameraproperties.HFOV = HFOVs[camera_index];
+        std::string camera_label_ = rig_label + "_" + camera_labels[rig_index];
+        vec3 camera_position_ = camera_positions[rig_index];
+        vec3 camera_lookat_ = camera_lookats[rig_index];
+        radiation.addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, cameraproperties, 100);
+        radiation.setCameraSpectralResponse(camera_label_, "red", "calibrated_sun_NikonB500_spectral_response_red");
+        radiation.setCameraSpectralResponse(camera_label_, "green","calibrated_sun_NikonB500_spectral_response_green");
+        radiation.setCameraSpectralResponse(camera_label_, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+        radiation.updateGeometry();
+    }
+
+    radiation.enableCameraModelVisualization();
     visualizer.buildContextGeometry(&context);
     // visualizer.colorContextPrimitivesByData("radiation_flux_PAR");
 
@@ -720,7 +762,6 @@ int main(){
             visualizer.plotUpdate();
         }
         ImGui::SameLine();
-        std::vector<std::string> bandlabels = {"red", "green", "blue"};
         std::string image_dir = "./saved/";
         bool dir = std::filesystem::create_directories(image_dir);
         if (!dir && !std::filesystem::exists(image_dir)){
@@ -752,8 +793,12 @@ int main(){
                         radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
                         radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
                         radiation.updateGeometry();
+                        /* Everything above move outside of the loop. Call when creating camera. */
+                        // radiation.setCameraPosition();
+                        // radiation.setCameraLookat();
                         radiation.runBand({"red", "green", "blue"});
-                        radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
+                        // radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
+                        radiation.writeNormCameraImage( cameralabel, bandlabels, "RGB", image_dir);
                         radiation.writeDepthImageData( cameralabel, "depth", image_dir);
                         radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
                         radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
@@ -1035,6 +1080,7 @@ int main(){
                 ImGui::SameLine();
                 ImGui::Text("Rig Name");
                 // ####### CAMERA LABEL ####### //
+                /* SINGLE CAMERA VERSION
                 ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
                 if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
@@ -1051,12 +1097,40 @@ int main(){
                 ImGui::SameLine();
                 ImGui::Text("Camera Label");
                 ImGui::EndTabItem();
+                */
+                ImGui::Text("Cameras:");
+                for (int i = 0; i < camera_names.size(); i++){
+                    std::string& camera_name = camera_names[i];
+
+                    ImGui::SetNextItemWidth(60);
+
+                    std::set curr_set = rig_camera_labels[rig_dict[(std::string) current_rig]];
+                    // if (i % 3 != 0){
+                    //     ImGui::SameLine();
+                    // }
+                    bool isCameraSelected = curr_set.find(camera_name) != curr_set.end();
+                    ImGui::PushID(i);
+                    if(ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)){
+                        if (isCameraSelected){
+                            rig_camera_labels[rig_dict[(std::string) current_rig]].insert(camera_name);
+                        }else{
+                            rig_camera_labels[rig_dict[(std::string) current_rig]].erase(camera_name);
+                        }
+                    }
+                    ImGui::PopID();
+                }
                 // ####### ADD KEYPOINT ####### //
-                if (ImGui::BeginCombo("##cam_combo", current_cam_position.c_str())){
+                std::stringstream cam_pos_value;
+                cam_pos_value << current_cam_position.c_str();
+                int current_cam_position_;
+                cam_pos_value >> current_cam_position_;
+                std::string current_keypoint_ = std::to_string(keypoint_frames[rig_dict[(std::string) current_rig]][current_cam_position_]);
+                if (ImGui::BeginCombo("##cam_combo", current_keypoint_.c_str())){
                     for (int n = 0; n < camera_position_vec[rig_dict[(std::string) current_rig]].size(); n++){
                         std::string select_cam_position = std::to_string(n);
+                        std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[(std::string) current_rig]][n]);
                         bool is_pos_selected = (current_cam_position == select_cam_position); // You can store your selection however you want, outside or inside your objects
-                        if (ImGui::Selectable(select_cam_position.c_str(), is_pos_selected)){
+                        if (ImGui::Selectable(selected_keypoint.c_str(), is_pos_selected)){
                             current_cam_position = std::to_string(n);
                         }
                         if (is_pos_selected)
@@ -1064,15 +1138,17 @@ int main(){
                     }
                     ImGui::EndCombo();
                 }
-                std::stringstream cam_pos_value;
                 cam_pos_value << current_cam_position.c_str();
-                int current_cam_position_;
                 cam_pos_value >> current_cam_position_;
                 ImGui::SameLine();
                 if (ImGui::Button("Add Keypoint")){
                     camera_position_vec[rig_dict[(std::string) current_rig]].push_back(camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_]);
                     camera_lookat_vec[rig_dict[(std::string) current_rig]].push_back(camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_]);
+                    keypoint_frames[rig_dict[(std::string) current_rig]].push_back(keypoint_frames[rig_dict[(std::string) current_rig]].back() + 1);
                 }
+                // ####### KEYPOINT FRAME ####### //
+                ImGui::SetNextItemWidth(80);
+                ImGui::InputInt("Keypoint Frame", &keypoint_frames[rig_dict[(std::string) current_rig]][current_cam_position_]);
                 // ####### CAMERA POSITION ####### //
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_].x);
@@ -1098,6 +1174,9 @@ int main(){
                 // ####### NUMBER OF IMAGES ####### //
                 ImGui::SetNextItemWidth(80);
                 ImGui::InputInt("Number of Images", &num_images);
+                num_images = std::max(num_images,
+                    *std::max_element(keypoint_frames[rig_dict[(std::string) current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
+                ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Camera")){
                 current_tab = "Camera";
@@ -1461,6 +1540,25 @@ void get_xml_values(const std::string& name, const std::string& parent, std::vec
                 helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
             }else{
                 curr_vec.push_back(default_value);
+            }
+        }
+        default_vec.push_back(curr_vec);
+    }
+}
+
+
+void get_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+    pugi::xml_node helios = xmldoc.child("helios");
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        std::set<std::string> curr_vec = {};
+        for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+            const char *node_str = node.child_value();
+            std::string default_value;
+            if ( node.empty() ) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else{
+                default_value = node_str;
+                curr_vec.insert(default_value);
             }
         }
         default_vec.push_back(curr_vec);
