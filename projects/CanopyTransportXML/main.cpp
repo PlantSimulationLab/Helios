@@ -62,6 +62,10 @@ void recalculate_values(Context&, float&, float&, float&, std::vector<std::strin
                         std::vector<vec3>&, std::vector<std::string>&, std::vector<int2>&, std::vector<float>&,
                         std::vector<float>&, std::vector<float>&, std::vector<float>&);
 std::vector<vec3> linspace(vec3, vec3, int);
+std::vector<vec3> interpolate(std::vector<int>, std::vector<vec3>, int);
+void update_arrows(Context&, std::map<int, std::vector<uint>>&, std::vector<std::vector<vec3>>&,
+                    std::vector<std::string>&, std::map<std::string, int>&);
+void delete_arrows(Context&, std::map<int, std::vector<uint>>&);
 // void OpenFileDialog();
 
 pugi::xml_document xmldoc;
@@ -111,7 +115,29 @@ int main(){
     assert( context.doesGlobalDataExist( "sun_ID" ) );
     context.getGlobalData( "sun_ID", sun_ID );
 
+
+    std::vector<std::string> bandlabels = {"red", "green", "blue"};
+
     std::vector<uint> ground_UUIDs, leaf_UUIDs, petiolule_UUIDs, petiole_UUIDs, internode_UUIDs, peduncle_UUIDs, petal_UUIDs, pedicel_UUIDs, fruit_UUIDs;
+    std::vector<std::string> primitive_names = {"Ground", "Leaf", "Petiolule", "Petiole", "Internode", "Peduncle",
+                                                "Petal", "Pedicel", "Fruit"};
+    std::map<std::string, std::vector<uint>> primitive_types = {{"Ground", ground_UUIDs}, {"Leaf", leaf_UUIDs},
+                                                                {"Petiolule", petiolule_UUIDs}, {"Petiole", petiole_UUIDs},
+                                                                {"Internode", internode_UUIDs}, {"Peduncle", peduncle_UUIDs},
+                                                                {"Petal", petal_UUIDs}, {"Pedicel", pedicel_UUIDs},
+                                                                {"Fruit", fruit_UUIDs}};
+
+    //! band -> primitive_type -> {reflectivity, transmissivity, emissivity}
+    std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
+    for (std::string& band : bandlabels){
+        std::map<std::string, std::vector<float>> curr;
+        for (std::pair<std::string, std::vector<uint>> primitive_pair : primitive_types){
+            // curr[primitive_pair.first] = std::vector<float>{0.0, 0.0, 0.0};
+            curr[primitive_pair.first] = std::vector<float>{0.25, 0.0, 0.0};
+        }
+        primitive_values[band] = curr;
+    }
+
     context.getGlobalData( "ground_UUIDs", ground_UUIDs );
     assert( !ground_UUIDs.empty() );
     context.getGlobalData( "leaf_UUIDs", leaf_UUIDs );
@@ -203,8 +229,6 @@ int main(){
 
         radiation.enforcePeriodicBoundary("xy");
 
-        std::vector<std::string> bandlabels = {"red", "green", "blue"};
-
         std::string xml_error_string;
         if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
             helios_runtime_error(xml_error_string);
@@ -253,13 +277,24 @@ int main(){
     }
     // RIG BLOCK
     std::vector<std::string> rig_labels;
-    vec3 camera_position(0,0,0); std::vector<vec3> camera_positions;
+    vec3 camera_position(0,0,0);
+
+    //! Vector containing the *first* position of every rig. Used to position cameras in visualization.
+    std::vector<vec3> camera_positions;
+
     // camera_positions = {camera_position};
     std::vector<std::vector<int>> keypoint_frames;
     std::vector<std::vector<vec3>> camera_position_vec;
     std::vector<std::vector<vec3>> camera_lookat_vec;
-    vec3 camera_lookat(0,0,0); std::vector<vec3> camera_lookats;
-    std::string camera_label = "RGB"; std::vector<std::string> camera_labels;
+    vec3 camera_lookat(0,0,0);
+
+    //! Vector containing the *first* camera lookat position of every rig. Used to orient cameras in visualization.
+    std::vector<vec3> camera_lookats;
+    std::string camera_label = "RGB";
+
+    //! Vector containting the *first* camera label of every rig.
+    std::vector<std::string> camera_labels;
+
     std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
     int num_images = 10;
     get_xml_value("camera_position", "rig", camera_position);
@@ -284,7 +319,11 @@ int main(){
     float lens_diameter = 0.02; std::vector<float> lens_diameters;
     float FOV_aspect_ratio = 1.4; std::vector<float> FOV_aspect_ratios;
     float HFOV = 50.0; std::vector<float> HFOVs;
-    std::map<std::string, int> camera_dict = get_node_labels("label", "camera", camera_names);
+
+    //! Dictionary keyed by camera name that returns camera index.
+    std::map<std::string, int> camera_dict;
+    camera_dict = get_node_labels("label", "camera", camera_names);
+
     get_xml_value("camera_resolution", "camera", camera_resolution);
     get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
     get_xml_value("lens_diameter", "camera", lens_diameter);
@@ -296,60 +335,57 @@ int main(){
     get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     get_xml_values("HFOV", "camera", HFOVs);
 
-
+    //! Vector of sets. The i-th set in the vector contains the camera names of the i-th rig.
     std::vector<std::set<std::string>> rig_camera_labels;
     get_xml_values("camera_label", "rig", rig_camera_labels);
 
-    std::vector<std::vector<uint>> arrow_vec;
     Visualizer visualizer(800);
 
-    std::string current_rig;
+    std::map<int, std::vector<uint>> arrow_dict;
+    int arrow_count = 0;
     for (int n = 0; n < rig_labels.size(); n++){
-        current_rig = rig_labels[n];
-        vec3 camera_lookat_ = camera_lookats[rig_dict[(std::string) current_rig]];
-        vec3 camera_position_ = camera_positions[rig_dict[(std::string) current_rig]];
-        vec3 scale(1,1,1);
-        vec3 initial(0, 1, 0);
-        SphericalCoord rotation = cart2sphere(camera_lookat_ - camera_position_);
-        // SphericalCoord rotation = cart2sphere(camera_position_ - camera_lookat_);
-        // SphericalCoord rotation = cart2sphere(camera_lookat_ - camera_position_);
-        // SphericalCoord rotation(0,0,0);
-        RGBcolor color(255,0,0);
-        // context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_,
-        //                 scale, rotation, color, "ZUP", true);
+        std::string current_rig = rig_labels[n];
         for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
-            vec3 arrow_pos = camera_position_vec[rig_dict[(std::string) current_rig]][0];
-            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[(std::string) current_rig]][1];
+            vec3 arrow_pos = camera_position_vec[rig_dict[(std::string) current_rig]][i - 1];
+            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[(std::string) current_rig]][i];
             SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
             vec3 arrow_scale(0.35, 0.35, 0.35);
-            std::vector<uint> arrow = context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj",
+            arrow_dict[arrow_count] = context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj",
                                                     nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
-            context.rotatePrimitive(arrow, arrow_direction_sph.elevation, "x");
-            context.rotatePrimitive(arrow, -arrow_direction_sph.azimuth, "z");
-            context.translatePrimitive(arrow, arrow_pos);
-            context.setPrimitiveData(arrow, "twosided_flag", uint(3));
-            arrow_vec.push_back(arrow);
+            context.rotatePrimitive(arrow_dict[arrow_count], arrow_direction_sph.elevation, "x");
+            context.rotatePrimitive(arrow_dict[arrow_count], -arrow_direction_sph.azimuth, "z");
+            context.translatePrimitive(arrow_dict[arrow_count], arrow_pos);
+            context.setPrimitiveData(arrow_dict[arrow_count], "twosided_flag", uint(3));
+            // visualizer.colorContextPrimitivesByData(arrow_dict[arrow_count]);
+            arrow_count++;
         }
     }
-    std::vector<std::string> bandlabels = {"red", "green", "blue"};
     for (std::string rig_label : rig_labels){
-        CameraProperties cameraproperties;
         int rig_index = rig_dict[rig_label];
-        int camera_index = camera_dict[camera_labels[rig_index]];
-        cameraproperties.camera_resolution = camera_resolutions[camera_index];
-        cameraproperties.focal_plane_distance = focal_plane_distances[camera_index];
-        cameraproperties.lens_diameter = lens_diameters[camera_index];
-        cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
-        cameraproperties.HFOV = HFOVs[camera_index];
-        std::string camera_label_ = rig_label + "_" + camera_labels[rig_index];
-        vec3 camera_position_ = camera_positions[rig_index];
-        vec3 camera_lookat_ = camera_lookats[rig_index];
-        radiation.addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, cameraproperties, 100);
-        radiation.setCameraSpectralResponse(camera_label_, "red", "calibrated_sun_NikonB500_spectral_response_red");
-        radiation.setCameraSpectralResponse(camera_label_, "green","calibrated_sun_NikonB500_spectral_response_green");
-        radiation.setCameraSpectralResponse(camera_label_, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
-        radiation.updateGeometry();
+        for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+            int camera_index = camera_dict[rig_camera_label];
+
+            /* Load properties of camera */
+            CameraProperties cameraproperties;
+            cameraproperties.camera_resolution = camera_resolutions[camera_index];
+            cameraproperties.focal_plane_distance = focal_plane_distances[camera_index];
+            cameraproperties.lens_diameter = lens_diameters[camera_index];
+            cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
+            cameraproperties.HFOV = HFOVs[camera_index];
+
+            /* Create new camera */
+            std::string camera_label_ = rig_label + "_" + rig_camera_label;
+            vec3 camera_position_ = camera_positions[rig_index];
+            vec3 camera_lookat_ = camera_lookats[rig_index];
+            radiation.addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, cameraproperties, 100);
+            radiation.setCameraSpectralResponse(camera_label_, "red", "calibrated_sun_NikonB500_spectral_response_red");
+            radiation.setCameraSpectralResponse(camera_label_, "green","calibrated_sun_NikonB500_spectral_response_green");
+            radiation.setCameraSpectralResponse(camera_label_, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
+            radiation.updateGeometry();
+        }
     }
+
+    radiation.runBand({"red", "green", "blue"});
 
     radiation.enableCameraModelVisualization();
     visualizer.buildContextGeometry(&context);
@@ -606,7 +642,7 @@ int main(){
 
         // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
         ImGui::Begin("Editor", &my_tool_active, window_flags);  // Begin a new window
-        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 100.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
+        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 200.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
         current_position = ImGui::GetWindowPos();
         currently_collapsed = ImGui::IsWindowCollapsed();
 
@@ -691,8 +727,11 @@ int main(){
                     visualizer.clearGeometry();
                     if (visualization_type != "RGB") {
                         visualizer.colorContextPrimitivesByData(visualization_type.c_str());
+                        visualizer.addCoordinateAxes();
                     } else{
                         visualizer.clearColor();
+                        visualizer.disableColorbar();
+                        visualizer.addCoordinateAxes();
                     }
                     visualizer.buildContextGeometry(&context);
                     visualizer.plotUpdate();
@@ -770,47 +809,44 @@ int main(){
         // context.setPrimitiveData(UUIDs_bunny, "bunny", uint(0));
         // plant segmentation bounding boxes
         // plant ID bounding boxes (plant architecture->optional plant output data)
+
         if (ImGui::Button("Record")){
-            for (int i = 0; i < rig_labels.size(); i++){
-                CameraProperties cameraproperties;
-                int rig_index = rig_dict[rig_labels[i]];
-                int camera_index = camera_dict[camera_labels[rig_index]];
-                cameraproperties.camera_resolution = camera_resolutions[camera_index];
-                cameraproperties.focal_plane_distance = focal_plane_distances[camera_index];
-                cameraproperties.lens_diameter = lens_diameters[camera_index];
-                cameraproperties.FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
-                cameraproperties.HFOV = HFOVs[camera_index];
-                std::vector<vec3> interpolated_camera_positions;
-                std::vector<vec3> interpolated_camera_lookats;
-                for (int k = 0; k < camera_position_vec[camera_index].size() - 1; k++){
-                    interpolated_camera_positions = linspace(camera_position_vec[camera_index][k], camera_position_vec[camera_index][k + 1], num_images);
-                    interpolated_camera_lookats = linspace(camera_lookat_vec[camera_index][k], camera_lookat_vec[camera_index][k + 1], num_images);
-                    for (int j = 0; j < interpolated_camera_positions.size(); j++){
-                        std::string cameralabel = camera_labels[rig_index] + "_" + std::to_string(j);
-                        radiation.addRadiationCamera(cameralabel, bandlabels, interpolated_camera_positions[j],
-                            interpolated_camera_lookats[j], cameraproperties, 100);
-                        radiation.setCameraSpectralResponse(cameralabel, "red", "calibrated_sun_NikonB500_spectral_response_red");
-                        radiation.setCameraSpectralResponse(cameralabel, "green","calibrated_sun_NikonB500_spectral_response_green");
-                        radiation.setCameraSpectralResponse(cameralabel, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
-                        radiation.updateGeometry();
-                        /* Everything above move outside of the loop. Call when creating camera. */
-                        // radiation.setCameraPosition();
-                        // radiation.setCameraLookat();
+            // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+            for (std::string band : bandlabels){
+                for (std::pair<std::string, std::vector<uint>> primitive_pair : primitive_types){
+                    float reflectivity = primitive_values[band][primitive_pair.first][0];
+                    float transmissivity = primitive_values[band][primitive_pair.first][1];
+                    float emissivity = primitive_values[band][primitive_pair.first][2];
+                    std::string reflectivity_band = "reflectivity_" + band;
+                    std::string transmissivity_band = "transmissivity_" + band;
+                    std::string emissivity_band = "emissivity_" + band;
+                    context.setPrimitiveData(primitive_pair.second, reflectivity_band.c_str(), reflectivity);
+                    context.setPrimitiveData(primitive_pair.second, transmissivity_band.c_str(), transmissivity);
+                    context.setPrimitiveData(primitive_pair.second, emissivity_band.c_str(), emissivity);
+                }
+            }
+            // delete_arrows(context, arrow_dict);
+            for (std::string rig_label : rig_labels){
+                int rig_index = rig_dict[rig_label];
+                for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+                    int camera_index = camera_dict[rig_camera_label];
+                    std::string cameralabel = rig_label + "_" + rig_camera_label;
+                    std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images);
+                    std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images);
+                    for (int i = 0; i < interpolated_camera_positions.size(); i++){
+                        radiation.setCameraPosition(cameralabel, interpolated_camera_positions[i]);
+                        radiation.setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
                         radiation.runBand({"red", "green", "blue"});
-                        // radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
-                        radiation.writeNormCameraImage( cameralabel, bandlabels, "RGB", image_dir);
-                        radiation.writeDepthImageData( cameralabel, "depth", image_dir);
-                        radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
-                        radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
+                        radiation.writeCameraImage( cameralabel, bandlabels, "RGB" + std::to_string(i), image_dir + rig_label + '/');
+                        radiation.writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
+                        radiation.writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
+                        radiation.writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
+                        radiation.writeImageBoundingBoxes( cameralabel, "bunny" + std::to_string(i), 0, "bbox", image_dir + rig_label + '/');
                     }
                 }
             }
-            // for (std::string cameralabel : camera_labels){
-            //     radiation.writeCameraImage( cameralabel, bandlabels, "RGB", image_dir);
-            //     radiation.writeDepthImageData( cameralabel, "depth", image_dir);
-            //     radiation.writeNormDepthImage( cameralabel, "normdepth", 3, image_dir);
-            //     radiation.writeImageBoundingBoxes( cameralabel, "bunny", 0, "bbox", image_dir);
-            // }
+            // update_arrows(context, arrow_dict, camera_position_vec, rig_labels, rig_dict);
+            visualizer.plotUpdate();
         }
         // ####### RESULTS ####### //
         ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
@@ -889,8 +925,7 @@ int main(){
                 static const char* current_item = "canopy_0";
                 if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
                 {
-                    for (int n = 0; n < labels.size(); n++)
-                    {
+                    for (int n = 0; n < labels.size(); n++){
                         bool is_selected = (current_item == labels[n]); // You can store your selection however you want, outside or inside your objects
                         if (ImGui::Selectable(labels[n].c_str(), is_selected))
                             current_item = labels[n].c_str();
@@ -1029,6 +1064,45 @@ int main(){
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Ground Reflectivity Spectrum", &solar_direct_spectrum);
 
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Spectra")){
+                current_tab = "Spectra";
+                // std::vector<uint> ground_UUIDs, leaf_UUIDs, petiolule_UUIDs, petiole_UUIDs, internode_UUIDs, peduncle_UUIDs, petal_UUIDs, pedicel_UUIDs, fruit_UUIDs;
+                static const char* current_primitive = "Ground";
+                static const char* current_band = "red";
+                if (ImGui::BeginCombo("##combo_primitive", current_primitive)) // The second parameter is the label previewed before opening the combo.
+                {
+                    for (int m = 0; m < primitive_names.size(); m++){
+                        bool is_primitive_selected = (current_primitive == primitive_names[m]); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(primitive_names[m].c_str(), is_primitive_selected))
+                            current_primitive = primitive_names[m].c_str();
+                        if (is_primitive_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                if (ImGui::BeginCombo("##combo_band", current_band)){
+                    for (int n = 0; n < bandlabels.size(); n++){
+                        bool is_band_selected = (current_band == bandlabels[n]);
+                        if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                            current_band = bandlabels[n].c_str();
+                        if (is_band_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Primitive Types");
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("Reflectivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][0]);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("Transmissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][1]);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputFloat("Emissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][2]);
+                ImGui::SameLine();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Rig")){
@@ -1881,12 +1955,73 @@ void recalculate_values(Context& context, float &PAR_absorbed, float &NIR_absorb
 
 std::vector<vec3> linspace(vec3 a, vec3 b, int num_points){
     std::vector<vec3> result(num_points);
-    for (int i = 0; i < num_points; i++){
-        result[i].x = a.x + i * ( (b.x - a.x) / (float)num_points );
-        result[i].y = a.y + i * ( (b.y - a.y) / (float)num_points );
-        result[i].z = a.z + i * ( (b.z - a.z) / (float)num_points );
+    result[0] = a;
+    for (int i = 1; i < num_points - 1; i++){
+        result[i].x = a.x + i * ( (b.x - a.x) / ((float)num_points - 1.0) );
+        result[i].y = a.y + i * ( (b.y - a.y) / ((float)num_points - 1.0) );
+        result[i].z = a.z + i * ( (b.z - a.z) / ((float)num_points - 1.0) );
+    }
+    result[num_points - 1] = b;
+    return result;
+}
+
+std::vector<vec3> interpolate(std::vector<int> keypoints, std::vector<vec3> positions, int num_points){
+    std::vector<vec3> result(num_points);
+    std::vector<int> keypoints_sorted = keypoints;
+    std::sort(keypoints_sorted.begin(), keypoints_sorted.end());
+    std::map<int, int> keypoints_loc;
+    for (int i = 0; i < keypoints.size(); i++){
+        keypoints_loc.insert({keypoints[i], i});
+    }
+    if (keypoints_sorted[keypoints_sorted.size() - 1] != num_points - 1){
+        keypoints_sorted.push_back(num_points - 1);
+        keypoints_loc.insert({num_points - 1, keypoints.size()});
+        positions.push_back(positions[positions.size() - 1]);
+    }
+    for (int i = 0; i < keypoints_sorted.size() - 1; i++){
+        int keypoint = keypoints_sorted[i];
+        int keypoint_idx = keypoints_loc[keypoints_sorted[i]];
+        int next_keypoint = keypoints_sorted[i + 1];
+        int next_keypoint_idx = keypoints_loc[keypoints_sorted[i + 1]];
+        std::vector<vec3> curr_positions = linspace(positions[keypoint_idx], positions[next_keypoint_idx], next_keypoint - keypoint + 1);
+        for (int j = 0; j < next_keypoint - keypoint + 1; j++){
+            int idx = j + keypoint;
+            result[idx] = curr_positions[j];
+        }
     }
     return result;
+}
+
+void update_arrows(Context& context, std::map<int, std::vector<uint>>& arrow_dict, std::vector<std::vector<vec3>>& camera_position_vec,
+                    std::vector<std::string>& rig_labels, std::map<std::string, int>& rig_dict){
+    for (std::pair<int, std::vector<uint>> arrow : arrow_dict){
+        context.deleteObject(arrow.second);
+    }
+    arrow_dict.clear();
+    int arrow_count = 0;
+    for (int n = 0; n < rig_labels.size(); n++){
+        std::string current_rig = rig_labels[n];
+        for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
+            vec3 arrow_pos = camera_position_vec[rig_dict[(std::string) current_rig]][0];
+            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[(std::string) current_rig]][1];
+            SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
+            vec3 arrow_scale(0.35, 0.35, 0.35);
+            arrow_dict[arrow_count] = context.loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj",
+                                                    nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
+            context.rotatePrimitive(arrow_dict[arrow_count], arrow_direction_sph.elevation, "x");
+            context.rotatePrimitive(arrow_dict[arrow_count], -arrow_direction_sph.azimuth, "z");
+            context.translatePrimitive(arrow_dict[arrow_count], arrow_pos);
+            context.setPrimitiveData(arrow_dict[arrow_count], "twosided_flag", uint(3));
+            arrow_count++;
+        }
+    }
+}
+
+void delete_arrows(Context& context, std::map<int, std::vector<uint>>& arrow_dict){
+    for (std::pair<int, std::vector<uint>> arrow : arrow_dict){
+        context.deleteObject(arrow.second);
+    }
+    arrow_dict.clear();
 }
 
 // void OpenFileDialog(){
