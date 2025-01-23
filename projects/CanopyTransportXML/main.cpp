@@ -28,6 +28,7 @@ using namespace helios;
 
 void key_callback(GLFWwindow*, int, int, int, int);
 std::map<std::string, int> get_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
+void get_keypoints(const std::string&, const std::string&, std::vector<std::vector<int>>&);
 void get_xml_value(const std::string&, const std::string&, int&);
 void get_xml_value(const std::string&, const std::string&, float&);
 void get_xml_value(const std::string&, const std::string&, std::string&);
@@ -119,6 +120,12 @@ int main(){
     std::vector<std::string> bandlabels = {"red", "green", "blue"};
 
     std::vector<uint> ground_UUIDs, leaf_UUIDs, petiolule_UUIDs, petiole_UUIDs, internode_UUIDs, peduncle_UUIDs, petal_UUIDs, pedicel_UUIDs, fruit_UUIDs;
+
+    context.getGlobalData( "ground_UUIDs", ground_UUIDs );
+    assert( !ground_UUIDs.empty() );
+    context.getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+    assert( !leaf_UUIDs.empty() );
+
     std::vector<std::string> primitive_names = {"Ground", "Leaf", "Petiolule", "Petiole", "Internode", "Peduncle",
                                                 "Petal", "Pedicel", "Fruit"};
     std::map<std::string, std::vector<uint>> primitive_types = {{"Ground", ground_UUIDs}, {"Leaf", leaf_UUIDs},
@@ -138,10 +145,20 @@ int main(){
         primitive_values[band] = curr;
     }
 
-    context.getGlobalData( "ground_UUIDs", ground_UUIDs );
-    assert( !ground_UUIDs.empty() );
-    context.getGlobalData( "leaf_UUIDs", leaf_UUIDs );
-    assert( !leaf_UUIDs.empty() );
+    // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+    for (std::string band : bandlabels){
+        for (std::pair<std::string, std::vector<uint>> primitive_pair : primitive_types){
+            float reflectivity = primitive_values[band][primitive_pair.first][0];
+            float transmissivity = primitive_values[band][primitive_pair.first][1];
+            float emissivity = primitive_values[band][primitive_pair.first][2];
+            std::string reflectivity_band = "reflectivity_" + band;
+            std::string transmissivity_band = "transmissivity_" + band;
+            std::string emissivity_band = "emissivity_" + band;
+            context.setPrimitiveData(primitive_pair.second, reflectivity_band.c_str(), reflectivity);
+            context.setPrimitiveData(primitive_pair.second, transmissivity_band.c_str(), transmissivity);
+            context.setPrimitiveData(primitive_pair.second, emissivity_band.c_str(), emissivity);
+        }
+    }
 
     float ground_area = context.sumPrimitiveSurfaceArea( ground_UUIDs );
 
@@ -296,7 +313,7 @@ int main(){
     std::vector<std::string> camera_labels;
 
     std::map<std::string, int> rig_dict = get_node_labels("label", "rig", rig_labels);
-    int num_images = 10;
+    int num_images = 5;
     get_xml_value("camera_position", "rig", camera_position);
     get_xml_value("camera_lookat", "rig", camera_lookat);
     get_xml_value("camera_label", "rig", camera_label);
@@ -305,13 +322,7 @@ int main(){
     get_xml_values("camera_lookat", "rig", camera_lookats);
     get_xml_values("camera_lookat", "rig", camera_lookat_vec);
     get_xml_values("camera_label", "rig", camera_labels);
-    for (int i = 0; i < camera_position_vec.size(); i++){
-        std::vector<int> curr_vec{};
-        for (int j = 0; j < camera_position_vec[i].size(); j++){
-            curr_vec.push_back(j);
-        }
-        keypoint_frames.push_back( curr_vec );
-    }
+    get_keypoints("keypoint", "camera_position", keypoint_frames);
     // CAMERA BLOCK
     std::vector<std::string> camera_names;
     int2 camera_resolution(1024, 1024); std::vector<int2> camera_resolutions;
@@ -335,14 +346,57 @@ int main(){
     get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     get_xml_values("HFOV", "camera", HFOVs);
 
-    //! Vector of sets. The i-th set in the vector contains the camera names of the i-th rig.
+    //! Vector of sets of cameras. The i-th set in the vector contains the camera names of the i-th rig.
     std::vector<std::set<std::string>> rig_camera_labels;
     get_xml_values("camera_label", "rig", rig_camera_labels);
+
+
+    // LIGHT BLOCK
+
+    //! Vector of light names.
+    std::vector<std::string> light_names;
+
+    //! Vector of light types (e.g. sphere, rectangle, etc.).
+    std::vector<std::string> light_types;
+    get_xml_values("light_type", "light", light_types);
+
+    //! Vector of all possible light types.
+    std::vector<std::string> all_light_types = {"collimated", "sphere", "sunsphere", "rectangle", "disk"};
+
+    //! Vector of light positions for each light.
+    std::vector<vec3> light_direction_vec;
+    get_xml_values("light_direction", "light", light_direction_vec);
+
+    //! Vector of light spherical directions for each light.
+    std::vector<SphericalCoord> light_direction_sph_vec;
+    for (vec3 vec : light_direction_vec){
+        light_direction_sph_vec.push_back(cart2sphere(vec));
+    }
+
+    //! Vector of rotations for each light.
+    std::vector<vec3> light_rotation_vec;
+    get_xml_values("light_rotation", "light", light_rotation_vec);
+
+    //! Vector of sizes for each light.
+    std::vector<vec2> light_size_vec;
+    get_xml_values("light_size", "light", light_size_vec);
+
+    //! Vector of sizes for each light.
+    std::vector<float> light_radius_vec;
+    get_xml_values("light_radius", "light", light_radius_vec);
+
+    //! Dictionary keyed by light name that returns light index (in light_names).
+    std::map<std::string, int> light_dict;
+    light_dict = get_node_labels("label", "light", light_names);
+
+    //! Vector of sets of lights. The i-th set in the vector contains the light names of the i-th rig.
+    std::vector<std::set<std::string>> rig_light_labels;
+    get_xml_values("light_label", "rig", rig_light_labels);
 
     Visualizer visualizer(800);
 
     std::map<int, std::vector<uint>> arrow_dict;
-    int arrow_count = 0;
+    int arrow_count = 10;
     for (int n = 0; n < rig_labels.size(); n++){
         std::string current_rig = rig_labels[n];
         for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
@@ -603,6 +657,7 @@ int main(){
 
         user_input = false;
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
+        ImGuiWindowFlags window_flags2 = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
 
         // ImGui::SetNextWindowSize(ImVec2(500, 400));
         ImVec2 windowSize = ImGui::GetWindowSize();
@@ -641,8 +696,9 @@ int main(){
         //
 
         // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
-        ImGui::Begin("Editor", &my_tool_active, window_flags);  // Begin a new window
-        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 200.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
+        ImGui::Begin("Editor", &my_tool_active, window_flags2);  // Begin a new window
+        // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
+        ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always);
         current_position = ImGui::GetWindowPos();
         currently_collapsed = ImGui::IsWindowCollapsed();
 
@@ -655,7 +711,7 @@ int main(){
             if (ImGui::BeginMenu("File"))
             {
                 if (ImGui::MenuItem("Open..", "Ctrl+O")) { /* Do stuff */ }
-                if (ImGui::MenuItem("Save", "Ctrl+S")){
+                if (ImGui::MenuItem("Save XML", "Ctrl+S")){
                     // MAIN BLOCK
                     set_xml_value("latitude", "helios", latitude);
                     set_xml_value("longitude", "helios", longitude);
@@ -1058,8 +1114,8 @@ int main(){
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
                 // ####### LEAF EMISSIVITY ####### //
-                ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("Leaf Emissivity", &leaf_emissivity);
+                // ImGui::SetNextItemWidth(60);
+                // ImGui::InputFloat("Leaf Emissivity", &leaf_emissivity);
                 // ####### GROUND REFLECTIVITY SPECTRUM ####### //
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Ground Reflectivity Spectrum", &solar_direct_spectrum);
@@ -1082,6 +1138,8 @@ int main(){
                     }
                     ImGui::EndCombo();
                 }
+                ImGui::SameLine();
+                ImGui::Text("Primitive Types");
                 if (ImGui::BeginCombo("##combo_band", current_band)){
                     for (int n = 0; n < bandlabels.size(); n++){
                         bool is_band_selected = (current_band == bandlabels[n]);
@@ -1093,16 +1151,13 @@ int main(){
                     ImGui::EndCombo();
                 }
                 ImGui::SameLine();
-                ImGui::Text("Primitive Types");
+                ImGui::Text("Bands");
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("Reflectivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][0]);
-                ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("Transmissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][1]);
-                ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("Emissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][2]);
-                ImGui::SameLine();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Rig")){
@@ -1172,6 +1227,7 @@ int main(){
                 ImGui::Text("Camera Label");
                 ImGui::EndTabItem();
                 */
+                // ####### CAMERA CHECKBOX ####### //
                 ImGui::Text("Cameras:");
                 for (int i = 0; i < camera_names.size(); i++){
                     std::string& camera_name = camera_names[i];
@@ -1189,6 +1245,25 @@ int main(){
                             rig_camera_labels[rig_dict[(std::string) current_rig]].insert(camera_name);
                         }else{
                             rig_camera_labels[rig_dict[(std::string) current_rig]].erase(camera_name);
+                        }
+                    }
+                    ImGui::PopID();
+                }
+                // ####### LIGHT CHECKBOX ####### //
+                ImGui::Text("Lights:");
+                for (int i = 0; i < light_names.size(); i++){
+                    std::string& light_name = light_names[i];
+
+                    ImGui::SetNextItemWidth(60);
+
+                    std::set curr_rig_light = rig_light_labels[rig_dict[(std::string) current_rig]];
+                    bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
+                    ImGui::PushID(i);
+                    if(ImGui::Checkbox(light_name.c_str(), &isLightSelected)){
+                        if (isLightSelected){
+                            rig_light_labels[rig_dict[(std::string) current_rig]].insert(light_name);
+                        }else{
+                            rig_light_labels[rig_dict[(std::string) current_rig]].erase(light_name);
                         }
                     }
                     ImGui::PopID();
@@ -1233,7 +1308,7 @@ int main(){
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
-                ImGui::Text("Camera Position");
+                ImGui::Text("Rig Position");
                 // ####### CAMERA LOOKAT ####### //
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].x);
@@ -1244,10 +1319,10 @@ int main(){
                 ImGui::SetNextItemWidth(60);
                 ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
-                ImGui::Text("Camera Lookat");
+                ImGui::Text("Rig Lookat");
                 // ####### NUMBER OF IMAGES ####### //
                 ImGui::SetNextItemWidth(80);
-                ImGui::InputInt("Number of Images", &num_images);
+                ImGui::InputInt("Total Number of Frames", &num_images);
                 num_images = std::max(num_images,
                     *std::max_element(keypoint_frames[rig_dict[(std::string) current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
                 ImGui::EndTabItem();
@@ -1313,6 +1388,99 @@ int main(){
                 ImGui::SetNextItemWidth(50);
                 ImGui::InputFloat("HFOV", &HFOVs[camera_dict[(std::string) current_cam]]);
                 //
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Light")){
+                current_tab = "Light";
+                static const char* current_light = light_names[0].c_str();
+                if (ImGui::BeginCombo("##light_combo", current_light)){
+                    for (int n = 0; n < light_names.size(); n++){
+                        bool is_light_selected = (current_light == light_names[n]);
+                        if (ImGui::Selectable(light_names[n].c_str(), is_light_selected))
+                            current_light = light_names[n].c_str();
+                        if (is_light_selected)
+                        ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Add Light")){
+                    std::string default_light_name = "light";
+                    std::string new_light_name = "light_0";
+                    int count = 0;
+                    while (light_dict.find(new_light_name) != light_dict.end()){
+                        count++;
+                        new_light_name = default_light_name + "_" + std::to_string(count);
+                    }
+                    light_dict.insert({new_light_name, light_names.size()});
+                    light_types.push_back(light_types[light_dict[(std::string) current_light]]);
+                    light_direction_vec.push_back(light_direction_vec[light_dict[(std::string) current_light]]);
+                    light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[(std::string) current_light]]);
+                    light_rotation_vec.push_back(light_rotation_vec[light_dict[(std::string) current_light]]);
+                    light_size_vec.push_back(light_size_vec[light_dict[(std::string) current_light]]);
+                    light_radius_vec.push_back(light_radius_vec[light_dict[(std::string) current_light]]);
+                    light_names.push_back(new_light_name);
+                    std::string parent = "light";
+                    pugi::xml_node light_block = helios.child(parent.c_str());
+                    pugi::xml_node new_light_node = helios.append_copy(light_block);
+                    std::string name = "label";
+                    pugi::xml_attribute node_label = new_light_node.attribute(name.c_str());
+                    node_label.set_value(new_light_name.c_str());
+                }
+                ImGui::SetNextItemWidth(100);
+                ImGui::InputText("##light_name", &light_names[light_dict[(std::string) current_light]]);
+                ImGui::SameLine();
+                ImGui::Text("Light Label");
+                // ####### LIGHT TYPE ############ //
+                static const char* current_type = light_types[light_dict[(std::string) current_light]].c_str();
+                if (ImGui::BeginCombo("##light_type_combo", current_type)){
+                    for (int n = 0; n < all_light_types.size(); n++){
+                        bool is_type_selected = (current_type == all_light_types[n]);
+                        if (ImGui::Selectable(all_light_types[n].c_str(), is_type_selected)){
+                            current_type = all_light_types[n].c_str();
+                            light_types[light_dict[(std::string) current_light]] = current_type;
+                        }
+                        if (is_type_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                // ####### LIGHT DIRECTION ####### //
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[(std::string) current_light]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[(std::string) current_light]].y);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[(std::string) current_light]].z);
+                ImGui::SameLine();
+                ImGui::Text("Light Direction");
+                // ####### LIGHT ROTATION ####### //
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[(std::string) current_light]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[(std::string) current_light]].y);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[(std::string) current_light]].z);
+                ImGui::SameLine();
+                ImGui::Text("Light Rotation");
+                // ####### LIGHT SIZE ####### //
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[(std::string) current_light]].x);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[(std::string) current_light]].y);
+                ImGui::SameLine();
+                ImGui::Text("Light Size");
+                // ####### LIGHT RADIUS ####### //
+                ImGui::SetNextItemWidth(90);
+                ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[(std::string) current_light]]);
+                ImGui::SameLine();
+                ImGui::Text("Light Radius");
+                // LIGHT END
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -1386,6 +1554,30 @@ std::map<std::string, int> get_node_labels(const std::string& name, const std::s
 }
 
 
+void get_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+    pugi::xml_node helios = xmldoc.child("helios");
+    const char *rig_ = "rig";
+    for (pugi::xml_node rig = helios.child(rig_); rig; rig = rig.next_sibling(rig_)){
+        int count = 0;
+        std::vector<int> curr_keypoints;
+        for (pugi::xml_node p = rig.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+            std::string default_value = std::to_string(count);
+            if (!p.attribute(name.c_str()).empty()){
+                const char *node_str = p.attribute(name.c_str()).value();
+                default_value = (std::string) node_str;
+            }
+            std::stringstream keypoint_value;
+            keypoint_value << default_value.c_str();
+            int keypoint_;
+            keypoint_value >> keypoint_;
+            curr_keypoints.push_back(keypoint_);
+            count++;
+        }
+        keypoints.push_back(curr_keypoints);
+    }
+}
+
+
 void get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     pugi::xml_node helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
@@ -1420,9 +1612,10 @@ void get_xml_value(const std::string& name, const std::string& parent, float &de
         const char *node_str = node.child_value();
         if (!parse_float(node_str, default_value)) {
             helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
-        } else if( default_value<0 ){
-            helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than or equal to 0.");
         }
+        // else if( default_value<0 ){
+        //     helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than or equal to 0.");
+        // }
     }
 }
 
@@ -1513,9 +1706,11 @@ void get_xml_values(const std::string& name, const std::string& parent, std::vec
             vec2 default_value;
             if (!parse_vec2(node_str, default_value)) {
                 helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
-            }else if( default_value.x<=0 || default_value.y<=0 ){
-                helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than 0.");
-            }else{
+            }
+            // else if( default_value.x<=0 || default_value.y<=0 ){
+            //     helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than 0.");
+            // }
+            else{
                 default_vec.push_back(default_value);
             }
         }
