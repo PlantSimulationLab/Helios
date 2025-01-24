@@ -191,6 +191,7 @@ ShootParameters::ShootParameters(std::minstd_rand0 *generator) {
 
     // ---- Growth Parameters ---- //
 
+    phyllochron.initialize(2, generator);
     phyllochron_min.initialize(2, generator);
 
     elongation_rate.initialize(0.2, generator);
@@ -384,7 +385,7 @@ void Phytomer::setFloralBudState(BudState state, uint petiole_index, uint bud_in
     setFloralBudState(state, floral_buds.at(petiole_index).at(bud_index));
 }
 
-void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
+void Phytomer::setFloralBudState(BudState state, FloralBud &fbud, bool carbon_model ) {
     // If state is already at the desired state, do nothing
     if (fbud.state == state) {
         return;
@@ -394,12 +395,14 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
     }
 
     // Calculate carbon cost
-    if( state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN ) ){ //state went from active to closed flower or open flower
-        float flower_cost = calculateFlowerConstructionCosts(fbud);
-        plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
-    }else if( state == BUD_FRUITING ){ //adding a fruit
-        float fruit_cost = calculateFruitConstructionCosts(fbud);
-        plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+    if( carbon_model){
+        if( state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN ) ){ //state went from active to closed flower or open flower
+            float flower_cost = calculateFlowerConstructionCosts(fbud);
+            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
+        }else if( state == BUD_FRUITING ){ //adding a fruit
+            float fruit_cost = calculateFruitConstructionCosts(fbud);
+            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+        }
     }
 
     // Delete geometry from previous reproductive state (if present)
@@ -424,7 +427,7 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
     }
 }
 
-int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
+int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, bool carbon_model ) {
 
     auto shoot_tree_ptr = &plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree;
 
@@ -482,7 +485,7 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
 
             // if the shoot type does not require dormancy, bud should be set to active
             if (!shoot_parameters.flowers_require_dormancy && fbud.state != BUD_DEAD) {
-                phytomer->setFloralBudState(BUD_ACTIVE, fbud);
+                phytomer->setFloralBudState(BUD_ACTIVE, fbud, carbon_model );
             }
 
             fbud.parent_index = petiole_index;
@@ -544,7 +547,9 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
     }
 
     //calculate fully expanded/elongated carbon costs
-    this->carbohydrate_pool_molC -= phytomer->calculatePhytomerConstructionCosts();
+    if( carbon_model){
+        this->carbohydrate_pool_molC -= phytomer->calculatePhytomerConstructionCosts();
+    }
 
     return (int) phytomers.size() - 1;
 }
@@ -771,6 +776,28 @@ float Shoot::sumShootLeafArea(uint start_node_index) const {
     }
 
     return area;
+}
+
+float Shoot::sumChildVolume( uint start_node_index ) const{
+
+    if( start_node_index>=phytomers.size() ){
+        helios_runtime_error("ERROR (Shoot::sumChildVolume): Start node index out of range.");
+    }
+
+    float volume = 0;
+
+    for( uint p=start_node_index; p<phytomers.size(); p++ ){
+        //call recursively for child shoots
+        if( childIDs.find(p)!=childIDs.end() ){
+            for( int child_shoot_ID : childIDs.at(p) ) {
+                volume += plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
+            }
+        }
+
+    }
+
+    return volume;
+
 }
 
 Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
@@ -1771,7 +1798,7 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
     }
 }
 
-void Shoot::buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper) {
+void Shoot::buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, bool carbon_model) {
 
     for( int i=0; i<current_node_number; i++ ) { //loop over phytomers to build up the shoot
 
@@ -1789,7 +1816,7 @@ void Shoot::buildShootPhytomers(float internode_radius, float internode_length, 
         }
 
         //Adding the phytomer(s) to the shoot
-        int pID = appendPhytomer(internode_radius * taper, internode_length, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, shoot_parameters.phytomer_parameters);
+        int pID = appendPhytomer(internode_radius * taper, internode_length, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, shoot_parameters.phytomer_parameters, carbon_model);
 
     }
 }
@@ -1934,7 +1961,7 @@ uint PlantArchitecture::addBaseStemShoot(uint plantID, uint current_node_number,
 }
 
 uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
-                                    float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label) {
+                                    float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, bool carbon_model) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ) {
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -1972,13 +1999,13 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     shoot_tree_ptr->emplace_back(shoot_new);
 
     // Build phytomer geometry
-    shoot_new->buildShootPhytomers(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper);
+    shoot_new->buildShootPhytomers(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper, carbon_model);
 
     return appended_shootID;
 }
 
 uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                                      float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index) {
+                                      float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index, bool carbon_model) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2021,7 +2048,7 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
 }
 
 uint PlantArchitecture::addEpicormicShoot(uint plantID, int parent_shoot_ID, float parent_position_fraction, uint current_node_number, float zenith_perturbation_degrees, float internode_radius, float internode_length_max,
-                                          float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label) {
+                                          float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, bool carbon_model) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::addEpicormicShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2041,7 +2068,7 @@ uint PlantArchitecture::addEpicormicShoot(uint plantID, int parent_shoot_ID, flo
     //\todo Figuring out how to set this correctly to make the shoot vertical, which avoids having to write a child shoot function.
     AxisRotation base_rotation = make_AxisRotation(0, acos_safe(petiole_axis.z), 0);
 
-    return addChildShoot(plantID, parent_shoot_ID, parent_node_index, current_node_number, base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper, shoot_type_label, 0);
+    return addChildShoot(plantID, parent_shoot_ID, parent_node_index, current_node_number, base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper, shoot_type_label, 0, carbon_model);
 
 }
 
@@ -2056,7 +2083,7 @@ void PlantArchitecture::validateShootTypes(ShootParameters &shoot_parameters) co
     }
 }
 
-int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction) {
+int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, bool carbon_model) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::appendPhytomerToShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2070,7 +2097,7 @@ int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const P
 
     auto current_shoot_ptr = plant_instances.at(plantID).shoot_tree.at(shootID);
 
-    int pID = current_shoot_ptr->appendPhytomer(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, phytomer_parameters);
+    int pID = current_shoot_ptr->appendPhytomer(internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, phytomer_parameters, carbon_model);
 
     current_shoot_ptr->current_node_number++;
     current_shoot_ptr->nodes_this_season++;
@@ -2718,23 +2745,23 @@ void PlantArchitecture::disablePlantPhenology(uint plantID) {
     plant_instances.at(plantID).dd_to_dormancy = 1e6;
 }
 
-void PlantArchitecture::advanceTime(float time_step_days) {
+void PlantArchitecture::advanceTime(float time_step_days, bool carbon_model) {
     for (auto &plant: plant_instances) {
         uint plantID = plant.first;
 
-        advanceTime(plantID, time_step_days);
+        advanceTime(plantID, time_step_days, carbon_model);
     }
 }
 
-void PlantArchitecture::advanceTime( int time_step_years, float time_step_days ) {
+void PlantArchitecture::advanceTime( int time_step_years, float time_step_days, bool carbon_model ) {
     for (auto &plant: plant_instances) {
         uint plantID = plant.first;
 
-        advanceTime(plantID, float(time_step_years)*365.f+time_step_days);
+        advanceTime(plantID, float(time_step_years)*365.f+time_step_days, carbon_model);
     }
 }
 
-void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
+void PlantArchitecture::advanceTime( uint plantID, float time_step_days, bool carbon_model ) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2748,24 +2775,29 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
         return;
     }
 
-    //accounting for case of time_step_days>phyllochron_min
-    float phyllochron_min = shoot_tree->front()->shoot_parameters.phyllochron_min.val();
+    //accounting for case of time_step_days>phyllochron
+    float phyllochron = shoot_tree->front()->shoot_parameters.phyllochron.val();
     for (int i = 1; i < shoot_tree->size(); i++) {
-        if (shoot_tree->at(i)->shoot_parameters.phyllochron_min.val() < phyllochron_min) {
-            phyllochron_min = shoot_tree->at(i)->shoot_parameters.phyllochron_min.val();
+        if (shoot_tree->at(i)->shoot_parameters.phyllochron.val() < phyllochron) {
+            phyllochron = shoot_tree->at(i)->shoot_parameters.phyllochron.val();
         }
     }
 
-    int Nsteps = std::floor(time_step_days / phyllochron_min);
-    float remainder_time = time_step_days - phyllochron_min * float(Nsteps);
+    int Nsteps = std::floor(time_step_days / phyllochron);
+    float remainder_time = time_step_days - phyllochron * float(Nsteps);
     if (remainder_time > 0.f) {
         Nsteps++;
     }
 
     for (int timestep = 0; timestep < Nsteps; timestep++) {
-        float dt_max = phyllochron_min;
+        float dt_max = phyllochron;
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
             dt_max = remainder_time;
+        }
+
+        // **** accumulate photosynthate **** //
+        if( carbon_model ){
+            accumulateShootPhotosynthesis();
         }
 
         if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max > plant_instance.max_age) {
@@ -2784,7 +2816,6 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             plant_instance.time_since_dormancy = 0;
             for (const auto &shoot: *shoot_tree) {
                 shoot->makeDormant();
-                shoot->carbohydrate_pool_molC = 100;
             }
             harvestPlant(plantID);
             continue;
@@ -2807,7 +2838,6 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             // breaking dormancy
             if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
                 shoot->breakDormancy();
-                shoot->carbohydrate_pool_molC = 1e6;
             }
 
             if (shoot->isdormant) {
@@ -2840,9 +2870,9 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                                     (shoot->shoot_parameters.flowers_require_dormancy && phytomer->age >= plant_instance.dd_to_flower_initiation)) {
                                     fbud.time_counter = 0;
                                     if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
-                                        phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
+                                        phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud, carbon_model);
                                     } else {
-                                        phytomer->setFloralBudState(BUD_DEAD, fbud);
+                                        phytomer->setFloralBudState(BUD_DEAD, fbud, carbon_model);
                                     }
                                     if (shoot->shoot_parameters.determinate_shoot_growth) {
                                         shoot->terminateApicalBud();
@@ -2856,12 +2886,12 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                                 if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
                                     fbud.time_counter = 0;
                                     if (fbud.state == BUD_FLOWER_CLOSED) {
-                                        phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
+                                        phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud, carbon_model);
                                     }else{
                                         if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
-                                            phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
+                                            phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud, carbon_model);
                                         } else {
-                                            phytomer->setFloralBudState(BUD_DEAD, fbud);
+                                            phytomer->setFloralBudState(BUD_DEAD, fbud, carbon_model);
                                         }
                                     }
                                     if (shoot->shoot_parameters.determinate_shoot_growth) {
@@ -2881,9 +2911,9 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                                 if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
                                     fbud.time_counter = 0;
                                     if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val()) {
-                                        phytomer->setFloralBudState(BUD_FRUITING, fbud);
+                                        phytomer->setFloralBudState(BUD_FRUITING, fbud, carbon_model);
                                     } else {
-                                        phytomer->setFloralBudState(BUD_DEAD, fbud);
+                                        phytomer->setFloralBudState(BUD_DEAD, fbud, carbon_model);
                                     }
                                     if (shoot->shoot_parameters.determinate_shoot_growth) {
                                         shoot->terminateApicalBud();
@@ -2973,7 +3003,7 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
 
                             float internode_radius = phytomer->internode_radius_initial;
 
-                            uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
+                            uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index, carbon_model);
 
                             phytomer->setVegetativeBudState(BUD_DEAD, vbud);
                             vbud.shoot_ID = childID;
@@ -3056,13 +3086,13 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
 
             // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
             shoot->phyllochron_counter += dt_max;
-            if (shoot->phyllochron_counter >= shoot->shoot_parameters.phyllochron_min.val() && !shoot->phytomers.back()->isdormant ) {
+            if (shoot->phyllochron_counter >= shoot->shoot_parameters.phyllochron.val() && !shoot->phytomers.back()->isdormant ) {
                 float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                 shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
                 float internode_length_max = shoot->internode_length_max_shoot_initial;
-                appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01); //\todo These factors should be set to be consistent with the shoot
-                shoot->shoot_parameters.phyllochron_min.resample();
-                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->shoot_parameters.phyllochron_min.val();
+                appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01, carbon_model); //\todo These factors should be set to be consistent with the shoot
+                shoot->shoot_parameters.phyllochron.resample();
+                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->shoot_parameters.phyllochron.val();
             }
 
             // ****** EPICORMIC SHOOTS ****** //
@@ -3076,17 +3106,24 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                     float internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();
                     shoot_types.at(epicormic_shoot_label).internode_length_max.resample();
                     std::cout << "Adding epicormic shoot" << std::endl;
-                    addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
+                    addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label, carbon_model);
                 }
             }
-
-            // **** subtract maintenance carbon costs **** //
-            // subtractShootMaintenanceCarbon(dt_max);
-
-            if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                float shoot_volume = shoot->calculateShootInternodeVolume();
-                context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration",shoot->carbohydrate_pool_molC / shoot_volume);
+            if( carbon_model){
+                if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    float shoot_volume = shoot->calculateShootInternodeVolume();
+                    context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration",shoot->carbohydrate_pool_molC / shoot_volume);
+                }
             }
+        }
+
+        // **** subtract maintenance carbon costs **** //
+        if( carbon_model){
+            subtractShootMaintenanceCarbon(time_step_days);
+            subtractShootGrowthCarbon();
+            checkCarbonPool_adjustPhyllochron();
+            checkCarbonPool_abortBuds();
+            checkCarbonPool_transferCarbon();
         }
     }
 

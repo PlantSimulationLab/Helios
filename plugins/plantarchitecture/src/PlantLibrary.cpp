@@ -210,7 +210,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
 
     phytomer_parameters_almond.leaf.leaves_per_petiole = 1;
     phytomer_parameters_almond.leaf.roll.uniformDistribution(-10,10);
-    phytomer_parameters_almond.leaf.prototype_scale = 0.08;
+    phytomer_parameters_almond.leaf.prototype_scale = 0.2;
     phytomer_parameters_almond.leaf.prototype = leaf_prototype;
 
     phytomer_parameters_almond.peduncle.length = 0.005;
@@ -255,8 +255,10 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
     shoot_parameters_proleptic.max_nodes = 50;
     shoot_parameters_proleptic.max_nodes_per_season = 25;
-    shoot_parameters_proleptic.phyllochron_min = 2;
+    shoot_parameters_proleptic.phyllochron_min = 6;
+    shoot_parameters_proleptic.phyllochron = 6;
     shoot_parameters_proleptic.elongation_rate = 0.15;
+    shoot_parameters_proleptic.elongation_max = 0.2;
     shoot_parameters_proleptic.girth_area_factor = 8.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
@@ -284,7 +286,8 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_sylleptic.phytomer_parameters.leaf.pitch.uniformDistribution(-45, -20);
     shoot_parameters_sylleptic.insertion_angle_tip = 0;
     shoot_parameters_sylleptic.insertion_angle_decay_rate = 0;
-    shoot_parameters_sylleptic.phyllochron_min = 2;
+    shoot_parameters_sylleptic.phyllochron_min = 4;
+    shoot_parameters_sylleptic.phyllochron = 4;
     shoot_parameters_sylleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_sylleptic.gravitropic_curvature= 600;
     shoot_parameters_sylleptic.internode_length_max = 0.06;
@@ -427,7 +430,9 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     shoot_parameters_proleptic.max_nodes = 40;
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
+    shoot_parameters_proleptic.phyllochron = 2.0;
     shoot_parameters_proleptic.elongation_rate = 0.15;
+    shoot_parameters_proleptic.elongation_max = 0.2;
     shoot_parameters_proleptic.girth_area_factor = 5.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
@@ -557,7 +562,9 @@ void PlantArchitecture::initializeAsparagusShoots() {
     shoot_parameters.gravitropic_curvature = -200;
 
     shoot_parameters.phyllochron_min = 1;
+    shoot_parameters.phyllochron = 1;
     shoot_parameters.elongation_rate = 0.15;
+    shoot_parameters.elongation_max = 0.2;
 //    shoot_parameters.girth_growth_rate = 0.00005;
     shoot_parameters.girth_area_factor = 30;
     shoot_parameters.vegetative_bud_break_time = 5;
@@ -642,7 +649,9 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_primary.vegetative_bud_break_time = 3;
     shoot_parameters_primary.base_roll = 90;
     shoot_parameters_primary.phyllochron_min = 1;
+    shoot_parameters_primary.phyllochron = 1;
     shoot_parameters_primary.elongation_rate = 0.25;
+    shoot_parameters_primary.elongation_max = 0.35;
     shoot_parameters_primary.girth_area_factor = 0;
     shoot_parameters_primary.internode_length_max = 0.03;
     shoot_parameters_primary.internode_length_decay_rate = 0;
@@ -664,7 +673,9 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_base.vegetative_bud_break_probability_min = 1.0;
     shoot_parameters_base.vegetative_bud_break_time = 2;
     shoot_parameters_base.phyllochron_min = 2;
+    shoot_parameters_base.phyllochron = 2;
     shoot_parameters_base.elongation_rate = 0.15;
+    shoot_parameters_base.elongation_max = 0.2;
     shoot_parameters_base.girth_area_factor = 0.f;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.01;
@@ -808,7 +819,9 @@ void PlantArchitecture::initializeBeanShoots() {
     shoot_parameters_trifoliate.gravitropic_curvature = 200;
 
     shoot_parameters_trifoliate.phyllochron_min = 2;
+    shoot_parameters_trifoliate.phyllochron = 2;
     shoot_parameters_trifoliate.elongation_rate = 0.1;
+    shoot_parameters_trifoliate.elongation_max = 0.1;
     shoot_parameters_trifoliate.girth_area_factor = 1.5f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 15;
     shoot_parameters_trifoliate.vegetative_bud_break_probability_min = 0.1;
@@ -905,7 +918,9 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     shoot_parameters_base.vegetative_bud_break_probability_min = 0.2;
     shoot_parameters_base.vegetative_bud_break_time = 6;
     shoot_parameters_base.phyllochron_min = 2;
+    shoot_parameters_base.phyllochron = 2;
     shoot_parameters_base.elongation_rate = 0.1;
+    shoot_parameters_base.elongation_max = 0.1;
     shoot_parameters_base.girth_area_factor = 10.f;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.0015;
@@ -1040,7 +1055,9 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.gravitropic_curvature = 200;
 
     shoot_parameters_trifoliate.phyllochron_min = 2;
+    shoot_parameters_trifoliate.phyllochron = 2;
     shoot_parameters_trifoliate.elongation_rate = 0.1;
+    shoot_parameters_trifoliate.elongation_max = 0.1;
     shoot_parameters_trifoliate.girth_area_factor = 1.5f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 15;
     shoot_parameters_trifoliate.vegetative_bud_break_probability_min = 0.1;
@@ -1162,7 +1179,9 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_main.vegetative_bud_break_probability_decay_rate = 1.;
     shoot_parameters_main.vegetative_bud_break_time = 30;
     shoot_parameters_main.phyllochron_min.uniformDistribution(1.75,2.25);
+    shoot_parameters_main.phyllochron.uniformDistribution(1.75,2.25);
     shoot_parameters_main.elongation_rate = 0.15;
+    shoot_parameters_main.elongation_max = 0.2;
     shoot_parameters_main.girth_area_factor = 1.f;
     shoot_parameters_main.gravitropic_curvature = 400;
     shoot_parameters_main.tortuosity = 15;
@@ -1203,6 +1222,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 25;
     shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
     shoot_parameters_trunk.phyllochron_min = 2.5;
+    shoot_parameters_trunk.phyllochron = 2.5;
     shoot_parameters_trunk.insertion_angle_tip = 90;
     shoot_parameters_trunk.girth_area_factor = 0;
     shoot_parameters_trunk.max_nodes = 18;
@@ -1313,7 +1333,9 @@ void PlantArchitecture::initializeMaizeShoots() {
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0.5;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 2;
+    shoot_parameters_mainstem.phyllochron = 2;
     shoot_parameters_mainstem.elongation_rate = 0.1;
+    shoot_parameters_mainstem.elongation_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 8.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-500,0);
     shoot_parameters_mainstem.internode_length_max = 0.22;
@@ -1427,7 +1449,9 @@ void PlantArchitecture::initializeOliveTreeShoots(){
     shoot_parameters_proleptic.max_nodes.uniformDistribution(16,24);
     shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8,12);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
+    shoot_parameters_proleptic.phyllochron = 2.0;
     shoot_parameters_proleptic.elongation_rate = 0.25;
+    shoot_parameters_proleptic.elongation_max = 0.25;
     shoot_parameters_proleptic.girth_area_factor = 5.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 1.0;
@@ -1587,7 +1611,9 @@ void PlantArchitecture::initializePistachioTreeShoots(){
     shoot_parameters_proleptic.max_nodes.uniformDistribution(16,24);
     shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8,12);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
+    shoot_parameters_proleptic.phyllochron = 2.0;
     shoot_parameters_proleptic.elongation_rate = 0.25;
+    shoot_parameters_proleptic.elongation_max = 0.25;
     shoot_parameters_proleptic.girth_area_factor = 8.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.7;
@@ -1707,7 +1733,9 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.vegetative_bud_break_time = 3;
     shoot_parameters_primary.base_roll = 90;
     shoot_parameters_primary.phyllochron_min = 1;
+    shoot_parameters_primary.phyllochron = 1;
     shoot_parameters_primary.elongation_rate = 0.2;
+    shoot_parameters_primary.elongation_max = 0.2;
     shoot_parameters_primary.girth_area_factor = 0.f;
     shoot_parameters_primary.internode_length_max = 0.02;
     shoot_parameters_primary.internode_length_decay_rate = 0;
@@ -1729,7 +1757,9 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_base.vegetative_bud_break_probability_min = 1;
     shoot_parameters_base.vegetative_bud_break_time = 2;
     shoot_parameters_base.phyllochron_min = 2;
+    shoot_parameters_base.phyllochron = 2;
     shoot_parameters_base.elongation_rate = 0.15;
+    shoot_parameters_base.elongation_max = 0.15;
     shoot_parameters_base.gravitropic_curvature = 0;
     shoot_parameters_base.internode_length_max = 0.01;
     shoot_parameters_base.internode_length_decay_rate = 0;
@@ -1837,7 +1867,9 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.vegetative_bud_break_probability_min = 1.0;
     shoot_parameters_main.vegetative_bud_break_time = 2;
     shoot_parameters_main.phyllochron_min = 2;
+    shoot_parameters_main.phyllochron = 2;
     shoot_parameters_main.elongation_rate = 0.1;
+    shoot_parameters_main.elongation_max = 0.1;
     shoot_parameters_main.girth_area_factor = 4.f;
     shoot_parameters_main.gravitropic_curvature = 300;
     shoot_parameters_main.tortuosity = 5;
@@ -1971,7 +2003,9 @@ void PlantArchitecture::initializeRiceShoots() {
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 2;
+    shoot_parameters_mainstem.phyllochron = 2;
     shoot_parameters_mainstem.elongation_rate = 0.1;
+    shoot_parameters_mainstem.elongation_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000,-400);
     shoot_parameters_mainstem.internode_length_max = 0.0075;
@@ -2056,7 +2090,9 @@ void PlantArchitecture::initializeButterLettuceShoots() {
     shoot_parameters_mainstem.phytomer_parameters = phytomer_parameters;
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
     shoot_parameters_mainstem.phyllochron_min = 2;
+    shoot_parameters_mainstem.phyllochron = 2;
     shoot_parameters_mainstem.elongation_rate = 0.15;
+    shoot_parameters_mainstem.elongation_max = 0.15;
     shoot_parameters_mainstem.girth_area_factor = 0.f;
     shoot_parameters_mainstem.gravitropic_curvature = 10;
     shoot_parameters_mainstem.internode_length_max = 0.001;
@@ -2158,7 +2194,9 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 2;
+    shoot_parameters_mainstem.phyllochron = 2;
     shoot_parameters_mainstem.elongation_rate = 0.1;
+    shoot_parameters_mainstem.elongation_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000,-400);
     shoot_parameters_mainstem.internode_length_max = 0.26;
@@ -2289,7 +2327,9 @@ void PlantArchitecture::initializeSoybeanShoots() {
     shoot_parameters_trifoliate.gravitropic_curvature = 400;
 
     shoot_parameters_trifoliate.phyllochron_min = 2;
+    shoot_parameters_trifoliate.phyllochron = 2;
     shoot_parameters_trifoliate.elongation_rate = 0.1;
+    shoot_parameters_trifoliate.elongation_max = 0.1;
     shoot_parameters_trifoliate.girth_area_factor = 2.f;
     shoot_parameters_trifoliate.vegetative_bud_break_time = 15;
     shoot_parameters_trifoliate.vegetative_bud_break_probability_min = 0.05;
@@ -2421,7 +2461,9 @@ void PlantArchitecture::initializeStrawberryShoots() {
     shoot_parameters.tortuosity = 0;
 
     shoot_parameters.phyllochron_min = 2;
+    shoot_parameters.phyllochron = 2;
     shoot_parameters.elongation_rate = 0.1;
+    shoot_parameters.elongation_max = 0.1;
     shoot_parameters.girth_area_factor = 2.f;
     shoot_parameters.vegetative_bud_break_time = 15;
     shoot_parameters.vegetative_bud_break_probability_min = 0.1;
@@ -2510,7 +2552,9 @@ void PlantArchitecture::initializeSugarbeetShoots() {
     shoot_parameters_mainstem.phytomer_parameters = phytomer_parameters_sugarbeet;
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
     shoot_parameters_mainstem.phyllochron_min = 2;
+    shoot_parameters_mainstem.phyllochron = 2;
     shoot_parameters_mainstem.elongation_rate = 0.1;
+    shoot_parameters_mainstem.elongation_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 20.f;
     shoot_parameters_mainstem.gravitropic_curvature = 10;
     shoot_parameters_mainstem.internode_length_max = 0.001;
@@ -2626,7 +2670,9 @@ void PlantArchitecture::initializeTomatoShoots() {
     shoot_parameters.tortuosity = 3;
 
     shoot_parameters.phyllochron_min = 2;
+    shoot_parameters.phyllochron = 2;
     shoot_parameters.elongation_rate = 0.1;
+    shoot_parameters.elongation_max = 0.1;
     shoot_parameters.girth_area_factor = 3.f;
     shoot_parameters.vegetative_bud_break_time = 10;
     shoot_parameters.vegetative_bud_break_probability_min = 0.15;
@@ -2748,7 +2794,9 @@ void PlantArchitecture::initializeWalnutTreeShoots(){
     shoot_parameters_proleptic.max_nodes = 30;
     shoot_parameters_proleptic.max_nodes_per_season = 15;
     shoot_parameters_proleptic.phyllochron_min = 2.;
+    shoot_parameters_proleptic.phyllochron = 2.;
     shoot_parameters_proleptic.elongation_rate = 0.15;
+    shoot_parameters_proleptic.elongation_max = 0.15;
     shoot_parameters_proleptic.girth_area_factor = 10.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
@@ -2891,6 +2939,7 @@ void PlantArchitecture::initializeWheatShoots() {
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 2;
     shoot_parameters_mainstem.elongation_rate = 0.1;
+    shoot_parameters_mainstem.elongation_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 6.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-500,-200);
     shoot_parameters_mainstem.flowers_require_dormancy = false;

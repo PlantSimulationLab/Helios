@@ -695,9 +695,11 @@ struct ShootParameters{
 
     // ---- Growth Parameters ---- //
 
+    RandomParameter_float phyllochron; //days/phytomer
     RandomParameter_float phyllochron_min; //days/phytomer
 
     RandomParameter_float elongation_rate; //length/day
+    RandomParameter_float elongation_max; //length/day
 
     // Minimum probability that bud with this shoot type will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability_min;
@@ -734,8 +736,8 @@ struct ShootParameters{
         this->max_nodes.resample();
         this->max_nodes_per_season = a.max_nodes_per_season;
         this->max_nodes_per_season.resample();
-        this->phyllochron_min = a.phyllochron_min;
-        this->phyllochron_min.resample();
+        this->phyllochron = a.phyllochron;
+        this->phyllochron.resample();
         this->elongation_rate = a.elongation_rate;
         this->elongation_rate.resample();
         this->girth_area_factor = a.girth_area_factor;
@@ -884,7 +886,7 @@ public:
 
     void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
-    void setFloralBudState(BudState state, FloralBud &fbud);
+    void setFloralBudState(BudState state, FloralBud &fbud, bool carbon_model = false);
 
     float calculateFruitConstructionCosts(const FloralBud &fbud);
 
@@ -962,7 +964,7 @@ struct Shoot {
     Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &shoot_base_position, const AxisRotation &shoot_base_rotation, uint current_node_number,
           float internode_length_shoot_initial, ShootParameters &shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr);
 
-    void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper);
+    void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, bool carbon_model = false);
 
     //! Append a phytomer at the shoot apex
     /**
@@ -972,7 +974,7 @@ struct Shoot {
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      * \return Number of phytomers in the shoot after the new phytomer is appended
      */
-    int appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters);
+    int appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters, bool carbon_model = false);
 
     //! Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters
     /**
@@ -1012,6 +1014,8 @@ struct Shoot {
 
     float sumShootLeafArea( uint start_node_index = 0 ) const;
 
+    float sumChildVolume( uint start_node_index = 0) const;
+
     void propagateDownstreamLeafArea(Shoot* shoot, uint node_index, float leaf_area);
 
     uint current_node_number = 0;
@@ -1031,6 +1035,12 @@ struct Shoot {
     float carbohydrate_pool_molC = 0.01;  // mol C
     float old_shoot_volume = 0;
 
+    float phyllochron_increase = 2;
+    float phyllochron_recovery = phyllochron_increase * 1.5;
+
+    float elongation_decay = 0.5;
+    float elongation_recovery = elongation_decay / 1.5 ;
+
     uint days_with_negative_carbon_balance = 0;
 
     void breakDormancy();
@@ -1042,6 +1052,8 @@ struct Shoot {
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
+    float phyllochron_min = 6;
+    float elongation_max = .25;
 
     float curvature_perturbation = 0;
     float yaw_perturbation = 0;
@@ -1234,21 +1246,23 @@ public:
     /**
      * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( float time_step_days );
+    void advanceTime( float time_step_days, bool carbon_model = false );
+
+    void accumulateHourlyLeafPhotosynthesis();
 
     //! Advance plant growth by a specified time interval for all plants
     /**
      * \param[in] time_step_years Number of years to advance.
      * \param[in] time_step_days Number of days to advance (added to number of years).
      */
-    void advanceTime( int time_step_years, float time_step_days );
+    void advanceTime( int time_step_years, float time_step_days, bool carbon_model = false );
 
     //! Advance plant growth by a specified time interval for a single plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( uint plantID, float time_step_days );
+    void advanceTime( uint plantID, float time_step_days, bool carbon_model = false );
 
     // -- plant building methods -- //
 
@@ -1290,7 +1304,7 @@ public:
      * \return ID of the new shoot to be used to reference it later.
      */
     uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
-                     float radius_taper, const std::string &shoot_type_label);
+                     float radius_taper, const std::string &shoot_type_label, bool carbon_model = false);
 
     //! Manually add a child shoot at the axillary bud of a phytomer.
     /**
@@ -1309,7 +1323,7 @@ public:
      * \return ID of the newly generated shoot.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index = 0);
+                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index = 0, bool carbon_model = false);
 
     //! Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot
     /**
@@ -1327,7 +1341,7 @@ public:
      * \return ID of the newly generated shoot.
      */
     uint addEpicormicShoot(uint plantID, int parent_shoot_ID, float parent_position_fraction, uint current_node_number, float zenith_perturbation_degrees, float internode_radius, float internode_length_max,
-                           float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label);
+                           float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, bool carbon_model = false);
 
     //! Add a new phytomer at the terminal bud of a shoot.
     /**
@@ -1340,7 +1354,7 @@ public:
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \return ID of generated phytomer
      */
-    int appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
+    int appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, bool carbon_model = false);
 
     //! Enable shoot type to produce epicormic child shoots (water sprouts)
     /**
@@ -1367,6 +1381,8 @@ public:
     void enableGroundClipping( float ground_height = 0.f );
 
     // -- methods for modifying the current plant state -- //
+
+    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3);
 
     void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3 );
 
@@ -1588,12 +1604,12 @@ protected:
 
     void accumulateShootPhotosynthesis();
 
-    void accumulateHourlyLeafPhotosynthesis();
-
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortbuds();
+    void checkCarbonPool_abortBuds();
+    void checkCarbonPool_adjustPhyllochron();
+    void checkCarbonPool_transferCarbon();
 
     // --- Plant Library --- //
 
