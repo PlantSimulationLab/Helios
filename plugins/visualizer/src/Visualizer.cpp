@@ -4482,6 +4482,49 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
 }
 
+void* Visualizer::getWindow(){
+    return window;
+}
+
+std::vector<uint> Visualizer::getFrameBufferSize(){
+    std::vector<uint> frameBufferSize = {Wframebuffer, Hframebuffer};
+    return frameBufferSize;
+}
+
+void Visualizer::setFrameBufferSize(int width, int height){
+    Wframebuffer = width;
+    Hframebuffer = height;
+}
+
+helios::RGBcolor Visualizer::getBackgroundColor(){
+    return backgroundColor;
+}
+
+Shader Visualizer::getPrimaryShader(){
+    return primaryShader;
+}
+
+std::vector<helios::vec3> Visualizer::getCameraPosition(){
+    std::vector<helios::vec3> cameraPosition = {camera_lookat_center, camera_eye_location};
+    return cameraPosition;
+}
+
+glm::mat4 Visualizer::getPerspectiveTransformationMatrix(){
+    return perspectiveTransformationMatrix;
+}
+
+std::vector<Visualizer::LightingModel> Visualizer::getPrimaryLightingModel(){
+    return primaryLightingModel;
+}
+
+uint Visualizer::getDepthTexture(){
+    return depthTexture;
+}
+
+void Visualizer::clearColor(){
+    colorPrimitivesByData = "";
+}
+
 std::string errorString( GLenum err ){
 
     std::string message;
