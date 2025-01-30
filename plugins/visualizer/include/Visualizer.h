@@ -927,6 +927,27 @@ public:
   //! Close the graphics window
   void closeWindow();
 
+ void* getWindow();
+
+ std::vector<uint> getFrameBufferSize();
+
+ void setFrameBufferSize(int width, int height);
+
+ helios::RGBcolor getBackgroundColor();
+
+ Shader getPrimaryShader();
+
+ std::vector<helios::vec3> getCameraPosition();
+
+ glm::mat4 getPerspectiveTransformationMatrix();
+
+ std::vector<LightingModel> getPrimaryLightingModel();
+
+ uint getDepthTexture();
+
+ void clearColor();
+
+
 private:
 
     void openWindow();
