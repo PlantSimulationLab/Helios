@@ -76,6 +76,9 @@ std::vector<helios::vec3> linspace(helios::vec3 a, helios::vec3 b, int num_point
 */
 std::vector<helios::vec3> interpolate(std::vector<int> keypoints, std::vector<helios::vec3> positions, int num_points);
 
+//! Function to open file dialog
+std::string file_dialog();
+
 class guixml {
   private:
     //! XML Document
@@ -426,6 +429,30 @@ class guixml {
     //! Function to visualize XML plot
     void visualize();
 
+    //! Function to visualize XML plot
+    /**
+     * \param[in] xml_input_file Name of XML input file
+    */
+    void build_and_visualize(std::string xml_path);
+
+    //! Function to set all values in GUI from XML
+    void set_xml_values();
+
+    //! Function to set all values in GUI from XML
+    /**
+     * \param[in] xml_input_file Name of XML input file
+    */
+    void set_xml_values(std::string xml_path);
+
+    //! Function to get all values from current XML
+    void get_xml_values();
+
+    //! Function to get all values from current XML
+    /**
+     * \param[in] xml_input_file Name of XML input file
+    */
+    void get_xml_values(std::string xml_path);
+
     //! Function to get node labels for a given set of nodes
     /**
      * \param[in] label_name Name of the label
@@ -442,6 +469,14 @@ class guixml {
      * \param[out] keypoints Vector of keypoint (int) vectors
     */
     void get_keypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
+
+    //! Function to set keypoints for every rig
+    /**
+     * \param[in] name Name of the label (e.g. name="keypoint")
+     * \param[in] parent Name of the XML fields to get labels from (e.g. field="camera_position")
+     * \param[out] keypoints Vector of keypoint (int) vectors
+    */
+    void set_keypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
 
     //! Function to get value of an XML field
     /**
@@ -642,6 +677,22 @@ class guixml {
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
     void set_xml_values(const std::string& name, const std::string& parent, std::vector<float>&);
+
+    //! Function to set values to an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes to set
+    */
+    void set_xml_values(const std::string&, const std::string&, std::vector<std::vector<helios::vec3>>&);
+
+    //! Function to set values to an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes to set
+    */
+    void set_xml_values(const std::string&, const std::string&, std::vector<std::set<std::string>>&);
 
     //! Function to set node labels for a given set of nodes
     /**
