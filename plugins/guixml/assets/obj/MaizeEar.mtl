@@ -1,0 +1,33 @@
+# Blender 4.0.2 MTL File: 'MaizeEar.blend'
+# www.blender.org
+
+newmtl Material.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.220879 0.381195 0.200078
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl Material.002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.212459 0.363717 0.188761
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl corn_ear_fur
+Ns 549.300903
+Ka 1.000000 1.000000 1.000000
+Kd 0.235300 0.054900 0.031400
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Bump /Users/bnbailey/Dropbox/Helios/projects/corn_OBJ/xml/corn_ear_fur_bump&disp.jpg
