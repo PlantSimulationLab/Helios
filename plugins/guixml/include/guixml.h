@@ -20,11 +20,12 @@ Copyright (C) 2016-2025 Brian Bailey
 #include "Context.h"
 #include <pugixml.hpp>
 #include "glew.h"
-#include "../../boundarylayerconductance/include/BoundaryLayerConductanceModel.h" // TODO: change this to conditionally compile
-#include "../../energybalance/include/EnergyBalanceModel.h" // TODO: change this to conditionally compile
-#include "../../plantarchitecture/include/PlantArchitecture.h" // TODO: change this to conditionally compile
-#include "../../radiation/include/RadiationModel.h" // TODO: change this to conditionally compile
-#include "../../solarposition/include/SolarPosition.h" // TODO: change this to conditionally compile
+#include "BoundaryLayerConductanceModel.h"
+#include "EnergyBalanceModel.h"
+#include "PlantArchitecture.h"
+#include "RadiationModel.h"
+#include "SolarPosition.h"
+
 #include "Visualizer.h"
 
 #include "InitializeSimulation.h"
@@ -32,10 +33,10 @@ Copyright (C) 2016-2025 Brian Bailey
 #include "InitializeRadiation.h"
 #include "InitializeEnergyBalance.h"
 
-#include "imgui/imgui.h"
-#include "imgui/backends/imgui_impl_glfw.h"
-#include "imgui/backends/imgui_impl_opengl3.h"
-#include "imgui/misc/cpp/imgui_stdlib.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_stdlib.h"
 #include "GLFW/glfw3.h"
 
 #include <chrono>
@@ -106,28 +107,28 @@ class guixml {
     uint sun_ID;
 
     //! Context
-    helios::Context *context;
+    helios::Context *context = nullptr;
 
     //! Visualizer
-    Visualizer *visualizer;
+    Visualizer *visualizer = nullptr;
 
     //! Plant Architecture
-    PlantArchitecture *plantarchitecture;
+    PlantArchitecture *plantarchitecture = nullptr;
 
     //! Radiation Model
-    RadiationModel *radiation;
+    RadiationModel *radiation = nullptr;
 
     //! Solar Position
-    SolarPosition *solarposition;
+    SolarPosition *solarposition = nullptr;
 
     //! Energy Balance Model
-    EnergyBalanceModel *energybalancemodel;
+    EnergyBalanceModel *energybalancemodel = nullptr;
 
     //! Boundary Layer Conductance
-    BLConductanceModel *boundarylayerconductance;
+    BLConductanceModel *boundarylayerconductance = nullptr;
 
     //! Camera Properties
-    CameraProperties *cameraproperties;
+    CameraProperties *cameraproperties = nullptr;
 
     //! Band Labels
     std::vector<std::string> bandlabels;
@@ -650,6 +651,18 @@ class guixml {
      * \param[out] labels_vec Vector of labels of XML "parent" nodes to set
     */
     std::map<std::string, int> set_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
+
+    //! Destructor
+    ~guixml(){
+      delete context;
+      delete visualizer;
+      delete plantarchitecture;
+      delete radiation;
+      delete solarposition;
+      delete energybalancemodel;
+      delete boundarylayerconductance;
+      delete cameraproperties;
+    }
 };
 
 #endif //HELIOS_GUI_H
