@@ -1,4 +1,9 @@
 #include "../include/guixml.h"
+#ifdef _WIN32
+    #include <windows.h>
+    #include <iostream>
+    #include <commdlg.h>
+#endif
 
 using namespace helios;
 
@@ -59,6 +64,37 @@ std::vector<vec3> interpolate(std::vector<int> keypoints, std::vector<vec3> posi
     }
     return result;
 }
+
+std::string file_dialog(){
+    std::string file_name;
+    #ifdef _WIN32
+        OPENFILENAME ofn;
+        char szFile[260] = {0};
+
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = NULL;
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = sizeof(szFile);
+        ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.txt\0";
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrInitialDir = NULL;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+        if (GetOpenFileName(&ofn)) {
+            std::cout << "Selected file: " << ofn.lpstrFile << std::endl;
+        } else {
+            std::cout << "No file selected." << std::endl;
+            return "";
+        }
+        file_name = (std::string)ofn.lpstrFile;
+    #endif
+
+    return file_name;
+}
+
 
 void guixml::build_from_xml(){
     context = new Context();
@@ -214,43 +250,7 @@ void guixml::build_from_xml(){
     }
     // RIG BLOCK
     num_images = 5;
-    rig_dict = get_node_labels("label", "rig", rig_labels);
-    get_xml_value("camera_position", "rig", camera_position);
-    get_xml_value("camera_lookat", "rig", camera_lookat);
-    get_xml_value("camera_label", "rig", camera_label);
-    get_xml_values("camera_position", "rig", camera_positions);
-    get_xml_values("camera_position", "rig", camera_position_vec);
-    get_xml_values("camera_lookat", "rig", camera_lookats);
-    get_xml_values("camera_lookat", "rig", camera_lookat_vec);
-    get_xml_values("camera_label", "rig", camera_labels);
-    get_keypoints("keypoint", "camera_position", keypoint_frames);
-    // CAMERA BLOCK
-    camera_dict = get_node_labels("label", "camera", camera_names);
-    get_xml_value("camera_resolution", "camera", camera_resolution);
-    get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
-    get_xml_value("lens_diameter", "camera", lens_diameter);
-    get_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
-    get_xml_value("HFOV", "camera", HFOV);
-    get_xml_values("camera_resolution", "camera", camera_resolutions);
-    get_xml_values("focal_plane_distance", "camera", focal_plane_distances);
-    get_xml_values("lens_diameter", "camera", lens_diameters);
-    get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
-    get_xml_values("HFOV", "camera", HFOVs);
-    get_xml_values("camera_label", "rig", rig_camera_labels);
-
-
-    // LIGHT BLOCK
-    get_xml_values("light_type", "light", light_types);
-    get_xml_values("light_direction", "light", light_direction_vec);
-    for (vec3 vec : light_direction_vec){
-        light_direction_sph_vec.push_back(cart2sphere(vec));
-    }
-    get_xml_values("light_rotation", "light", light_rotation_vec);
-    get_xml_values("light_size", "light", light_size_vec);
-    get_xml_values("light_radius", "light", light_radius_vec);
-    light_dict = get_node_labels("label", "light", light_names);
-    get_xml_values("light_label", "rig", rig_light_labels);
-
+    get_xml_values();
     for (int n = 0; n < rig_labels.size(); n++){
         std::string current_rig = rig_labels[n];
         for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
@@ -298,43 +298,6 @@ void guixml::build_from_xml(){
     }
     helios = xmldoc.child("helios");
     pugi::xml_node node;
-
-    // ####### DEFAULT VALUES ####### //
-    // MAIN BLOCK
-    get_xml_value("latitude", "helios", latitude);
-    get_xml_value("longitude", "helios", longitude);
-    get_xml_value("UTC_offset", "helios", UTC_offset);
-    get_xml_value("csv_weather_file", "helios", csv_weather_file);
-    get_xml_value("domain_origin", "helios", domain_origin);
-    get_xml_value("domain_extent", "helios", domain_extent);
-    get_xml_value("ground_resolution", "helios", ground_resolution);
-    get_xml_value("ground_texture_file", "helios", ground_texture_file);
-    // CANOPY BLOCK
-    canopy_labels = get_node_labels("label", "canopy_block", labels);
-    get_xml_value("canopy_origin", "canopy_block", canopy_origin);
-    get_xml_value("plant_count", "canopy_block", plant_count);
-    get_xml_value("plant_spacing", "canopy_block", plant_spacing);
-    get_xml_value("plant_library_name", "canopy_block", plant_library_name);
-    get_xml_value("plant_age", "canopy_block", plant_age);
-    get_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
-    get_xml_values("canopy_origin", "canopy_block", canopy_origins);
-    get_xml_values("plant_count", "canopy_block", plant_counts);
-    get_xml_values("plant_spacing", "canopy_block", plant_spacings);
-    get_xml_values("plant_library_name", "canopy_block", plant_library_names);
-    get_xml_values("plant_age", "canopy_block", plant_ages);
-    get_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
-    // RADIATION BLOCK
-    get_xml_value("direct_ray_count", "radiation", direct_ray_count);
-    get_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
-    get_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
-    get_xml_value("scattering_depth", "radiation", scattering_depth);
-    get_xml_value("air_turbidity", "radiation", air_turbidity);
-    get_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
-    get_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
-    get_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
-    get_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
-    get_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
-    get_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
 }
 
 
@@ -385,6 +348,22 @@ void guixml::get_keypoints(const std::string& name, const std::string& parent, s
     }
 }
 
+void guixml::set_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+    helios = xmldoc.child("helios");
+    const char *rig_ = "rig";
+    int rig_count = 0;
+    for (pugi::xml_node rig = helios.child(rig_); rig; rig = rig.next_sibling(rig_)){
+        int count = 0;
+        for (pugi::xml_node p = rig.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+            std::string default_value = std::to_string(count);
+            if (!p.attribute(name.c_str()).empty()){
+                p.attribute(name.c_str()).set_value(keypoints[rig_count][count]);
+            }
+            count++;
+        }
+        rig_count++;
+    }
+} // TODO: test this function
 
 void guixml::get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     helios = xmldoc.child("helios");
@@ -794,6 +773,36 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
+void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+    helios = xmldoc.child("helios");
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        int j = 0;
+        std::vector<vec3> curr_vec = {};
+        for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+            node.text().set(vec_to_string(default_vec[i][j]).c_str());
+            j++;
+        }
+        i++;
+    }
+}
+
+
+void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+    helios = xmldoc.child("helios");
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+            p.remove_child(node);
+        }
+        for (std::string s : default_vec[i]){
+            p.append_child(name.c_str()).set_value(s.c_str());
+        }
+        i++;
+    }
+} // TODO: test this function
+
+
 void guixml::visualize(){
     visualizer = new Visualizer(800);
     radiation->enableCameraModelVisualization();
@@ -991,50 +1000,14 @@ void guixml::visualize(){
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("Open..", "Ctrl+O")) { /* Open XML File */ }
+                if (ImGui::MenuItem("Open..", "Ctrl+O")){
+                    std::string file_name = file_dialog();
+                    if (!file_name.empty()){
+                        get_xml_values(file_name);
+                    }
+                }
                 if (ImGui::MenuItem("Save XML", "Ctrl+S")){
-                    // MAIN BLOCK
-                    set_xml_value("latitude", "helios", latitude);
-                    set_xml_value("longitude", "helios", longitude);
-                    set_xml_value("UTC_offset", "helios", UTC_offset);
-                    set_xml_value("csv_weather_file", "helios", csv_weather_file);
-                    set_xml_value("domain_origin", "helios", domain_origin);
-                    set_xml_value("domain_extent", "helios", domain_extent);
-                    set_xml_value("ground_resolution", "helios", ground_resolution);
-                    set_xml_value("ground_texture_file", "helios", ground_texture_file);
-                    // Canopy Block
-                    canopy_labels = set_node_labels("label", "canopy_block", labels);
-                    set_xml_values("canopy_origin", "canopy_block", canopy_origins);
-                    set_xml_values("plant_count", "canopy_block", plant_counts);
-                    set_xml_values("plant_spacing", "canopy_block", plant_spacings);
-                    set_xml_values("plant_library_name", "canopy_block", plant_library_names);
-                    set_xml_values("plant_age", "canopy_block", plant_ages);
-                    set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
-                    // Radiation Block
-                    set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
-                    set_xml_value("direct_ray_count", "radiation", direct_ray_count);
-                    set_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
-                    set_xml_value("scattering_depth", "radiation", scattering_depth);
-                    set_xml_value("air_turbidity", "radiation", air_turbidity);
-                    set_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
-                    set_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
-                    set_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
-                    set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
-                    set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
-                    set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
-                    // RIG BLOCK
-                    rig_dict = set_node_labels("label", "rig", rig_labels);
-                    set_xml_values("camera_position", "rig", camera_positions);
-                    set_xml_values("camera_lookat", "rig", camera_lookats);
-                    set_xml_values("camera_label", "rig", camera_labels);
-                    set_xml_values("camera_resolution", "rig", camera_resolutions);
-                    set_xml_values("focal_plane_distances", "rig", focal_plane_distances);
-                    set_xml_values("lens_diameter", "rig", lens_diameters);
-                    set_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
-                    set_xml_values("HFOV", "rig", HFOVs);
-                    // BuildGeometry(xml_input_file, &plantarchitecture, &context);
-                    // xmldoc.save_file("../inputs/inputs.xml");
-                    xmldoc.save_file(xml_input_file.c_str());
+                    set_xml_values();
                 }
                 if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
                 ImGui::EndMenu();
@@ -1079,53 +1052,19 @@ void guixml::visualize(){
             ImGui::EndMenuBar();
         }
         if (ImGui::Button("Reload")) {
-            // domain_extent = vec2( domain_extent.x, domain_extent.y );
-            // node = helios.child("domain_extent");
-            // node.text().set(vec_to_string(domain_extent).c_str());
-
-            // MAIN BLOCK
-            set_xml_value("latitude", "helios", latitude);
-            set_xml_value("longitude", "helios", longitude);
-            set_xml_value("UTC_offset", "helios", UTC_offset);
-            set_xml_value("csv_weather_file", "helios", csv_weather_file);
-            set_xml_value("domain_origin", "helios", domain_origin);
-            set_xml_value("domain_extent", "helios", domain_extent);
-            set_xml_value("ground_resolution", "helios", ground_resolution);
-            set_xml_value("ground_texture_file", "helios", ground_texture_file);
-            // Canopy Block
-            canopy_labels = set_node_labels("label", "canopy_block", labels);
-            set_xml_values("canopy_origin", "canopy_block", canopy_origins);
-            set_xml_values("plant_count", "canopy_block", plant_counts);
-            set_xml_values("plant_spacing", "canopy_block", plant_spacings);
-            set_xml_values("plant_library_name", "canopy_block", plant_library_names);
-            set_xml_values("plant_age", "canopy_block", plant_ages);
-            set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
-            // Radiation Block
-            set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
-            set_xml_value("direct_ray_count", "radiation", direct_ray_count);
-            set_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
-            set_xml_value("scattering_depth", "radiation", scattering_depth);
-            set_xml_value("air_turbidity", "radiation", air_turbidity);
-            set_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
-            set_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
-            set_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
-            set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
-            set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
-            set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
-            // RIG BLOCK
-            rig_dict = set_node_labels("label", "rig", rig_labels);
-            set_xml_values("camera_position", "rig", camera_positions);
-            set_xml_values("camera_lookat", "rig", camera_lookats);
-            set_xml_values("camera_label", "rig", camera_labels);
-            set_xml_values("camera_resolution", "rig", camera_resolutions);
-            set_xml_values("focal_plane_distances", "rig", focal_plane_distances);
-            set_xml_values("lens_diameter", "rig", lens_diameters);
-            set_xml_values("FOV_aspect_ratio", "rig", FOV_aspect_ratios);
-            set_xml_values("HFOV", "rig", HFOVs);
-            xmldoc.save_file(xml_input_file.c_str());
+            set_xml_values();
             visualizer->clearGeometry();
+            delete context;
+            delete plantarchitecture;
+            delete radiation;
+            delete solarposition;
+            delete energybalancemodel;
+            delete boundarylayerconductance;
+            delete cameraproperties;
             build_from_xml();
+            radiation->enableCameraModelVisualization();
             visualizer->buildContextGeometry(context);
+            visualizer->addCoordinateAxes();
             visualizer->plotUpdate();
         }
         ImGui::SameLine();
@@ -1195,9 +1134,11 @@ void guixml::visualize(){
                 // ####### CSV Weather File ####### //
                 ImGui::SetNextItemWidth(60);
                 if (ImGui::Button("CSV Weather File")){
-                    // OpenFileDialog();
+                    std::string csv_weather_file_ = file_dialog();
+                    if (!csv_weather_file_.empty()){
+                        csv_weather_file = csv_weather_file_;
+                    }
                 }
-                ImGui::SameLine();
                 ImGui::SameLine();
                 std::string shorten_weather_file = csv_weather_file;
                 size_t last_weather_file = csv_weather_file.rfind('/');
@@ -1235,7 +1176,10 @@ void guixml::visualize(){
                 // ####### GROUND TEXTURE File ####### //
                 ImGui::SetNextItemWidth(60);
                 if (ImGui::Button("Ground Texture File")){
-                    // OpenFileDialog();
+                    std::string ground_texture_file_ = file_dialog();
+                    if (!ground_texture_file_.empty()){
+                        ground_texture_file = ground_texture_file_;
+                    }
                 }
                 ImGui::SameLine();
                 std::string shorten = ground_texture_file;
@@ -1367,15 +1311,18 @@ void guixml::visualize(){
                 // ####### LOAD XML LIBRARY FILE ####### //
                 ImGui::SetNextItemWidth(60);
                 if (ImGui::Button("XML Library File")){
-                    // OpenFileDialog();
+                    std::string load_xml_library_file_ = file_dialog();
+                    if (!load_xml_library_file_.empty()){
+                        load_xml_library_file = load_xml_library_file_;
+                    }
                 }
                 ImGui::SameLine();
-                std::string shorten_ground_texture_file = ground_texture_file;
-                size_t last_ground_texture_file = ground_texture_file.rfind('/');
-                if (last_ground_texture_file != std::string::npos){
-                    shorten_ground_texture_file = ground_texture_file.substr(last_ground_texture_file + 1);
+                std::string shorten_xml_library_file = load_xml_library_file;
+                size_t last_xml_library_file = load_xml_library_file.rfind('/');
+                if (last_xml_library_file != std::string::npos){
+                    shorten_xml_library_file = load_xml_library_file.substr(last_xml_library_file + 1);
                 }
-                ImGui::Text("%s", shorten_ground_texture_file.c_str());
+                ImGui::Text("%s", shorten_xml_library_file.c_str());
                 // ####### SOLAR DIRECT SPECTRUM ####### //
                 // ImGui::SetNextItemWidth(60);
                 // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
@@ -1781,3 +1728,202 @@ void guixml::visualize(){
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
+
+
+void guixml::build_and_visualize(std::string xml_path){
+    build_from_xml(xml_path);
+    visualize();
+}
+
+
+void guixml::set_xml_values(){
+    // MAIN BLOCK
+    set_xml_value("latitude", "helios", latitude);
+    set_xml_value("longitude", "helios", longitude);
+    set_xml_value("UTC_offset", "helios", UTC_offset);
+    set_xml_value("csv_weather_file", "helios", csv_weather_file);
+    set_xml_value("domain_origin", "helios", domain_origin);
+    set_xml_value("domain_extent", "helios", domain_extent);
+    set_xml_value("ground_resolution", "helios", ground_resolution);
+    set_xml_value("ground_texture_file", "helios", ground_texture_file);
+    // CANOPY BLOCK
+    canopy_labels = set_node_labels("label", "canopy_block", labels);
+    set_xml_value("canopy_origin", "canopy_block", canopy_origin);
+    set_xml_value("plant_count", "canopy_block", plant_count);
+    set_xml_value("plant_spacing", "canopy_block", plant_spacing);
+    set_xml_value("plant_library_name", "canopy_block", plant_library_name);
+    set_xml_value("plant_age", "canopy_block", plant_age);
+    set_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
+    set_xml_values("canopy_origin", "canopy_block", canopy_origins);
+    set_xml_values("plant_count", "canopy_block", plant_counts);
+    set_xml_values("plant_spacing", "canopy_block", plant_spacings);
+    set_xml_values("plant_library_name", "canopy_block", plant_library_names);
+    set_xml_values("plant_age", "canopy_block", plant_ages);
+    set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    // RIG BLOCK
+    rig_dict = set_node_labels("label", "rig", rig_labels);
+    // set_xml_value("camera_position", "rig", camera_position);
+    // set_xml_value("camera_lookat", "rig", camera_lookat);
+    set_xml_value("camera_label", "rig", camera_label);
+    // set_xml_values("camera_position", "rig", camera_positions);
+    set_xml_values("camera_position", "rig", camera_position_vec);
+    // set_xml_values("camera_lookat", "rig", camera_lookats);
+    set_xml_values("camera_lookat", "rig", camera_lookat_vec);
+    // set_xml_values("camera_label", "rig", camera_labels);
+    set_xml_values("camera_label", "rig", rig_camera_labels);
+    set_keypoints("keypoint", "camera_position", keypoint_frames);
+    // CAMERA BLOCK
+    camera_dict = set_node_labels("label", "camera", camera_names);
+    set_xml_value("camera_resolution", "camera", camera_resolution);
+    set_xml_value("focal_plane_distance", "camera", focal_plane_distance);
+    set_xml_value("lens_diameter", "camera", lens_diameter);
+    set_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
+    set_xml_value("HFOV", "camera", HFOV);
+    set_xml_values("camera_resolution", "camera", camera_resolutions);
+    set_xml_values("focal_plane_distance", "camera", focal_plane_distances);
+    set_xml_values("lens_diameter", "camera", lens_diameters);
+    set_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
+    set_xml_values("HFOV", "camera", HFOVs);
+    // LIGHT BLOCK
+    set_xml_values("light_type", "light", light_types);
+    set_xml_values("light_direction", "light", light_direction_vec);
+    set_xml_values("light_rotation", "light", light_rotation_vec);
+    set_xml_values("light_size", "light", light_size_vec);
+    set_xml_values("light_radius", "light", light_radius_vec);
+    light_dict = set_node_labels("label", "light", light_names);
+    set_xml_values("light_label", "rig", rig_light_labels);
+    // RADIATION BLOCK
+    set_xml_value("direct_ray_count", "radiation", direct_ray_count);
+    set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
+    set_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
+    set_xml_value("scattering_depth", "radiation", scattering_depth);
+    set_xml_value("air_turbidity", "radiation", air_turbidity);
+    set_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
+    set_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
+    set_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
+    set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
+    set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
+    set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+    xmldoc.save_file(xml_input_file.c_str());
+}
+
+
+void guixml::set_xml_values(std::string xml_path){
+    xml_input_file = xml_path;
+    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+        helios_runtime_error(xml_error_string);
+    }
+    set_xml_values();
+}
+
+
+void guixml::get_xml_values(){
+    // MAIN BLOCK
+    get_xml_value("latitude", "helios", latitude);
+    get_xml_value("longitude", "helios", longitude);
+    get_xml_value("UTC_offset", "helios", UTC_offset);
+    get_xml_value("csv_weather_file", "helios", csv_weather_file);
+    get_xml_value("domain_origin", "helios", domain_origin);
+    get_xml_value("domain_extent", "helios", domain_extent);
+    get_xml_value("ground_resolution", "helios", ground_resolution);
+    get_xml_value("ground_texture_file", "helios", ground_texture_file);
+    // CANOPY BLOCK
+    labels.clear();
+    canopy_labels = get_node_labels("label", "canopy_block", labels);
+    get_xml_value("canopy_origin", "canopy_block", canopy_origin);
+    get_xml_value("plant_count", "canopy_block", plant_count);
+    get_xml_value("plant_spacing", "canopy_block", plant_spacing);
+    get_xml_value("plant_library_name", "canopy_block", plant_library_name);
+    get_xml_value("plant_age", "canopy_block", plant_age);
+    get_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
+    canopy_origins.clear();
+    get_xml_values("canopy_origin", "canopy_block", canopy_origins);
+    plant_counts.clear();
+    get_xml_values("plant_count", "canopy_block", plant_counts);
+    plant_spacings.clear();
+    get_xml_values("plant_spacing", "canopy_block", plant_spacings);
+    plant_library_names.clear();
+    get_xml_values("plant_library_name", "canopy_block", plant_library_names);
+    plant_ages.clear();
+    get_xml_values("plant_age", "canopy_block", plant_ages);
+    ground_clipping_heights.clear();
+    get_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    // RIG BLOCK
+    rig_labels.clear();
+    rig_dict = get_node_labels("label", "rig", rig_labels);
+    get_xml_value("camera_position", "rig", camera_position);
+    get_xml_value("camera_lookat", "rig", camera_lookat);
+    get_xml_value("camera_label", "rig", camera_label);
+    camera_positions.clear();
+    get_xml_values("camera_position", "rig", camera_positions);
+    camera_position_vec.clear();
+    get_xml_values("camera_position", "rig", camera_position_vec);
+    camera_lookats.clear();
+    get_xml_values("camera_lookat", "rig", camera_lookats);
+    camera_lookat_vec.clear();
+    get_xml_values("camera_lookat", "rig", camera_lookat_vec);
+    camera_labels.clear();
+    get_xml_values("camera_label", "rig", camera_labels);
+    rig_camera_labels.clear();
+    get_xml_values("camera_label", "rig", rig_camera_labels);
+    keypoint_frames.clear();
+    get_keypoints("keypoint", "camera_position", keypoint_frames);
+    // CAMERA BLOCK
+    camera_names.clear();
+    camera_dict = get_node_labels("label", "camera", camera_names);
+    get_xml_value("camera_resolution", "camera", camera_resolution);
+    get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
+    get_xml_value("lens_diameter", "camera", lens_diameter);
+    get_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
+    get_xml_value("HFOV", "camera", HFOV);
+    camera_resolutions.clear();
+    get_xml_values("camera_resolution", "camera", camera_resolutions);
+    focal_plane_distances.clear();
+    get_xml_values("focal_plane_distance", "camera", focal_plane_distances);
+    lens_diameters.clear();
+    get_xml_values("lens_diameter", "camera", lens_diameters);
+    FOV_aspect_ratios.clear();
+    get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
+    HFOVs.clear();
+    get_xml_values("HFOV", "camera", HFOVs);
+    // LIGHT BLOCK
+    light_types.clear();
+    get_xml_values("light_type", "light", light_types);
+    light_direction_vec.clear();
+    get_xml_values("light_direction", "light", light_direction_vec);
+    light_direction_sph_vec.clear();
+    for (vec3 vec : light_direction_vec){
+        light_direction_sph_vec.push_back(cart2sphere(vec));
+    }
+    light_rotation_vec.clear();
+    get_xml_values("light_rotation", "light", light_rotation_vec);
+    light_size_vec.clear();
+    get_xml_values("light_size", "light", light_size_vec);
+    light_radius_vec.clear();
+    get_xml_values("light_radius", "light", light_radius_vec);
+    light_names.clear();
+    light_dict = get_node_labels("label", "light", light_names);
+    rig_light_labels.clear();
+    get_xml_values("light_label", "rig", rig_light_labels);
+    // RADIATION BLOCK
+    get_xml_value("direct_ray_count", "radiation", direct_ray_count);
+    get_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
+    get_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
+    get_xml_value("scattering_depth", "radiation", scattering_depth);
+    get_xml_value("air_turbidity", "radiation", air_turbidity);
+    get_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
+    get_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
+    get_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
+    get_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
+    get_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
+    get_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+}
+
+void guixml::get_xml_values(std::string xml_path){
+    xml_input_file = xml_path;
+    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+        helios_runtime_error(xml_error_string);
+    }
+    get_xml_values();
+}
+
