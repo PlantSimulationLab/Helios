@@ -25,7 +25,6 @@ Copyright (C) 2016-2025 Brian Bailey
 #include "PlantArchitecture.h"
 #include "RadiationModel.h"
 #include "SolarPosition.h"
-
 #include "Visualizer.h"
 
 #include "InitializeSimulation.h"
@@ -34,9 +33,9 @@ Copyright (C) 2016-2025 Brian Bailey
 #include "InitializeEnergyBalance.h"
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_stdlib.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+#include "misc/cpp/imgui_stdlib.h"
 #include "GLFW/glfw3.h"
 
 #include <chrono>
