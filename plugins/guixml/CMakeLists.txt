@@ -5,20 +5,31 @@ project(helios)
 
 include_directories(include)
 include_directories(../../core/include)
-#TODO: make everything below conditional
-include_directories(../boundarylayerconductance/include)
+#TODO: make plugins conditional
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../boundarylayerconductance/include")
 include_directories(../energybalance/include)
 include_directories(../plantarchitecture/include)
-
 include_directories(../radiation/include)
-#include_directories("${OPTIX_PATH}include")
 include_directories(../solarposition/include)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(guixml STATIC "src/BuildGeometry.cpp;src/guixml.cpp;src/InitializeEnergyBalance.cpp;src/InitializeRadiation.cpp;src/InitializeSimulation.cpp;")
+add_library(guixml STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/BuildGeometry.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/guixml.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeEnergyBalance.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeRadiation.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp")
 
 target_include_directories(guixml PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
@@ -29,7 +40,7 @@ target_include_directories(guixml PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
 )
 
-#RADIATION
+# CUDA + OPTIX
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
     include_directories(${CUDA_INCLUDE_DIRS})
@@ -76,7 +87,7 @@ if(NOT DEFINED OPTIX_PATH)
 endif(NOT DEFINED OPTIX_PATH)
 message(STATUS "OptiX include directory: ${OPTIX_PATH}include")
 
-# RADIATION END
+# CUDA + OPTIX END
 
 target_link_libraries( guixml energybalance )
 target_link_libraries( guixml plantarchitecture )
@@ -87,7 +98,8 @@ target_link_libraries( guixml visualizer )
 include_directories(lib/imgui)
 include_directories(lib/imgui/backends)
 include_directories(lib/imgui/misc/cpp)
+target_include_directories( guixml PUBLIC lib/imgui )
+target_include_directories( guixml PUBLIC lib/imgui/backends )
+target_include_directories( guixml PUBLIC lib/imgui/misc/cpp )
 
-add_library(imgui STATIC "lib/imgui/imgui.cpp;lib/imgui/imgui_draw.cpp;lib/imgui/imgui_widgets.cpp;lib/imgui/imgui_demo.cpp;lib/imgui/imgui_tables.cpp;lib/imgui/backends/imgui_impl_glfw.cpp;lib/imgui/backends/imgui_impl_opengl3.cpp;lib/imgui/misc/cpp/imgui_stdlib.cpp;")
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui" PARENT_SCOPE )
+set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )
