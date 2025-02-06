@@ -68,6 +68,10 @@ std::vector<vec3> interpolate(std::vector<int> keypoints, std::vector<vec3> posi
 std::string file_dialog(){
     std::string file_name;
     #ifdef _WIN32
+        // save CWD
+        char CWD[MAX_PATH];
+        GetCurrentDirectory(MAX_PATH, CWD);
+
         OPENFILENAME ofn;
         char szFile[260] = {0};
 
@@ -89,6 +93,10 @@ std::string file_dialog(){
             std::cout << "No file selected." << std::endl;
             return "";
         }
+
+        // correct CWD
+        SetCurrentDirectory(CWD);
+
         file_name = (std::string)ofn.lpstrFile;
     #endif
 
@@ -963,7 +971,7 @@ void guixml::visualize(){
             origin_position = perspectiveTransformationMatrix * origin_position;
             ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
                                             windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
-            ImGui::SetNextWindowSize(ImVec2(100, 10), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(110, 10), ImGuiCond_Always);
             // double check above
             ImGui::Begin(current_label.c_str(), &my_tool_active);
             ImGui::End();
@@ -975,6 +983,7 @@ void guixml::visualize(){
             origin_position = perspectiveTransformationMatrix * origin_position;
             ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
                                             windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(110, 10), ImGuiCond_Always);
             ImGui::Begin(current_label.c_str(), &my_tool_active);
             ImGui::End();
             // vec3 scale(1,1,1);
@@ -1032,8 +1041,7 @@ void guixml::visualize(){
                     visualization_type = "radiation_flux_LW";
                     switch_visualization = true;
                 }
-                if (switch_visualization)
-                {
+                if (switch_visualization){
                     const char* font_name = "LCD";
                     visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
                         RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);

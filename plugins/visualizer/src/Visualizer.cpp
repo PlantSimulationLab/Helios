@@ -2307,9 +2307,58 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     std::vector<std::vector<uint> > maskData; //This will hold the letter mask data
 
     //Load the font
-    char font[100];
-    std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
-    if(FT_New_Face(ft, font, 0, &face)!=0) {
+    std::string font;
+    // std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
+    font = "plugins/visualizer/fonts/" + (std::string) fontname + ".ttf";
+    auto error = FT_New_Face(ft, font.c_str(), 0, &face);
+    if (error != 0) {
+        switch (error) {
+            case FT_Err_Ok: ; // do nothing
+            case FT_Err_Cannot_Open_Resource: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot open resource.");
+            case FT_Err_Unknown_File_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unknown file format.");
+            case FT_Err_Invalid_File_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid file format.");
+            case FT_Err_Invalid_Version: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid FreeType version.");
+            case FT_Err_Lower_Module_Version: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Lower module version.");
+            case FT_Err_Invalid_Argument: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid argument.");
+            case FT_Err_Unimplemented_Feature: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unimplemented feature.");
+            case FT_Err_Invalid_Table: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid table.");
+            case FT_Err_Invalid_Offset: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid offset.");
+            case FT_Err_Array_Too_Large: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Array too large.");
+            case FT_Err_Missing_Module: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Missing module.");
+            case FT_Err_Out_Of_Memory: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Out of memory.");
+            case FT_Err_Invalid_Face_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid face handle.");
+            case FT_Err_Invalid_Size_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid size handle.");
+            case FT_Err_Invalid_Slot_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid slot handle.");
+            case FT_Err_Invalid_CharMap_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid charmap handle.");
+            case FT_Err_Invalid_Glyph_Index: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid glyph index.");
+            case FT_Err_Invalid_Character_Code: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid character code.");
+            case FT_Err_Invalid_Glyph_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid glyph format.");
+            case FT_Err_Cannot_Render_Glyph: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Cannot render glyph.");
+            case FT_Err_Invalid_Outline: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid outline.");
+            case FT_Err_Invalid_Composite: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid composite glyph.");
+            case FT_Err_Too_Many_Hints: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too many hints.");
+            case FT_Err_Invalid_Pixel_Size: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid pixel size.");
+            case FT_Err_Invalid_Library_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid library handle.");
+            case FT_Err_Invalid_Stream_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid stream handle.");
+            case FT_Err_Invalid_Frame_Operation: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid frame operation.");
+            case FT_Err_Nested_Frame_Access: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Nested frame access.");
+            case FT_Err_Invalid_Frame_Read: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid frame read.");
+            case FT_Err_Raster_Uninitialized: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster uninitialized.");
+            case FT_Err_Raster_Corrupted: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster corrupted.");
+            case FT_Err_Raster_Overflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster overflow.");
+            case FT_Err_Raster_Negative_Height: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster negative height.");
+            case FT_Err_Too_Many_Caches: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too many caches.");
+            case FT_Err_Invalid_Opcode: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid opcode.");
+            case FT_Err_Too_Few_Arguments: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too few arguments.");
+            case FT_Err_Stack_Overflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Stack overflow.");
+            case FT_Err_Stack_Underflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Stack underflow.");
+            case FT_Err_Ignore: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Ignore.");
+            case FT_Err_No_Unicode_Glyph_Name: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): No Unicode glyph name.");
+            case FT_Err_Missing_Property: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Missing property.");
+            default: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unknown FreeType error.");
+        }
+    }
+    if(error!=0) {
         helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not open font '" + std::string(fontname) + "'");
     }
 

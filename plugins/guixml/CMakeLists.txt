@@ -6,6 +6,7 @@ project(helios)
 include_directories(include)
 include_directories(../../core/include)
 #TODO: make plugins conditional
+# solarposition needs to be loaded if radiation is loaded
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../boundarylayerconductance/include")
 include_directories(../energybalance/include)
 include_directories(../plantarchitecture/include)
