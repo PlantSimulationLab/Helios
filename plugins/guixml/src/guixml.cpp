@@ -1194,20 +1194,29 @@ void guixml::visualize(){
             if (ImGui::BeginTabItem("Canopy")){
                 current_tab = "Canopy";
                 // ####### CANOPY ORIGIN ####### //
-                static const char* current_item = "canopy_0";
-                if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+                if (ImGui::BeginCombo("##combo", current_canopy.c_str()))
                 {
                     for (int n = 0; n < labels.size(); n++){
-                        bool is_selected = (current_item == labels[n]); // You can store your selection however you want, outside or inside your objects
+                        bool is_selected = (current_canopy == labels[n]);
                         if (ImGui::Selectable(labels[n].c_str(), is_selected))
-                            current_item = labels[n].c_str();
+                            current_canopy = labels[n];
                         if (is_selected)
-                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                        ImGui::SetItemDefaultFocus();
                 }
                     ImGui::EndCombo();
                 }
                 ImGui::SetNextItemWidth(100);
-                ImGui::InputText("##canopy_name", &labels[canopy_labels[(std::string) current_item]]);
+                std::string prev_canopy_name = labels[canopy_labels[current_canopy]];
+                ImGui::InputText("##canopy_name", &labels[canopy_labels[current_canopy]]);
+                if (labels[canopy_labels[current_canopy]] != prev_canopy_name){
+                    int temp = canopy_labels[current_canopy];
+                    current_canopy = labels[canopy_labels[current_canopy]];
+                    std::map<std::string, int>::iterator current_canopy_iter = canopy_labels.find(prev_canopy_name);
+                    if (current_canopy_iter != canopy_labels.end()){
+                        canopy_labels.erase(current_canopy_iter);
+                    }
+                    canopy_labels[current_canopy] = temp;
+                }
                 ImGui::SameLine();
                 if (ImGui::Button("Add Canopy")){
                     std::string default_canopy_label = "canopy";
@@ -1225,7 +1234,7 @@ void guixml::visualize(){
                     plant_ages.push_back(plant_age);
                     ground_clipping_heights.push_back(ground_clipping_height);
                     labels.push_back(new_canopy_label);
-                    current_item = new_canopy_label.c_str();
+                    // current_canopy = new_canopy_label;
                     std::string parent = "canopy_block";
                     pugi::xml_node canopy_block = helios.child(parent.c_str());
                     pugi::xml_node new_canopy_node = helios.append_copy(canopy_block);
@@ -1254,40 +1263,40 @@ void guixml::visualize(){
                     node_label.set_value(new_canopy_label.c_str());
                 }
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels[(std::string) current_item]].x);
+                ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels[current_canopy]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels[(std::string) current_item]].y);
+                ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels[current_canopy]].y);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels[(std::string) current_item]].z);
+                ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels[current_canopy]].z);
                 ImGui::SameLine();
                 ImGui::Text("Canopy Origin");
                 // ####### PLANT COUNT ####### //
                 ImGui::SetNextItemWidth(70);
-                ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[current_item]].x);
+                ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[current_canopy]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(70);
-                ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels[current_item]].y);
+                ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels[current_canopy]].y);
                 ImGui::SameLine();
                 ImGui::Text("Plant Count");
                 // ####### PLANT SPACING ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels[current_item]].x);
+                ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels[current_canopy]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels[current_item]].y);
+                ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels[current_canopy]].y);
                 ImGui::SameLine();
                 ImGui::Text("Plant Spacing");
                 // ####### PLANT LIBRARY NAME ####### //
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputText("Plant Library", &plant_library_names[rig_dict[(std::string) current_item]]);
+                ImGui::InputText("Plant Library", &plant_library_names[canopy_labels[current_canopy]]);
                 // ####### PLANT AGE ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[current_item]]);
+                ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[current_canopy]]);
                 // ####### GROUND CLIPPING HEIGHT ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[current_item]]);
+                ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[current_canopy]]);
 
                 ImGui::EndTabItem();
             }
@@ -1344,14 +1353,12 @@ void guixml::visualize(){
             if (ImGui::BeginTabItem("Spectra")){
                 current_tab = "Spectra";
                 // std::vector<uint> ground_UUIDs, leaf_UUIDs, petiolule_UUIDs, petiole_UUIDs, internode_UUIDs, peduncle_UUIDs, petal_UUIDs, pedicel_UUIDs, fruit_UUIDs;
-                static const char* current_primitive = "Ground";
-                static const char* current_band = "red";
-                if (ImGui::BeginCombo("##combo_primitive", current_primitive)) // The second parameter is the label previewed before opening the combo.
+                if (ImGui::BeginCombo("##combo_primitive", current_primitive.c_str()))
                 {
                     for (int m = 0; m < primitive_names.size(); m++){
-                        bool is_primitive_selected = (current_primitive == primitive_names[m]); // You can store your selection however you want, outside or inside your objects
+                        bool is_primitive_selected = (current_primitive == primitive_names[m]);
                         if (ImGui::Selectable(primitive_names[m].c_str(), is_primitive_selected))
-                            current_primitive = primitive_names[m].c_str();
+                            current_primitive = primitive_names[m];
                         if (is_primitive_selected)
                             ImGui::SetItemDefaultFocus();
                     }
@@ -1359,11 +1366,11 @@ void guixml::visualize(){
                 }
                 ImGui::SameLine();
                 ImGui::Text("Primitive Types");
-                if (ImGui::BeginCombo("##combo_band", current_band)){
+                if (ImGui::BeginCombo("##combo_band", current_band.c_str())){
                     for (int n = 0; n < bandlabels.size(); n++){
                         bool is_band_selected = (current_band == bandlabels[n]);
                         if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                            current_band = bandlabels[n].c_str();
+                            current_band = bandlabels[n];
                         if (is_band_selected)
                             ImGui::SetItemDefaultFocus();
                     }
@@ -1372,22 +1379,22 @@ void guixml::visualize(){
                 ImGui::SameLine();
                 ImGui::Text("Bands");
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("Reflectivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][0]);
+                ImGui::InputFloat("Reflectivity", &primitive_values[current_band][current_primitive][0]);
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("Transmissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][1]);
+                ImGui::InputFloat("Transmissivity", &primitive_values[current_band][current_primitive][1]);
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("Emissivity", &primitive_values[(std::string) current_band][(std::string) current_primitive][2]);
+                ImGui::InputFloat("Emissivity", &primitive_values[current_band][current_primitive][2]);
                 ImGui::EndTabItem();
             }
+            // RIG TAB
             if (ImGui::BeginTabItem("Rig")){
                 current_tab = "Rig";
-                static const char* current_rig = "rig_0";
-                if (ImGui::BeginCombo("##rig_combo", current_rig)) // The second parameter is the label previewed before opening the combo.
+                if (ImGui::BeginCombo("##rig_combo", current_rig.c_str())) // The second parameter is the label previewed before opening the combo.
                 {
                     for (int n = 0; n < rig_labels.size(); n++){
                         bool is_rig_selected = (current_rig == rig_labels[n]); // You can store your selection however you want, outside or inside your objects
                         if (ImGui::Selectable(rig_labels[n].c_str(), is_rig_selected))
-                            current_rig = rig_labels[n].c_str();
+                            current_rig = rig_labels[n];
                             current_cam_position = "0";
                         if (is_rig_selected)
                         ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
@@ -1407,15 +1414,18 @@ void guixml::visualize(){
                     camera_positions.push_back(camera_position);
                     camera_lookats.push_back(camera_lookat);
                     camera_labels.push_back(camera_label);
-                    camera_position_vec.push_back(camera_position_vec[rig_dict[(std::string) current_rig]]);
-                    camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[(std::string) current_rig]]);
+                    camera_position_vec.push_back(camera_position_vec[rig_dict[current_rig]]);
+                    camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[current_rig]]);
                     // camera_resolutions.push_back(camera_resolution);
                     // focal_plane_distances.push_back(focal_plane_distance);
                     // lens_diameters.push_back(lens_diameter);
                     // FOV_aspect_ratios.push_back(FOV_aspect_ratio);
                     // HFOVs.push_back(HFOV);
                     rig_labels.push_back(new_rig_label);
-                    current_rig = new_rig_label.c_str();
+                    rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
+                    rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
+                    keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
+                    // current_rig = new_rig_label;
                     std::string parent = "rig";
                     pugi::xml_node rig_block = helios.child(parent.c_str());
                     pugi::xml_node new_rig_node = helios.append_copy(rig_block);
@@ -1424,7 +1434,17 @@ void guixml::visualize(){
                     node_label.set_value(new_rig_label.c_str());
                 }
                 ImGui::SetNextItemWidth(100);
-                ImGui::InputText("##rig_name", &rig_labels[rig_dict[(std::string) current_rig]]);
+                std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
+                ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
+                if (rig_labels[rig_dict[current_rig]] != prev_rig_name){
+                    int temp = rig_dict[current_rig];
+                    current_rig = rig_labels[rig_dict[current_rig]];
+                    std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
+                    if (current_rig_iter != rig_dict.end()){
+                        rig_dict.erase(current_rig_iter);
+                    }
+                    rig_dict[current_rig] = temp;
+                }
                 ImGui::SameLine();
                 ImGui::Text("Rig Name");
                 // ####### CAMERA LABEL ####### //
@@ -1453,7 +1473,7 @@ void guixml::visualize(){
 
                     ImGui::SetNextItemWidth(60);
 
-                    std::set curr_set = rig_camera_labels[rig_dict[(std::string) current_rig]];
+                    std::set curr_set = rig_camera_labels[rig_dict[current_rig]];
                     // if (i % 3 != 0){
                     //     ImGui::SameLine();
                     // }
@@ -1461,9 +1481,9 @@ void guixml::visualize(){
                     ImGui::PushID(i);
                     if(ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)){
                         if (isCameraSelected){
-                            rig_camera_labels[rig_dict[(std::string) current_rig]].insert(camera_name);
+                            rig_camera_labels[rig_dict[current_rig]].insert(camera_name);
                         }else{
-                            rig_camera_labels[rig_dict[(std::string) current_rig]].erase(camera_name);
+                            rig_camera_labels[rig_dict[current_rig]].erase(camera_name);
                         }
                     }
                     ImGui::PopID();
@@ -1475,14 +1495,14 @@ void guixml::visualize(){
 
                     ImGui::SetNextItemWidth(60);
 
-                    std::set curr_rig_light = rig_light_labels[rig_dict[(std::string) current_rig]];
+                    std::set curr_rig_light = rig_light_labels[rig_dict[current_rig]];
                     bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
                     ImGui::PushID(i);
                     if(ImGui::Checkbox(light_name.c_str(), &isLightSelected)){
                         if (isLightSelected){
-                            rig_light_labels[rig_dict[(std::string) current_rig]].insert(light_name);
+                            rig_light_labels[rig_dict[current_rig]].insert(light_name);
                         }else{
-                            rig_light_labels[rig_dict[(std::string) current_rig]].erase(light_name);
+                            rig_light_labels[rig_dict[current_rig]].erase(light_name);
                         }
                     }
                     ImGui::PopID();
@@ -1492,11 +1512,11 @@ void guixml::visualize(){
                 cam_pos_value << current_cam_position.c_str();
                 int current_cam_position_;
                 cam_pos_value >> current_cam_position_;
-                std::string current_keypoint_ = std::to_string(keypoint_frames[rig_dict[(std::string) current_rig]][current_cam_position_]);
-                if (ImGui::BeginCombo("##cam_combo", current_keypoint_.c_str())){
-                    for (int n = 0; n < camera_position_vec[rig_dict[(std::string) current_rig]].size(); n++){
+                current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
+                if (ImGui::BeginCombo("##cam_combo", current_keypoint.c_str())){
+                    for (int n = 0; n < camera_position_vec[rig_dict[current_rig]].size(); n++){
                         std::string select_cam_position = std::to_string(n);
-                        std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[(std::string) current_rig]][n]);
+                        std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n]);
                         bool is_pos_selected = (current_cam_position == select_cam_position); // You can store your selection however you want, outside or inside your objects
                         if (ImGui::Selectable(selected_keypoint.c_str(), is_pos_selected)){
                             current_cam_position = std::to_string(n);
@@ -1510,52 +1530,52 @@ void guixml::visualize(){
                 cam_pos_value >> current_cam_position_;
                 ImGui::SameLine();
                 if (ImGui::Button("Add Keypoint")){
-                    camera_position_vec[rig_dict[(std::string) current_rig]].push_back(camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_]);
-                    camera_lookat_vec[rig_dict[(std::string) current_rig]].push_back(camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_]);
-                    keypoint_frames[rig_dict[(std::string) current_rig]].push_back(keypoint_frames[rig_dict[(std::string) current_rig]].back() + 1);
+                    camera_position_vec[rig_dict[current_rig]].push_back(camera_position_vec[rig_dict[current_rig]][current_cam_position_]);
+                    camera_lookat_vec[rig_dict[current_rig]].push_back(camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]);
+                    keypoint_frames[rig_dict[current_rig]].push_back(keypoint_frames[rig_dict[current_rig]].back() + 1);
                 }
                 // ####### KEYPOINT FRAME ####### //
                 ImGui::SetNextItemWidth(80);
-                ImGui::InputInt("Keypoint Frame", &keypoint_frames[rig_dict[(std::string) current_rig]][current_cam_position_]);
+                ImGui::InputInt("Keypoint Frame", &keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
                 // ####### CAMERA POSITION ####### //
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_].x);
+                ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_].y);
+                ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
+                ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
                 ImGui::Text("Rig Position");
                 // ####### CAMERA LOOKAT ####### //
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].x);
+                ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].y);
+                ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[(std::string) current_rig]][current_cam_position_].z);
+                ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
                 ImGui::SameLine();
                 ImGui::Text("Rig Lookat");
                 // ####### NUMBER OF IMAGES ####### //
                 ImGui::SetNextItemWidth(80);
                 ImGui::InputInt("Total Number of Frames", &num_images);
                 num_images = std::max(num_images,
-                    *std::max_element(keypoint_frames[rig_dict[(std::string) current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
+                    *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
                 ImGui::EndTabItem();
             }
+            // CAMERA TAB
             if (ImGui::BeginTabItem("Camera")){
                 current_tab = "Camera";
-                static const char* current_cam = camera_names[0].c_str();
-                if (ImGui::BeginCombo("##camera_combo", current_cam)){
+                if (ImGui::BeginCombo("##camera_combo", current_cam.c_str())){
                     for (int n = 0; n < camera_names.size(); n++){
-                        bool is_cam_selected = (current_cam == camera_names[n]); // You can store your selection however you want, outside or inside your objects
+                        bool is_cam_selected = (current_cam == camera_names[n]);
                         if (ImGui::Selectable(camera_names[n].c_str(), is_cam_selected))
-                            current_cam = camera_names[n].c_str();
+                            current_cam = camera_names[n];
                         if (is_cam_selected)
-                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                        ImGui::SetItemDefaultFocus();
                     }
                     ImGui::EndCombo();
                 }
@@ -1583,40 +1603,50 @@ void guixml::visualize(){
                     node_label.set_value(new_cam_name.c_str());
                 }
                 ImGui::SetNextItemWidth(100);
-                ImGui::InputText("##cam_name", &camera_names[camera_dict[(std::string) current_cam]]);
+                std::string prev_cam_name = camera_names[camera_dict[current_cam]];
+                ImGui::InputText("##cam_name", &camera_names[camera_dict[current_cam]]);
+                if (camera_names[camera_dict[current_cam]] != prev_cam_name){
+                    int temp = camera_dict[current_cam];
+                    current_cam = camera_names[camera_dict[current_cam]];
+                    std::map<std::string, int>::iterator current_cam_iter = camera_dict.find(prev_cam_name);
+                    if (current_cam_iter != camera_dict.end()){
+                        camera_dict.erase(current_cam_iter);
+                    }
+                    camera_dict[current_cam] = temp;
+                }
                 ImGui::SameLine();
                 ImGui::Text("Camera Label");
                // ####### CAMERA RESOLUTION ####### //
                 ImGui::SetNextItemWidth(90);
-                ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[(std::string) current_cam]].x);
+                ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(90);
-                ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[(std::string) current_cam]].y);
+                ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[current_cam]].y);
                 ImGui::SameLine();
                 ImGui::Text("Camera Resolution");
                 // ####### FOCAL PLANE DISTANCE ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[(std::string) current_cam]]);
+                ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[current_cam]]);
                 // ####### LENS DIAMETER ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[(std::string) current_cam]]);
+                ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[current_cam]]);
                 // ####### FOV ASPECT RATIO ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[(std::string) current_cam]]);
+                ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[current_cam]]);
                 // ####### HFOV ####### //
                 ImGui::SetNextItemWidth(50);
-                ImGui::InputFloat("HFOV", &HFOVs[camera_dict[(std::string) current_cam]]);
+                ImGui::InputFloat("HFOV", &HFOVs[camera_dict[current_cam]]);
                 //
                 ImGui::EndTabItem();
             }
+            // LIGHT TAB
             if (ImGui::BeginTabItem("Light")){
                 current_tab = "Light";
-                static const char* current_light = light_names[0].c_str();
-                if (ImGui::BeginCombo("##light_combo", current_light)){
+                if (ImGui::BeginCombo("##light_combo", current_light.c_str())){
                     for (int n = 0; n < light_names.size(); n++){
                         bool is_light_selected = (current_light == light_names[n]);
                         if (ImGui::Selectable(light_names[n].c_str(), is_light_selected))
-                            current_light = light_names[n].c_str();
+                            current_light = light_names[n];
                         if (is_light_selected)
                         ImGui::SetItemDefaultFocus();
                     }
@@ -1632,12 +1662,12 @@ void guixml::visualize(){
                         new_light_name = default_light_name + "_" + std::to_string(count);
                     }
                     light_dict.insert({new_light_name, light_names.size()});
-                    light_types.push_back(light_types[light_dict[(std::string) current_light]]);
-                    light_direction_vec.push_back(light_direction_vec[light_dict[(std::string) current_light]]);
-                    light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[(std::string) current_light]]);
-                    light_rotation_vec.push_back(light_rotation_vec[light_dict[(std::string) current_light]]);
-                    light_size_vec.push_back(light_size_vec[light_dict[(std::string) current_light]]);
-                    light_radius_vec.push_back(light_radius_vec[light_dict[(std::string) current_light]]);
+                    light_types.push_back(light_types[light_dict[current_light]]);
+                    light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);
+                    light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[current_light]]);
+                    light_rotation_vec.push_back(light_rotation_vec[light_dict[current_light]]);
+                    light_size_vec.push_back(light_size_vec[light_dict[current_light]]);
+                    light_radius_vec.push_back(light_radius_vec[light_dict[current_light]]);
                     light_names.push_back(new_light_name);
                     std::string parent = "light";
                     pugi::xml_node light_block = helios.child(parent.c_str());
@@ -1647,58 +1677,84 @@ void guixml::visualize(){
                     node_label.set_value(new_light_name.c_str());
                 }
                 ImGui::SetNextItemWidth(100);
-                ImGui::InputText("##light_name", &light_names[light_dict[(std::string) current_light]]);
+                std::string prev_light_name = light_names[light_dict[current_light]];
+                ImGui::InputText("##light_name", &light_names[light_dict[current_light]]);
+                if (light_names[light_dict[current_light]] != prev_light_name){
+                    int temp = light_dict[current_light];
+                    current_light = light_names[light_dict[current_light]];
+                    std::map<std::string, int>::iterator current_light_iter = light_dict.find(prev_light_name);
+                    if (current_light_iter != light_dict.end()){
+                        light_dict.erase(current_light_iter);
+                    }
+                    light_dict[current_light] = temp;
+                }
                 ImGui::SameLine();
                 ImGui::Text("Light Label");
                 // ####### LIGHT TYPE ############ //
-                static const char* current_type = light_types[light_dict[(std::string) current_light]].c_str();
-                if (ImGui::BeginCombo("##light_type_combo", current_type)){
+                if (ImGui::BeginCombo("##light_type_combo", light_types[light_dict[current_light]].c_str())){
                     for (int n = 0; n < all_light_types.size(); n++){
-                        bool is_type_selected = (current_type == all_light_types[n]);
+                        bool is_type_selected = (light_types[light_dict[current_light]] == all_light_types[n]);
                         if (ImGui::Selectable(all_light_types[n].c_str(), is_type_selected)){
-                            current_type = all_light_types[n].c_str();
-                            light_types[light_dict[(std::string) current_light]] = current_type;
+                            light_types[light_dict[current_light]] = all_light_types[n];
                         }
                         if (is_type_selected)
                             ImGui::SetItemDefaultFocus();
                     }
                     ImGui::EndCombo();
                 }
+                ImGui::SameLine();
+                ImGui::Text("Light Type");
+                // collimated -> direction
+                // disk       -> position, radius, rotation
+                // sphere     -> position, radius
+                // sunsphere  -> direction
+                // rectangle  -> position, size, rotation
                 // ####### LIGHT DIRECTION ####### //
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[(std::string) current_light]].x);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[(std::string) current_light]].y);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[(std::string) current_light]].z);
-                ImGui::SameLine();
-                ImGui::Text("Light Direction");
+                if (light_types[light_dict[(std::string) current_light]] == "collimated" ||
+                    light_types[light_dict[(std::string) current_light]] == "sunsphere"){
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[current_light]].x);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[current_light]].y);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[current_light]].z);
+                    ImGui::SameLine();
+                    ImGui::Text("Light Direction");
+                }
                 // ####### LIGHT ROTATION ####### //
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[(std::string) current_light]].x);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[(std::string) current_light]].y);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[(std::string) current_light]].z);
-                ImGui::SameLine();
-                ImGui::Text("Light Rotation");
+                if (light_types[light_dict[current_light]] == "disk" ||
+                    light_types[light_dict[current_light]] == "rectangle"){
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[current_light]].x);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[current_light]].y);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[current_light]].z);
+                    ImGui::SameLine();
+                    ImGui::Text("Light Rotation");
+                }
                 // ####### LIGHT SIZE ####### //
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[(std::string) current_light]].x);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[(std::string) current_light]].y);
-                ImGui::SameLine();
-                ImGui::Text("Light Size");
+                if (light_types[light_dict[current_light]] == "rectangle"){
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[current_light]].x);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[current_light]].y);
+                    ImGui::SameLine();
+                    ImGui::Text("Light Size");
+                }
                 // ####### LIGHT RADIUS ####### //
-                ImGui::SetNextItemWidth(90);
-                ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[(std::string) current_light]]);
-                ImGui::SameLine();
-                ImGui::Text("Light Radius");
+                if (light_types[light_dict[current_light]] == "disk" ||
+                    light_types[light_dict[current_light]] == "sphere"){
+                    ImGui::SetNextItemWidth(90);
+                    ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[current_light]]);
+                    ImGui::SameLine();
+                    ImGui::Text("Light Radius");
+                }
                 // LIGHT END
                 ImGui::EndTabItem();
             }
@@ -1830,6 +1886,7 @@ void guixml::get_xml_values(){
     // CANOPY BLOCK
     labels.clear();
     canopy_labels = get_node_labels("label", "canopy_block", labels);
+    current_canopy = labels[0];
     get_xml_value("canopy_origin", "canopy_block", canopy_origin);
     get_xml_value("plant_count", "canopy_block", plant_count);
     get_xml_value("plant_spacing", "canopy_block", plant_spacing);
@@ -1851,6 +1908,7 @@ void guixml::get_xml_values(){
     // RIG BLOCK
     rig_labels.clear();
     rig_dict = get_node_labels("label", "rig", rig_labels);
+    current_rig = rig_labels[0];
     get_xml_value("camera_position", "rig", camera_position);
     get_xml_value("camera_lookat", "rig", camera_lookat);
     get_xml_value("camera_label", "rig", camera_label);
@@ -1868,9 +1926,11 @@ void guixml::get_xml_values(){
     get_xml_values("camera_label", "rig", rig_camera_labels);
     keypoint_frames.clear();
     get_keypoints("keypoint", "camera_position", keypoint_frames);
+    current_keypoint = std::to_string(keypoint_frames[0][0]);
     // CAMERA BLOCK
     camera_names.clear();
     camera_dict = get_node_labels("label", "camera", camera_names);
+    current_cam = camera_names[0];
     get_xml_value("camera_resolution", "camera", camera_resolution);
     get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
     get_xml_value("lens_diameter", "camera", lens_diameter);
@@ -1903,6 +1963,7 @@ void guixml::get_xml_values(){
     get_xml_values("light_radius", "light", light_radius_vec);
     light_names.clear();
     light_dict = get_node_labels("label", "light", light_names);
+    current_light = light_names[0];
     rig_light_labels.clear();
     get_xml_values("light_label", "rig", rig_light_labels);
     // RADIATION BLOCK

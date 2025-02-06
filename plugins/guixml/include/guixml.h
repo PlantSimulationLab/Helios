@@ -416,6 +416,27 @@ class guixml {
     //! Visualization type
     std::string visualization_type = "RGB";
 
+    //! Currently selected canopy in the GUI
+    std::string current_canopy;
+
+    //! Currently selected rig in the GUI
+    std::string current_rig;
+
+    //! Currently selected camera in the GUI
+    std::string current_cam;
+
+    //! Currently selected light in the GUI
+    std::string current_light;
+
+    //! Currently selected keypoint in the GUI
+    std::string current_keypoint;
+
+    //! Currently selected primitive in the GUI
+    std::string current_primitive = "Leaf";
+
+    //! Currently selected radiation band in the GUI
+    std::string current_band = "red";
+
   public:
     //! Function to build context from XML
     void build_from_xml();
