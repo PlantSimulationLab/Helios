@@ -437,6 +437,9 @@ class guixml {
     //! Currently selected radiation band in the GUI
     std::string current_band = "red";
 
+    //! Depth MVP matrix
+    glm::mat4 depthMVP;
+
   public:
     //! Function to build context from XML
     void build_from_xml();

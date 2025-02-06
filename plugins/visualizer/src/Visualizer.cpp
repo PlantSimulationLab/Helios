@@ -3462,6 +3462,155 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
 }
 
+glm::mat4 Visualizer::plotInit() {
+
+    if( message_flag ){
+        std::cout << "Generating interactive plot..." << std::endl;
+    }
+
+//    glfwShowWindow( (GLFWwindow*) window);
+
+//    openWindow();
+
+    //Update the Context geometry (if needed)
+    if( contextGeomNeedsUpdate ){
+        buildContextGeometry_private();
+    }else{
+        colormap_current.setRange( colorbar_min, colorbar_max );
+    }
+
+    //Update
+    if( colorbar_flag==2 ){
+        addColorbarByCenter( colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current );
+    }
+
+    //Watermark
+    if( isWatermarkVisible ){
+        float hratio = float(Wdisplay)/float(Hdisplay);
+        float width = 0.2389f/0.8f/hratio;
+        addRectangleByCenter( make_vec3(0.75f*width,0.95f,0), make_vec2(width,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+    }
+
+    setupPlot();
+
+    //domain bounding box
+    vec2 xbounds, ybounds, zbounds;
+    getDomainBoundingBox( xbounds, ybounds, zbounds );
+
+    glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
+    //float bound_R = 2.f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
+    float bound_R = 0.75*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
+
+    glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
+
+    bool shadow_flag = false;
+    for( uint m=0; m<primaryLightingModel.size(); m++ ){
+        if( primaryLightingModel.at(m) == Visualizer::LIGHTING_PHONG_SHADOWED ){
+            shadow_flag = true;
+            break;
+        }
+    }
+
+    glm::mat4 depthMVP;
+
+    if( shadow_flag ){
+
+        // Depth buffer for shadows
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+        glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+        //glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+
+        // Clear the screen
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+        depthShader.useShader();
+
+        // Compute the MVP matrix from the light's point of view
+        glm::mat4 depthProjectionMatrix = glm::ortho<float>(-bound_R,bound_R,-bound_R,bound_R,-bound_R,bound_R);
+        glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir, view_center, glm::vec3(0,0,1));
+        depthMVP = depthProjectionMatrix * depthViewMatrix;
+
+        depthShader.setTransformationMatrix( depthMVP );
+
+        //bind depth texture
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
+
+        depthShader.enableTextureMaps();
+        depthShader.enableTextureMasks();
+
+        render( 1 );
+
+    }else{
+
+        depthMVP = glm::mat4(1.0);
+
+    }
+
+    assert(checkerrors());
+
+    std::vector<vec3> camera_output;
+
+    glfwShowWindow( (GLFWwindow*) window);
+
+    return depthMVP;
+
+}
+
+void Visualizer::plotOnce(glm::mat4 depthMVP) {
+    // Render to the screen
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,Wframebuffer,Hframebuffer);
+
+    glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
+
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    primaryShader.useShader();
+
+    updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
+
+    glm::mat4 biasMatrix(
+            0.5, 0.0, 0.0, 0.0,
+            0.0, 0.5, 0.0, 0.0,
+            0.0, 0.0, 0.5, 0.0,
+            0.5, 0.5, 0.5, 1.0
+    );
+
+    glm::mat4 DepthBiasMVP = biasMatrix*depthMVP;
+
+    primaryShader.setDepthBiasMatrix( DepthBiasMVP );
+
+    primaryShader.setTransformationMatrix( perspectiveTransformationMatrix );
+
+    primaryShader.enableTextureMaps();
+    primaryShader.enableTextureMasks();
+
+    primaryShader.setLightingModel( primaryLightingModel.at(0) );
+    primaryShader.setLightIntensity( lightintensity );
+
+    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glUniform1i(primaryShader.shadowmapUniform,1);
+
+    render( 0 );
+
+    // glfwPollEvents();
+    getViewKeystrokes( camera_eye_location, camera_lookat_center );
+
+    // glfwSwapBuffers((GLFWwindow*)window);
+
+    // glfwWaitEvents();
+
+    int width, height;
+    //glfwGetWindowSize((GLFWwindow*)window, &width, &height );
+    //Wdisplay = width;
+    //Hdisplay = height;
+    glfwGetFramebufferSize((GLFWwindow*)window, &width, &height );
+    Wframebuffer = width;
+    Hframebuffer = height;
+}
+
 void Visualizer::setupPlot(){
 
     glEnableVertexAttribArray(0); //position

@@ -872,6 +872,12 @@ public:
   //! Plot current geometry into an interactive graphics window
   std::vector<helios::vec3> plotInteractive();
 
+  //! Plot interactive setup
+  glm::mat4 plotInit();
+
+  //! Run one rendering loop from plotInteractive()
+  void plotOnce(glm::mat4);
+
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap();
 
