@@ -112,7 +112,9 @@ class guixml {
     helios::Context *context = nullptr;
 
     //! Visualizer
+#ifdef HELIOS_VISUALIZER
     Visualizer *visualizer = nullptr;
+#endif
 
     //! Plant Architecture
     PlantArchitecture *plantarchitecture = nullptr;
@@ -285,7 +287,8 @@ class guixml {
     std::vector<std::string> light_types;
 
     //! Vector of all possible light types.
-    std::vector<std::string> all_light_types = {"collimated", "sphere", "sunsphere", "rectangle", "disk"};
+    // std::vector<std::string> all_light_types = {"collimated", "sphere", "sunsphere", "rectangle", "disk"};
+    std::vector<std::string> all_light_types = {"sphere", "rectangle", "disk"};
 
     //! Vector of light positions for each light.
     std::vector<helios::vec3> light_direction_vec;
