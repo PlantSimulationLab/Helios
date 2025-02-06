@@ -853,7 +853,7 @@ void guixml::visualize(){
     bool switch_visualization = false;
 
     std::string current_cam_position = "0";
-
+    depthMVP = visualizer->plotInit();
     while ( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 ) {
         // Poll and handle events
         // glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -923,7 +923,6 @@ void guixml::visualize(){
         // glm::mat4 perspectiveTransformationMatrix = visualizer.getPerspectiveTransformationMatrix();
         // glm::vec4 canopy_origin_position = glm::vec4(camera_position.x, camera_position.y, camera_position.z, 1.0);
         // canopy_origin_position = perspectiveTransformationMatrix * canopy_origin_position;
-
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -938,12 +937,12 @@ void guixml::visualize(){
         //     user_input = true;
         // }
 
-        if (ImGui::IsKeyDown(ImGuiKey_Q)) {
-            user_input = true;
-        }
-
-        if (user_input)
-            visualizer->plotUpdate();
+        // if (ImGui::IsKeyDown(ImGuiKey_Q)) {
+        //     user_input = true;
+        // }
+        //
+        // if (user_input)
+        //     visualizer->plotUpdate();
 
         user_input = false;
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
@@ -959,18 +958,19 @@ void guixml::visualize(){
         //glm::mat4 depthMVP = visualizer->getDepthMVP();
         for (int n = 0; n < labels.size(); n++){
             current_label = labels[n];
-            vec3 canopy_origin_ = canopy_origins[canopy_labels[(std::string) current_label]];
+            vec3 canopy_origin_ = canopy_origins[canopy_labels[current_label]];
             origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z + 0.5, 1.0);
             origin_position = perspectiveTransformationMatrix * origin_position;
             ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
                                             windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(100, 10), ImGuiCond_Always);
             // double check above
             ImGui::Begin(current_label.c_str(), &my_tool_active);
             ImGui::End();
         }
         for (int n = 0; n < rig_labels.size(); n++){
             current_label = rig_labels[n];
-            vec3 camera_position_ = camera_positions[rig_dict[(std::string) current_label]];
+            vec3 camera_position_ = camera_positions[rig_dict[current_label]];
             origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z + 0.5, 1.0);
             origin_position = perspectiveTransformationMatrix * origin_position;
             ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
@@ -1780,9 +1780,11 @@ void guixml::visualize(){
         // (Your code clears your framebuffer, renders your other stuff etc.)
         // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);  // Set a background color (e.g., dark grey)
         // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        visualizer->plotOnce(depthMVP);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+        glfwWaitEvents();
         // (Your code calls glfwSwapBuffers() etc.)
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100/6));
