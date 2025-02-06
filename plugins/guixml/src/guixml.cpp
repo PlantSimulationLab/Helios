@@ -1034,6 +1034,10 @@ void guixml::visualize(){
                 }
                 if (switch_visualization)
                 {
+                    const char* font_name = "LCD";
+                    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                    visualizer->plotUpdate();
                     visualizer->clearGeometry();
                     if (visualization_type != "RGB") {
                         visualizer->colorContextPrimitivesByData(visualization_type.c_str());
@@ -1053,6 +1057,10 @@ void guixml::visualize(){
         }
         if (ImGui::Button("Reload")) {
             set_xml_values();
+            const char* font_name = "LCD";
+            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+            visualizer->plotUpdate();
             visualizer->clearGeometry();
             delete context;
             delete plantarchitecture;
@@ -1987,4 +1995,5 @@ void guixml::get_xml_values(std::string xml_path){
     }
     get_xml_values();
 }
+
 
