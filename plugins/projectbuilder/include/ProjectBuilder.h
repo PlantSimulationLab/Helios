@@ -1,4 +1,4 @@
-/** \file "Visualizer.h" Visualizer header.
+/** \file "ProjectBuilder.h" Visualizer header.
 
 Copyright (C) 2016-2025 Brian Bailey
 
@@ -13,8 +13,8 @@ Copyright (C) 2016-2025 Brian Bailey
 
 */
 
-#ifndef HELIOS_GUI_H
-#define HELIOS_GUI_H
+#ifndef HELIOS_PROJECTBUILDER_H
+#define HELIOS_PROJECTBUILDER_H
 
 
 #include "Context.h"
@@ -79,7 +79,7 @@ std::vector<helios::vec3> interpolate(std::vector<int> keypoints, std::vector<he
 //! Function to open file dialog
 std::string file_dialog();
 
-class guixml {
+class ProjectBuilder {
   private:
     //! XML Document
     pugi::xml_document xmldoc;
@@ -730,7 +730,7 @@ class guixml {
     std::map<std::string, int> set_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
 
     //! Destructor
-    ~guixml(){
+    ~ProjectBuilder(){
       delete context;
       delete visualizer;
       delete plantarchitecture;
@@ -742,4 +742,4 @@ class guixml {
     }
 };
 
-#endif //HELIOS_GUI_H
+#endif //HELIOS_PROJECTBUILDER_H
