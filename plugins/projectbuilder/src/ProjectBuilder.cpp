@@ -1,4 +1,4 @@
-#include "../include/guixml.h"
+#include "../include/ProjectBuilder.h"
 #ifdef _WIN32
     #include <windows.h>
     #include <iostream>
@@ -104,7 +104,7 @@ std::string file_dialog(){
 }
 
 
-void guixml::build_from_xml(){
+void ProjectBuilder::build_from_xml(){
     context = new Context();
 
     plantarchitecture = new PlantArchitecture(context);
@@ -309,13 +309,13 @@ void guixml::build_from_xml(){
 }
 
 
-void guixml::build_from_xml(std::string xml_path){
+void ProjectBuilder::build_from_xml(std::string xml_path){
      xml_input_file = xml_path;
      build_from_xml();
 }
 
 
-std::map<std::string, int> guixml::get_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+std::map<std::string, int> ProjectBuilder::get_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
     int counter = 0;
     std::map<std::string, int> labels_dict = {};
     helios = xmldoc.child("helios");
@@ -333,7 +333,7 @@ std::map<std::string, int> guixml::get_node_labels(const std::string& name, cons
 }
 
 
-void guixml::get_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+void ProjectBuilder::get_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
     helios = xmldoc.child("helios");
     const char *rig_ = "rig";
     for (pugi::xml_node rig = helios.child(rig_); rig; rig = rig.next_sibling(rig_)){
@@ -356,7 +356,7 @@ void guixml::get_keypoints(const std::string& name, const std::string& parent, s
     }
 }
 
-void guixml::set_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+void ProjectBuilder::set_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
     helios = xmldoc.child("helios");
     const char *rig_ = "rig";
     int rig_count = 0;
@@ -373,7 +373,7 @@ void guixml::set_keypoints(const std::string& name, const std::string& parent, s
     }
 } // TODO: test this function
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -393,7 +393,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, i
     }
 }
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, float &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, float &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -414,7 +414,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, f
     }
 }
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -430,7 +430,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, s
     }
 }
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -450,7 +450,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, v
     }
 }
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -468,7 +468,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, v
     }
 }
 
-void guixml::get_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
+void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -489,7 +489,7 @@ void guixml::get_xml_value(const std::string& name, const std::string& parent, i
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -513,7 +513,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -533,7 +533,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -549,7 +549,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -571,7 +571,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -593,7 +593,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
         std::vector<vec3> curr_vec = {};
@@ -611,7 +611,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
         std::set<std::string> curr_vec = {};
@@ -629,7 +629,7 @@ void guixml::get_xml_values(const std::string& name, const std::string& parent, 
     }
 }
 
-std::map<std::string, int> guixml::set_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+std::map<std::string, int> ProjectBuilder::set_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
     int i = 0;
     helios = xmldoc.child("helios");
     std::map<std::string, int> labels_dict = {};
@@ -643,7 +643,7 @@ std::map<std::string, int> guixml::set_node_labels(const std::string& name, cons
 }
 
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, int &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, int &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -654,7 +654,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, i
     node.text().set(std::to_string(default_value).c_str());
 }
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, float &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, float &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -665,7 +665,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, f
     node.text().set(std::to_string(default_value).c_str());
 }
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -676,7 +676,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, s
     node.text().set(default_value.c_str());
 }
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -687,7 +687,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, i
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -698,7 +698,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, v
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void guixml::set_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
+void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -709,7 +709,7 @@ void guixml::set_xml_value(const std::string& name, const std::string& parent, v
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -721,7 +721,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -733,7 +733,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -745,7 +745,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -757,7 +757,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<int>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<int>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -769,7 +769,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_values){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -781,7 +781,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -796,7 +796,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 }
 
 
-void guixml::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -811,7 +811,7 @@ void guixml::set_xml_values(const std::string& name, const std::string& parent, 
 } // TODO: test this function
 
 
-void guixml::visualize(){
+void ProjectBuilder::visualize(){
     visualizer = new Visualizer(800);
     radiation->enableCameraModelVisualization();
     visualizer->buildContextGeometry(context);
@@ -1804,13 +1804,13 @@ void guixml::visualize(){
 }
 
 
-void guixml::build_and_visualize(std::string xml_path){
+void ProjectBuilder::build_and_visualize(std::string xml_path){
     build_from_xml(xml_path);
     visualize();
 }
 
 
-void guixml::set_xml_values(){
+void ProjectBuilder::set_xml_values(){
     // MAIN BLOCK
     set_xml_value("latitude", "helios", latitude);
     set_xml_value("longitude", "helios", longitude);
@@ -1882,7 +1882,7 @@ void guixml::set_xml_values(){
 }
 
 
-void guixml::set_xml_values(std::string xml_path){
+void ProjectBuilder::set_xml_values(std::string xml_path){
     xml_input_file = xml_path;
     if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
         helios_runtime_error(xml_error_string);
@@ -1891,7 +1891,7 @@ void guixml::set_xml_values(std::string xml_path){
 }
 
 
-void guixml::get_xml_values(){
+void ProjectBuilder::get_xml_values(){
     // MAIN BLOCK
     get_xml_value("latitude", "helios", latitude);
     get_xml_value("longitude", "helios", longitude);
@@ -1998,7 +1998,7 @@ void guixml::get_xml_values(){
     get_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
 }
 
-void guixml::get_xml_values(std::string xml_path){
+void ProjectBuilder::get_xml_values(std::string xml_path){
     xml_input_file = xml_path;
     if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
         helios_runtime_error(xml_error_string);

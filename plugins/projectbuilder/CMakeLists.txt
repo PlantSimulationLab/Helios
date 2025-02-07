@@ -8,18 +8,18 @@ include_directories(../../core/include)
 #TODO: make plugins conditional
 # solarposition needs to be loaded if radiation is loaded
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../boundarylayerconductance/include")
-include_directories(../energybalance/include)
-include_directories(../plantarchitecture/include)
-include_directories(../radiation/include)
-include_directories(../solarposition/include)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../energybalance/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../plantarchitecture/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../radiation/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../solarposition/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(guixml STATIC
+add_library(projectbuilder STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/BuildGeometry.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/guixml.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeEnergyBalance.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeRadiation.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
@@ -32,7 +32,7 @@ add_library(guixml STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp")
 
-target_include_directories(guixml PUBLIC
+target_include_directories(projectbuilder PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/energybalance/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/plantarchitecture/include
@@ -45,7 +45,7 @@ target_include_directories(guixml PUBLIC
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
     include_directories(${CUDA_INCLUDE_DIRS})
-    target_link_libraries( guixml ${CUDA_LIBRARIES} )
+    target_link_libraries( projectbuilder ${CUDA_LIBRARIES} )
 endif(CUDA_FOUND)
 if(UNIX AND NOT APPLE)
     if( OPTIX_VERSION_LEGACY )
@@ -57,13 +57,13 @@ if(UNIX AND NOT APPLE)
     endif()
     include_directories(${OPTIX_PATH}include)
     add_subdirectory(${OPTIX_PATH} "plugins/radiation")
-    target_link_libraries( guixml ${OPTIX_PATH}lib64/liboptix.so )
+    target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.so )
 endif(UNIX AND NOT APPLE)
 if(APPLE)
     set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/mac64-4.0.2/)
     include_directories(${OPTIX_PATH}include)
     add_subdirectory(${OPTIX_PATH})
-    target_link_libraries( guixml ${OPTIX_PATH}lib64/liboptix.dylib )
+    target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.dylib )
 endif(APPLE)
 if(WIN32)
     if( OPTIX_VERSION_LEGACY )
@@ -78,9 +78,9 @@ if(WIN32)
         message("Using OptiX version 6.5")
     endif()
     include_directories(${OPTIX_PATH}include)
-    target_link_libraries( guixml "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
-    add_custom_command( TARGET guixml POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
-    add_custom_command( TARGET guixml POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )
+    target_link_libraries( projectbuilder "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
+    add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
+    add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )
 
 endif(WIN32)
 if(NOT DEFINED OPTIX_PATH)
@@ -90,17 +90,17 @@ message(STATUS "OptiX include directory: ${OPTIX_PATH}include")
 
 # CUDA + OPTIX END
 
-target_link_libraries( guixml energybalance )
-target_link_libraries( guixml plantarchitecture )
-target_link_libraries( guixml radiation )
-target_link_libraries( guixml solarposition )
-target_link_libraries( guixml visualizer )
+target_link_libraries( projectbuilder energybalance )
+target_link_libraries( projectbuilder plantarchitecture )
+target_link_libraries( projectbuilder radiation )
+target_link_libraries( projectbuilder solarposition )
+target_link_libraries( projectbuilder visualizer )
 #imgui
 include_directories(lib/imgui)
 include_directories(lib/imgui/backends)
 include_directories(lib/imgui/misc/cpp)
-target_include_directories( guixml PUBLIC lib/imgui )
-target_include_directories( guixml PUBLIC lib/imgui/backends )
-target_include_directories( guixml PUBLIC lib/imgui/misc/cpp )
+target_include_directories( projectbuilder PUBLIC lib/imgui )
+target_include_directories( projectbuilder PUBLIC lib/imgui/backends )
+target_include_directories( projectbuilder PUBLIC lib/imgui/misc/cpp )
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )
