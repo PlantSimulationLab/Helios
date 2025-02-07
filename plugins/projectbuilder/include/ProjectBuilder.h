@@ -445,13 +445,13 @@ class ProjectBuilder {
 
   public:
     //! Function to build context from XML
-    void build_from_xml();
+    void buildFromXML();
 
     //! Function to build context from XML
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void build_from_xml(std::string xml_path);
+    void buildFromXML(std::string xml_path);
 
     //! Function to visualize XML plot
     void visualize();
@@ -460,25 +460,25 @@ class ProjectBuilder {
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void build_and_visualize(std::string xml_path);
+    void buildAndVisualize(std::string xml_path);
 
     //! Function to set all values in GUI from XML
-    void set_xml_values();
+    void xmlSetValues();
 
     //! Function to set all values in GUI from XML
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void set_xml_values(std::string xml_path);
+    void xmlSetValues(std::string xml_path);
 
     //! Function to get all values from current XML
-    void get_xml_values();
+    void xmlGetValues();
 
     //! Function to get all values from current XML
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void get_xml_values(std::string xml_path);
+    void xmlGetValues(std::string xml_path);
 
     //! Function to get node labels for a given set of nodes
     /**
@@ -486,7 +486,7 @@ class ProjectBuilder {
      * \param[in] node_name Name of the XML nodes to get labels from
      * \param[out] labels_vec Vector of labels of XML "parent" nodes
     */
-    std::map<std::string, int> get_node_labels(const std::string& label_name, const std::string& node_name,
+    std::map<std::string, int> getNodeLabels(const std::string& label_name, const std::string& node_name,
                                                std::vector<std::string>& labels_vec);
 
     //! Function to get keypoints for every rig
@@ -495,7 +495,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
     */
-    void get_keypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
+    void getKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
 
     //! Function to set keypoints for every rig
     /**
@@ -503,7 +503,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
     */
-    void set_keypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
+    void setKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
 
     //! Function to get value of an XML field
     /**
@@ -511,7 +511,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, int& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, int& default_value);
 
     //! Function to get value of an XML field
     /**
@@ -519,7 +519,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, float& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, float& default_value);
 
     //! Function to get value of an XML field
     /**
@@ -527,7 +527,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, std::string& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, std::string& default_value);
 
     //! Function to get value of an XML field
     /**
@@ -535,7 +535,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, helios::vec2& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, helios::vec2& default_value);
 
     //! Function to get value of an XML field
     /**
@@ -543,7 +543,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, helios::vec3& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, helios::vec3& default_value);
 
     //! Function to get value of an XML field
     /**
@@ -551,7 +551,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
     */
-    void get_xml_value(const std::string& name, const std::string& parent, helios::int2& default_value);
+    void xmlGetValue(const std::string& name, const std::string& parent, helios::int2& default_value);
 
     //! Function to get values of an XML field
     /**
@@ -559,7 +559,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
 
     //! Function to get values of an XML field
     /**
@@ -567,7 +567,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
 
      //! Function to get values of an XML field
     /**
@@ -575,7 +575,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
 
     //! Function to get values of an XML field
     /**
@@ -583,7 +583,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec);
 
     //! Function to get values of an XML field
     /**
@@ -591,7 +591,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
 
     //! Function to get values of an XML field
     /**
@@ -599,7 +599,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<helios::vec3>>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<helios::vec3>>& default_vec);
 
     //! Function to get values of an XML field
     /**
@@ -607,7 +607,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
-    void get_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec);
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -615,7 +615,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, int& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, int& default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -623,7 +623,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, float& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, float& default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -631,7 +631,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, std::string& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, std::string& default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -639,7 +639,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, helios::vec2& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, helios::vec2& default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -647,7 +647,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, helios::vec3& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, helios::vec3& default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -655,7 +655,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
     */
-    void set_xml_value(const std::string& name, const std::string& parent, helios::int2& default_value);
+    void xmlSetValue(const std::string& name, const std::string& parent, helios::int2& default_value);
 
     //! Function to set values to an XML field
     /**
@@ -663,7 +663,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
 
     //! Function to set values to an XML field
     /**
@@ -671,7 +671,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
 
     //! Function to set values to an XML field
     /**
@@ -679,7 +679,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
 
     //! Function to set values to an XML field
     /**
@@ -687,7 +687,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>&);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::string>&);
 
     //! Function to set values to an XML field
     /**
@@ -695,7 +695,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<int>&);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<int>&);
 
     //! Function to set values to an XML field
     /**
@@ -703,7 +703,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string& name, const std::string& parent, std::vector<float>&);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>&);
 
     //! Function to set values to an XML field
     /**
@@ -711,7 +711,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string&, const std::string&, std::vector<std::vector<helios::vec3>>&);
+    void xmlSetValues(const std::string&, const std::string&, std::vector<std::vector<helios::vec3>>&);
 
     //! Function to set values to an XML field
     /**
@@ -719,7 +719,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void set_xml_values(const std::string&, const std::string&, std::vector<std::set<std::string>>&);
+    void xmlSetValues(const std::string&, const std::string&, std::vector<std::set<std::string>>&);
 
     //! Function to set node labels for a given set of nodes
     /**
@@ -727,7 +727,7 @@ class ProjectBuilder {
      * \param[in] node_name Name of the XML nodes to get labels from
      * \param[out] labels_vec Vector of labels of XML "parent" nodes to set
     */
-    std::map<std::string, int> set_node_labels(const std::string&, const std::string&, std::vector<std::string>&);
+    std::map<std::string, int> setNodeLabels(const std::string&, const std::string&, std::vector<std::string>&);
 
     //! Destructor
     ~ProjectBuilder(){

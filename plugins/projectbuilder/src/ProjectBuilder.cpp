@@ -104,7 +104,7 @@ std::string file_dialog(){
 }
 
 
-void ProjectBuilder::build_from_xml(){
+void ProjectBuilder::buildFromXML(){
     context = new Context();
 
     plantarchitecture = new PlantArchitecture(context);
@@ -251,14 +251,14 @@ void ProjectBuilder::build_from_xml(){
             helios_runtime_error(xml_error_string);
         }
 
-        rig_dict = get_node_labels("label", "rig", rig_labels);
-        get_xml_values("camera_position", "rig", camera_positions);
-        get_xml_values("camera_lookat", "rig", camera_lookats);
-        get_xml_values("camera_label", "rig", camera_labels);
+        rig_dict = getNodeLabels("label", "rig", rig_labels);
+        xmlGetValues("camera_position", "rig", camera_positions);
+        xmlGetValues("camera_lookat", "rig", camera_lookats);
+        xmlGetValues("camera_label", "rig", camera_labels);
     }
     // RIG BLOCK
     num_images = 5;
-    get_xml_values();
+    xmlGetValues();
     for (int n = 0; n < rig_labels.size(); n++){
         std::string current_rig = rig_labels[n];
         for (int i = 1; i < camera_position_vec[rig_dict[(std::string) current_rig]].size(); i++){
@@ -309,13 +309,13 @@ void ProjectBuilder::build_from_xml(){
 }
 
 
-void ProjectBuilder::build_from_xml(std::string xml_path){
+void ProjectBuilder::buildFromXML(std::string xml_path){
      xml_input_file = xml_path;
-     build_from_xml();
+     buildFromXML();
 }
 
 
-std::map<std::string, int> ProjectBuilder::get_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+std::map<std::string, int> ProjectBuilder::getNodeLabels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
     int counter = 0;
     std::map<std::string, int> labels_dict = {};
     helios = xmldoc.child("helios");
@@ -333,7 +333,7 @@ std::map<std::string, int> ProjectBuilder::get_node_labels(const std::string& na
 }
 
 
-void ProjectBuilder::get_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+void ProjectBuilder::getKeypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
     helios = xmldoc.child("helios");
     const char *rig_ = "rig";
     for (pugi::xml_node rig = helios.child(rig_); rig; rig = rig.next_sibling(rig_)){
@@ -356,7 +356,7 @@ void ProjectBuilder::get_keypoints(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::set_keypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
+void ProjectBuilder::setKeypoints(const std::string& name, const std::string& parent, std::vector<std::vector<int>>& keypoints){
     helios = xmldoc.child("helios");
     const char *rig_ = "rig";
     int rig_count = 0;
@@ -373,7 +373,7 @@ void ProjectBuilder::set_keypoints(const std::string& name, const std::string& p
     }
 } // TODO: test this function
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, int &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, int &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -393,7 +393,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, float &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, float &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -414,7 +414,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, std::string &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -430,7 +430,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, vec2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -450,7 +450,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, vec3 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -468,7 +468,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
     }
 }
 
-void ProjectBuilder::get_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
+void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, int2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -489,7 +489,7 @@ void ProjectBuilder::get_xml_value(const std::string& name, const std::string& p
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<vec2>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -513,7 +513,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<vec3>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -533,7 +533,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -549,7 +549,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -571,7 +571,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -593,7 +593,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
         std::vector<vec3> curr_vec = {};
@@ -611,7 +611,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::get_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
         std::set<std::string> curr_vec = {};
@@ -629,7 +629,7 @@ void ProjectBuilder::get_xml_values(const std::string& name, const std::string& 
     }
 }
 
-std::map<std::string, int> ProjectBuilder::set_node_labels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+std::map<std::string, int> ProjectBuilder::setNodeLabels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
     int i = 0;
     helios = xmldoc.child("helios");
     std::map<std::string, int> labels_dict = {};
@@ -643,7 +643,7 @@ std::map<std::string, int> ProjectBuilder::set_node_labels(const std::string& na
 }
 
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, int &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, int &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -654,7 +654,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(std::to_string(default_value).c_str());
 }
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, float &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, float &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -665,7 +665,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(std::to_string(default_value).c_str());
 }
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, std::string &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, std::string &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -676,7 +676,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(default_value.c_str());
 }
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, int2 &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, int2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -687,7 +687,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, vec2 &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, vec2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -698,7 +698,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void ProjectBuilder::set_xml_value(const std::string& name, const std::string& parent, vec3 &default_value) {
+void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, vec3 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     if (parent != "helios") {
@@ -709,7 +709,7 @@ void ProjectBuilder::set_xml_value(const std::string& name, const std::string& p
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -721,7 +721,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -733,7 +733,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -745,7 +745,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -757,7 +757,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<int>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<int>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -769,7 +769,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<float>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>& default_values){
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
     int i = 0;
@@ -781,7 +781,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -796,7 +796,7 @@ void ProjectBuilder::set_xml_values(const std::string& name, const std::string& 
 }
 
 
-void ProjectBuilder::set_xml_values(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
@@ -1012,11 +1012,11 @@ void ProjectBuilder::visualize(){
                 if (ImGui::MenuItem("Open..", "Ctrl+O")){
                     std::string file_name = file_dialog();
                     if (!file_name.empty()){
-                        get_xml_values(file_name);
+                        xmlGetValues(file_name);
                     }
                 }
                 if (ImGui::MenuItem("Save XML", "Ctrl+S")){
-                    set_xml_values();
+                    xmlSetValues();
                 }
                 if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
                 ImGui::EndMenu();
@@ -1064,7 +1064,7 @@ void ProjectBuilder::visualize(){
             ImGui::EndMenuBar();
         }
         if (ImGui::Button("Reload")) {
-            set_xml_values();
+            xmlSetValues();
             const char* font_name = "LCD";
             visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
                 RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
@@ -1077,7 +1077,7 @@ void ProjectBuilder::visualize(){
             delete energybalancemodel;
             delete boundarylayerconductance;
             delete cameraproperties;
-            build_from_xml();
+            buildFromXML();
             radiation->enableCameraModelVisualization();
             visualizer->buildContextGeometry(context);
             visualizer->addCoordinateAxes();
@@ -1804,206 +1804,206 @@ void ProjectBuilder::visualize(){
 }
 
 
-void ProjectBuilder::build_and_visualize(std::string xml_path){
-    build_from_xml(xml_path);
+void ProjectBuilder::buildAndVisualize(std::string xml_path){
+    buildFromXML(xml_path);
     visualize();
 }
 
 
-void ProjectBuilder::set_xml_values(){
+void ProjectBuilder::xmlSetValues(){
     // MAIN BLOCK
-    set_xml_value("latitude", "helios", latitude);
-    set_xml_value("longitude", "helios", longitude);
-    set_xml_value("UTC_offset", "helios", UTC_offset);
-    set_xml_value("csv_weather_file", "helios", csv_weather_file);
-    set_xml_value("domain_origin", "helios", domain_origin);
-    set_xml_value("domain_extent", "helios", domain_extent);
-    set_xml_value("ground_resolution", "helios", ground_resolution);
-    set_xml_value("ground_texture_file", "helios", ground_texture_file);
+    xmlSetValue("latitude", "helios", latitude);
+    xmlSetValue("longitude", "helios", longitude);
+    xmlSetValue("UTC_offset", "helios", UTC_offset);
+    xmlSetValue("csv_weather_file", "helios", csv_weather_file);
+    xmlSetValue("domain_origin", "helios", domain_origin);
+    xmlSetValue("domain_extent", "helios", domain_extent);
+    xmlSetValue("ground_resolution", "helios", ground_resolution);
+    xmlSetValue("ground_texture_file", "helios", ground_texture_file);
     // CANOPY BLOCK
-    canopy_labels = set_node_labels("label", "canopy_block", labels);
-    set_xml_value("canopy_origin", "canopy_block", canopy_origin);
-    set_xml_value("plant_count", "canopy_block", plant_count);
-    set_xml_value("plant_spacing", "canopy_block", plant_spacing);
-    set_xml_value("plant_library_name", "canopy_block", plant_library_name);
-    set_xml_value("plant_age", "canopy_block", plant_age);
-    set_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
-    set_xml_values("canopy_origin", "canopy_block", canopy_origins);
-    set_xml_values("plant_count", "canopy_block", plant_counts);
-    set_xml_values("plant_spacing", "canopy_block", plant_spacings);
-    set_xml_values("plant_library_name", "canopy_block", plant_library_names);
-    set_xml_values("plant_age", "canopy_block", plant_ages);
-    set_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    canopy_labels = setNodeLabels("label", "canopy_block", labels);
+    xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
+    xmlSetValue("plant_count", "canopy_block", plant_count);
+    xmlSetValue("plant_spacing", "canopy_block", plant_spacing);
+    xmlSetValue("plant_library_name", "canopy_block", plant_library_name);
+    xmlSetValue("plant_age", "canopy_block", plant_age);
+    xmlSetValue("ground_clipping_height", "canopy_block", ground_clipping_height);
+    xmlSetValues("canopy_origin", "canopy_block", canopy_origins);
+    xmlSetValues("plant_count", "canopy_block", plant_counts);
+    xmlSetValues("plant_spacing", "canopy_block", plant_spacings);
+    xmlSetValues("plant_library_name", "canopy_block", plant_library_names);
+    xmlSetValues("plant_age", "canopy_block", plant_ages);
+    xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
     // RIG BLOCK
-    rig_dict = set_node_labels("label", "rig", rig_labels);
-    // set_xml_value("camera_position", "rig", camera_position);
-    // set_xml_value("camera_lookat", "rig", camera_lookat);
-    set_xml_value("camera_label", "rig", camera_label);
-    // set_xml_values("camera_position", "rig", camera_positions);
-    set_xml_values("camera_position", "rig", camera_position_vec);
-    // set_xml_values("camera_lookat", "rig", camera_lookats);
-    set_xml_values("camera_lookat", "rig", camera_lookat_vec);
-    // set_xml_values("camera_label", "rig", camera_labels);
-    set_xml_values("camera_label", "rig", rig_camera_labels);
-    set_keypoints("keypoint", "camera_position", keypoint_frames);
+    rig_dict = setNodeLabels("label", "rig", rig_labels);
+    // xmlSetValue("camera_position", "rig", camera_position);
+    // xmlSetValue("camera_lookat", "rig", camera_lookat);
+    xmlSetValue("camera_label", "rig", camera_label);
+    // xmlSetValues("camera_position", "rig", camera_positions);
+    xmlSetValues("camera_position", "rig", camera_position_vec);
+    // xmlSetValues("camera_lookat", "rig", camera_lookats);
+    xmlSetValues("camera_lookat", "rig", camera_lookat_vec);
+    // xmlSetValues("camera_label", "rig", camera_labels);
+    xmlSetValues("camera_label", "rig", rig_camera_labels);
+    setKeypoints("keypoint", "camera_position", keypoint_frames);
     // CAMERA BLOCK
-    camera_dict = set_node_labels("label", "camera", camera_names);
-    set_xml_value("camera_resolution", "camera", camera_resolution);
-    set_xml_value("focal_plane_distance", "camera", focal_plane_distance);
-    set_xml_value("lens_diameter", "camera", lens_diameter);
-    set_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
-    set_xml_value("HFOV", "camera", HFOV);
-    set_xml_values("camera_resolution", "camera", camera_resolutions);
-    set_xml_values("focal_plane_distance", "camera", focal_plane_distances);
-    set_xml_values("lens_diameter", "camera", lens_diameters);
-    set_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
-    set_xml_values("HFOV", "camera", HFOVs);
+    camera_dict = setNodeLabels("label", "camera", camera_names);
+    xmlSetValue("camera_resolution", "camera", camera_resolution);
+    xmlSetValue("focal_plane_distance", "camera", focal_plane_distance);
+    xmlSetValue("lens_diameter", "camera", lens_diameter);
+    xmlSetValue("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
+    xmlSetValue("HFOV", "camera", HFOV);
+    xmlSetValues("camera_resolution", "camera", camera_resolutions);
+    xmlSetValues("focal_plane_distance", "camera", focal_plane_distances);
+    xmlSetValues("lens_diameter", "camera", lens_diameters);
+    xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
+    xmlSetValues("HFOV", "camera", HFOVs);
     // LIGHT BLOCK
-    set_xml_values("light_type", "light", light_types);
-    set_xml_values("light_direction", "light", light_direction_vec);
-    set_xml_values("light_rotation", "light", light_rotation_vec);
-    set_xml_values("light_size", "light", light_size_vec);
-    set_xml_values("light_radius", "light", light_radius_vec);
-    light_dict = set_node_labels("label", "light", light_names);
-    set_xml_values("light_label", "rig", rig_light_labels);
+    xmlSetValues("light_type", "light", light_types);
+    xmlSetValues("light_direction", "light", light_direction_vec);
+    xmlSetValues("light_rotation", "light", light_rotation_vec);
+    xmlSetValues("light_size", "light", light_size_vec);
+    xmlSetValues("light_radius", "light", light_radius_vec);
+    light_dict = setNodeLabels("label", "light", light_names);
+    xmlSetValues("light_label", "rig", rig_light_labels);
     // RADIATION BLOCK
-    set_xml_value("direct_ray_count", "radiation", direct_ray_count);
-    set_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
-    set_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
-    set_xml_value("scattering_depth", "radiation", scattering_depth);
-    set_xml_value("air_turbidity", "radiation", air_turbidity);
-    set_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
-    set_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
-    set_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
-    set_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
-    set_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
-    set_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+    xmlSetValue("direct_ray_count", "radiation", direct_ray_count);
+    xmlSetValue("diffuse_ray_count", "radiation", diffuse_ray_count);
+    xmlSetValue("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
+    xmlSetValue("scattering_depth", "radiation", scattering_depth);
+    xmlSetValue("air_turbidity", "radiation", air_turbidity);
+    xmlSetValue("load_xml_library_file", "radiation", load_xml_library_file);
+    xmlSetValue("solar_direct_spectrum", "radiation", solar_direct_spectrum);
+    xmlSetValue("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
+    xmlSetValue("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
+    xmlSetValue("leaf_emissivity", "radiation", leaf_emissivity);
+    xmlSetValue("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
     xmldoc.save_file(xml_input_file.c_str());
 }
 
 
-void ProjectBuilder::set_xml_values(std::string xml_path){
+void ProjectBuilder::xmlSetValues(std::string xml_path){
     xml_input_file = xml_path;
     if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
         helios_runtime_error(xml_error_string);
     }
-    set_xml_values();
+    xmlSetValues();
 }
 
 
-void ProjectBuilder::get_xml_values(){
+void ProjectBuilder::xmlGetValues(){
     // MAIN BLOCK
-    get_xml_value("latitude", "helios", latitude);
-    get_xml_value("longitude", "helios", longitude);
-    get_xml_value("UTC_offset", "helios", UTC_offset);
-    get_xml_value("csv_weather_file", "helios", csv_weather_file);
-    get_xml_value("domain_origin", "helios", domain_origin);
-    get_xml_value("domain_extent", "helios", domain_extent);
-    get_xml_value("ground_resolution", "helios", ground_resolution);
-    get_xml_value("ground_texture_file", "helios", ground_texture_file);
+    xmlGetValue("latitude", "helios", latitude);
+    xmlGetValue("longitude", "helios", longitude);
+    xmlGetValue("UTC_offset", "helios", UTC_offset);
+    xmlGetValue("csv_weather_file", "helios", csv_weather_file);
+    xmlGetValue("domain_origin", "helios", domain_origin);
+    xmlGetValue("domain_extent", "helios", domain_extent);
+    xmlGetValue("ground_resolution", "helios", ground_resolution);
+    xmlGetValue("ground_texture_file", "helios", ground_texture_file);
     // CANOPY BLOCK
     labels.clear();
-    canopy_labels = get_node_labels("label", "canopy_block", labels);
+    canopy_labels = getNodeLabels("label", "canopy_block", labels);
     current_canopy = labels[0];
-    get_xml_value("canopy_origin", "canopy_block", canopy_origin);
-    get_xml_value("plant_count", "canopy_block", plant_count);
-    get_xml_value("plant_spacing", "canopy_block", plant_spacing);
-    get_xml_value("plant_library_name", "canopy_block", plant_library_name);
-    get_xml_value("plant_age", "canopy_block", plant_age);
-    get_xml_value("ground_clipping_height", "canopy_block", ground_clipping_height);
+    xmlGetValue("canopy_origin", "canopy_block", canopy_origin);
+    xmlGetValue("plant_count", "canopy_block", plant_count);
+    xmlGetValue("plant_spacing", "canopy_block", plant_spacing);
+    xmlGetValue("plant_library_name", "canopy_block", plant_library_name);
+    xmlGetValue("plant_age", "canopy_block", plant_age);
+    xmlGetValue("ground_clipping_height", "canopy_block", ground_clipping_height);
     canopy_origins.clear();
-    get_xml_values("canopy_origin", "canopy_block", canopy_origins);
+    xmlGetValues("canopy_origin", "canopy_block", canopy_origins);
     plant_counts.clear();
-    get_xml_values("plant_count", "canopy_block", plant_counts);
+    xmlGetValues("plant_count", "canopy_block", plant_counts);
     plant_spacings.clear();
-    get_xml_values("plant_spacing", "canopy_block", plant_spacings);
+    xmlGetValues("plant_spacing", "canopy_block", plant_spacings);
     plant_library_names.clear();
-    get_xml_values("plant_library_name", "canopy_block", plant_library_names);
+    xmlGetValues("plant_library_name", "canopy_block", plant_library_names);
     plant_ages.clear();
-    get_xml_values("plant_age", "canopy_block", plant_ages);
+    xmlGetValues("plant_age", "canopy_block", plant_ages);
     ground_clipping_heights.clear();
-    get_xml_values("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    xmlGetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
     // RIG BLOCK
     rig_labels.clear();
-    rig_dict = get_node_labels("label", "rig", rig_labels);
+    rig_dict = getNodeLabels("label", "rig", rig_labels);
     current_rig = rig_labels[0];
-    get_xml_value("camera_position", "rig", camera_position);
-    get_xml_value("camera_lookat", "rig", camera_lookat);
-    get_xml_value("camera_label", "rig", camera_label);
+    xmlGetValue("camera_position", "rig", camera_position);
+    xmlGetValue("camera_lookat", "rig", camera_lookat);
+    xmlGetValue("camera_label", "rig", camera_label);
     camera_positions.clear();
-    get_xml_values("camera_position", "rig", camera_positions);
+    xmlGetValues("camera_position", "rig", camera_positions);
     camera_position_vec.clear();
-    get_xml_values("camera_position", "rig", camera_position_vec);
+    xmlGetValues("camera_position", "rig", camera_position_vec);
     camera_lookats.clear();
-    get_xml_values("camera_lookat", "rig", camera_lookats);
+    xmlGetValues("camera_lookat", "rig", camera_lookats);
     camera_lookat_vec.clear();
-    get_xml_values("camera_lookat", "rig", camera_lookat_vec);
+    xmlGetValues("camera_lookat", "rig", camera_lookat_vec);
     camera_labels.clear();
-    get_xml_values("camera_label", "rig", camera_labels);
+    xmlGetValues("camera_label", "rig", camera_labels);
     rig_camera_labels.clear();
-    get_xml_values("camera_label", "rig", rig_camera_labels);
+    xmlGetValues("camera_label", "rig", rig_camera_labels);
     keypoint_frames.clear();
-    get_keypoints("keypoint", "camera_position", keypoint_frames);
+    getKeypoints("keypoint", "camera_position", keypoint_frames);
     current_keypoint = std::to_string(keypoint_frames[0][0]);
     // CAMERA BLOCK
     camera_names.clear();
-    camera_dict = get_node_labels("label", "camera", camera_names);
+    camera_dict = getNodeLabels("label", "camera", camera_names);
     current_cam = camera_names[0];
-    get_xml_value("camera_resolution", "camera", camera_resolution);
-    get_xml_value("focal_plane_distance", "camera", focal_plane_distance);
-    get_xml_value("lens_diameter", "camera", lens_diameter);
-    get_xml_value("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
-    get_xml_value("HFOV", "camera", HFOV);
+    xmlGetValue("camera_resolution", "camera", camera_resolution);
+    xmlGetValue("focal_plane_distance", "camera", focal_plane_distance);
+    xmlGetValue("lens_diameter", "camera", lens_diameter);
+    xmlGetValue("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
+    xmlGetValue("HFOV", "camera", HFOV);
     camera_resolutions.clear();
-    get_xml_values("camera_resolution", "camera", camera_resolutions);
+    xmlGetValues("camera_resolution", "camera", camera_resolutions);
     focal_plane_distances.clear();
-    get_xml_values("focal_plane_distance", "camera", focal_plane_distances);
+    xmlGetValues("focal_plane_distance", "camera", focal_plane_distances);
     lens_diameters.clear();
-    get_xml_values("lens_diameter", "camera", lens_diameters);
+    xmlGetValues("lens_diameter", "camera", lens_diameters);
     FOV_aspect_ratios.clear();
-    get_xml_values("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
+    xmlGetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     HFOVs.clear();
-    get_xml_values("HFOV", "camera", HFOVs);
+    xmlGetValues("HFOV", "camera", HFOVs);
     // LIGHT BLOCK
     light_types.clear();
-    get_xml_values("light_type", "light", light_types);
+    xmlGetValues("light_type", "light", light_types);
     light_direction_vec.clear();
-    get_xml_values("light_direction", "light", light_direction_vec);
+    xmlGetValues("light_direction", "light", light_direction_vec);
     light_direction_sph_vec.clear();
     for (vec3 vec : light_direction_vec){
         light_direction_sph_vec.push_back(cart2sphere(vec));
     }
     light_rotation_vec.clear();
-    get_xml_values("light_rotation", "light", light_rotation_vec);
+    xmlGetValues("light_rotation", "light", light_rotation_vec);
     light_size_vec.clear();
-    get_xml_values("light_size", "light", light_size_vec);
+    xmlGetValues("light_size", "light", light_size_vec);
     light_radius_vec.clear();
-    get_xml_values("light_radius", "light", light_radius_vec);
+    xmlGetValues("light_radius", "light", light_radius_vec);
     light_names.clear();
-    light_dict = get_node_labels("label", "light", light_names);
+    light_dict = getNodeLabels("label", "light", light_names);
     current_light = light_names[0];
     rig_light_labels.clear();
-    get_xml_values("light_label", "rig", rig_light_labels);
+    xmlGetValues("light_label", "rig", rig_light_labels);
     // RADIATION BLOCK
-    get_xml_value("direct_ray_count", "radiation", direct_ray_count);
-    get_xml_value("diffuse_ray_count", "radiation", diffuse_ray_count);
-    get_xml_value("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
-    get_xml_value("scattering_depth", "radiation", scattering_depth);
-    get_xml_value("air_turbidity", "radiation", air_turbidity);
-    get_xml_value("load_xml_library_file", "radiation", load_xml_library_file);
-    get_xml_value("solar_direct_spectrum", "radiation", solar_direct_spectrum);
-    get_xml_value("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
-    get_xml_value("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
-    get_xml_value("leaf_emissivity", "radiation", leaf_emissivity);
-    get_xml_value("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+    xmlGetValue("direct_ray_count", "radiation", direct_ray_count);
+    xmlGetValue("diffuse_ray_count", "radiation", diffuse_ray_count);
+    xmlGetValue("diffuse_extinction_coeff", "radiation", diffuse_extinction_coeff);
+    xmlGetValue("scattering_depth", "radiation", scattering_depth);
+    xmlGetValue("air_turbidity", "radiation", air_turbidity);
+    xmlGetValue("load_xml_library_file", "radiation", load_xml_library_file);
+    xmlGetValue("solar_direct_spectrum", "radiation", solar_direct_spectrum);
+    xmlGetValue("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
+    xmlGetValue("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
+    xmlGetValue("leaf_emissivity", "radiation", leaf_emissivity);
+    xmlGetValue("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
 }
 
-void ProjectBuilder::get_xml_values(std::string xml_path){
+void ProjectBuilder::xmlGetValues(std::string xml_path){
     xml_input_file = xml_path;
     if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
         helios_runtime_error(xml_error_string);
     }
-    get_xml_values();
+    xmlGetValues();
 }
 
 
