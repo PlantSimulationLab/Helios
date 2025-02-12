@@ -2024,3 +2024,31 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Plant Architecture*
 - Added methods for querying bulk properties of a plant (total leaf count, stem height, plant height, leaf angle distribution) and write plant mesh vertices to file.
+
+[1.3.27] 2025-02-11
+
+**Some experimental OpenMP parallelization has been added. This is not enabled by default yet, but can be turned on by setting the CMake option ENABLE_OPENMP to ON.**
+**Updates to core CMakeLists.txt to use more modern CMake features.**
+
+*Context*
+- Context::pruneTubeNodes() was added to allow for removal of part of a tube object.
+
+*Plant Architecture*
+- Added ground cherry weed model.
+- Minor fix in PlantArchitecture::getPlsantLeafInclinationAngleDistribution() to prevent rare out of range index.
+- Changed PlantArchitecture::getPlantLeafInclinationAngleDistribution() to area-weight the distribution, and removed the 'normalize' optional argument.
+- Added PlantArchitecture::prunBranch() method to remove all or part of a branch and its downstream branches.
+- Removed shoot parameter 'elongation_rate'. There is now an 'elongation_rate_max' shoot parameter that can be set by the user. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled.
+- Many updates to carbohydrate model. Credit to Ethan Frehner for these updates.
+
+*LiDAR*
+- Added exportTriangleAzimuthDistribution() to write the triangulated azimuthal angle distribution to a file. Credit to Alejandra Ponce de Leon for this addition.
+- The output distribution from exportTriangleInclinationDistribution() was not being normalized.
+
+*Radiation*
+- Added bindweed spectra to the default library.
+- There was an error in the writeObjectDataLabelMap() method that could cause undefined behavior if the UUID in the pixel label map did not exist in the Context.
+- There was an error in the writeObjectDataLabelMap() method where the primitive UUID was being used instead of the object ID.
+- There was an error in the model that could cause incorrect assignment of radiative properties if runBand() is called with fewer bands than a previous call to runBand().
+- The previous version could cause unnecessary updating of radiative properties, resulting in a performance hit. This has been fixed.
+- Revised the radiation plug-in CMakeLists.txt to use a modern CMake approach for building CUDA source files. This update should also enable indexing of .cu source files in IDEs such as CLion.

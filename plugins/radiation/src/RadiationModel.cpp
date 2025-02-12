@@ -207,6 +207,8 @@ void RadiationModel::addRadiationBand(const std::string &label ){
         source.source_fluxes[label] = -1.f;
     }
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 void RadiationModel::addRadiationBand( const std::string &label, float wavelength1, float wavelength2 ){
@@ -232,9 +234,7 @@ void RadiationModel::addRadiationBand( const std::string &label, float wavelengt
         source.source_fluxes[label] = -1.f;
     }
 
-
-
-
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -1198,6 +1198,8 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         buildCameraModelGeometry(camera_label);
     }
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::SphericalCoord &viewing_direction, const CameraProperties &camera_properties, uint antialiasing_samples) {
@@ -1637,8 +1639,10 @@ void RadiationModel::initializeOptiX() {
     addBuffer( "source_fluxes", source_fluxes_RTbuffer, source_fluxes_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
 
     //number of radiation bands
-    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nbands", &Nbands_RTvariable ) );
-    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_RTvariable,0 ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nbands_global", &Nbands_global_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_global_RTvariable,0 ) );
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "Nbands_launch", &Nbands_launch_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_launch_RTvariable,0 ) );
 
     //flag to disable launches for certain bands
     addBuffer( "band_launch_flag", band_launch_flag_RTbuffer, band_launch_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1 );
@@ -1992,12 +1996,9 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
         std::cout << "Updating geometry in radiation transport model..." << std::flush;
     }
 
-    for ( auto &band : radiation_bands ) {
-        band.second.radiativepropertiesinitialized = false;
-    }
-
     context_UUIDs = UUIDs;
 
+    //remove any primitive UUIDs that don't exist or have zero area
     for( int u=context_UUIDs.size()-1; u>=0; u-- ){
         float area = context->getPrimitiveArea(context_UUIDs.at(u));
         if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
@@ -2481,13 +2482,15 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     //   printf("available device memory at end of acceleration build: %6.3f GB\n",device_memory*1e-3);
     // }
 
+    radiativepropertiesneedupdate = true;
+
     if( message_flag ){
         std::cout << "done." << std::endl;
     }
 
 }
 
-void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &labels ) {
+void RadiationModel::updateRadiativeProperties() {
 
     // Possible scenarios for specifying a primitive's radiative properties
     // 1. If primitive data of form reflectivity_band/transmissivity_band is given, this value is used and overrides any other option.
@@ -2499,15 +2502,15 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
         std::cout << "Updating radiative properties..." << std::flush;
     }
 
-    uint Nbands = labels.size();//number of radiative bands
+    uint Nbands = radiation_bands.size();//number of radiative bands
     uint Nsources = radiation_sources.size();
     uint Ncameras = cameras.size();
     size_t Nobjects = primitiveID.size();
     size_t Nprimitives = context_UUIDs.size();
 
-    scattering_iterations_needed.resize(Nbands);
-    for( int b=0; b<Nbands; b++ ){
-        scattering_iterations_needed.at(b) = false;
+    scattering_iterations_needed.clear();
+    for( auto &band : radiation_bands ){
+        scattering_iterations_needed[band.first] = false;
     }
 
     std::vector<std::vector<std::vector<float> > > rho, tau; //first index is the source, second index is the primitive, third index is the band
@@ -2515,12 +2518,9 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
     float eps;
 
     std::string prop;
-
-    for( auto &label : radiation_bands){
-        label.second.radiativepropertiesinitialized = false;
-    }
-    for ( const auto &label: labels) {
-        radiation_bands.at(label).radiativepropertiesinitialized = true;
+    std::vector<std::string> band_labels;
+    for ( auto &band : radiation_bands ) {
+        band_labels.push_back(band.first);
     }
 
     rho.resize(Nsources);
@@ -2561,11 +2561,11 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
             for (uint b = 0; b < Nbands; b++) {
 
-                if( camera.second.band_spectral_response.find(labels.at(b)) == camera.second.band_spectral_response.end() ){
+                if( camera.second.band_spectral_response.find(band_labels.at(b)) == camera.second.band_spectral_response.end() ){
                     continue;
                 }
 
-                std::string camera_response = camera.second.band_spectral_response.at(labels.at(b));
+                std::string camera_response = camera.second.band_spectral_response.at(band_labels.at(b));
 
                 if (!camera_response.empty()) {
 
@@ -2689,7 +2689,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
         }
 
         for (uint b = 0; b < Nbands; b++) {
-            std::string band = labels.at(b);
+            std::string band = band_labels.at(b);
 
             for (uint s = 0; s < Nsources; s++) {
 
@@ -2747,7 +2747,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
         }
 
         for( uint b=0; b<Nbands; b++ ) {
-            std::string band = labels.at(b);
+            std::string band = band_labels.at(b);
 
             for (uint s = 0; s < Nsources; s++) {
 
@@ -2873,7 +2873,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
             }
 
             uint b = 0;
-            for (const auto &band: labels) {
+            for (const auto &band : band_labels) {
 
                 //check for primitive data of form "reflectivity_bandname"
                 prop = "reflectivity_" + band;
@@ -2916,7 +2916,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         }
                     }
                     if( rho.at(s).at(u).at(b)!=0 ){
-                        scattering_iterations_needed.at(b) = true;
+                        scattering_iterations_needed.at(band) = true;
                     }
                     for( auto &odata : output_prim_data ) {
                         if ( odata == "reflectivity" ){
@@ -2939,7 +2939,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
             }
 
             b = 0;
-            for ( const auto &band: labels ) {
+            for ( const auto &band : band_labels ) {
 
                 //check for primitive data of form "transmissivity_bandname"
                 prop = "transmissivity_" + band;
@@ -2981,7 +2981,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                         }
                     }
                     if( tau.at(s).at(u).at(b)!=0 ){
-                        scattering_iterations_needed.at(b) = true;
+                        scattering_iterations_needed.at(band) = true;
                     }
                     for( auto &odata : output_prim_data ) {
                         if (odata == "transmissivity" ){
@@ -2995,7 +2995,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
             // Emissivity (only for error checking)
 
             b = 0;
-            for (const auto &band: labels) {
+            for (const auto &band : band_labels) {
 
                 prop = "emissivity_" + band;
 
@@ -3017,7 +3017,7 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
                     }
                 }
                 if( eps!=1 ){
-                    scattering_iterations_needed.at(b) = true;
+                    scattering_iterations_needed.at(band) = true;
                 }
 
                 assert(doesBandExist(band));
@@ -3057,6 +3057,8 @@ void RadiationModel::updateRadiativeProperties( const std::vector<std::string> &
 
     initializeBuffer1Df(rho_cam_RTbuffer, flatten(rho_cam));
     initializeBuffer1Df(tau_cam_RTbuffer, flatten(tau_cam));
+
+    radiativepropertiesneedupdate = false;
 
     if( message_flag ) {
         std::cout << "done\n";
@@ -3123,6 +3125,15 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     //----- VERIFICATIONS -----//
 
+    //We need the band label strings to appear in the same order as in radiation_bands map.
+    //this is because that was the order in which radiative properties were laid out when updateRadiativeProperties() was called
+    std::vector<std::string> band_labels;
+    for( auto &band : radiation_bands ){
+        if( std::find( label.begin(), label.end(), band.first ) != label.end() ) {
+            band_labels.push_back(band.first);
+        }
+    }
+
     //Check to make sure some geometry was added to the context
     if( context->getPrimitiveCount()==0 ){
         std::cerr << "WARNING (RadiationModel::runBand): No geometry was added to the context. There is nothing to simulate...exiting." << std::endl;
@@ -3134,7 +3145,8 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         updateGeometry();
     }
 
-    for( const std::string &band : label ){
+    //Check that all the bands passed to the runBand() method exist
+    for( const std::string &band : band_labels ){
         if( !doesBandExist(band) ){
             helios_runtime_error("ERROR (RadiationModel::runBand): Cannot run band " + band + " because it is not a valid band. Use addRadiationBand() function to add the band.");
         }
@@ -3145,22 +3157,26 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         addCollimatedRadiationSource();
     }
 
-    for( const auto &band : label ) {
-        if (!radiation_bands.at(band).radiativepropertiesinitialized) {
-            updateRadiativeProperties(label);
-            break;
-        }
+    if( radiativepropertiesneedupdate ){
+        updateRadiativeProperties();
     }
 
-    //Set the number of radiative bands
-    size_t Nbands = label.size();
+    //Number of radiation bands in this launch
+    size_t Nbands_launch = band_labels.size();
+    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_launch_RTvariable, Nbands_launch ) );
 
-    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_RTvariable, Nbands ) );
+    //Number of total bands in the radiation model
+    size_t Nbands_global = radiation_bands.size();
+    RT_CHECK_ERROR( rtVariableSet1ui( Nbands_global_RTvariable, Nbands_global ) );
 
     //Run all bands by default
-    std::vector<char> band_launch_flag(Nbands);
-    for( uint b=0; b<Nbands; b++ ){
-        band_launch_flag.at(b) = 1;
+    std::vector<char> band_launch_flag(Nbands_global);
+    uint bb=0;
+    for( auto &band : radiation_bands ){
+        if( std::find( band_labels.begin(), band_labels.end(), band.first ) != band_labels.end() ) {
+            band_launch_flag.at(bb) = 1;
+        }
+        bb++;
     }
     initializeBuffer1Dchar( band_launch_flag_RTbuffer, band_launch_flag );
 
@@ -3184,10 +3200,10 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     RT_CHECK_ERROR( rtVariableSet1ui( Ncameras_RTvariable, Ncameras ) );
 
     //Set scattering depth for each band
-    std::vector<uint> scattering_depth(Nbands);
+    std::vector<uint> scattering_depth(Nbands_launch);
     bool scatteringenabled = false;
-    for( auto b=0; b<Nbands; b++ ){
-        scattering_depth.at(b) = radiation_bands.at(label.at(b)).scatteringDepth;
+    for(auto b=0; b < Nbands_launch; b++ ){
+        scattering_depth.at(b) = radiation_bands.at(band_labels.at(b)).scatteringDepth;
         if( scattering_depth.at(b)>0 ){
             scatteringenabled=true;
         }
@@ -3195,17 +3211,17 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     initializeBuffer1Dui( max_scatters_RTbuffer, scattering_depth );
 
     //Issue warning if rho>0, tau>0, or eps<1
-    for( int b=0; b<Nbands; b++ ){
-        if( scattering_depth.at(b)==0 && scattering_iterations_needed.at(b) ){
-            std::cout << "WARNING (RadiationModel::runBand): Surface radiative properties for band " << label.at(b) << " are set to non-default values, but scattering iterations are disabled. Surface radiative properties will be ignored unless scattering depth is non-zero." << std::endl;
+    for(int b=0; b < Nbands_launch; b++ ){
+        if( scattering_depth.at(b)==0 && scattering_iterations_needed.at(band_labels.at(b)) ){
+            std::cout << "WARNING (RadiationModel::runBand): Surface radiative properties for band " << band_labels.at(b) << " are set to non-default values, but scattering iterations are disabled. Surface radiative properties will be ignored unless scattering depth is non-zero." << std::endl;
         }
     }
 
     //Set diffuse flux for each band
-    std::vector<float> diffuse_flux(Nbands);
+    std::vector<float> diffuse_flux(Nbands_launch);
     bool diffuseenabled = false;
-    for( auto b=0; b<Nbands; b++ ){
-        diffuse_flux.at(b) = getDiffuseFlux( label.at(b) );
+    for(auto b=0; b < Nbands_launch; b++ ){
+        diffuse_flux.at(b) = getDiffuseFlux( band_labels.at(b) );
         if( diffuse_flux.at(b)>0.f ){
             diffuseenabled=true;
         }
@@ -3213,28 +3229,28 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     initializeBuffer1Df( diffuse_flux_RTbuffer, diffuse_flux );
 
     //Set diffuse extinction coefficient for each band
-    std::vector<float> diffuse_extinction(Nbands,0);
+    std::vector<float> diffuse_extinction(Nbands_launch, 0);
     if( diffuseenabled ) {
-        for (auto b = 0; b < Nbands; b++) {
-            diffuse_extinction.at(b) = radiation_bands.at(label.at(b)).diffuseExtinction;
+        for (auto b = 0; b < Nbands_launch; b++) {
+            diffuse_extinction.at(b) = radiation_bands.at(band_labels.at(b)).diffuseExtinction;
         }
     }
     initializeBuffer1Df(diffuse_extinction_RTbuffer, diffuse_extinction);
 
     //Set diffuse distribution normalization factor for each band
-    std::vector<float> diffuse_dist_norm(Nbands,0);
+    std::vector<float> diffuse_dist_norm(Nbands_launch, 0);
     if( diffuseenabled ) {
-        for (auto b = 0; b < Nbands; b++) {
-            diffuse_dist_norm.at(b) = radiation_bands.at(label.at(b)).diffuseDistNorm;
+        for (auto b = 0; b < Nbands_launch; b++) {
+            diffuse_dist_norm.at(b) = radiation_bands.at(band_labels.at(b)).diffuseDistNorm;
         }
         initializeBuffer1Df(diffuse_dist_norm_RTbuffer, diffuse_dist_norm);
     }
 
     //Set diffuse distribution peak direction for each band
-    std::vector<optix::float3> diffuse_peak_dir(Nbands);
+    std::vector<optix::float3> diffuse_peak_dir(Nbands_launch);
     if( diffuseenabled ) {
-        for (auto b = 0; b < Nbands; b++) {
-            helios::vec3 peak_dir = radiation_bands.at(label.at(b)).diffusePeakDir;
+        for (auto b = 0; b < Nbands_launch; b++) {
+            helios::vec3 peak_dir = radiation_bands.at(band_labels.at(b)).diffusePeakDir;
             diffuse_peak_dir.at(b) = optix::make_float3(peak_dir.x,peak_dir.y,peak_dir.z);
         }
         initializeBuffer1Dfloat3(diffuse_peak_dir_RTbuffer, diffuse_peak_dir);
@@ -3242,8 +3258,8 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     //Determine whether emission is enabled for any band
     bool emissionenabled = false;
-    for( auto b=0; b<Nbands; b++ ){
-        if( radiation_bands.at(label.at(b)).emissionFlag ){
+    for(auto b=0; b < Nbands_launch; b++ ){
+        if( radiation_bands.at(band_labels.at(b)).emissionFlag ){
             emissionenabled=true;
         }
     }
@@ -3273,18 +3289,18 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     }
 
     // Zero buffers
-    zeroBuffer1D( radiation_in_RTbuffer, Nbands*Nprimitives );
-    zeroBuffer1D( scatter_buff_top_RTbuffer, Nbands*Nprimitives );
-    zeroBuffer1D( scatter_buff_bottom_RTbuffer, Nbands*Nprimitives );
-    zeroBuffer1D( Rsky_RTbuffer, Nbands*Nprimitives );
+    zeroBuffer1D(radiation_in_RTbuffer, Nbands_launch * Nprimitives );
+    zeroBuffer1D(scatter_buff_top_RTbuffer, Nbands_launch * Nprimitives );
+    zeroBuffer1D(scatter_buff_bottom_RTbuffer, Nbands_launch * Nprimitives );
+    zeroBuffer1D(Rsky_RTbuffer, Nbands_launch * Nprimitives );
 
     if( Ncameras>0 ){
-        zeroBuffer1D( scatter_buff_top_cam_RTbuffer, Nbands*Nprimitives );
-        zeroBuffer1D( scatter_buff_bottom_cam_RTbuffer, Nbands*Nprimitives );
+        zeroBuffer1D(scatter_buff_top_cam_RTbuffer, Nbands_launch * Nprimitives );
+        zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, Nbands_launch * Nprimitives );
     }
 
     std::vector<float> TBS_top, TBS_bottom;
-    TBS_top.resize(Nbands*Nprimitives, 0);
+    TBS_top.resize(Nbands_launch * Nprimitives, 0);
     TBS_bottom = TBS_top;
 
     std::map<std::string,std::vector<std::vector<float> > > radiation_in_camera;
@@ -3297,8 +3313,8 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     bool rundirect = false;
     for( uint s=0; s<Nsources; s++ ){
-        for( uint b=0; b<Nbands; b++ ){
-            if( getSourceFlux( s, label.at(b))>0.f){
+        for(uint b=0; b < Nbands_launch; b++ ){
+            if( getSourceFlux( s, band_labels.at(b))>0.f){
                 rundirect = true;
                 break;
             }
@@ -3319,10 +3335,10 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
         size_t s=0;
         for( const auto &source : radiation_sources ) {
 
-            fluxes.at(s).resize(Nbands);
+            fluxes.at(s).resize(Nbands_launch);
 
             for( auto b=0; b<label.size(); b++ ) {
-                fluxes.at(s).at(b) = getSourceFlux( s, label.at(b));
+                fluxes.at(s).at(b) = getSourceFlux( s, band_labels.at(b));
             }
 
             positions.at(s) = optix::make_float3( source.source_position.x, source.source_position.y, source.source_position.z );
@@ -3393,15 +3409,15 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     if( emissionenabled || diffuseenabled ){
 
         std::vector<float> flux_top, flux_bottom;
-        flux_top.resize(Nbands*Nprimitives,0);
+        flux_top.resize(Nbands_launch * Nprimitives, 0);
         flux_bottom = flux_top;
 
         //If we are doing a diffuse/emission ray trace anyway and we have direct scattered energy, we get a "free" scattering trace here
         if( scatteringenabled && rundirect ){
             flux_top=getOptiXbufferData( scatter_buff_top_RTbuffer );
             flux_bottom=getOptiXbufferData( scatter_buff_bottom_RTbuffer );
-            zeroBuffer1D( scatter_buff_top_RTbuffer, Nbands*Nprimitives );
-            zeroBuffer1D( scatter_buff_bottom_RTbuffer, Nbands*Nprimitives );
+            zeroBuffer1D(scatter_buff_top_RTbuffer, Nbands_launch * Nprimitives );
+            zeroBuffer1D(scatter_buff_bottom_RTbuffer, Nbands_launch * Nprimitives );
         }
 
         //add any emitted energy to the outgoing energy buffer
@@ -3419,11 +3435,11 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
                 scatter_buff_bottom_cam_data = (float*)ptr;
             }
 
-            for (auto b = 0; b < Nbands; b++) {
-                if (radiation_bands.at(label.at(b)).emissionFlag) {
-                    std::string prop = "emissivity_" + label.at(b);
+            for (auto b = 0; b < Nbands_launch; b++) {
+                if (radiation_bands.at(band_labels.at(b)).emissionFlag) {
+                    std::string prop = "emissivity_" + band_labels.at(b);
                     for (size_t u = 0; u < Nprimitives; u++) {
-                        size_t ind = u * Nbands + b;
+                        size_t ind = u * Nbands_launch + b;
                         uint p = context_UUIDs.at(u);
                         if (context->doesPrimitiveDataExist(p, prop.c_str())) {
                             context->getPrimitiveData(p, prop.c_str(), eps);
@@ -3521,7 +3537,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     if( scatteringenabled ){
 
-        for( auto b=0; b<Nbands; b++ ) {
+        for(auto b=0; b < Nbands_launch; b++ ) {
             diffuse_flux.at(b) = 0.f;
         }
         initializeBuffer1Df( diffuse_flux_RTbuffer, diffuse_flux );
@@ -3540,15 +3556,20 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
                 std::cout << "Performing scattering ray trace (iteration " << s+1 << " of " << scatteringDepth << ")..." << std::flush;
             }
 
-            for( uint b=0; b<Nbands; b++ ){
-                uint depth = radiation_bands.at(label.at(b)).scatteringDepth;
+            int b = -1;
+            for(uint b_global=0; b_global < Nbands_global; b_global++ ){
+
+                if( band_launch_flag.at(b_global)==0 ){
+                    continue;
+                }
+                b++;
+
+                uint depth = radiation_bands.at(band_labels.at(b)).scatteringDepth;
                 if( s+1>depth ) {
                     if( message_flag ) {
-                        std::cout << "Skipping band " << label.at(b) << " for scattering launch " << s + 1 << std::flush;
+                        std::cout << "Skipping band " << band_labels.at(b) << " for scattering launch " << s + 1 << std::flush;
                     }
-                    band_launch_flag.at(b) = 0;
-                }else{
-                    band_launch_flag.at(b) = 1;
+                    band_launch_flag.at(b_global) = 0;
                 }
             }
             initializeBuffer1Dchar( band_launch_flag_RTbuffer, band_launch_flag );
@@ -3563,9 +3584,9 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 //            }
 
             copyBuffer1D( scatter_buff_top_RTbuffer, radiation_out_top_RTbuffer );
-            zeroBuffer1D( scatter_buff_top_RTbuffer, Nbands*Nprimitives );
+            zeroBuffer1D(scatter_buff_top_RTbuffer, Nbands_launch * Nprimitives );
             copyBuffer1D( scatter_buff_bottom_RTbuffer, radiation_out_bottom_RTbuffer );
-            zeroBuffer1D( scatter_buff_bottom_RTbuffer, Nbands*Nprimitives );
+            zeroBuffer1D(scatter_buff_bottom_RTbuffer, Nbands_launch * Nprimitives );
 
             for( uint launch=0; launch<Nlaunches; launch++ ){
 
@@ -3603,8 +3624,8 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
         //re-set diffuse radiation fluxes
         if( diffuseenabled ){
-            for( auto b=0; b<Nbands; b++ ){
-                diffuse_flux.at(b) = getDiffuseFlux(label.at(b));
+            for(auto b=0; b < Nbands_launch; b++ ){
+                diffuse_flux.at(b) = getDiffuseFlux(band_labels.at(b));
             }
             initializeBuffer1Df( diffuse_flux_RTbuffer, diffuse_flux );
         }
@@ -3625,7 +3646,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
             RT_CHECK_ERROR( rtVariableSet1f( camera_viewplane_length_RTvariable, 0.5f/tanf(0.5f*camera.second.HFOV_degrees*M_PI/180.f) ) );
             RT_CHECK_ERROR( rtVariableSet1ui( camera_ID_RTvariable, cam ));
 
-            zeroBuffer1D( radiation_in_camera_RTbuffer, camera.second.resolution.x*camera.second.resolution.y*Nbands );
+            zeroBuffer1D( radiation_in_camera_RTbuffer, camera.second.resolution.x * camera.second.resolution.y * Nbands_launch );
 
             optix::int3 launch_dim_camera = optix::make_int3( camera.second.antialiasing_samples, camera.second.resolution.x, camera.second.resolution.y );
 
@@ -3641,17 +3662,17 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
             std::string camera_label = camera.second.label;
 
-            for( auto b=0; b<Nbands; b++ ) {
+            for(auto b=0; b < Nbands_launch; b++ ) {
 
-                camera.second.pixel_data[label.at(b)].resize(camera.second.resolution.x*camera.second.resolution.y);
+                camera.second.pixel_data[band_labels.at(b)].resize(camera.second.resolution.x*camera.second.resolution.y);
 
-                std::string data_label = "camera_" + camera_label + "_" + label.at(b);
+                std::string data_label = "camera_" + camera_label + "_" + band_labels.at(b);
 
                 for( auto p=0; p<camera.second.resolution.x*camera.second.resolution.y; p++ ){
-                    camera.second.pixel_data.at(label.at(b)).at(p) = radiation_camera.at(p*Nbands+b);
+                    camera.second.pixel_data.at(band_labels.at(b)).at(p) = radiation_camera.at(p * Nbands_launch + b);
                 }
 
-                context->setGlobalData(data_label.c_str(), HELIOS_TYPE_FLOAT,camera.second.resolution.x*camera.second.resolution.y,&camera.second.pixel_data.at(label.at(b))[0]);
+                context->setGlobalData(data_label.c_str(), HELIOS_TYPE_FLOAT,camera.second.resolution.x*camera.second.resolution.y,&camera.second.pixel_data.at(band_labels.at(b))[0]);
 
             }
 
@@ -3701,11 +3722,11 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
     std::vector<uint> UUIDs_context_all = context->getAllUUIDs();
 
-    for( auto b=0; b<Nbands; b++ ) {
+    for(auto b=0; b < Nbands_launch; b++ ) {
 
-        std::string prop = "radiation_flux_" + label.at(b);
+        std::string prop = "radiation_flux_" + band_labels.at(b);
         for (size_t u = 0; u < Nprimitives; u++) {
-            size_t ind = u * Nbands + b;
+            size_t ind = u * Nbands_launch + b;
             float R = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
             context->setPrimitiveData(context_UUIDs.at(u), prop.c_str(), R);
             if (radiation_flux_data.at(ind) != radiation_flux_data.at(ind)) {
@@ -5229,31 +5250,35 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
             uint ii = camera_resolution.x - i -1;
-            uint UUID =pixel_UUIDs.at(j * camera_resolution.x + ii)-1;
+            uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii)-1;
+            if( !context->doesPrimitiveExist(UUID) ){
+                pixel_data << padvalue << " ";
+                continue;
+            }
             uint objID = context->getPrimitiveParentObjectID(UUID);
             if (context->doesObjectExist(objID) && context->doesObjectDataExist(objID,object_data_label.c_str())){
                 HeliosDataType datatype = context->getObjectDataType(objID,object_data_label.c_str());
                 if( datatype == HELIOS_TYPE_FLOAT ){
                     float labeldata;
-                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    context->getObjectData(objID,object_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                     empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_UINT){
                     uint labeldata;
-                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    context->getObjectData(objID,object_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                     empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_INT){
                     int labeldata;
-                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    context->getObjectData(objID,object_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                     empty_flag = false;
                 }
                 else if (datatype == HELIOS_TYPE_DOUBLE){
                     double labeldata;
-                    context->getObjectData(UUID,object_data_label.c_str(),labeldata);
+                    context->getObjectData(objID,object_data_label.c_str(),labeldata);
                     pixel_data << labeldata << " ";
                     empty_flag = false;
                 }else{

@@ -46,7 +46,7 @@ struct CameraProperties{
     //! Camera horizontal field of view in degrees
     float HFOV = 20.f;
 
-    //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
+    //! Ratio of horizontal to vertical camera field of view.
     float FOV_aspect_ratio = 1.f;
 
     CameraProperties(){

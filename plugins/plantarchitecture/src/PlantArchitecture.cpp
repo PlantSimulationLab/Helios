@@ -193,7 +193,7 @@ ShootParameters::ShootParameters(std::minstd_rand0 *generator) {
 
     phyllochron_min.initialize(2, generator);
 
-    elongation_rate.initialize(0.2, generator);
+    elongation_rate_max.initialize(0.2, generator);
     girth_area_factor.initialize(0, generator);
 
     vegetative_bud_break_time.initialize(5, generator);
@@ -394,12 +394,14 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
     }
 
     // Calculate carbon cost
-    if( state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN ) ){ //state went from active to closed flower or open flower
-        float flower_cost = calculateFlowerConstructionCosts(fbud);
-        plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
-    }else if( state == BUD_FRUITING ){ //adding a fruit
-        float fruit_cost = calculateFruitConstructionCosts(fbud);
-        plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+    if( plantarchitecture_ptr->carbon_model_enabled ){
+        if( state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN ) ){ //state went from active to closed flower or open flower
+            float flower_cost = calculateFlowerConstructionCosts(fbud);
+            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
+        }else if( state == BUD_FRUITING ){ //adding a fruit
+            float fruit_cost = calculateFruitConstructionCosts(fbud);
+            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+        }
     }
 
     // Delete geometry from previous reproductive state (if present)
@@ -544,7 +546,9 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
     }
 
     //calculate fully expanded/elongated carbon costs
-    this->carbohydrate_pool_molC -= phytomer->calculatePhytomerConstructionCosts();
+    if( plantarchitecture_ptr->carbon_model_enabled ){
+        this->carbohydrate_pool_molC -= phytomer->calculatePhytomerConstructionCosts();
+    }
 
     return (int) phytomers.size() - 1;
 }
@@ -771,6 +775,29 @@ float Shoot::sumShootLeafArea(uint start_node_index) const {
     }
 
     return area;
+}
+
+
+float Shoot::sumChildVolume( uint start_node_index ) const{
+
+    if( start_node_index>=phytomers.size() ){
+        helios_runtime_error("ERROR (Shoot::sumChildVolume): Start node index out of range.");
+    }
+
+    float volume = 0;
+
+    for( uint p=start_node_index; p<phytomers.size(); p++ ){
+        //call recursively for child shoots
+        if( childIDs.find(p)!=childIDs.end() ){
+            for( int child_shoot_ID : childIDs.at(p) ) {
+                volume += plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
+            }
+        }
+
+    }
+
+    return volume;
+
 }
 
 Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
@@ -1749,6 +1776,54 @@ void Phytomer::removeLeaf() {
     }
 }
 
+void Phytomer::deletePhytomer(){
+
+    // internode
+    if( context_ptr->doesObjectExist(parent_shoot_ptr->internode_tube_objID) ) {
+        context_ptr->pruneTubeNodes(parent_shoot_ptr->internode_tube_objID, this->shoot_index.x);
+        parent_shoot_ptr->terminateApicalBud();
+    }
+
+    // leaves
+    this->removeLeaf();
+
+    //inflorescence
+    for (auto &petiole: this->floral_buds) {
+        for (auto &fbud: petiole) {
+            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                uint objID = fbud.inflorescence_objIDs.at(p);
+                context_ptr->deleteObject(objID);
+                fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+            }
+            for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
+                uint objID = fbud.peduncle_objIDs.at(p);
+                context_ptr->deleteObject(fbud.peduncle_objIDs);
+                context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                fbud.peduncle_objIDs.clear();
+                fbud.inflorescence_objIDs.clear();
+                fbud.inflorescence_bases.clear();
+                break;
+            }
+        }
+    }
+
+    // delete next phytomer on shoot
+    if (shoot_index.x < parent_shoot_ptr->phytomers.size() - 1) {
+        auto next_phytomer = parent_shoot_ptr->phytomers.at(shoot_index.x + 1);
+        next_phytomer->deletePhytomer();
+    }
+
+    // delete any child shoots
+    if( parent_shoot_ptr->childIDs.find(shoot_index.x) != parent_shoot_ptr->childIDs.end() ){
+        for( auto childID: parent_shoot_ptr->childIDs.at(shoot_index.x) ){
+            auto child_shoot = plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(childID);
+            child_shoot->phytomers.front()->deletePhytomer();
+        }
+    }
+
+}
+
 bool Phytomer::hasLeaf() const {
     return (!leaf_bases.empty() && !leaf_bases.front().empty());
 }
@@ -1765,6 +1840,8 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
     isdormant = true;
     gravitropic_curvature = shoot_params.gravitropic_curvature.val();
     context_ptr = plant_architecture_ptr->context_ptr;
+    phyllochron_instantaneous = shoot_parameters.phyllochron_min.val();
+    elongation_rate_instantaneous = shoot_parameters.elongation_rate_max.val();
 
     if( parent_shoot_ID>=0 ) {
         plant_architecture_ptr->plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->childIDs[(int) parent_node_index].push_back(shoot_ID);
@@ -2302,7 +2379,7 @@ float PlantArchitecture::getPlantHeight(uint plantID) const{
 
 }
 
-std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins, bool normalize) const {
+std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins) const {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::getPlantLeafInclinationAngleDistribution): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2316,15 +2393,17 @@ std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(u
     for( uint UUID : leaf_UUIDs ){
         vec3 normal = context_ptr->getPrimitiveNormal(UUID);
         float theta = acos_safe(fabs(normal.z));
+        float area = context_ptr->getPrimitiveArea(UUID);
         uint bin = uint( std::floor(theta / dtheta) );
-        leaf_inclination_angles.at(bin)++;
+        if (bin >= Nbins) {
+            bin = Nbins - 1; // Ensure bin index is within range
+        }
+        leaf_inclination_angles.at(bin)+=area;
     }
 
-    if( normalize ){
-        float sum = helios::sum(leaf_inclination_angles);
-        for( float &angle : leaf_inclination_angles ){
-            angle /= sum;
-        }
+    float sum = helios::sum(leaf_inclination_angles);
+    for( float &angle : leaf_inclination_angles ){
+        angle /= sum;
     }
 
     return  leaf_inclination_angles;
@@ -2371,6 +2450,13 @@ void PlantArchitecture::writePlantMeshVertices(uint plantID, const std::string &
 void PlantArchitecture::setPlantAge(uint plantID, float a_current_age) {
     //\todo
     //    this->current_age = current_age;
+}
+
+std::string PlantArchitecture::getPlantName(uint plantID) const{
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantName): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).plant_name;
 }
 
 float PlantArchitecture::getPlantAge(uint plantID) const{
@@ -2451,6 +2537,21 @@ void PlantArchitecture::breakPlantDormancy( uint plantID ){
     }
 }
 
+void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index){
+
+    if( plant_instances.find(plantID) == plant_instances.end() ){
+        helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }else if( shootID>=plant_instances.at(plantID).shoot_tree.size() ){
+        helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Shoot with ID of " + std::to_string(shootID) + " does not exist on plant " + std::to_string(plantID) + ".");
+    }else if( node_index>=plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number ){
+        helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Node index " + std::to_string(node_index) + " is out of range for shoot " + std::to_string(shootID) + ".");
+    }
+
+    auto &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
+
+    shoot->phytomers.at(node_index)->deletePhytomer();
+
+}
 
 uint PlantArchitecture::getShootNodeCount( uint plantID, uint shootID ) const{
     if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -2480,6 +2581,18 @@ float PlantArchitecture::getShootTaper( uint plantID, uint shootID ) const{
     }
 
     return taper;
+}
+
+std::vector<uint> PlantArchitecture::getAllPlantIDs() const{
+
+        std::vector<uint> objIDs;
+        objIDs.reserve(plant_instances.size());
+
+        for( const auto &plant : plant_instances ){
+            objIDs.push_back(plant.first);
+        }
+
+        return objIDs;
 }
 
 std::vector<uint> PlantArchitecture::getAllPlantObjectIDs(uint plantID) const{
@@ -2727,13 +2840,21 @@ std::vector<uint> PlantArchitecture::getAllObjectIDs() const {
     return objIDs_all;
 }
 
+void PlantArchitecture::enableCarbohydrateModel() {
+    carbon_model_enabled = true;
+}
+
+void PlantArchitecture::disableCarbohydrateModel() {
+    carbon_model_enabled = false;
+}
+
 uint PlantArchitecture::addPlantInstance(const helios::vec3 &base_position, float current_age) {
 
     if( current_age<0 ){
         helios_runtime_error("ERROR (PlantArchitecture::addPlantInstance): Current age must be greater than or equal to zero.");
     }
 
-    PlantInstance instance(base_position, current_age, context_ptr);
+    PlantInstance instance(base_position, current_age, "custom", context_ptr);
 
     plant_instances.emplace(plant_count, instance);
 
@@ -2843,7 +2964,7 @@ void PlantArchitecture::advanceTime(float time_step_days) {
     }
 }
 
-void PlantArchitecture::advanceTime( int time_step_years, float time_step_days ) {
+void PlantArchitecture::advanceTime(int time_step_years, float time_step_days) {
     for (auto &plant: plant_instances) {
         uint plantID = plant.first;
 
@@ -2851,7 +2972,7 @@ void PlantArchitecture::advanceTime( int time_step_years, float time_step_days )
     }
 }
 
-void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
+void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2885,6 +3006,11 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             dt_max = remainder_time;
         }
 
+        // **** accumulate photosynthate **** //
+        if( carbon_model_enabled ){
+            accumulateShootPhotosynthesis();
+        }
+
         if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max > plant_instance.max_age) {
             std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
         } else if (plant_instance.current_age >= plant_instance.max_age) {
@@ -2901,7 +3027,6 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             plant_instance.time_since_dormancy = 0;
             for (const auto &shoot: *shoot_tree) {
                 shoot->makeDormant();
-                shoot->carbohydrate_pool_molC = 100;
             }
             harvestPlant(plantID);
             continue;
@@ -2924,7 +3049,6 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             // breaking dormancy
             if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
                 shoot->breakDormancy();
-                shoot->carbohydrate_pool_molC = 1e6;
             }
 
             if (shoot->isdormant) {
@@ -3019,7 +3143,7 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
             for (auto &phytomer: shoot->phytomers) {
                 //scale internode length
                 if (phytomer->current_internode_scale_factor < 1) {
-                    float dL_internode = dt_max * shoot->shoot_parameters.elongation_rate.val() * phytomer->internode_length_max;
+                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
                     float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                      phytomer->setInternodeLengthScaleFraction(length_scale, false);
                 }
@@ -3039,7 +3163,7 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                 if (phytomer->hasLeaf() && phytomer->current_leaf_scale_factor <= 1) {
                     float tip_ind = ceil(float(phytomer->leaf_size_max.front().size()-1)/2.f);
                     float leaf_length = phytomer->current_leaf_scale_factor * phytomer->leaf_size_max.front().at(tip_ind);
-                    float dL_leaf = dt_max * shoot->shoot_parameters.elongation_rate.val() * phytomer->leaf_size_max.front().at(tip_ind);
+                    float dL_leaf = dt_max * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.front().at(tip_ind);
                     float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val() );
                     phytomer->phytomer_parameters.leaf.prototype_scale.resample();
                     phytomer->setLeafScaleFraction(scale);
@@ -3111,11 +3235,7 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                     // leaves
                     for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
                         if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
-                            context_ptr->deleteObject(phytomer->leaf_objIDs.at(petiole));
-                            phytomer->leaf_objIDs.at(petiole).clear();
-                            phytomer->leaf_bases.at(petiole).clear();
-                            context_ptr->deleteObject(phytomer->petiole_objIDs.at(petiole));
-                            phytomer->petiole_objIDs.at(petiole).clear();
+                            phytomer->removeLeaf();
                         }
                     }
 
@@ -3196,14 +3316,21 @@ void PlantArchitecture::advanceTime( uint plantID, float time_step_days ) {
                     addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
                 }
             }
-
-            // **** subtract maintenance carbon costs **** //
-            // subtractShootMaintenanceCarbon(dt_max);
-
-            if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                float shoot_volume = shoot->calculateShootInternodeVolume();
-                context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration",shoot->carbohydrate_pool_molC / shoot_volume);
+            if( carbon_model_enabled ){
+                if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    float shoot_volume = shoot->calculateShootInternodeVolume();
+                    context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration",shoot->carbohydrate_pool_molC / shoot_volume);
+                }
             }
+        }
+
+        // **** subtract maintenance carbon costs **** //
+        if( carbon_model_enabled ){
+            subtractShootMaintenanceCarbon(time_step_days);
+            subtractShootGrowthCarbon();
+            checkCarbonPool_adjustPhyllochron();
+            checkCarbonPool_abortBuds();
+            checkCarbonPool_transferCarbon();
         }
     }
 

@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['layer_20conductance_20model_20plugin_20documentation_0',['Boundary-Layer Conductance Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'PlugIns']]],
-  ['leaf_20area_20for_20a_20homogeneous_20canopy_1',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]],
-  ['lidar_20point_20cloud_20plugin_20documentation_2',['LiDAR Point Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'Aerial LiDAR Point Cloud Plugin Documentation'],['../_li_d_a_r_doc.html',1,'LiDAR Point Cloud Plugin Documentation']]],
-  ['light_20interception_3',['Tutorial 10: Radiation model basics - tree light interception',['../radiation_basics.html',1,'Tutorials']]],
-  ['light_20interception_20and_20fraction_20of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_4',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]]
+  ['making_20texture_20mask_20files_20with_20transparency_20using_20gimp_0',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
+  ['mask_20files_20with_20transparency_20using_20gimp_1',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
+  ['model_20basics_20tree_20light_20interception_2',['Tutorial 10: Radiation model basics - tree light interception',['../radiation_basics.html',1,'Tutorials']]],
+  ['model_20plugin_20documentation_3',['Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_dummy.html',1,'Dummy Model Plugin Documentation'],['../_energy_balance_doc.html',1,'Energy Balance Model Plugin Documentation'],['../_photosynthesis_doc.html',1,'Photosynthesis Model Plugin Documentation'],['../_plant_architecture_doc.html',1,'Plant Architecture Model Plugin Documentation'],['../_radiation_doc.html',1,'Radiation Model Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation']]]
 ];

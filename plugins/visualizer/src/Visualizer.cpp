@@ -2421,6 +2421,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
     }
 
+    FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
 }

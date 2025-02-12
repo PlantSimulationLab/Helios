@@ -51,5 +51,6 @@ var searchData=
   ['printobjectinfo_48',['printObjectInfo',['../classhelios_1_1_context.html#a963fbdd1d4c3d270d2eb8f49a22b274a',1,'helios::Context']]],
   ['printprimitiveinfo_49',['printPrimitiveInfo',['../classhelios_1_1_context.html#a355617da1f3faa4d01ca4d95425e9c0b',1,'helios::Context']]],
   ['printwindow_50',['printWindow',['../class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32',1,'Visualizer::printWindow()'],['../class_visualizer.html#a1840b4285caa645e6b8b28144478cfe1',1,'Visualizer::printWindow(const char *outfile)']]],
-  ['prospect_51',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]]
+  ['prospect_51',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]],
+  ['prunetubenodes_52',['pruneTubeNodes',['../classhelios_1_1_tube.html#a4d8bc6d05dab160f3e0fbee48ad3fd2c',1,'helios::Tube::pruneTubeNodes()'],['../classhelios_1_1_context.html#a7e47d13895d9e65ae719e2afce8d1d54',1,'helios::Context::pruneTubeNodes()']]]
 ];

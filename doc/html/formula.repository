@@ -109,12 +109,11 @@
 \_form#108=116x17:$electron\,photon^{-1}$
 \_form#109=341x35:\[J(Q) = \dfrac{\alpha Q + J_{max} - \sqrt{(\alpha Q + J_{max})^2 - 4 \theta \alpha Q J_{max}}}{2 \theta}\]
 \_form#110=144x17:$A=0.75g_M\left(C_{a}-C_i\right)$
-\_form#111=398x81:\[
- \begin{aligned}
+\_form#111=398x81:\[ \begin{aligned}
  k &= k_{25} \cdot \exp \left[\frac{\Delta H_a}{R} \left(\frac{1}{298}-\frac{1}{T_{leaf}} \right) \right] \frac{f(298)}{f(T_{leaf})}, \\
  f(T_{leaf}) &= 1+\exp \left[\frac{\Delta H_d}{R} \left(\frac{1}{T_{opt}} - \frac{1}{T_{leaf}} \right) - \ln \left(\frac{\Delta H_d}{\Delta H_a}-1 \right) \right]
  \end{aligned}
- \]
+\]
 \_form#112=6x6:$^\circ$
 \_form#113=20x15:$k_{25}$
 \_form#114=111x15:$A = \Delta H_a = dH_a$
@@ -127,14 +126,13 @@
 \_form#121=14x12:$K$
 \_form#122=33x15:$T_{leaf}$
 \_form#123=93x14:$kJ\,mol^{-1}\,K^{-1}$
-\_form#124=266x165:\[
- \begin{aligned}
+\_form#124=266x165:\[ \begin{aligned}
  \Gamma^* &= 42.60 \cdot \exp \left[ \frac{37.83}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
  K_c &= 400.3 \cdot \exp \left[ \frac{79.43}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
  K_o &= 275.1 \cdot \exp \left[ \frac{36.38}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right] \\
  R_d &= R_{d,25} \cdot \exp \left[ \frac{46.39}{R} \left(\frac{1}{298} - \frac{1}{T_{leaf}} \right) \right]
  \end{aligned}
- \]
+\]
 \_form#125=17x15:$C_{a}$
 \_form#126=50x15:$V_{cmax25}$
 \_form#127=44x15:$J_{max25}$
@@ -174,8 +172,7 @@
 \_form#161=41x12:$A=0$
 \_form#162=15x8:$\infty$
 \_form#163=11x14:$\leq$
-\_form#164=165x32:\[
-    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
+\_form#164=165x32:\[    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
 \]
 \_form#165=15x12:$d\theta$
 \_form#166=18x12:$dL$
@@ -221,16 +218,13 @@
 \_form#206=104x14:$\sigma=5.67\times10^{-8}$
 \_form#207=50x17:$R_{meas,h}$
 \_form#208=38x15:$R_{clear}$
-\_form#209=149x17:\[
-    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
- \]
-\_form#210=206x36:\[
-    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
- \]
+\_form#209=149x17:\[    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
+\]
+\_form#210=206x36:\[    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+\]
 \_form#211=89x17:$0\leq f_{diff} \leq 1$
-\_form#212=162x36:\[
-   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
- \]
+\_form#212=162x36:\[   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+\]
 \_form#213=122x17:$(\theta-\theta_w)/(\theta_f-\theta_w)$
 \_form#214=56x17:$\theta,\,\theta_f,\,\theta_w$
 \_form#215=14x15:$h_s$

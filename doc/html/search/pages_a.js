@@ -1,13 +1,8 @@
 var searchData=
 [
-  ['canopy_0',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]],
-  ['canopy_20generator_20plugin_20documentation_1',['Canopy Generator Plugin Documentation',['../_canopy_generator_doc.html',1,'PlugIns']]],
-  ['choosing_20the_20right_20cuda_20and_20optix_20version_2',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
-  ['clion_20ide_20with_20helios_3',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
-  ['cloud_20plugin_20documentation_4',['Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'Aerial LiDAR Point Cloud Plugin Documentation'],['../_li_d_a_r_doc.html',1,'LiDAR Point Cloud Plugin Documentation']]],
-  ['conductance_20model_20plugin_20documentation_5',['Conductance Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation']]],
-  ['context_20geometry_6',['Tutorial 2: Working with Context Geometry',['../context_primitives.html',1,'Tutorials']]],
-  ['context_20self_20test_20tutorial_7',['Tutorial 0: Context Self-Test Tutorial',['../context_selftest.html',1,'Tutorials']]],
-  ['converting_20polygon_20file_20formats_20to_20ply_20using_20blender_8',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['cuda_20and_20optix_20version_9',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]]
+  ['data_0',['Data',['../context_primdata.html',1,'Tutorial 5: Primitive Data'],['../context_globaldata.html',1,'Tutorial 6: Global Data']]],
+  ['data_20values_1',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
+  ['documentation_2',['Documentation',['../_aerial_li_d_a_r_doc.html',1,'Aerial LiDAR Point Cloud Plugin Documentation'],['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_canopy_generator_doc.html',1,'Canopy Generator Plugin Documentation'],['../_dummy.html',1,'Dummy Model Plugin Documentation'],['../_energy_balance_doc.html',1,'Energy Balance Model Plugin Documentation'],['../index.html',1,'Helios Documentation'],['../_li_d_a_r_doc.html',1,'LiDAR Point Cloud Plugin Documentation'],['../_photosynthesis_doc.html',1,'Photosynthesis Model Plugin Documentation'],['../_plant_architecture_doc.html',1,'Plant Architecture Model Plugin Documentation'],['../_radiation_doc.html',1,'Radiation Model Plugin Documentation'],['../_solar_position_doc.html',1,'Solar Position Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation'],['../_visualizer_doc.html',1,'Visualizer Plugin Documentation'],['../_voxel_intersection_doc.html',1,'Voxel Intersection Plugin Documentation'],['../_weber_penn_doc.html',1,'Weber-Penn Tree Plugin Documentation']]],
+  ['driver_20timeout_3',['Increasing graphics driver timeout',['../_p_c_g_p_u_timeout.html',1,'']]],
+  ['dummy_20model_20plugin_20documentation_4',['Dummy Model Plugin Documentation',['../_dummy.html',1,'']]]
 ];

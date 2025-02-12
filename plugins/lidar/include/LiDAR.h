@@ -637,6 +637,13 @@ class LiDARcloud{
   */
   void exportTriangleInclinationDistribution( const char* filename, uint Nbins );
 
+  //! Export to file discrete azimuthal angle probability distribution based on the triangulation. Azimuthal angles are between 0 and 360 degrees. The probability distribution is normalized such that the integral over all angles is 1. The value of each bin is written as a column in the output file; lines correspond to each voxel grid cell.
+  /**
+    * \param[in] filename Name of file
+    * \param[in] Nbins Number of bins to use for the histogram
+   */
+  void exportTriangleAzimuthDistribution( const char* filename, uint Nbins );
+
   //! Export to file the leaf area within each grid cell. Lines of the file correspond to each grid cell
   /**
    * \param[in] filename Name of file

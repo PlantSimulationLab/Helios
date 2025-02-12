@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['7_3a_20visualizer_20basics_0',['Tutorial 7: Visualizer Basics',['../visualizer_basics.html',1,'Tutorials']]]
+  ['8_3a_20visualizing_20primitive_20data_20values_0',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]]
 ];

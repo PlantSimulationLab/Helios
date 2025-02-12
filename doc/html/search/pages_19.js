@@ -1,11 +1,9 @@
 var searchData=
 [
-  ['v1_203_2026_0',['Helios Documentation v1.3.26',['../index.html',1,'']]],
-  ['values_1',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
-  ['vector_20types_20tutorial_2',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],
-  ['version_3',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
-  ['visualizer_20basics_4',['Tutorial 7: Visualizer Basics',['../visualizer_basics.html',1,'Tutorials']]],
-  ['visualizer_20plugin_20documentation_5',['Visualizer Plugin Documentation',['../_visualizer_doc.html',1,'PlugIns']]],
-  ['visualizing_20primitive_20data_20values_6',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
-  ['voxel_20intersection_20plugin_20documentation_7',['Voxel Intersection Plugin Documentation',['../_voxel_intersection_doc.html',1,'PlugIns']]]
+  ['weber_20penn_20tree_20plugin_20documentation_0',['Weber-Penn Tree Plugin Documentation',['../_weber_penn_doc.html',1,'PlugIns']]],
+  ['with_20context_20geometry_1',['Tutorial 2: Working with Context Geometry',['../context_primitives.html',1,'Tutorials']]],
+  ['with_20helios_2',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
+  ['with_20transparency_20using_20gimp_3',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
+  ['working_20with_20context_20geometry_4',['Tutorial 2: Working with Context Geometry',['../context_primitives.html',1,'Tutorials']]],
+  ['writing_20plugins_5',['Writing Plugins',['../_plugins.html',1,'']]]
 ];

@@ -613,6 +613,7 @@ void LiDARcloud::exportTriangleInclinationDistribution( const char* filename, ui
     for( int i=0; i<getGridCellCount(); i++ ){
         inclinations.at(i).resize( Nbins );
     }
+    std::vector<float> cell_area(inclinations.size(),0);
 
     float db = 0.5f*M_PI/float(Nbins); //bin width
 
@@ -644,6 +645,8 @@ void LiDARcloud::exportTriangleInclinationDistribution( const char* filename, ui
 
         inclinations.at(cell).at(bin) += area;
 
+        cell_area.at(cell) += area;
+
     }
 
     ofstream file;
@@ -656,7 +659,76 @@ void LiDARcloud::exportTriangleInclinationDistribution( const char* filename, ui
 
     for( int cell=0; cell<getGridCellCount(); cell++ ){
         for( int bin=0; bin<Nbins; bin++ ) {
-            file << inclinations.at(cell).at(bin) << " ";
+            file << inclinations.at(cell).at(bin)/cell_area.at(cell) << " ";
+        }
+        file << std::endl;
+    }
+
+    file.close();
+
+}
+
+void LiDARcloud::exportTriangleAzimuthDistribution( const char* filename, uint Nbins ){
+
+    std::vector<std::vector<float>> azimuths( getGridCellCount() );
+    for( int i=0; i<getGridCellCount(); i++ ){
+        azimuths.at(i).resize( Nbins );
+    }
+    std::vector<float> cell_area(azimuths.size(),0);
+
+    float db = 2*M_PI/float(Nbins); //bin width
+
+    for( std::size_t t=0; t<triangles.size(); t++ ){
+
+        Triangulation tri = triangles.at(t);
+
+        int cell = tri.gridcell;
+
+        if( cell<0 ){
+            continue;
+        }
+
+        vec3 v0 = tri.vertex0;
+        vec3 v1 = tri.vertex1;
+        vec3 v2 = tri.vertex2;
+
+        vec3 normal = cross( v1-v0, v2-v0 );
+        normal.normalize();
+        SphericalCoord n_sph= cart2sphere(normal);
+
+        float azimuth= n_sph.azimuth;
+
+        if (normal.z<0){
+            azimuth=azimuth+M_PI;
+            if (azimuth >M_PI*2){
+                azimuth=azimuth-M_PI*2;
+            }
+        }
+
+
+        float area = tri.area;
+
+        uint bin = floor(azimuth/db);
+        if( bin>=Nbins ){
+            bin = Nbins-1;
+        }
+
+        azimuths.at(cell).at(bin) += area;
+        cell_area.at(cell) += area;
+
+    }
+
+    ofstream file;
+
+    file.open(filename);
+
+    if( !file.is_open() ){
+        throw( std::runtime_error("ERROR (LiDARcloud::exportTriangleAzimuthDistribution): Could not open file '" + std::string(filename) + "' for writing.") );
+    }
+
+    for( int cell=0; cell<getGridCellCount(); cell++ ){
+        for( int bin=0; bin<Nbins; bin++ ) {
+            file << azimuths.at(cell).at(bin)/cell_area.at(cell) << " ";
         }
         file << std::endl;
     }

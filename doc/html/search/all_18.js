@@ -162,5 +162,6 @@ var searchData=
   ['prospect_159',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]],
   ['prototype_5ffunction_160',['prototype_function',['../struct_leaf_prototype.html#ab709ab7749bf4ad562946441bc7a937e',1,'LeafPrototype']]],
   ['prototypes_161',['Prototypes',['../_plant_architecture_doc.html#PlantArchOrgans',1,'Creating Plant Organ Prototypes'],['../_plant_architecture_doc.html#FlowerPrototypes',1,'Flower Prototypes'],['../_plant_architecture_doc.html#FruitPrototypes',1,'Fruit Prototypes'],['../_plant_architecture_doc.html#LeafPrototypes',1,'Leaf Prototypes']]],
-  ['pseudocolor_20map_162',['Coloring by pseudocolor map',['../_visualizer_doc.html#ColoringPseudo',1,'']]]
+  ['prunetubenodes_162',['pruneTubeNodes',['../classhelios_1_1_tube.html#a4d8bc6d05dab160f3e0fbee48ad3fd2c',1,'helios::Tube::pruneTubeNodes()'],['../classhelios_1_1_context.html#a7e47d13895d9e65ae719e2afce8d1d54',1,'helios::Context::pruneTubeNodes()']]],
+  ['pseudocolor_20map_163',['Coloring by pseudocolor map',['../_visualizer_doc.html#ColoringPseudo',1,'']]]
 ];
