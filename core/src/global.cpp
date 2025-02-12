@@ -3051,7 +3051,7 @@ float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
 
     //If the caller's X value is less than the smallest X value in the table,
     //we can't interpolate.
-    if (iter == points.cbegin() and x <= points.cbegin()->x) {
+    if (iter == points.cbegin() && x <= points.cbegin()->x) {
         return points.cbegin()->y;
     }
 

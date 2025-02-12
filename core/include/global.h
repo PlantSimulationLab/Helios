@@ -53,6 +53,10 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <iomanip>
 #include <filesystem>
 
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 typedef unsigned int uint;
 
 #include "helios_vector_types.h"

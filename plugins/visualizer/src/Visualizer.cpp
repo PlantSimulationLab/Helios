@@ -2421,6 +2421,7 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
 
     }
 
+    FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
 }
@@ -4371,7 +4372,7 @@ void cursorCallback( GLFWwindow* window, double xpos, double ypos ){
 void scrollCallback( GLFWwindow* window, double xoffset, double yoffset ){
     dscroll = (float) yoffset;
     scrollY = yoffset;
-    if (yoffset > 0.0 or yoffset < 0.0){
+    if (yoffset > 0.0 || yoffset < 0.0){
         scroll = true;
     } else {scroll = false;}
 }

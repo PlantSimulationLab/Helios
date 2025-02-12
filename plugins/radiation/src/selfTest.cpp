@@ -48,7 +48,7 @@ int RadiationModel::selfTest(){
 
     shortwave_exact_0 = 0.7f*Qs;
     shortwave_exact_1 = 0.3f*0.2f*Qs;
-    longwave_exact_0 = 0.f;//sigma*powf(300.f,4)*0.2f;
+    longwave_exact_0 = 0.f;
     longwave_exact_1 = sigma*powf(300.f,4)*0.2f;
 
     Context context_1;
@@ -464,7 +464,7 @@ int RadiationModel::selfTest(){
 
     std::cout << "Test #6: Parallel disks (Texture Masked Patches)..." << std::flush;
 
-    uint Ndirect_6 = 100;
+    uint Ndirect_6 = 1000;
     uint Ndiffuse_6 = 500000;
 
     shortwave_rho = 0.3;

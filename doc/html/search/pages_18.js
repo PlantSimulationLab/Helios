@@ -1,8 +1,10 @@
 var searchData=
 [
-  ['up_0',['Install and Set-up',['../_dependent_software.html',1,'']]],
-  ['user_20api_20guide_1',['User/API Guide',['../_a_p_i.html',1,'']]],
-  ['using_20blender_2',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['using_20gimp_3',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['using_20the_20clion_20ide_20with_20helios_4',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]]
+  ['values_0',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
+  ['vector_20types_20tutorial_1',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],
+  ['version_2',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['visualizer_20basics_3',['Tutorial 7: Visualizer Basics',['../visualizer_basics.html',1,'Tutorials']]],
+  ['visualizer_20plugin_20documentation_4',['Visualizer Plugin Documentation',['../_visualizer_doc.html',1,'PlugIns']]],
+  ['visualizing_20primitive_20data_20values_5',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata.html',1,'Tutorials']]],
+  ['voxel_20intersection_20plugin_20documentation_6',['Voxel Intersection Plugin Documentation',['../_voxel_intersection_doc.html',1,'PlugIns']]]
 ];

@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation v1.3.26
+/*! \mainpage Helios Documentation
 
   <p> <br> </p>
 
@@ -40,15 +40,19 @@ $ git pull
   $ git log
   ~~~~~~
 
-<p> <br><br><br><br> </p>
+ <p> <br><br><br><br> </p>
 
-  \image html doc/images/PSL_logo_compact.png
+ <div align="center">
+    \image html doc/images/PSL_logo_compact.png
+ </div>
 
+  <!--
   <p> <br><br> </p>
 
   Financial support provided by:
 
   \image html doc/images/sponsors.jpg
+  -->
 
   <p> <br><br> </p>
 
@@ -348,7 +352,7 @@ $ git pull
   
   Projects that use the Helios API are typically built using the CMake package a CMakeLists.txt file.  Helios requires CMake version 3.15+. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
-  ~~~~~~
+  ```
   # Helios standard CMakeLists.txt file version 1.9
   cmake_minimum_required(VERSION 3.15)
   project(helios)
@@ -369,21 +373,21 @@ $ git pull
 
   #-------- DO NOT MODIFY ---------#
   include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
-  ~~~~~~
+ ```
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".
 
   To build the code from the command line based on the CMakeLists.txt file, which creates a makefile, simply run the command 'cmake', followed by the path to the CMakeLists.txt file.  If, as in the examples above, you are currently in the build directory and your CMakeLists.txt file is located one directory up, the CMake build is accomplished through:
 
-  ~~~~~~
+  ```
   $ cmake ..
-  ~~~~~~
+  ```
 
   By default, this will build Helios in "debug" mode. This is useful for debugging and testing because it will generate debug symbols and output more detailed error messages to the command line. However, this will make the code run much slower because it disables compiler optimizations (usually 3x slower on Linux and 4-5x slower on PC). For 'production' runs, it is recommended to build in 'release' mode in order to enable compiler optimizations. This is accomplished by passing an additional command-line argument to CMake:
 
-  ~~~~~~
+  ```
   $ cmake -DCMAKE_BUILD_TYPE='Release' ..
-  ~~~~~~
+  ```
 
   The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.
 
@@ -459,20 +463,20 @@ $ git pull
 
  In order to use the Context, the following header must be included:
 
- ~~~~~~{.cpp}
+ ~~~
  #include "Context.h"
- ~~~~~~
+ ~~~
 
  The context is typically created within the main function:
 
- ~~~~~~{.cpp}
+ ~~~
  #include "Context.h"
  using namespace helios;
 
  int main(){
     Context context;
  }
- ~~~~~~
+ ~~~
 
  The Context is usually passed to plugins (see \ref Plugins), which gives them access to geometry and data.
 
@@ -1621,7 +1625,7 @@ $ git pull
 
   \section XMLread Reading XML Files
 
-  XML files can be read by the Context via the function \ref loadXML().  This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.
+  XML files can be read by the Context via the function \ref Context::loadXML().  This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.
   ~~~~~~{.cpp}
    #include "Context.h"
    using namespace helios;
@@ -1752,7 +1756,7 @@ $ git pull
 
   \section Export Exporting Project to XML File Format
 
-  All geometry and global/primitive data loaded into the Context can be written to an XML file using the \ref writeXML() function, which can be later read back in using the \ref loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.
+  All geometry and global/primitive data loaded into the Context can be written to an XML file using the \ref Context::writeXML() function, which can be later read back in using the \ref Context::loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.
 
   An XML file can be written as follows:
 

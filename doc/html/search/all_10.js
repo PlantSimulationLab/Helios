@@ -7,7 +7,7 @@ var searchData=
   ['helios_4',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
   ['helios_20context_5',['The Helios Context',['../_overview.html#ContextOverview',1,'']]],
   ['helios_20dependencies_6',['Installing Helios Dependencies',['../_dependent_software.html#Automatically',1,'']]],
-  ['helios_20documentation_20v1_203_2026_7',['Helios Documentation v1.3.26',['../index.html',1,'']]],
+  ['helios_20documentation_7',['Helios Documentation',['../index.html',1,'']]],
   ['helios_20prerequisites_8',['Helios Prerequisites',['../_overview.html#PrereqsHelios',1,'']]],
   ['helios_20programming_9',['Which platform to use for Helios programming?',['../_dependent_software.html#WhichPlatform',1,'']]],
   ['helios_20vector_20types_20tutorial_10',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors.html',1,'Tutorials']]],

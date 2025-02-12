@@ -4142,10 +4142,10 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   // - it would make more sense to write patches  as quads rather than two triangles
 
   if( UUIDs.empty() ){
-    std::cout << "WARNING (Context::writeOBJ): No primitives found to write - OBJ file will not be written." << std::endl;
+    std::cout << "WARNING (Context::writeOBJ): No primitives found to write - OBJ file " << filename << " will not be written." << std::endl;
     return;
   }else if( filename.empty() ){
-    std::cout << "WARNING (Context::writeOBJ): Filename was empty - OBJ file will not be written." << std::endl;
+    std::cout << "WARNING (Context::writeOBJ): Filename was empty - OBJ file " << filename << " will not be written." << std::endl;
     return;
   }
 

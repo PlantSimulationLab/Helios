@@ -77,7 +77,12 @@ else()
 	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 endif()
 
-set( CUDA_SOURCES "src/primitiveIntersection.cu;src/rayGeneration.cu;src/rayHit.cu;" )
+set( CUDA_SOURCES
+		src/primitiveIntersection.cu
+		src/rayGeneration.cu
+		src/rayHit.cu
+)
+
 cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
 add_custom_target(ptx ALL DEPENDS ${cuda_ptx_files}  ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
 add_dependencies( radiation ptx )
@@ -88,6 +93,29 @@ add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMA
 add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx )
 add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx )
 endif()
+
+# Define a CUDA object library (makes CLion aware of CUDA files)
+#add_library(CudaPTX OBJECT ${CUDA_SOURCES})
+#set_target_properties(CudaPTX PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+# Custom target to generate PTX files
+#set(PTX_FILES)
+#foreach(CU_FILE ${CUDA_SOURCES})
+#	get_filename_component(CU_NAME ${CU_FILE} NAME_WE)
+#	set(PTX_FILE ${CMAKE_BINARY_DIR}/plugins/radiation/${CU_NAME}.ptx)
+#	add_custom_command(
+#			OUTPUT ${PTX_FILE}
+#			COMMAND ${CUDA_NVCC_EXECUTABLE} --ptx ${CMAKE_CURRENT_SOURCE_DIR}/${CU_FILE} -o ${PTX_FILE}
+#			-I${OPTIX_PATH}include -I${CMAKE_CURRENT_SOURCE_DIR}/include
+#			DEPENDS ${CU_FILE}
+#	)
+#	list(APPEND PTX_FILES ${PTX_FILE})
+#endforeach()
+
+#add_custom_target(ptx ALL DEPENDS ${PTX_FILES})
+
+# Ensure main project depends on PTX target
+#add_dependencies(radiation ptx)
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )

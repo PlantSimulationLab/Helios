@@ -697,7 +697,7 @@ struct ShootParameters{
 
     RandomParameter_float phyllochron_min; //days/phytomer
 
-    RandomParameter_float elongation_rate; //length/day
+    RandomParameter_float elongation_rate_max; //length/day
 
     // Minimum probability that bud with this shoot type will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability_min;
@@ -736,8 +736,6 @@ struct ShootParameters{
         this->max_nodes_per_season.resample();
         this->phyllochron_min = a.phyllochron_min;
         this->phyllochron_min.resample();
-        this->elongation_rate = a.elongation_rate;
-        this->elongation_rate.resample();
         this->girth_area_factor = a.girth_area_factor;
         this->girth_area_factor.resample();
         this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
@@ -890,6 +888,8 @@ public:
 
     void removeLeaf();
 
+    void deletePhytomer();
+
     // ---- phytomer data ---- //
 
     //! Coordinates of internode tube segments. Index is tube segment within internode
@@ -1012,6 +1012,8 @@ struct Shoot {
 
     float sumShootLeafArea( uint start_node_index = 0 ) const;
 
+    float sumChildVolume( uint start_node_index = 0) const;
+
     void propagateDownstreamLeafArea(Shoot* shoot, uint node_index, float leaf_area);
 
     uint current_node_number = 0;
@@ -1028,8 +1030,14 @@ struct Shoot {
     const uint rank;
     const uint parent_petiole_index;
 
-    float carbohydrate_pool_molC = 0.01;  // mol C
-    float old_shoot_volume = 0;
+    float carbohydrate_pool_molC = 0;  // mol C
+    float old_shoot_volume;
+
+    float phyllochron_increase = 2;
+    float phyllochron_recovery = phyllochron_increase * 1.5;
+
+    float elongation_decay = 0.5;
+    float elongation_recovery = elongation_decay /1.5 ;
 
     uint days_with_negative_carbon_balance = 0;
 
@@ -1042,6 +1050,8 @@ struct Shoot {
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
+    float phyllochron_min = 6;
+    float elongation_max = .25;
 
     float curvature_perturbation = 0;
     float yaw_perturbation = 0;
@@ -1064,6 +1074,9 @@ struct Shoot {
 
     std::string shoot_type_label;
 
+    float phyllochron_instantaneous;
+    float elongation_rate_instantaneous;
+
     std::vector<std::shared_ptr<Phytomer> > phytomers;
 
     PlantArchitecture* plantarchitecture_ptr;
@@ -1074,12 +1087,13 @@ struct Shoot {
 
 struct PlantInstance{
 
-    PlantInstance(const helios::vec3 &a_base_position, float a_current_age, helios::Context *a_context_ptr) : base_position(a_base_position), current_age(a_current_age), context_ptr(a_context_ptr) {}
+    PlantInstance(const helios::vec3 &a_base_position, float a_current_age, const std::string &a_plant_name, helios::Context *a_context_ptr) : base_position(a_base_position), current_age(a_current_age), plant_name(a_plant_name), context_ptr(a_context_ptr) {}
     std::vector<std::shared_ptr<Shoot> > shoot_tree;
     helios::vec3 base_position;
     float current_age;
     float time_since_dormancy = 0;
     helios::Context *context_ptr;
+    std::string plant_name;
     std::pair<std::string,float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
 
     //Phenological thresholds
@@ -1234,21 +1248,23 @@ public:
     /**
      * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( float time_step_days );
+    void advanceTime(float time_step_days);
+
+    void accumulateHourlyLeafPhotosynthesis();
 
     //! Advance plant growth by a specified time interval for all plants
     /**
      * \param[in] time_step_years Number of years to advance.
      * \param[in] time_step_days Number of days to advance (added to number of years).
      */
-    void advanceTime( int time_step_years, float time_step_days );
+    void advanceTime(int time_step_years, float time_step_days);
 
     //! Advance plant growth by a specified time interval for a single plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] time_step_days Time interval in days.
      */
-    void advanceTime( uint plantID, float time_step_days );
+    void advanceTime(uint plantID, float time_step_days);
 
     // -- plant building methods -- //
 
@@ -1368,6 +1384,8 @@ public:
 
     // -- methods for modifying the current plant state -- //
 
+    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3);
+
     void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3 );
 
     void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
@@ -1392,7 +1410,11 @@ public:
 
     void breakPlantDormancy( uint plantID );
 
+    void pruneBranch(uint plantID, uint shootID, uint node_index);
+
     // -- methods for querying information about the plant -- //
+
+    std::string getPlantName(uint plantID) const;
 
     float getPlantAge(uint plantID) const;
 
@@ -1427,10 +1449,9 @@ public:
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] Nbins Number of bins for the histogram.
-     * \param[in] normalize [OPTIONAL] Normalize the histogram to integrate to 1.
      * \return Histogram of leaf inclination angles. Bins are evenly spaced between 0 and 90 degrees.
      */
-    std::vector<float> getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins, bool normalize=false) const;
+    std::vector<float> getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins) const;
 
     //! Get the total number of leaves on the plant
     /**
@@ -1445,6 +1466,12 @@ public:
      * \param[in] filename Name/path of the output file.
      */
     void writePlantMeshVertices(uint plantID, const std::string &filename) const;
+
+    //! Get IDs for all plant instances
+    /**
+     * \return Vector of plant IDs for all plant instances
+     */
+    std::vector<uint> getAllPlantIDs() const;
 
     //! Get object IDs for all organs objects for a given plant
     /**
@@ -1550,6 +1577,12 @@ public:
      */
     std::vector<uint> getAllObjectIDs() const;
 
+    // -- carbohydrate model -- //
+
+    void enableCarbohydrateModel();
+
+    void disableCarbohydrateModel();
+
     // -- manual plant generation from input string -- //
 
     std::string getPlantString(uint plantID) const;
@@ -1625,12 +1658,14 @@ protected:
 
     void accumulateShootPhotosynthesis();
 
-    void accumulateHourlyLeafPhotosynthesis();
-
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortbuds();
+    void checkCarbonPool_abortBuds();
+    void checkCarbonPool_adjustPhyllochron();
+    void checkCarbonPool_transferCarbon();
+
+    bool carbon_model_enabled = false;
 
     // --- Plant Library --- //
 
@@ -1665,6 +1700,10 @@ protected:
     void initializeGrapevineVSPShoots();
 
     uint buildGrapevineVSP( const helios::vec3 &base_position );
+
+    void initializeGroundCherryWeedShoots();
+
+    uint buildGroundCherryWeedPlant( const helios::vec3 &base_position );
 
     void initializeMaizeShoots();
 

@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['making_20texture_20mask_20files_20with_20transparency_20using_20gimp_0',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['mask_20files_20with_20transparency_20using_20gimp_1',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['model_20basics_20tree_20light_20interception_2',['Tutorial 10: Radiation model basics - tree light interception',['../radiation_basics.html',1,'Tutorials']]],
-  ['model_20plugin_20documentation_3',['Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_dummy.html',1,'Dummy Model Plugin Documentation'],['../_energy_balance_doc.html',1,'Energy Balance Model Plugin Documentation'],['../_photosynthesis_doc.html',1,'Photosynthesis Model Plugin Documentation'],['../_plant_architecture_doc.html',1,'Plant Architecture Model Plugin Documentation'],['../_radiation_doc.html',1,'Radiation Model Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation']]]
+  ['of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_0',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law.html',1,'Tutorials']]],
+  ['optix_20version_1',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['output_2',['File Input/Output',['../_i_o.html',1,'']]],
+  ['overview_3',['Overview',['../_overview.html',1,'']]]
 ];

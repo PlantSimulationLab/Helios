@@ -8,8 +8,7 @@ var searchData=
   ['2003_20model_20simplified_20version_20given_20in_20buckley_20turnbull_20and_20adams_202012_5',['Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnbull, and Adams 2012)',['../_stomatal_doc.html#BMFTheory',1,'']]],
   ['2011_20optimality_20based_20model_6',['Medlyn et al. (2011) Optimality-Based Model',['../_stomatal_doc.html#MoptTheory',1,'']]],
   ['2012_7',['Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnbull, and Adams 2012)',['../_stomatal_doc.html#BMFTheory',1,'']]],
-  ['26_8',['Helios Documentation v1.3.26',['../index.html',1,'']]],
-  ['2_3a_20working_20with_20context_20geometry_9',['Tutorial 2: Working with Context Geometry',['../context_primitives.html',1,'Tutorials']]],
-  ['2d_20raster_20ground_20cover_20fraction_10',['2D raster ground cover fraction',['../_aerial_li_d_a_r_doc.html#AerialGroundCover',1,'']]],
-  ['2d_20raster_20height_20maps_11',['2D raster height maps',['../_aerial_li_d_a_r_doc.html#AerialRasters',1,'']]]
+  ['2_3a_20working_20with_20context_20geometry_8',['Tutorial 2: Working with Context Geometry',['../context_primitives.html',1,'Tutorials']]],
+  ['2d_20raster_20ground_20cover_20fraction_9',['2D raster ground cover fraction',['../_aerial_li_d_a_r_doc.html#AerialGroundCover',1,'']]],
+  ['2d_20raster_20height_20maps_10',['2D raster height maps',['../_aerial_li_d_a_r_doc.html#AerialRasters',1,'']]]
 ];

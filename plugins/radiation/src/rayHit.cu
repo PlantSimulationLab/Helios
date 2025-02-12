@@ -29,7 +29,8 @@ rtDeclareVariable(rtObject,      top_object, , );
 
 rtDeclareVariable( unsigned int, UUID, attribute UUID, );
 
-rtDeclareVariable( unsigned int, Nbands,, );
+rtDeclareVariable( unsigned int, Nbands_launch,, );
+rtDeclareVariable( unsigned int, Nbands_global,, );
 rtBuffer<bool, 1> band_launch_flag;
 
 rtDeclareVariable( unsigned int, Nprimitives,, );
@@ -203,14 +204,16 @@ RT_PROGRAM void closest_hit_diffuse() {
 
         bool face = dot(normal, ray.direction) < 0;
 
-        for (size_t b = 0; b < Nbands; b++) {
+        int b = -1;
+        for (int b_global = 0; b_global < Nbands_global; b_global++) {
 
-            if( band_launch_flag[b]==0 ){
+            if( band_launch_flag[b_global]==0 ){
                 continue;
             }
+            b++;
 
-            size_t ind_origin = Nbands * origin_UUID + b;
-            size_t ind_hit = Nbands * UUID + b;
+            size_t ind_origin = Nbands_launch * origin_UUID + b;
+            size_t ind_hit = Nbands_launch * UUID + b;
 
             double strength;
             if (face || primitive_type[objID] == 4) {
@@ -223,8 +226,9 @@ RT_PROGRAM void closest_hit_diffuse() {
                 continue;
             }
 
-            float t_rho = rho[ Nprimitives*Nbands*prd.source_ID + Nbands*origin_UUID + b ];
-            float t_tau = tau[ Nprimitives*Nbands*prd.source_ID + Nbands*origin_UUID + b ];
+            size_t radprop_ind_global = Nprimitives*Nbands_global*prd.source_ID + Nbands_global*origin_UUID + b_global;
+            float t_rho = rho[ radprop_ind_global ];
+            float t_tau = tau[ radprop_ind_global ];
 
             if (primitive_type[objectID[origin_UUID]] == 4) { //ray was launched from voxel
 
@@ -253,7 +257,7 @@ RT_PROGRAM void closest_hit_diffuse() {
                     }
                 }
                 if( Ncameras>0 ) {
-                    size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+                    size_t indc = prd.source_ID*Nprimitives*Nbands_global*Ncameras + origin_UUID*Nbands_global*Ncameras + b_global*Ncameras + camera_ID;
                     float t_rho_cam = rho_cam[ indc ];
                     float t_tau_cam = tau_cam[ indc ];
                     if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
@@ -369,12 +373,12 @@ RT_PROGRAM void closest_hit_camera() {
         float3 camera_normal = d_rotatePoint( make_float3(0,0,1), -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );
 
         double strength;
-        for( size_t b=0; b<Nbands; b++ ) {
+        for( size_t b=0; b<Nbands_launch; b++ ) {
 
             if (face || primitive_type[objID] == 4) {
-                strength = radiation_out_top[Nbands * UUID + b] * prd.strength;   //this one  /fabs(dot())
+                strength = radiation_out_top[Nbands_launch * UUID + b] * prd.strength;   //this one  /fabs(dot())
             } else {
-                strength = radiation_out_bottom[Nbands * UUID + b] * prd.strength;
+                strength = radiation_out_bottom[Nbands_launch * UUID + b] * prd.strength;
             }
 
 
@@ -389,7 +393,7 @@ RT_PROGRAM void closest_hit_camera() {
 //                float spec = 0;
 //                if (source_types[rr] == 0) { //collimated source
 //                    light_direction = normalize(source_positions[rr]);
-//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[rr*Nbands + b];
+//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[rr*Nbands_launch + b];
 //
 //                } else { //sphere source
 //
@@ -404,7 +408,7 @@ RT_PROGRAM void closest_hit_camera() {
 //
 //                    light_magnitude = d_magnitude(light_direction);
 //                    light_direction = normalize(light_direction);
-//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[ rr*Nbands + b] * fabs(dot(normal, light_direction)) / (light_magnitude * light_magnitude)*source_widths[rr].x*source_widths[rr].x;
+//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[ rr*Nbands_launch + b] * fabs(dot(normal, light_direction)) / (light_magnitude * light_magnitude)*source_widths[rr].x*source_widths[rr].x;
 //                }
 //
 //                float3 specular_direction = normalize(2 * abs(dot(light_direction, normal)) * normal - light_direction);
@@ -417,8 +421,8 @@ RT_PROGRAM void closest_hit_camera() {
 
             // absorption
 
-            atomicAdd(&radiation_in_camera[Nbands * prd.origin_UUID + b], strength );
-//            atomicAdd(&radiation_in_camera[Nbands * prd.origin_UUID + b], strength+strength_spec );
+            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength );
+//            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength+strength_spec );
 
         }
 
@@ -480,18 +484,21 @@ RT_PROGRAM void miss_direct(){
 
     uint objID = objectID[prd.origin_UUID];
 
-    for( size_t b=0; b<Nbands; b++ ) {
+    int b=-1;
+    for( int b_global=0; b_global<Nbands_global; b_global++ ) {
 
-        if( band_launch_flag[b]==0 ){
+        if( band_launch_flag[b_global]==0 ){
             continue;
         }
+        b++;
 
-        size_t ind_origin = Nbands*prd.origin_UUID+b;
+        size_t ind_origin = Nbands_launch*prd.origin_UUID+b;
 
-        float t_rho = rho[Nprimitives*Nbands*prd.source_ID+Nbands*prd.origin_UUID+b];
-        float t_tau = tau[Nprimitives*Nbands*prd.source_ID+Nbands*prd.origin_UUID+b];
+        size_t radprop_ind_global = Nprimitives*Nbands_global*prd.source_ID + Nbands_global*prd.origin_UUID + b_global;
+        float t_rho = rho[ radprop_ind_global ];
+        float t_tau = tau[ radprop_ind_global ];
 
-        double strength = prd.strength * source_fluxes[ prd.source_ID*Nbands + b ];
+        double strength = prd.strength * source_fluxes[ prd.source_ID*Nbands_launch + b ];
 
         //absorption
         atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau)  );
@@ -506,7 +513,7 @@ RT_PROGRAM void miss_direct(){
             }
         }
         if( Ncameras>0 ) {
-            size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+            size_t indc = prd.source_ID*Nprimitives*Nbands_global*Ncameras + prd.origin_UUID*Nbands_global*Ncameras + b_global*Ncameras + camera_ID;
             float t_rho_cam = rho_cam[ indc ];
             float t_tau_cam = tau_cam[ indc ];
             if ( (t_rho_cam > 0 || t_tau_cam > 0) && strength>0 ) {
@@ -535,18 +542,21 @@ RT_PROGRAM void miss_diffuse() {
 //
 //    atomicFloatAdd(&Rsky[prd.origin_UUID], strength);
 
-    for( size_t b=0; b<Nbands; b++ ) {
+    int b=-1;
+    for( size_t b_global=0; b_global<Nbands_global; b_global++ ) {
 
-        if( band_launch_flag[b]==0 ){
+        if( band_launch_flag[b_global]==0 ){
             continue;
         }
+        b++;
 
         if (diffuse_flux[b] > 0.f) {
 
-            size_t ind_origin = Nbands * prd.origin_UUID + b;
+            size_t ind_origin = Nbands_launch * prd.origin_UUID + b;
 
-            float t_rho = rho[Nprimitives*Nbands*prd.source_ID+Nbands*prd.origin_UUID+b];
-            float t_tau = tau[Nprimitives*Nbands*prd.source_ID+Nbands*prd.origin_UUID+b];
+            size_t radprop_ind_global = Nprimitives*Nbands_global*prd.source_ID + Nbands_global*prd.origin_UUID + b_global;
+            float t_rho = rho[ radprop_ind_global ];
+            float t_tau = tau[ radprop_ind_global ];
 
             if (primitive_type[objectID[prd.origin_UUID]] == 4) { //ray was launched from voxel
 
@@ -574,7 +584,7 @@ RT_PROGRAM void miss_diffuse() {
 
                 float strength = fd * diffuse_flux[b] * prd.strength;
 
-                        //                absorption
+                //  absorption
                 atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau) );
 
                 if (t_rho > 0 || t_tau > 0) {
@@ -587,7 +597,7 @@ RT_PROGRAM void miss_diffuse() {
                     }
                 }
                 if( Ncameras>0 ) {
-                    size_t indc = prd.source_ID*Nprimitives*Nbands*Ncameras + prd.origin_UUID*Nbands*Ncameras + b*Ncameras + camera_ID;
+                    size_t indc = prd.source_ID*Nprimitives*Nbands_global*Ncameras + prd.origin_UUID*Nbands_global*Ncameras + b_global*Ncameras + camera_ID;
                     float t_rho_cam = rho_cam[ indc ];
                     float t_tau_cam = tau_cam[ indc ];
                     if ( (t_rho_cam > 0 || t_tau_cam > 0) && prd.strength>0 ) {
@@ -611,7 +621,7 @@ RT_PROGRAM void miss_diffuse() {
 
 RT_PROGRAM void miss_camera() {
 
-    for( size_t b=0; b<Nbands; b++ ) {
+    for( size_t b=0; b<Nbands_launch; b++ ) {
 
         if (diffuse_flux[b] > 0.f) {
 
@@ -626,7 +636,7 @@ RT_PROGRAM void miss_camera() {
             }
 
             //absorption
-            atomicAdd(&radiation_in_camera[Nbands*prd.origin_UUID+b], fd * diffuse_flux[b] * prd.strength);
+            atomicAdd(&radiation_in_camera[Nbands_launch*prd.origin_UUID+b], fd * diffuse_flux[b] * prd.strength);
 
         }
 

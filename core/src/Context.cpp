@@ -3913,6 +3913,33 @@ void Tube::setTubeNodes( const std::vector<helios::vec3> &node_xyz ){
 
 }
 
+void Tube::pruneTubeNodes( uint node_index ){
+
+    if( node_index >= nodes.size() ){
+        helios_runtime_error("ERROR (Tube::pruneTubeNodes): Node index of " + std::to_string(node_index) + " is out of bounds.");
+    }
+
+    if( node_index == 0 ){
+        context->deleteObject(this->OID);
+        return;
+    }
+
+    nodes.erase( nodes.begin() + node_index, nodes.end() );
+    triangle_vertices.erase( triangle_vertices.begin() + node_index, triangle_vertices.end() );
+    radius.erase( radius.begin() + node_index, radius.end() );
+    colors.erase( colors.begin() + node_index, colors.end() );
+
+    int ii=0;
+    for (int i = node_index; i < nodes.size() - 1; i++) {
+        for(int j=0; j < subdiv; j++ ) {
+            context->deletePrimitive(UUIDs.at(ii));
+            context->deletePrimitive(UUIDs.at(ii+1));
+            ii += 2;
+        }
+    }
+
+}
+
 void Tube::updateTriangleVertices(){
 
     vec3 v0, v1, v2;
@@ -8210,6 +8237,13 @@ void Context::scaleTubeLength( uint ObjID, float scale_factor ){
         helios_runtime_error("ERROR (Context::scaleTubeLength): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
     dynamic_cast<Tube*>(objects.at(ObjID))->scaleTubeLength(scale_factor);
+}
+
+void Context::pruneTubeNodes( uint ObjID, uint node_index ){
+    if( objects.find(ObjID) == objects.end() ) {
+        helios_runtime_error("ERROR (Context::pruneTubeNodes): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+    }
+    dynamic_cast<Tube*>(objects.at(ObjID))->pruneTubeNodes(node_index);
 }
 
 void Context::setTubeNodes( uint ObjID, const std::vector<helios::vec3> &node_xyz ){

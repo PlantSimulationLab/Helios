@@ -39,7 +39,7 @@ int main(){
 
   // *** 2. Slicing and cropping primitives on the boundaries *** //
 
-  // slice and primitives that lie on the canopy boundaries (imagine taking a knife and perfectly cutting along the edges of the canopy)
+  // slice any primitives that lie on the canopy boundaries (imagine taking a knife and perfectly cutting along the edges of the canopy)
   VoxelIntersection vslice(&context);
 
   // define variables that give the center (x,y,z) coordinate of the canopy and the overall canopy dimensions

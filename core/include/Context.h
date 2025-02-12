@@ -735,6 +735,12 @@ public:
      */
     void setTubeNodes( const std::vector<helios::vec3> &node_xyz );
 
+    //! Remove a portion of the tube downstream of a specified node
+    /**
+     * \param[in] node_index Index of the tube segment node beyond which will be removed
+     */
+    void pruneTubeNodes( uint node_index );
+
 protected:
     
     std::vector<helios::vec3> nodes;
@@ -4792,6 +4798,13 @@ public:
      * \param[in] scale_factor Scaling factor to apply to the length of the tube object
      */
     void scaleTubeLength( uint ObjID, float scale_factor );
+
+    //! Remove a portion of the tube downstream of a specified node
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     * \param[in] node_index Index of the tube segment node beyond which will be removed
+     */
+    void pruneTubeNodes( uint ObjID, uint node_index );
 
     //! Set tube vertex coordinates at each segment node
     /**

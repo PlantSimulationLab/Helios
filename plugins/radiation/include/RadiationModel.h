@@ -124,7 +124,6 @@ public:
         diffuseDistNorm = 1.f;
         emissionFlag = true;
         wavebandBounds = helios::make_vec2(0,0);
-        radiativepropertiesinitialized = false;
     }
 
     //! Label for band
@@ -162,9 +161,6 @@ public:
 
     //! Waveband range of band
     helios::vec2 wavebandBounds;
-
-    //! Flag to indicate whether radiative bands have been initialized for this band
-    bool radiativepropertiesinitialized;
 
 private:
 
@@ -1050,7 +1046,7 @@ protected:
 
     std::map<std::string,RadiationBand> radiation_bands;
 
-    std::vector<bool> scattering_iterations_needed;
+    std::map<std::string,bool> scattering_iterations_needed;
 
     // --- radiation source variables --- //
 
@@ -1172,7 +1168,7 @@ protected:
     /** This function should be called anytime primitive radiative properties are modified. If radiative properties were not set in the Context, default radiative properties will be applied (black body).
         \note \ref updateRadiativeProperties() must be called before simulation can be run
     */
-    void updateRadiativeProperties( const std::vector<std::string> &labels );
+    void updateRadiativeProperties();
 
     //! Load Context global data corresponding to spectral data
     /**
@@ -1389,8 +1385,11 @@ protected:
     RTvariable max_scatters_RTvariable;
     RTbuffer max_scatters_RTbuffer;
 
-    //! Number of radiative bands
-    RTvariable Nbands_RTvariable;
+    //! Number of radiative bands in the radiation model
+    RTvariable Nbands_global_RTvariable;
+
+    //! Number of radiative bands in the current launch
+    RTvariable Nbands_launch_RTvariable;
 
     //! Flag to disable launches for certain bands
     RTvariable band_launch_flag_RTvariable;
@@ -1642,6 +1641,8 @@ protected:
         \sa \ref buildGeometry()
     */
     bool isgeometryinitialized;
+
+    bool radiativepropertiesneedupdate = true;
 
     std::vector<bool> isbandpropertyinitialized;
 
