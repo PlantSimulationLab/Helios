@@ -1,6 +1,10 @@
 #ifndef HELIOS_INITIALIZERADIATION_H
 #define HELIOS_INITIALIZERADIATION_H
 
+// Forward Declaration
+class RadiationModel;
+class SolarPosition;
+
 #include "RadiationModel.h"
 #include "SolarPosition.h"
 

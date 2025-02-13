@@ -1,6 +1,10 @@
 #ifndef HELIOS_INITIALIZEENERGYBALANCE_H
 #define HELIOS_INITIALIZEENERGYBALANCE_H
 
+// Forward Declaration
+class BLConductanceModel;
+class EnergyBalanceModel;
+
 #include "EnergyBalanceModel.h"
 #include "BoundaryLayerConductanceModel.h"
 

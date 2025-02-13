@@ -1,4 +1,4 @@
-#include "InitializeRadiation.h"
+#include "InitializeRadiation/InitializeRadiation.h"
 #include "SolarPosition.h"
 
 using namespace helios;

@@ -3,43 +3,107 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
+set(PLUGIN_INCLUDE_DIRS "")
+set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp")
+
+# Conditional Plugins
+file(GLOB PLUGIN_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/plugins/*)
+message(STATUS "Plugins: ${PLUGINS}")
+
+if("boundarylayerconductance" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_BOUNDARYLAYERCONDUCTANCEMODEL)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../boundarylayerconductance/include")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
+    )
+endif()
+
+
+if("energybalance" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_ENERGYBALANCEMODEL)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../energybalance/include")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/energybalance/include)
+endif()
+
+if("energybalance" IN_LIST PLUGINS AND "boundarylayerconductance" IN_LIST PLUGINS)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/InitializeEnergyBalance")
+    list(APPEND SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeEnergyBalance.cpp"
+    )
+endif()
+
+if("plantarchitecture" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_PLANT_ARCHITECTURE)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../plantarchitecture/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/BuildGeometry")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/plantarchitecture/include
+    )
+    list(APPEND SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/BuildGeometry.cpp"
+    )
+endif()
+
+if("radiation" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_RADIATION_MODEL)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../radiation/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/InitializeRadiation")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/radiation/include
+    )
+    list(APPEND SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeRadiation.cpp"
+    )
+endif()
+
+if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarposition needs to be loaded if radiation is loaded
+    add_definitions(-DENABLE_SOLARPOSITION)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../solarposition/include")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/solarposition/include
+    )
+endif()
+
+if("visualizer" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_HELIOS_VISUALIZER)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
+    )
+endif()
+
 include_directories(include)
 include_directories(../../core/include)
-#TODO: make plugins conditional
-# solarposition needs to be loaded if radiation is loaded
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../boundarylayerconductance/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../energybalance/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../plantarchitecture/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../radiation/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../solarposition/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(projectbuilder STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/BuildGeometry.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeEnergyBalance.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeRadiation.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp")
+add_library(projectbuilder STATIC ${SOURCES})
 
-target_include_directories(projectbuilder PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/energybalance/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/plantarchitecture/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/radiation/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/solarposition/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
-)
+# this target includes all plugin include dirs unconditionally
+#target_include_directories(projectbuilder PUBLIC
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/energybalance/include
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/plantarchitecture/include
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/radiation/include
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/solarposition/include
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
+#)
+
+target_include_directories(projectbuilder PUBLIC ${PLUGIN_INCLUDE_DIRS})
+
+#target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
+#target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
 # CUDA + OPTIX
 find_package(CUDA REQUIRED)
@@ -102,5 +166,9 @@ include_directories(lib/imgui/misc/cpp)
 target_include_directories( projectbuilder PUBLIC lib/imgui )
 target_include_directories( projectbuilder PUBLIC lib/imgui/backends )
 target_include_directories( projectbuilder PUBLIC lib/imgui/misc/cpp )
+
+target_link_libraries( projectbuilder helios )
+
+add_dependencies( projectbuilder helios )
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )

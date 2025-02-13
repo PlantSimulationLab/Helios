@@ -1,4 +1,4 @@
-#include "InitializeEnergyBalance.h"
+#include "InitializeEnergyBalance/InitializeEnergyBalance.h"
 
 using namespace helios;
 

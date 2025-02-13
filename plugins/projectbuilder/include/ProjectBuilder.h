@@ -1,4 +1,4 @@
-/** \file "ProjectBuilder.h" Visualizer header.
+/** \file "ProjectBuilder.h" ProjectBuilder header.
 
 Copyright (C) 2016-2025 Brian Bailey
 
@@ -13,34 +13,72 @@ Copyright (C) 2016-2025 Brian Bailey
 
 */
 
-#ifndef HELIOS_PROJECTBUILDER_H
-#define HELIOS_PROJECTBUILDER_H
+#ifndef PROJECT_BUILDER
+#define PROJECT_BUILDER
 
+//#pragma once
 
-#include "Context.h"
-#include <pugixml.hpp>
-#include "glew.h"
-#include "BoundaryLayerConductanceModel.h"
-#include "EnergyBalanceModel.h"
-#include "PlantArchitecture.h"
-#include "RadiationModel.h"
-#include "SolarPosition.h"
-#include "Visualizer.h"
-
-#include "InitializeSimulation.h"
-#include "BuildGeometry.h"
-#include "InitializeRadiation.h"
-#include "InitializeEnergyBalance.h"
-
+// IMGUI
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "misc/cpp/imgui_stdlib.h"
-#include "GLFW/glfw3.h"
+// #include "GLFW/glfw3.h"
 
 #include <chrono>
 #include <set>
 #include <thread>
+#include <iostream>
+
+#include "Context.h"
+#include <pugixml.hpp>
+#include "InitializeSimulation.h"
+
+// Forward Declaration
+class BLConductanceModel;
+class EnergyBalanceModel;
+class PlantArchitecture;
+class RadiationModel;
+class SolarPosition;
+class Visualizer;
+class CameraProperties;
+void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_architecture_ptr, helios::Context *context_ptr);
+void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solarposition_ptr, RadiationModel *radiation_ptr, helios::Context *context_ptr );
+void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceModel *boundarylayerconductancemodel, EnergyBalanceModel *energybalancemodel, helios::Context *context_ptr);
+void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr );
+
+
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+    #include "BoundaryLayerConductanceModel.h"
+#endif //BOUNDARYLAYERCONDUCTANCEMODEL
+
+#ifdef ENABLE_ENERGYBALANCEMODEL
+    #include "EnergyBalanceModel.h"
+#endif //ENERGYBALANCEMODEL
+
+#if defined(ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL) && defined(ENABLE_ENERGYBALANCEMODEL)
+    #include "InitializeEnergyBalance.h"
+#endif //BOUNDARYLAYERCONDUCTANCEMODEL && ENERGYBALANCEMODEL
+
+#ifdef ENABLE_PLANT_ARCHITECTURE
+    #include "PlantArchitecture.h"
+    #include "BuildGeometry.h"
+#endif //PLANT_ARCHITECTURE
+
+#ifdef ENABLE_RADIATION_MODEL
+    #include "RadiationModel.h"
+    #include "InitializeRadiation.h"
+#endif //RADIATION_MODEL
+
+#ifdef ENABLE_SOLARPOSITION
+    #include "SolarPosition.h"
+#endif //SOLARPOSITION
+
+#ifdef ENABLE_HELIOS_VISUALIZER
+    #include "glew.h"
+    #include "Visualizer.h"
+#endif //HELIOS_VISUALIZER
+
 
 //! Function to convert vector to string
 /**
@@ -112,9 +150,7 @@ class ProjectBuilder {
     helios::Context *context = nullptr;
 
     //! Visualizer
-#ifdef HELIOS_VISUALIZER
     Visualizer *visualizer = nullptr;
-#endif
 
     //! Plant Architecture
     PlantArchitecture *plantarchitecture = nullptr;
@@ -169,11 +205,7 @@ class ProjectBuilder {
                                                 "Petal", "Pedicel", "Fruit"};
 
     //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
-    std::map<std::string, std::vector<uint>> primitive_types = {{"Ground", ground_UUIDs}, {"Leaf", leaf_UUIDs},
-                                                                {"Petiolule", petiolule_UUIDs}, {"Petiole", petiole_UUIDs},
-                                                                {"Internode", internode_UUIDs}, {"Peduncle", peduncle_UUIDs},
-                                                                {"Petal", petal_UUIDs}, {"Pedicel", pedicel_UUIDs},
-                                                                {"Fruit", fruit_UUIDs}};
+    std::map<std::string, std::vector<uint>> primitive_types;
 
     //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
     std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
@@ -441,7 +473,9 @@ class ProjectBuilder {
     std::string current_band = "red";
 
     //! Depth MVP matrix
-    glm::mat4 depthMVP;
+//    #ifdef HELIOS_VISUALIZER
+//        glm::mat4 depthMVP;
+//    #endif //HELIOS_VISUALIZER
 
   public:
     //! Function to build context from XML
@@ -729,17 +763,48 @@ class ProjectBuilder {
     */
     std::map<std::string, int> setNodeLabels(const std::string&, const std::string&, std::vector<std::string>&);
 
+    //! Constructor
+    ProjectBuilder(){
+      fruit_UUIDs;
+      primitive_names = {"Ground", "Leaf", "Petiolule", "Petiole", "Internode", "Peduncle",
+                        "Petal", "Pedicel", "Fruit"};
+
+      primitive_types = {{"Ground", ground_UUIDs}, {"Leaf", leaf_UUIDs},
+                          {"Petiolule", petiolule_UUIDs}, {"Petiole", petiole_UUIDs},
+                          {"Internode", internode_UUIDs}, {"Peduncle", peduncle_UUIDs},
+                          {"Petal", petal_UUIDs}, {"Pedicel", pedicel_UUIDs},
+                          {"Fruit", fruit_UUIDs}};
+    }
+
     //! Destructor
     ~ProjectBuilder(){
       delete context;
-      delete visualizer;
-      delete plantarchitecture;
-      delete radiation;
-      delete solarposition;
-      delete energybalancemodel;
-      delete boundarylayerconductance;
-      delete cameraproperties;
+
+      #ifdef HELIOS_VISUALIZER
+          delete visualizer;
+      #endif //HELIOS_VISUALIZER
+
+      #ifdef PLANT_ARCHITECTURE
+          delete plantarchitecture;
+      #endif //PLANT_ARCHITECTURE
+
+      #ifdef RADIATION_MODEL
+          delete radiation;
+          delete cameraproperties;
+      #endif //RADIATION_MODEL
+
+      #ifdef SOLARPOSITION
+          delete solarposition;
+      #endif //SOLARPOSITION
+
+      #ifdef ENERGYBALANCEMODEL
+          delete energybalancemodel;
+      #endif //ENERGYBALANCEMODEL
+
+      #ifdef BOUNDARYLAYERCONDUCTANCEMODEL
+          delete boundarylayerconductance;
+      #endif //BOUNDARYLAYERCONDUCTANCEMODEL
     }
 };
 
-#endif //HELIOS_PROJECTBUILDER_H
+#endif // PROJECT_BUILDER

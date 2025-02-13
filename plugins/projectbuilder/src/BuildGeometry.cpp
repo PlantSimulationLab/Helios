@@ -1,4 +1,4 @@
-#include "BuildGeometry.h"
+#include "BuildGeometry/BuildGeometry.h"
 #include "PlantArchitecture.h"
 
 using namespace helios;
