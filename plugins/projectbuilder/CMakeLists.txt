@@ -5,15 +5,7 @@ project(helios)
 
 set(PLUGIN_INCLUDE_DIRS "")
 set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp")
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp")
 
 # Conditional Plugins
 file(GLOB PLUGIN_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/plugins/*)
@@ -67,6 +59,16 @@ if("radiation" IN_LIST PLUGINS)
 endif()
 
 if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarposition needs to be loaded if radiation is loaded
+    if (NOT "solarposition" IN_LIST PLUGINS)
+        set( TEMP_PLUGIN "solarposition")
+        message("-- loading plug-in ${TEMP_PLUGIN}")
+        if( ${TEMP_PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
+            message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
+        endif()
+        add_subdirectory( "${BASE_DIRECTORY}/plugins/${TEMP_PLUGIN}" "${PROJECT_BINARY_DIR}/plugins/${TEMP_PLUGIN}" )
+        target_link_libraries( ${EXECUTABLE_NAME} ${TEMP_PLUGIN} )
+        target_link_libraries( ${TEMP_PLUGIN} helios )
+    endif()
     add_definitions(-DENABLE_SOLARPOSITION)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../solarposition/include")
     list(APPEND PLUGIN_INCLUDE_DIRS
@@ -80,6 +82,16 @@ if("visualizer" IN_LIST PLUGINS)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm")
     list(APPEND PLUGIN_INCLUDE_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
+    )
+    list(APPEND SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp"
     )
 endif()
 
@@ -105,70 +117,89 @@ target_include_directories(projectbuilder PUBLIC ${PLUGIN_INCLUDE_DIRS})
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
-# CUDA + OPTIX
-find_package(CUDA REQUIRED)
-if(CUDA_FOUND)
-    include_directories(${CUDA_INCLUDE_DIRS})
-    target_link_libraries( projectbuilder ${CUDA_LIBRARIES} )
-endif(CUDA_FOUND)
-if(UNIX AND NOT APPLE)
-    if( OPTIX_VERSION_LEGACY )
-        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-5.1.0/)
-        message("Using legacy OptiX version 5.1")
-    else()
-        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-6.5.0/)
-        message("Using OptiX version 6.5")
-    endif()
-    include_directories(${OPTIX_PATH}include)
-    add_subdirectory(${OPTIX_PATH} "plugins/radiation")
-    target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.so )
-endif(UNIX AND NOT APPLE)
-if(APPLE)
-    set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/mac64-4.0.2/)
-    include_directories(${OPTIX_PATH}include)
-    add_subdirectory(${OPTIX_PATH})
-    target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.dylib )
-endif(APPLE)
-if(WIN32)
-    if( OPTIX_VERSION_LEGACY )
-        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/windows64-5.1.1/)
-        set(OPTIX_LIB "optix.51.lib")
-        set(OPTIX_DLL "optix.51.dll")
-        message("Using legacy OptiX version 5.1")
-    else()
-        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/windows64-6.5.0/)
-        set(OPTIX_LIB "optix.6.5.0.lib")
-        set(OPTIX_DLL "optix.6.5.0.dll")
-        message("Using OptiX version 6.5")
-    endif()
-    include_directories(${OPTIX_PATH}include)
-    target_link_libraries( projectbuilder "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
-    add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
-    add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )
+# CUDA + OPTIX required for energybalance and radiation
+if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
+    find_package(CUDA REQUIRED)
+    if(CUDA_FOUND)
+        include_directories(${CUDA_INCLUDE_DIRS})
+        target_link_libraries( projectbuilder ${CUDA_LIBRARIES} )
+    endif(CUDA_FOUND)
+    if(UNIX AND NOT APPLE)
+        if( OPTIX_VERSION_LEGACY )
+            set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-5.1.0/)
+            message("Using legacy OptiX version 5.1")
+        else()
+            set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-6.5.0/)
+            message("Using OptiX version 6.5")
+        endif()
+        include_directories(${OPTIX_PATH}include)
+        add_subdirectory(${OPTIX_PATH} "plugins/radiation")
+        target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.so )
+    endif(UNIX AND NOT APPLE)
+    if(APPLE)
+        set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/mac64-4.0.2/)
+        include_directories(${OPTIX_PATH}include)
+        add_subdirectory(${OPTIX_PATH})
+        target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.dylib )
+    endif(APPLE)
+    if(WIN32)
+        if( OPTIX_VERSION_LEGACY )
+            set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/windows64-5.1.1/)
+            set(OPTIX_LIB "optix.51.lib")
+            set(OPTIX_DLL "optix.51.dll")
+            message("Using legacy OptiX version 5.1")
+        else()
+            set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/windows64-6.5.0/)
+            set(OPTIX_LIB "optix.6.5.0.lib")
+            set(OPTIX_DLL "optix.6.5.0.dll")
+            message("Using OptiX version 6.5")
+        endif()
+        include_directories(${OPTIX_PATH}include)
+        target_link_libraries( projectbuilder "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
+        add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
+        add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )
 
-endif(WIN32)
-if(NOT DEFINED OPTIX_PATH)
-    message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
-endif(NOT DEFINED OPTIX_PATH)
-message(STATUS "OptiX include directory: ${OPTIX_PATH}include")
-
+    endif(WIN32)
+    if(NOT DEFINED OPTIX_PATH)
+        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
+    endif(NOT DEFINED OPTIX_PATH)
+    message(STATUS "OptiX include directory: ${OPTIX_PATH}include")
+endif()
 # CUDA + OPTIX END
 
-target_link_libraries( projectbuilder energybalance )
-target_link_libraries( projectbuilder plantarchitecture )
-target_link_libraries( projectbuilder radiation )
-target_link_libraries( projectbuilder solarposition )
-target_link_libraries( projectbuilder visualizer )
-#imgui
-include_directories(lib/imgui)
-include_directories(lib/imgui/backends)
-include_directories(lib/imgui/misc/cpp)
-target_include_directories( projectbuilder PUBLIC lib/imgui )
-target_include_directories( projectbuilder PUBLIC lib/imgui/backends )
-target_include_directories( projectbuilder PUBLIC lib/imgui/misc/cpp )
+if("energybalance" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder energybalance )
+endif()
+
+if("plantarchitecture" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder plantarchitecture )
+endif()
+
+if("radiation" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder radiation )
+endif()
+
+if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder solarposition )
+endif()
+
+if("visualizer" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder visualizer )
+    #imgui
+    include_directories(lib/imgui)
+    include_directories(lib/imgui/backends)
+    include_directories(lib/imgui/misc/cpp)
+    target_include_directories( projectbuilder PUBLIC lib/imgui )
+    target_include_directories( projectbuilder PUBLIC lib/imgui/backends )
+    target_include_directories( projectbuilder PUBLIC lib/imgui/misc/cpp )
+endif()
 
 target_link_libraries( projectbuilder helios )
 
 add_dependencies( projectbuilder helios )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )
+if("visualizer" IN_LIST PLUGINS)
+    set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )
+else()
+    set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};" PARENT_SCOPE )
+endif()

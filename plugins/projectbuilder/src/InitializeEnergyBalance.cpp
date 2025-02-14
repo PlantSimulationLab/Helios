@@ -45,10 +45,13 @@ void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceMod
     energybalancemodel->addRadiationBand( {"PAR", "NIR", "LW"} );
 
     std::vector<uint> ground_UUIDs;
-    assert( context_ptr->doesGlobalDataExist( "ground_UUIDs" ) );
-    context_ptr->getGlobalData( "ground_UUIDs", ground_UUIDs );
-
-    boundarylayerconductancemodel->setBoundaryLayerModel( ground_UUIDs, "Ground" );
+    try{
+//        assert( context_ptr->doesGlobalDataExist( "ground_UUIDs" ) );
+        context_ptr->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        boundarylayerconductancemodel->setBoundaryLayerModel( ground_UUIDs, "Ground" );
+    }catch(...){
+        std::cout << "WARNING: No ground UUIDs found" << std::endl;
+    }
 
     if( energybalance_block_count==0 ){
         context_ptr->setGlobalData( "energybalance_enabled", false );

@@ -18,13 +18,6 @@ Copyright (C) 2016-2025 Brian Bailey
 
 //#pragma once
 
-// IMGUI
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-#include "misc/cpp/imgui_stdlib.h"
-// #include "GLFW/glfw3.h"
-
 #include <chrono>
 #include <set>
 #include <thread>
@@ -77,6 +70,12 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 #ifdef ENABLE_HELIOS_VISUALIZER
     #include "glew.h"
     #include "Visualizer.h"
+    // IMGUI
+    #include "imgui.h"
+    #include "backends/imgui_impl_glfw.h"
+    #include "backends/imgui_impl_opengl3.h"
+    #include "misc/cpp/imgui_stdlib.h"
+    #include "GLFW/glfw3.h"
 #endif //HELIOS_VISUALIZER
 
 

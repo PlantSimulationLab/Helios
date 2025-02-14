@@ -246,45 +246,58 @@ void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solar
         }
 
         std::vector<uint> leaf_UUIDs;
-        context_ptr->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+        try{
+//            assert( context_ptr->doesGlobalDataExist( "leaf_UUIDs" ) );
+            context_ptr->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+        }catch(...){
+            std::cout << "WARNING: No leaf UUIDs found." << std::endl;
+        }
 
         std::vector<uint> ground_UUIDs;
-        context_ptr->getGlobalData( "ground_UUIDs", ground_UUIDs );
-
-        if( !leaf_reflectivity_spectrum.empty() ){
-            context_ptr->setPrimitiveData( leaf_UUIDs, "reflectivity_spectrum", leaf_reflectivity_spectrum );
-        }else{
-            std::cout << "WARNING: No value given for 'leaf_reflectivity_spectrum'. Assuming leaves are black across all shortwave bands." << std::endl;
+        try{
+//            assert( context_ptr->doesGlobalDataExist( "ground_UUIDs" ) );
+            context_ptr->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        }catch(...){
+            std::cout << "WARNING: No ground UUIDs found." << std::endl;
         }
 
-        if( !leaf_transmissivity_spectrum.empty() ){
-            context_ptr->setPrimitiveData( leaf_UUIDs, "transmissivity_spectrum", leaf_transmissivity_spectrum );
-        }else{
-            std::cout << "WARNING: No value given for 'leaf_transmissivity_spectrum'. Assuming leaves are black across all shortwave bands." << std::endl;
-        }
-
-        if( leaf_emissivity>=0.f && leaf_emissivity<=1.f ){
-            context_ptr->setPrimitiveData( leaf_UUIDs, "emissivity", leaf_emissivity );
-        }else{
-            std::cout << "WARNING: No value given for 'leaf_emissivity'. Assuming leaves are perfect emitters." << std::endl;
-        }
-
-        if( !ground_reflectivity_spectrum.empty() ){
-            if( context_ptr->doesGlobalDataExist( ground_reflectivity_spectrum.c_str() ) ){
-                context_ptr->setPrimitiveData( leaf_UUIDs, "reflectivity_spectrum", ground_reflectivity_spectrum );
+        if (! leaf_UUIDs.empty()){
+            if( !leaf_reflectivity_spectrum.empty() ){
+                context_ptr->setPrimitiveData( leaf_UUIDs, "reflectivity_spectrum", leaf_reflectivity_spectrum );
             }else{
-                std::cout << "WARNING: The specified ground reflectivity spectrum '" + ground_reflectivity_spectrum + "' could not be found in existing global data. Assuming the ground is black across all shortwave bands." << std::endl;
+                std::cout << "WARNING: No value given for 'leaf_reflectivity_spectrum'. Assuming leaves are black across all shortwave bands." << std::endl;
             }
-        }else{
-            std::cout << "WARNING: No value given for 'ground_reflectivity_spectrum'. Assuming the ground is black across all shortwave bands." << std::endl;
+
+            if( !leaf_transmissivity_spectrum.empty() ){
+                context_ptr->setPrimitiveData( leaf_UUIDs, "transmissivity_spectrum", leaf_transmissivity_spectrum );
+            }else{
+                std::cout << "WARNING: No value given for 'leaf_transmissivity_spectrum'. Assuming leaves are black across all shortwave bands." << std::endl;
+            }
+
+            if( leaf_emissivity>=0.f && leaf_emissivity<=1.f ){
+                context_ptr->setPrimitiveData( leaf_UUIDs, "emissivity", leaf_emissivity );
+            }else{
+                std::cout << "WARNING: No value given for 'leaf_emissivity'. Assuming leaves are perfect emitters." << std::endl;
+            }
         }
 
-        if( ground_emissivity>=0.f && ground_emissivity<=1.f ){
-            context_ptr->setPrimitiveData( ground_UUIDs, "emissivity", ground_emissivity );
-        }else{
-            std::cout << "WARNING: No value given for 'ground_emissivity'. Assuming ground is a perfect emitter." << std::endl;
-        }
+        if( !ground_UUIDs.empty() ){
+            if( !ground_reflectivity_spectrum.empty() ){
+                if( context_ptr->doesGlobalDataExist( ground_reflectivity_spectrum.c_str() ) ){
+                    context_ptr->setPrimitiveData( ground_UUIDs, "reflectivity_spectrum", ground_reflectivity_spectrum );
+                }else{
+                    std::cout << "WARNING: The specified ground reflectivity spectrum '" + ground_reflectivity_spectrum + "' could not be found in existing global data. Assuming the ground is black across all shortwave bands." << std::endl;
+                }
+            }else{
+                std::cout << "WARNING: No value given for 'ground_reflectivity_spectrum'. Assuming the ground is black across all shortwave bands." << std::endl;
+            }
 
+            if( ground_emissivity>=0.f && ground_emissivity<=1.f ){
+                context_ptr->setPrimitiveData( ground_UUIDs, "emissivity", ground_emissivity );
+            }else{
+                std::cout << "WARNING: No value given for 'ground_emissivity'. Assuming ground is a perfect emitter." << std::endl;
+            }
+        }
         radiation_ptr->updateGeometry();
 
     }

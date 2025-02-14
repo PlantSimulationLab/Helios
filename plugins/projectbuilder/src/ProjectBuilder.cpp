@@ -213,41 +213,49 @@ void ProjectBuilder::buildFromXML(){
     #endif //BOUNDARYLAYERCONDUCTANCEMODEL
 
     // if (enable_blconductance && enable_energybalance){
-    #ifdef ENABLE_ENERGYBALANCEMODEL
+    #if defined(ENABLE_ENERGYBALANCEMODEL) && defined(ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL)
         InitializeEnergyBalance(xml_input_file, boundarylayerconductance, energybalancemodel, context);
     // } //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
-    #endif
+    #endif //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
 
     // -- main time loop -- //
-    assert( context->doesGlobalDataExist( "air_turbidity" ) );
-    context->getGlobalData( "air_turbidity", turbidity );
+    if (enable_radiation){
+        assert( context->doesGlobalDataExist( "air_turbidity" ) );
+        context->getGlobalData( "air_turbidity", turbidity );
+    }
 
-    assert( context->doesGlobalDataExist( "diffuse_extinction_coeff" ) );
-    context->getGlobalData( "diffuse_extinction_coeff", diffuse_extinction_coeff );
+    if (enable_radiation){
+        assert( context->doesGlobalDataExist( "diffuse_extinction_coeff" ) );
+        context->getGlobalData( "diffuse_extinction_coeff", diffuse_extinction_coeff );
+    }
 
-    assert( context->doesGlobalDataExist( "sun_ID" ) );
-    context->getGlobalData( "sun_ID", sun_ID );
+    if (enable_radiation){
+        assert( context->doesGlobalDataExist( "sun_ID" ) );
+        context->getGlobalData( "sun_ID", sun_ID );
+    }
 
     bandlabels = {"red", "green", "blue"};
 
-    context->getGlobalData( "ground_UUIDs", ground_UUIDs );
-    assert( !ground_UUIDs.empty() );
-    context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
-    assert( !leaf_UUIDs.empty() );
-    // context->getGlobalData( "petiolule_UUIDs", petiolule_UUIDs );
-    // assert( !petiolule_UUIDs.empty() );
-    // context->getGlobalData( "petiole_UUIDs", petiole_UUIDs );
-    // assert( !petiole_UUIDs.empty() );
-    // context->getGlobalData( "internode_UUIDs", internode_UUIDs );
-    // assert( !internode_UUIDs.empty() );
-    // context->getGlobalData( "peduncle_UUIDs", peduncle_UUIDs );
-    // assert( !peduncle_UUIDs.empty() );
-    // context->getGlobalData( "petal_UUIDs", petal_UUIDs );
-    // assert( !petal_UUIDs.empty() );
-    // context->getGlobalData( "pedicel_UUIDs", pedicel_UUIDs );
-    // assert( !pedicel_UUIDs.empty() );
-    // context->getGlobalData( "fruit_UUIDs", fruit_UUIDs );
-    // assert( !fruit_UUIDs.empty() );
+    if (enable_plantarchitecture){
+        context->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        assert( !ground_UUIDs.empty() );
+        context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+        assert( !leaf_UUIDs.empty() );
+        // context->getGlobalData( "petiolule_UUIDs", petiolule_UUIDs );
+        // assert( !petiolule_UUIDs.empty() );
+        // context->getGlobalData( "petiole_UUIDs", petiole_UUIDs );
+        // assert( !petiole_UUIDs.empty() );
+        // context->getGlobalData( "internode_UUIDs", internode_UUIDs );
+        // assert( !internode_UUIDs.empty() );
+        // context->getGlobalData( "peduncle_UUIDs", peduncle_UUIDs );
+        // assert( !peduncle_UUIDs.empty() );
+        // context->getGlobalData( "petal_UUIDs", petal_UUIDs );
+        // assert( !petal_UUIDs.empty() );
+        // context->getGlobalData( "pedicel_UUIDs", pedicel_UUIDs );
+        // assert( !pedicel_UUIDs.empty() );
+        // context->getGlobalData( "fruit_UUIDs", fruit_UUIDs );
+        // assert( !fruit_UUIDs.empty() );
+    }
 
     for (std::string& band : bandlabels){
         std::map<std::string, std::vector<float>> curr;
