@@ -706,6 +706,28 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 }
 
 
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<int>& default_vec){
+    helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            int default_value;
+            if (!parse_int(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else if( default_value<0 ){
+                helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than or equal to 0.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
 void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<int2>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node node;
@@ -1201,8 +1223,8 @@ void ProjectBuilder::visualize(){
                     for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                         int camera_index = camera_dict[rig_camera_label];
                         std::string cameralabel = rig_label + "_" + rig_camera_label;
-                        std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images);
-                        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images);
+                        std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
+                        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
                         for (int i = 0; i < interpolated_camera_positions.size(); i++){
                             radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                             radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
@@ -1624,16 +1646,18 @@ void ProjectBuilder::visualize(){
                     int current_cam_position_;
                     cam_pos_value >> current_cam_position_;
                     current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
-                    if (ImGui::BeginCombo("##cam_combo", current_keypoint.c_str())){
-                        for (int n = 0; n < camera_position_vec[rig_dict[current_rig]].size(); n++){
-                            std::string select_cam_position = std::to_string(n);
-                            std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n]);
-                            bool is_pos_selected = (current_cam_position == select_cam_position); // You can store your selection however you want, outside or inside your objects
-                            if (ImGui::Selectable(selected_keypoint.c_str(), is_pos_selected)){
-                                current_cam_position = std::to_string(n);
+                    std::string modified_current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1); // 1-indexed value
+                    if (ImGui::BeginCombo("##cam_combo", modified_current_keypoint.c_str())){
+                        for (int n = 1; n <= camera_position_vec[rig_dict[current_rig]].size(); n++){
+                            std::string select_cam_position = std::to_string(n - 1);
+                            std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1]);
+                            bool is_pos_selected = (current_cam_position == select_cam_position);
+                            std::string modified_selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1] + 1); // 1-indexed value
+                            if (ImGui::Selectable(modified_selected_keypoint.c_str(), is_pos_selected)){
+                                current_cam_position = std::to_string(n - 1);
                             }
                             if (is_pos_selected)
-                                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                                ImGui::SetItemDefaultFocus();
                         }
                         ImGui::EndCombo();
                     }
@@ -1647,7 +1671,11 @@ void ProjectBuilder::visualize(){
                     }
                     // ####### KEYPOINT FRAME ####### //
                     ImGui::SetNextItemWidth(80);
-                    ImGui::InputInt("Keypoint Frame", &keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
+                    int modified_keypoint_frame = keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1; // 1-indexed value
+                    ImGui::InputInt("Keypoint Frame", &modified_keypoint_frame);
+                    if (modified_keypoint_frame != keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1){
+                        keypoint_frames[rig_dict[current_rig]][current_cam_position_] = modified_keypoint_frame - 1;
+                    }
                     // ####### CAMERA POSITION ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
@@ -1672,8 +1700,8 @@ void ProjectBuilder::visualize(){
                     ImGui::Text("Rig Lookat");
                     // ####### NUMBER OF IMAGES ####### //
                     ImGui::SetNextItemWidth(80);
-                    ImGui::InputInt("Total Number of Frames", &num_images);
-                    num_images = std::max(num_images, *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
+                    ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
+                    num_images_vec[rig_dict[current_rig]] = std::max(num_images_vec[rig_dict[current_rig]], *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
                     ImGui::EndTabItem();
                 }
                 // CAMERA TAB
@@ -1945,6 +1973,7 @@ void ProjectBuilder::xmlSetValues(){
     // xmlSetValues("camera_label", "rig", camera_labels);
     xmlSetValues("camera_label", "rig", rig_camera_labels);
     setKeypoints("keypoint", "camera_position", keypoint_frames);
+    xmlSetValues("images", "rig", num_images_vec);
     // CAMERA BLOCK
     camera_dict = setNodeLabels("label", "camera", camera_names);
     xmlSetValue("camera_resolution", "camera", camera_resolution);
@@ -2044,6 +2073,8 @@ void ProjectBuilder::xmlGetValues(){
     keypoint_frames.clear();
     getKeypoints("keypoint", "camera_position", keypoint_frames);
     current_keypoint = std::to_string(keypoint_frames[0][0]);
+    num_images_vec.clear();
+    xmlGetValues("images", "rig", num_images_vec);
     // CAMERA BLOCK
     camera_names.clear();
     camera_dict = getNodeLabels("label", "camera", camera_names);

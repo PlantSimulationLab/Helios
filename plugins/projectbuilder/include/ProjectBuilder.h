@@ -287,6 +287,9 @@ class ProjectBuilder {
     //! Number of images/frames
     int num_images = 5;
 
+    //! Number of images/frames per rig
+    std::vector<int> num_images_vec;
+
     //! Vector of camera names
     std::vector<std::string> camera_names;
 
@@ -625,6 +628,14 @@ class ProjectBuilder {
      * \param[out] default_vec Vector of field values for all parent nodes
     */
     void xmlGetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
+
+    //! Function to get values of an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes
+    */
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<int>& default_vec);
 
     //! Function to get values of an XML field
     /**
