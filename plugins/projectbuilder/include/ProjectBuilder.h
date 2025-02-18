@@ -72,6 +72,7 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
     #include "Visualizer.h"
     // IMGUI
     #include "imgui.h"
+    #include "imgui_internal.h"
     #include "backends/imgui_impl_glfw.h"
     #include "backends/imgui_impl_opengl3.h"
     #include "misc/cpp/imgui_stdlib.h"
@@ -113,8 +114,24 @@ std::vector<helios::vec3> linspace(helios::vec3 a, helios::vec3 b, int num_point
 */
 std::vector<helios::vec3> interpolate(std::vector<int> keypoints, std::vector<helios::vec3> positions, int num_points);
 
+//! ImGUI toggle button function
+/**
+ * \param[in] str_id String ID
+ * \param[in] v Boolean representing on or off
+*/
+void toggle_button(const char* str_id, bool* v);
+
 //! Function to open file dialog
 std::string file_dialog();
+
+//! Function to get node labels for a given set of nodes
+/**
+ * \param[in] xml_file Path to the XML file
+ * \param[in] label_name Name of the label
+ * \param[in] node_name Name of the XML nodes to get labels from
+*/
+std::vector<std::string> get_xml_node_values(std::string xml_file, const std::string& label_name, const std::string& node_name);
+
 
 class ProjectBuilder {
   private:
@@ -204,10 +221,19 @@ class ProjectBuilder {
                                                 "Petal", "Pedicel", "Fruit"};
 
     //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
-    std::map<std::string, std::vector<uint>> primitive_types;
+    std::map<std::string, std::vector<uint>*> primitive_types;
+
+    //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
+    std::map<std::string, std::vector<bool>> primitive_continuous;
+
+    //! Map keyed by primitive names that returns the primitive library file
+    std::map<std::string, std::string*> primitive_library;
+
+    //! Map keyed by primitive names that returns spectra (reflectivity, transmissivity, emissivity)
+    std::map<std::string,  std::vector<std::string*>> primitive_spectra;
 
     //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
-    std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
+    std::map<std::string, std::map<std::string, std::vector<float*>>> primitive_values;
 
     //! Ground area
     float ground_area;
@@ -432,11 +458,116 @@ class ProjectBuilder {
     //! Air turbidity
     float air_turbidity = 0.05;
 
-    //! XML library file
-    std::string load_xml_library_file = "plugins/radiation/spectral_data/leaf_surface_spectral_library.xml";
+    //! Leaf XML library file
+    std::string leaf_xml_library_file = "plugins/radiation/spectral_data/leaf_surface_spectral_library.xml";
+
+    //! Ground XML library file
+    std::string ground_xml_library_file = "plugins/radiation/spectral_data/soil_surface_spectral_library.xml";
+
+    //! Petiolule XML library file
+    std::string petiolule_xml_library_file = "";
+
+    //! Petiole XML library file
+    std::string petiole_xml_library_file = "";
+
+    //! Internode XML library file
+    std::string internode_xml_library_file = "";
+
+    //! Peduncle XML library file
+    std::string peduncle_xml_library_file = "";
+
+    //! Petal XML library file
+    std::string petal_xml_library_file = "";
+
+    //! Pedicel XML library file
+    std::string pedicel_xml_library_file = "";
+
+    //! Fruit XML library file
+    std::string fruit_xml_library_file = "plugins/radiation/spectral_data/fruit_surface_spectral_library.xml";
 
     //! Solar direct spectrum
     std::string solar_direct_spectrum = "ASTMG173";
+
+    //! Leaf reflectivity
+    float leaf_reflectivity = 0.0;
+
+    //! Leaf transmissivity
+    float leaf_transmissivity = 0.0;
+
+    //! Leaf emissivity
+    float leaf_emissivity = 0.0;
+
+    //! Ground reflectivity
+    float ground_reflectivity = 0.0;
+
+    //! Ground transmissivity
+    float ground_transmissivity = 0.0;
+
+    //! Ground emissivity
+    float ground_emissivity = 0.0;
+
+    //! Petiolule reflectivity
+    float petiolule_reflectivity = 0.0;
+
+    //! Petiolule transmissivity
+    float petiolule_transmissivity = 0.0;
+
+    //! Petiolule emissivity
+    float petiolule_emissivity = 0.0;
+
+    //! Petiole reflectivity
+    float petiole_reflectivity = 0.0;
+
+    //! Petiole transmissivity
+    float petiole_transmissivity = 0.0;
+
+    //! Petiole emissivity
+    float petiole_emissivity = 0.0;
+
+    //! Internode reflectivity
+    float internode_reflectivity = 0.0;
+
+    //! Internode transmissivity
+    float internode_transmissivity = 0.0;
+
+    //! Internode emissivity
+    float internode_emissivity = 0.0;
+
+    //! Peduncle reflectivity
+    float peduncle_reflectivity = 0.0;
+
+    //! Peduncle transmissivity
+    float peduncle_transmissivity = 0.0;
+
+    //! Peduncle emissivity
+    float peduncle_emissivity = 0.0;
+
+    //! Petal reflectivity
+    float petal_reflectivity = 0.0;
+
+    //! Petal transmissivity
+    float petal_transmissivity = 0.0;
+
+    //! Petal emissivity
+    float petal_emissivity = 0.0;
+
+    //! Pedicel reflectivity
+    float pedicel_reflectivity = 0.0;
+
+    //! Pedicel transmissivity
+    float pedicel_transmissivity = 0.0;
+
+    //! Pedicel emissivity
+    float pedicel_emissivity = 0.0;
+
+    //! Fruit reflectivity
+    float fruit_reflectivity = 0.0;
+
+    //! Fruit transmissivity
+    float fruit_transmissivity = 0.0;
+
+    //! Fruit emissivity
+    float fruit_emissivity = 0.0;
 
     //! Leaf reflectivity spectrum
     std::string leaf_reflectivity_spectrum = "grape_leaf_reflectivity_0000";
@@ -444,11 +575,80 @@ class ProjectBuilder {
     //! Leaf transmissivity spectrum
     std::string leaf_transmissivity_spectrum = "grape_leaf_transmissivity_0000";
 
-    //! Leaf emissivity
-    float leaf_emissivity = 0.95;
+    //! Leaf emissivity spectrum
+    std::string leaf_emissivity_spectrum = "";
 
     //! Ground reflectivity spectrum
     std::string ground_reflectivity_spectrum = "soil_reflectivity_0000";
+
+    //! Ground transmissivity spectrum
+    std::string ground_transmissivity_spectrum = "";
+
+    //! Ground emissivity spectrum
+    std::string ground_emissivity_spectrum = "";
+
+    //! Petiolule reflectivity spectrum
+    std::string petiolule_reflectivity_spectrum = "";
+
+    //! Petiolule transmissivity spectrum
+    std::string petiolule_transmissivity_spectrum = "";
+
+    //! Petiolule emissivity spectrum
+    std::string petiolule_emissivity_spectrum = "";
+
+    //! Petiole reflectivity spectrum
+    std::string petiole_reflectivity_spectrum = "";
+
+    //! Petiole transmissivity spectrum
+    std::string petiole_transmissivity_spectrum = "";
+
+    //! Petiole emissivity spectrum
+    std::string petiole_emissivity_spectrum = "";
+
+    //! Internode reflectivity spectrum
+    std::string internode_reflectivity_spectrum = "";
+
+    //! Internode transmissivity spectrum
+    std::string internode_transmissivity_spectrum = "";
+
+    //! Internode emissivity spectrum
+    std::string internode_emissivity_spectrum = "";
+
+    //! Peduncle reflectivity spectrum
+    std::string peduncle_reflectivity_spectrum = "";
+
+    //! Peduncle transmissivity spectrum
+    std::string peduncle_transmissivity_spectrum = "";
+
+    //! Peduncle emissivity spectrum
+    std::string peduncle_emissivity_spectrum = "";
+
+    //! Petal reflectivity spectrum
+    std::string petal_reflectivity_spectrum = "";
+
+    //! Petal transmissivity spectrum
+    std::string petal_transmissivity_spectrum = "";
+
+    //! Petal emissivity spectrum
+    std::string petal_emissivity_spectrum = "";
+
+    //! Pedicel reflectivity spectrum
+    std::string pedicel_reflectivity_spectrum = "";
+
+    //! Pedicel transmissivity spectrum
+    std::string pedicel_transmissivity_spectrum = "";
+
+    //! Pedicel emissivity spectrum
+    std::string pedicel_emissivity_spectrum = "";
+
+    //! Fruit reflectivity spectrum
+    std::string fruit_reflectivity_spectrum = "";
+
+    //! Fruit transmissivity spectrum
+    std::string fruit_transmissivity_spectrum = "";
+
+    //! Fruit emissivity spectrum
+    std::string fruit_emissivity_spectrum = "";
 
     //! Visualization type
     std::string visualization_type = "RGB";
@@ -480,6 +680,9 @@ class ProjectBuilder {
 //    #endif //HELIOS_VISUALIZER
 
   public:
+    //! Function to update spectra based on saved information
+    void updateSpectra();
+
     //! Function to build context from XML
     void buildFromXML();
 
@@ -775,15 +978,40 @@ class ProjectBuilder {
 
     //! Constructor
     ProjectBuilder(){
-      fruit_UUIDs;
-      primitive_names = {"Ground", "Leaf", "Petiolule", "Petiole", "Internode", "Peduncle",
-                        "Petal", "Pedicel", "Fruit"};
-
-      primitive_types = {{"Ground", ground_UUIDs}, {"Leaf", leaf_UUIDs},
-                          {"Petiolule", petiolule_UUIDs}, {"Petiole", petiole_UUIDs},
-                          {"Internode", internode_UUIDs}, {"Peduncle", peduncle_UUIDs},
-                          {"Petal", petal_UUIDs}, {"Pedicel", pedicel_UUIDs},
-                          {"Fruit", fruit_UUIDs}};
+      primitive_types = {{"Ground", &ground_UUIDs}, {"Leaf", &leaf_UUIDs}, {"Petiolule", &petiolule_UUIDs},
+                         {"Petiole", &petiole_UUIDs}, {"Internode", &internode_UUIDs}, {"Peduncle", &peduncle_UUIDs},
+                         {"Petal", &petal_UUIDs}, {"Pedicel", &pedicel_UUIDs}, {"Fruit", &fruit_UUIDs}};
+      primitive_continuous = {{"Ground", {false, false, false}}, {"Leaf", {false, false, false}},
+                              {"Petiolule", {false, false, false}}, {"Petiole", {false, false, false}},
+                              {"Internode", {false, false, false}}, {"Peduncle", {false, false, false}},
+                              {"Petal", {false, false, false}}, {"Pedicel", {false, false, false}},
+                              {"Fruit", {false, false, false}}};
+      bandlabels = {"red", "green", "blue"};
+      for (std::string band : bandlabels){
+       primitive_values[band] = {{"Ground", {&ground_reflectivity, &ground_transmissivity, &ground_emissivity}},
+                                 {"Leaf", {&leaf_reflectivity, &leaf_transmissivity, &leaf_emissivity}},
+                                 {"Petiolule", {&petiolule_reflectivity, &petiolule_transmissivity, &petiolule_emissivity}},
+                                 {"Petiole", {&petiole_reflectivity, &petiole_transmissivity, &petiole_emissivity}},
+                                 {"Internode", {&internode_reflectivity, &internode_transmissivity, &internode_emissivity}},
+                                 {"Peduncle", {&peduncle_reflectivity, &peduncle_transmissivity, &peduncle_emissivity}},
+                                 {"Petal", {&petal_reflectivity, &petal_transmissivity, &petal_emissivity}},
+                                 {"Pedicel", {&pedicel_reflectivity, &pedicel_transmissivity, &pedicel_emissivity}},
+                                 {"Fruit", {&fruit_reflectivity, &fruit_transmissivity, &fruit_emissivity}}};
+      }
+      primitive_library = {{"Ground", &ground_xml_library_file}, {"Leaf", &leaf_xml_library_file},
+                           {"Petiolule", &petiolule_xml_library_file}, {"Petiole", &petiole_xml_library_file},
+                           {"Internode", &internode_xml_library_file}, {"Peduncle", &peduncle_xml_library_file},
+                           {"Petal", &petal_xml_library_file}, {"Pedicel", &pedicel_xml_library_file},
+                           {"Fruit", &fruit_xml_library_file}};
+      primitive_spectra = {{"Ground", {&ground_reflectivity_spectrum, &ground_transmissivity_spectrum, &ground_emissivity_spectrum}},
+                           {"Leaf", {&leaf_reflectivity_spectrum, &leaf_transmissivity_spectrum, &leaf_emissivity_spectrum}},
+                           {"Petiolule", {&petiolule_reflectivity_spectrum, &petiolule_transmissivity_spectrum, &petiolule_emissivity_spectrum}},
+                           {"Petiole", {&petiole_reflectivity_spectrum, &petiole_transmissivity_spectrum, &petiole_emissivity_spectrum}},
+                           {"Internode", {&internode_reflectivity_spectrum, &internode_transmissivity_spectrum, &internode_emissivity_spectrum}},
+                           {"Peduncle", {&peduncle_reflectivity_spectrum, &peduncle_transmissivity_spectrum, &peduncle_emissivity_spectrum}},
+                           {"Petal", {&petal_reflectivity_spectrum, &petal_transmissivity_spectrum, &petal_emissivity_spectrum}},
+                           {"Pedicel", {&pedicel_reflectivity_spectrum, &pedicel_transmissivity_spectrum, &pedicel_emissivity_spectrum}},
+                           {"Fruit", {&fruit_reflectivity_spectrum, &fruit_transmissivity_spectrum, &fruit_emissivity_spectrum}}};
     }
 
     //! Destructor
