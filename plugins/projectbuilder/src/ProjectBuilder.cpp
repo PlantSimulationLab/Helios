@@ -248,6 +248,60 @@ void ProjectBuilder::updateSpectra(){
     }
 }
 
+void ProjectBuilder::record(){
+    #ifdef ENABLE_RADIATION_MODEL
+    std::string image_dir = "./saved/";
+    // delete_arrows(context, arrow_dict);
+    std::vector<uint> temp_lights{};
+    for (std::string rig_label : rig_labels){
+        int rig_index = rig_dict[rig_label];
+        for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+            int camera_index = camera_dict[rig_camera_label];
+            std::string cameralabel = rig_label + "_" + rig_camera_label;
+            std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
+            std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
+            for (int i = 0; i < interpolated_camera_positions.size(); i++){
+                // ADD RIG LIGHTS
+                for (std::string light : rig_light_labels[rig_dict[rig_label]]){
+                    int light_idx = light_dict[light];
+                    if (light_types[light_idx] == "sphere"){
+                        temp_lights.push_back(radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]));
+                    }else if (light_types[light_dict[light]] == "rectangle"){
+                        temp_lights.push_back(radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
+                            light_size_vec[light_idx], light_rotation_vec[light_idx]));
+                    }else if (light_types[light_dict[light]] == "disk"){
+                        temp_lights.push_back(radiation->addDiskRadiationSource(interpolated_camera_positions[i],
+                            light_radius_vec[light_idx], light_rotation_vec[light_idx]));
+                    }
+                }
+                //
+                radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
+                radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
+                radiation->runBand({"red", "green", "blue"});
+                radiation->writeCameraImage( cameralabel, bandlabels, "RGB" + std::to_string(i), image_dir + rig_label + '/');
+                radiation->writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
+                radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
+                radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
+                for (std::string primitive_name : primitive_names){
+                    if (!primitive_name.empty()){
+                        primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                    }
+                    radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                }
+                // REMOVE RIG LIGHTS
+                for (uint temp_light : temp_lights){
+                    radiation->deleteRadiationSource(temp_light);
+                }
+                temp_lights.clear();
+                //
+            }
+        }
+    }
+    // update_arrows(context, arrow_dict, camera_position_vec, rig_labels, rig_dict);
+    visualizer->plotUpdate();
+    #endif //RADIATION_MODEL
+}
+
 void ProjectBuilder::buildFromXML(){
     context = new Context();
 
@@ -1273,54 +1327,7 @@ void ProjectBuilder::visualize(){
             if (ImGui::Button("Record")){
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
                 updateSpectra();
-                // delete_arrows(context, arrow_dict);
-                std::vector<uint> temp_lights{};
-                for (std::string rig_label : rig_labels){
-                    int rig_index = rig_dict[rig_label];
-                    for (std::string rig_camera_label : rig_camera_labels[rig_index]){
-                        int camera_index = camera_dict[rig_camera_label];
-                        std::string cameralabel = rig_label + "_" + rig_camera_label;
-                        std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
-                        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
-                        for (int i = 0; i < interpolated_camera_positions.size(); i++){
-                            // ADD RIG LIGHTS
-                            for (std::string light : rig_light_labels[rig_dict[rig_label]]){
-                                int light_idx = light_dict[light];
-                                if (light_types[light_idx] == "sphere"){
-                                    temp_lights.push_back(radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]));
-                                }else if (light_types[light_dict[light]] == "rectangle"){
-                                    temp_lights.push_back(radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
-                                        light_size_vec[light_idx], light_rotation_vec[light_idx]));
-                                }else if (light_types[light_dict[light]] == "disk"){
-                                    temp_lights.push_back(radiation->addDiskRadiationSource(interpolated_camera_positions[i],
-                                        light_radius_vec[light_idx], light_rotation_vec[light_idx]));
-                                }
-                            }
-                            //
-                            radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
-                            radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
-                            radiation->runBand({"red", "green", "blue"});
-                            radiation->writeCameraImage( cameralabel, bandlabels, "RGB" + std::to_string(i), image_dir + rig_label + '/');
-                            radiation->writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
-                            radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
-                            radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
-                            for (std::string primitive_name : primitive_names){
-                                if (!primitive_name.empty()){
-                                    primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
-                                }
-                                radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                            }
-                            // REMOVE RIG LIGHTS
-                            for (uint temp_light : temp_lights){
-                                radiation->deleteRadiationSource(temp_light);
-                            }
-                            temp_lights.clear();
-                            //
-                        }
-                    }
-                }
-                // update_arrows(context, arrow_dict, camera_position_vec, rig_labels, rig_dict);
-                visualizer->plotUpdate();
+                record();
             }
             #endif //RADIATION_MODEL
             // ####### RESULTS ####### //

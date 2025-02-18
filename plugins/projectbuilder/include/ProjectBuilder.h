@@ -683,6 +683,9 @@ class ProjectBuilder {
     //! Function to update spectra based on saved information
     void updateSpectra();
 
+    //! Function to "record", or save camera images with bounding boxes for each rig
+    void record();
+
     //! Function to build context from XML
     void buildFromXML();
 
