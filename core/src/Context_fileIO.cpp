@@ -4331,7 +4331,7 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
   objfstream << "# Helios auto-generated OBJ File" << std::endl;
   objfstream << "# baileylab.ucdavis.edu/software/helios" << std::endl;
-  objfstream << "mtllib " << mtlfilename << std::endl;
+  objfstream << "mtllib " << getFileName(mtlfilename) << std::endl;
 
   for( auto &vert : verts) {
     objfstream << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
