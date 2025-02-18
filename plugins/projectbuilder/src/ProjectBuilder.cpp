@@ -344,45 +344,9 @@ void ProjectBuilder::buildFromXML(){
         assert( !ground_UUIDs.empty() );
         context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
         assert( !leaf_UUIDs.empty() );
-        // context->getGlobalData( "petiolule_UUIDs", petiolule_UUIDs );
-        // assert( !petiolule_UUIDs.empty() );
-        // context->getGlobalData( "petiole_UUIDs", petiole_UUIDs );
-        // assert( !petiole_UUIDs.empty() );
-        // context->getGlobalData( "internode_UUIDs", internode_UUIDs );
-        // assert( !internode_UUIDs.empty() );
-        // context->getGlobalData( "peduncle_UUIDs", peduncle_UUIDs );
-        // assert( !peduncle_UUIDs.empty() );
-        // context->getGlobalData( "petal_UUIDs", petal_UUIDs );
-        // assert( !petal_UUIDs.empty() );
-        // context->getGlobalData( "pedicel_UUIDs", pedicel_UUIDs );
-        // assert( !pedicel_UUIDs.empty() );
-        // context->getGlobalData( "fruit_UUIDs", fruit_UUIDs );
-        // assert( !fruit_UUIDs.empty() );
     }
 
-    // for (std::string& band : bandlabels){
-    //     std::map<std::string, std::vector<float>> curr;
-    //     for (std::pair<std::string, std::vector<uint>> primitive_pair : primitive_types){
-    //         // curr[primitive_pair.first] = std::vector<float>{0.0, 0.0, 0.0};
-    //         curr[primitive_pair.first] = std::vector<float>{0.25, 0.0, 0.0};
-    //     }
-    //     primitive_values[band] = curr;
-    // }
-
     // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
-    // for (std::string band : bandlabels){
-    //     for (std::pair<std::string, std::vector<uint>*> primitive_pair : primitive_types){
-    //         float reflectivity = *primitive_values[band][primitive_pair.first][0];
-    //         float transmissivity = *primitive_values[band][primitive_pair.first][1];
-    //         float emissivity = *primitive_values[band][primitive_pair.first][2];
-    //         std::string reflectivity_band = "reflectivity_" + band;
-    //         std::string transmissivity_band = "transmissivity_" + band;
-    //         std::string emissivity_band = "emissivity_" + band;
-    //         context->setPrimitiveData(*primitive_pair.second, reflectivity_band.c_str(), reflectivity);
-    //         context->setPrimitiveData(*primitive_pair.second, transmissivity_band.c_str(), transmissivity);
-    //         context->setPrimitiveData(*primitive_pair.second, emissivity_band.c_str(), emissivity);
-    //     }
-    // }
     updateSpectra();
 
     ground_area = context->sumPrimitiveSurfaceArea( ground_UUIDs );
@@ -1308,21 +1272,9 @@ void ProjectBuilder::visualize(){
             #ifdef ENABLE_RADIATION_MODEL
             if (ImGui::Button("Record")){
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
-                // for (std::string band : bandlabels){
-                //     for (std::pair<std::string, std::vector<uint>*> primitive_pair : primitive_types){
-                //         float reflectivity = *primitive_values[band][primitive_pair.first][0];
-                //         float transmissivity = *primitive_values[band][primitive_pair.first][1];
-                //         float emissivity = *primitive_values[band][primitive_pair.first][2];
-                //         std::string reflectivity_band = "reflectivity_" + band;
-                //         std::string transmissivity_band = "transmissivity_" + band;
-                //         std::string emissivity_band = "emissivity_" + band;
-                //         context->setPrimitiveData(*primitive_pair.second, reflectivity_band.c_str(), reflectivity);
-                //         context->setPrimitiveData(*primitive_pair.second, transmissivity_band.c_str(), transmissivity);
-                //         context->setPrimitiveData(*primitive_pair.second, emissivity_band.c_str(), emissivity);
-                //     }
-                // }
                 updateSpectra();
                 // delete_arrows(context, arrow_dict);
+                std::vector<uint> temp_lights{};
                 for (std::string rig_label : rig_labels){
                     int rig_index = rig_dict[rig_label];
                     for (std::string rig_camera_label : rig_camera_labels[rig_index]){
@@ -1331,6 +1283,20 @@ void ProjectBuilder::visualize(){
                         std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
                         std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
                         for (int i = 0; i < interpolated_camera_positions.size(); i++){
+                            // ADD RIG LIGHTS
+                            for (std::string light : rig_light_labels[rig_dict[rig_label]]){
+                                int light_idx = light_dict[light];
+                                if (light_types[light_idx] == "sphere"){
+                                    temp_lights.push_back(radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]));
+                                }else if (light_types[light_dict[light]] == "rectangle"){
+                                    temp_lights.push_back(radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
+                                        light_size_vec[light_idx], light_rotation_vec[light_idx]));
+                                }else if (light_types[light_dict[light]] == "disk"){
+                                    temp_lights.push_back(radiation->addDiskRadiationSource(interpolated_camera_positions[i],
+                                        light_radius_vec[light_idx], light_rotation_vec[light_idx]));
+                                }
+                            }
+                            //
                             radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                             radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
                             radiation->runBand({"red", "green", "blue"});
@@ -1338,7 +1304,18 @@ void ProjectBuilder::visualize(){
                             radiation->writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
                             radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
                             radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
-                            radiation->writeImageBoundingBoxes( cameralabel, "bunny" + std::to_string(i), 0, "bbox", image_dir + rig_label + '/');
+                            for (std::string primitive_name : primitive_names){
+                                if (!primitive_name.empty()){
+                                    primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                                }
+                                radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                            }
+                            // REMOVE RIG LIGHTS
+                            for (uint temp_light : temp_lights){
+                                radiation->deleteRadiationSource(temp_light);
+                            }
+                            temp_lights.clear();
+                            //
                         }
                     }
                 }
