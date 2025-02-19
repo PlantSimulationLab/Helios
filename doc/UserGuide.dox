@@ -874,7 +874,7 @@ $ git pull
      
      	  vec3 position = make_vec3( i*3, 0, 0 );
 
-	      context.translatePrimitive( position );
+	      context.translatePrimitive( UUID_copy, position );
 
      }
 
