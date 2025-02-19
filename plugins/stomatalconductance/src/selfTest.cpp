@@ -6,7 +6,6 @@
 using namespace std;
 using namespace helios;
 
-
 int StomatalConductanceModel::selfTest() {
     Context context_selftest;
     std::cout << "Running stomatal conductance model self-test..." << std::flush;
@@ -77,8 +76,8 @@ int StomatalConductanceModel::selfTest() {
     }
 
     if (sqrtf(RMSE_BWB) > RMSE_max || sqrtf(RMSE_BBL) > RMSE_max || sqrtf(RMSE_MOPT) > RMSE_max || sqrtf(RMSE_BMF) > RMSE_max) {
-        std::cout << "failed." << std::endl;
-        return 1;
+        std::cout << "FAILED: Stomatal Conductance Model error exceeds RMSE_max." << std::endl;
+        error_count++;
     }
 
     std::cout << "Existing tests passed." << std::endl;
