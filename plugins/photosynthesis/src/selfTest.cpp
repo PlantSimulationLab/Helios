@@ -127,6 +127,7 @@ int PhotosynthesisModel::selfTest() {
         error_count++;
     }
 
+
     // --- Test setModelCoefficients (Empirical Model with UUIDs) --- //
     std::vector<uint> UUIDs = {UUID};
     photomodel.setModelCoefficients(emp_coeffs, UUIDs);
