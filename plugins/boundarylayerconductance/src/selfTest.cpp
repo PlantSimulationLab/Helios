@@ -2,7 +2,6 @@
 #include "Context.h"
 #include <iostream>
 #include <cmath>
-#include <cassert>
 
 using namespace helios;
 
@@ -12,6 +11,7 @@ int BLConductanceModel::selfTest() {
 
     // Error tolerance for comparisons
     float err_tol = 1e-3;
+    int error_count = 0;
 
     // Context and UUID setup
     Context context_1;
@@ -69,7 +69,10 @@ int BLConductanceModel::selfTest() {
     float default_gH;
     context_2.getPrimitiveData(UUID_default, "boundarylayer_conductance", default_gH);
 
-    assert(default_gH > 0); // Ensure conductance is calculated even with defaults
+    if (!(default_gH > 0)) {
+        std::cout << "Default values handling failed." << std::endl;
+        error_count++;
+    }
 
     std::cout << "Default values handling passed." << std::endl;
 
@@ -82,10 +85,16 @@ int BLConductanceModel::selfTest() {
 
     // **New Test: Enable and Disable Messages**
     blc_1.enableMessages();
-    assert(blc_1.message_flag == true);
+    if (!(blc_1.message_flag == true)) {
+        std::cout << "Enable messages test failed." << std::endl;
+        error_count++;
+    }
 
     blc_1.disableMessages();
-    assert(blc_1.message_flag == false);
+    if (!(blc_1.message_flag == false)) {
+        std::cout << "Disable messages test failed." << std::endl;
+        error_count++;
+    }
 
     std::cout << "Message flag tests passed." << std::endl;
 
@@ -107,20 +116,36 @@ int BLConductanceModel::selfTest() {
 
     // **New Test: Edge Cases for calculateBoundaryLayerConductance**
     float result = blc_1.calculateBoundaryLayerConductance(0, 0, 0, 1, 0, 0, 0);
-    assert(result == 0);
+    if (!(result == 0)) {
+        std::cout << "calculateBoundaryLayerConductance test with zero inputs failed." << std::endl;
+        error_count++;
+    }
 
     result = blc_1.calculateBoundaryLayerConductance(1, 1000, 100, 2, 45 * M_PI / 180, 300, 290);
-    assert(result > 0); // Verify reasonable output
+    if (!(result > 0)) {
+        std::cout << "calculateBoundaryLayerConductance test with positive values failed." << std::endl;
+        error_count++;
+    }
 
     result = blc_1.calculateBoundaryLayerConductance(1, 1000, 100, 2, 80 * M_PI / 180, 300, 290);
-    assert(result > 0); // Ensure inclined plate with high inclination works
+    if (!(result > 0)) {
+        std::cout << "calculateBoundaryLayerConductance test with high inclination failed." << std::endl;
+        error_count++;
+    }
 
     result = blc_1.calculateBoundaryLayerConductance(1, 1000, 100, 2, 80 * M_PI / 180, 280, 300);
-    assert(result > 0); // Check `free_direction = -1` case
+    if (!(result > 0)) {
+        std::cout << "calculateBoundaryLayerConductance test with reversed temperature gradient failed." << std::endl;
+        error_count++;
+    }
 
     std::cout << "Edge case tests for calculateBoundaryLayerConductance passed." << std::endl;
 
-    std::cout << "All tests passed successfully!" << std::endl;
-    return 0;
-}
+    if (error_count > 0) {
+        std::cout << "Some tests failed. Error count: " << error_count << std::endl;
+    } else {
+        std::cout << "All tests passed successfully!" << std::endl;
+    }
 
+    return error_count;
+}
