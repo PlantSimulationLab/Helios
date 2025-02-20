@@ -255,46 +255,53 @@ void ProjectBuilder::record(){
     std::vector<uint> temp_lights{};
     for (std::string rig_label : rig_labels){
         int rig_index = rig_dict[rig_label];
-        for (std::string rig_camera_label : rig_camera_labels[rig_index]){
-            int camera_index = camera_dict[rig_camera_label];
-            std::string cameralabel = rig_label + "_" + rig_camera_label;
-            std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
-            std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
-            for (int i = 0; i < interpolated_camera_positions.size(); i++){
-                // ADD RIG LIGHTS
-                for (std::string light : rig_light_labels[rig_dict[rig_label]]){
-                    int light_idx = light_dict[light];
-                    if (light_types[light_idx] == "sphere"){
-                        temp_lights.push_back(radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]));
-                    }else if (light_types[light_dict[light]] == "rectangle"){
-                        temp_lights.push_back(radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
-                            light_size_vec[light_idx], light_rotation_vec[light_idx]));
-                    }else if (light_types[light_dict[light]] == "disk"){
-                        temp_lights.push_back(radiation->addDiskRadiationSource(interpolated_camera_positions[i],
-                            light_radius_vec[light_idx], light_rotation_vec[light_idx]));
-                    }
+        std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
+        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
+        for (int i = 0; i < interpolated_camera_positions.size(); i++){
+            // ADD RIG LIGHTS
+            for (std::string light : rig_light_labels[rig_dict[rig_label]]){
+                int light_idx = light_dict[light];
+                if (light_types[light_idx] == "sphere"){
+                    temp_lights.push_back(radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]));
+                }else if (light_types[light_dict[light]] == "rectangle"){
+                    temp_lights.push_back(radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
+                        light_size_vec[light_idx], light_rotation_vec[light_idx]));
+                }else if (light_types[light_dict[light]] == "disk"){
+                    temp_lights.push_back(radiation->addDiskRadiationSource(interpolated_camera_positions[i],
+                        light_radius_vec[light_idx], light_rotation_vec[light_idx]));
                 }
-                //
+            }
+            //
+            for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+                int camera_index = camera_dict[rig_camera_label];
+                std::string cameralabel = rig_label + "_" + rig_camera_label;
                 radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                 radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
-                radiation->runBand({"red", "green", "blue"});
+            }
+            radiation->runBand({"red", "green", "blue"});
+            for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+                std::string cameralabel = rig_label + "_" + rig_camera_label;
+                // Write Images
                 radiation->writeCameraImage( cameralabel, bandlabels, "RGB" + std::to_string(i), image_dir + rig_label + '/');
                 radiation->writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
                 radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
                 radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
+                //
+                // Bounding boxes for all primitive types
                 for (std::string primitive_name : primitive_names){
                     if (!primitive_name.empty()){
                         primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                     }
                     radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
                 }
-                // REMOVE RIG LIGHTS
-                for (uint temp_light : temp_lights){
-                    radiation->deleteRadiationSource(temp_light);
-                }
-                temp_lights.clear();
                 //
             }
+            // REMOVE RIG LIGHTS
+            for (uint temp_light : temp_lights){
+                radiation->deleteRadiationSource(temp_light);
+            }
+            temp_lights.clear();
+            //
         }
     }
     // update_arrows(context, arrow_dict, camera_position_vec, rig_labels, rig_dict);
@@ -621,9 +628,8 @@ void ProjectBuilder::setKeypoints(const std::string& name, const std::string& pa
         int count = 0;
         for (pugi::xml_node p = rig.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
             std::string default_value = std::to_string(count);
-            if (!p.attribute(name.c_str()).empty()){
-                p.attribute(name.c_str()).set_value(keypoints[rig_count][count]);
-            }
+            p.append_attribute(name.c_str());
+            p.attribute(name.c_str()).set_value(keypoints[rig_count][count]);
             count++;
         }
         rig_count++;
@@ -1064,11 +1070,17 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        int j = 0;
-        std::vector<vec3> curr_vec = {};
+        std::vector<pugi::xml_node> remove = {};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
-            node.text().set(vec_to_string(default_vec[i][j]).c_str());
-            j++;
+            remove.push_back(node);
+        }
+        for (pugi::xml_node &node : remove){
+            p.remove_child(node);
+        }
+        for (int j = 0; j < default_vec[i].size(); j++){
+            // p.append_child(name.c_str()).set_value(vec_to_string(default_vec[i][j]).c_str());
+            pugi::xml_node new_node = p.append_child(name.c_str());
+            new_node.text().set(vec_to_string(default_vec[i][j]).c_str());
         }
         i++;
     }
@@ -1079,11 +1091,17 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
     helios = xmldoc.child("helios");
     int i = 0;
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        std::vector<pugi::xml_node> remove{};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+            remove.push_back(node);
+        }
+        for (pugi::xml_node &node : remove){
             p.remove_child(node);
         }
         for (std::string s : default_vec[i]){
-            p.append_child(name.c_str()).set_value(s.c_str());
+            // p.append_child(name.c_str()).set_value(s.c_str());
+            pugi::xml_node new_node = p.append_child(name.c_str());
+            new_node.text().set(s.c_str());
         }
         i++;
     }
@@ -1765,6 +1783,7 @@ void ProjectBuilder::visualize(){
                         rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
                         rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
                         keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
+                        num_images_vec.push_back(num_images_vec[rig_dict[current_rig]]);
                         // current_rig = new_rig_label;
                         std::string parent = "rig";
                         pugi::xml_node rig_block = helios.child(parent.c_str());
