@@ -876,7 +876,11 @@ public:
   glm::mat4 plotInit();
 
   //! Run one rendering loop from plotInteractive()
-  void plotOnce(glm::mat4);
+  /**
+   * \param[in] depthMVP Depth MVP matrix.
+   * \param[in] getKeystrokes If false, do not update visualization with input keystrokes.
+  */
+  void plotOnce(glm::mat4 depthMVP, bool getKeystrokes);
 
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap();

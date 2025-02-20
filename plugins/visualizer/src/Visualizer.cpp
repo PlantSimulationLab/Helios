@@ -3606,7 +3606,7 @@ glm::mat4 Visualizer::plotInit() {
 
 }
 
-void Visualizer::plotOnce(glm::mat4 depthMVP) {
+void Visualizer::plotOnce(glm::mat4 depthMVP, bool getKeystrokes) {
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
@@ -3645,7 +3645,9 @@ void Visualizer::plotOnce(glm::mat4 depthMVP) {
     render( 0 );
 
     // glfwPollEvents();
-    getViewKeystrokes( camera_eye_location, camera_lookat_center );
+    if ( getKeystrokes ){
+        getViewKeystrokes( camera_eye_location, camera_lookat_center );
+    }
 
     // glfwSwapBuffers((GLFWwindow*)window);
 

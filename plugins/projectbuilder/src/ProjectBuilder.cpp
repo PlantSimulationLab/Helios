@@ -201,6 +201,38 @@ std::vector<std::string> get_xml_node_values(std::string xml_input, const std::s
     return labels_vec;
 }
 
+
+void ProjectBuilder::deleteArrows(){
+    for (auto& arrow : arrow_dict){
+        context->deleteObject(arrow_dict.at(arrow.first));
+    }
+    arrow_dict.clear();
+}
+
+
+void ProjectBuilder::updateArrows(){
+    #ifdef ENABLE_RADIATION_MODEL
+    arrow_count = 0;
+    for (int n = 0; n < rig_labels.size(); n++){
+        std::string current_rig = rig_labels[n];
+        for (int i = 1; i < camera_position_vec[rig_dict[current_rig]].size(); i++){
+            vec3 arrow_pos = camera_position_vec[rig_dict[current_rig]][i - 1];
+            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[current_rig]][i];
+            SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
+            vec3 arrow_scale(0.35, 0.35, 0.35);
+            arrow_dict[arrow_count] = context->loadOBJ("plugins/radiation/camera_light_models/Arrow.obj",
+                                                    nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
+            context->rotatePrimitive(arrow_dict.at(arrow_count), arrow_direction_sph.elevation, "x");
+            context->rotatePrimitive(arrow_dict.at(arrow_count), -arrow_direction_sph.azimuth, "z");
+            context->translatePrimitive(arrow_dict.at(arrow_count), arrow_pos);
+            context->setPrimitiveData(arrow_dict.at(arrow_count), "twosided_flag", uint(3));
+            arrow_count++;
+        }
+    }
+    #endif
+}
+
+
 void ProjectBuilder::updateSpectra(){
     for (std::pair<std::string, std::vector<uint>*> primitive_pair : primitive_types){
         if (!primitive_continuous[primitive_pair.first][0]){
@@ -251,7 +283,7 @@ void ProjectBuilder::updateSpectra(){
 void ProjectBuilder::record(){
     #ifdef ENABLE_RADIATION_MODEL
     std::string image_dir = "./saved/";
-    // delete_arrows(context, arrow_dict);
+    // deleteArrows();
     std::vector<uint> temp_lights{};
     for (std::string rig_label : rig_labels){
         int rig_index = rig_dict[rig_label];
@@ -304,7 +336,7 @@ void ProjectBuilder::record(){
             //
         }
     }
-    // update_arrows(context, arrow_dict, camera_position_vec, rig_labels, rig_dict);
+    // updateArrows();
     visualizer->plotUpdate();
     #endif //RADIATION_MODEL
 }
@@ -515,22 +547,7 @@ void ProjectBuilder::buildFromXML(){
     // RIG BLOCK
     num_images = 5;
     xmlGetValues();
-    for (int n = 0; n < rig_labels.size(); n++){
-        std::string current_rig = rig_labels[n];
-        for (int i = 1; i < camera_position_vec[rig_dict[current_rig]].size(); i++){
-            vec3 arrow_pos = camera_position_vec[rig_dict[current_rig]][i - 1];
-            vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[current_rig]][i];
-            SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
-            vec3 arrow_scale(0.35, 0.35, 0.35);
-            arrow_dict[arrow_count] = context->loadOBJ("../../../plugins/radiation/camera_light_models/Arrow.obj",
-                                                    nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
-            context->rotatePrimitive(arrow_dict[arrow_count], arrow_direction_sph.elevation, "x");
-            context->rotatePrimitive(arrow_dict[arrow_count], -arrow_direction_sph.azimuth, "z");
-            context->translatePrimitive(arrow_dict[arrow_count], arrow_pos);
-            context->setPrimitiveData(arrow_dict[arrow_count], "twosided_flag", uint(3));
-            arrow_count++;
-        }
-    }
+    updateArrows();
     for (std::string rig_label : rig_labels){
         int rig_index = rig_dict[rig_label];
         for (std::string rig_camera_label : rig_camera_labels[rig_index]){
@@ -1127,6 +1144,9 @@ void ProjectBuilder::visualize(){
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
+        // io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Nimbus-sans.ttf", 18.0f);
+        // io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/OpenSans-Regular.ttf", 18.0f);
+        io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Arial.ttf", 16.0f);
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -1204,7 +1224,7 @@ void ProjectBuilder::visualize(){
                 origin_position = perspectiveTransformationMatrix * origin_position;
                 ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
                                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
-                ImGui::SetNextWindowSize(ImVec2(110, 10), ImGuiCond_Always);
+                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
                 // double check above
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
@@ -1216,7 +1236,7 @@ void ProjectBuilder::visualize(){
                 origin_position = perspectiveTransformationMatrix * origin_position;
                 ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
                                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
-                ImGui::SetNextWindowSize(ImVec2(110, 10), ImGuiCond_Always);
+                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
                 // vec3 scale(1,1,1);
@@ -1356,13 +1376,13 @@ void ProjectBuilder::visualize(){
                 if (ImGui::BeginTabItem("General")){
                     current_tab = "General";
                     // ####### LATITUDE ####### //
-                    ImGui::SetNextItemWidth(60);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
                     // ####### LONGITUDE ####### //
-                    ImGui::SetNextItemWidth(60);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Longitude", &longitude);
                     // ####### UTC OFFSET ####### //
-                    ImGui::SetNextItemWidth(60);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("UTC Offset", &UTC_offset);
                     // ####### CSV Weather File ####### //
                     ImGui::SetNextItemWidth(60);
@@ -1404,10 +1424,10 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Domain Extent");
                     // ####### GROUND RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(70);
+                    ImGui::SetNextItemWidth(80);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth(70);
+                    ImGui::SetNextItemWidth(80);
                     ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
@@ -1518,7 +1538,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Canopy Origin");
                     // ####### PLANT COUNT ####### //
-                    ImGui::SetNextItemWidth(70);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[current_canopy]].x);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(70);
@@ -1534,13 +1554,13 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Plant Spacing");
                     // ####### PLANT LIBRARY NAME ####### //
-                    ImGui::SetNextItemWidth(60);
+                    ImGui::SetNextItemWidth(80);
                     ImGui::InputText("Plant Library", &plant_library_names[canopy_labels[current_canopy]]);
                     // ####### PLANT AGE ####### //
-                    ImGui::SetNextItemWidth(50);
+                    ImGui::SetNextItemWidth(80);
                     ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[current_canopy]]);
                     // ####### GROUND CLIPPING HEIGHT ####### //
-                    ImGui::SetNextItemWidth(50);
+                    ImGui::SetNextItemWidth(80);
                     ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[current_canopy]]);
 
                     ImGui::EndTabItem();
@@ -1561,7 +1581,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("Diffuse Extinction Coefficient", &diffuse_extinction_coeff);
                     // ####### SCATTERING DEPTH ####### //
-                    ImGui::SetNextItemWidth(60);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("Scattering Depth", &scattering_depth);
                     // ####### AIR TURBIDITY ####### //
                     ImGui::SetNextItemWidth(60);
@@ -1634,6 +1654,7 @@ void ProjectBuilder::visualize(){
                         if (!xml_library_file_.empty()){
                             *primitive_library[current_primitive] = xml_library_file_;
                         }
+                        context->loadXML( xml_library_file_.c_str() );
                     }
                     ImGui::SameLine();
                     std::string shorten_xml_library_file = *primitive_library[current_primitive];
@@ -2136,11 +2157,13 @@ void ProjectBuilder::visualize(){
             // (Your code clears your framebuffer, renders your other stuff etc.)
             // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);  // Set a background color (e.g., dark grey)
             // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            visualizer->plotOnce(depthMVP);
+            visualizer->plotOnce(depthMVP, !io.WantCaptureMouse);
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glfwSwapBuffers(window);
-            glfwWaitEvents();
+            if (!io.WantCaptureMouse){
+                glfwWaitEvents();
+            }
             // (Your code calls glfwSwapBuffers() etc.)
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100/6));

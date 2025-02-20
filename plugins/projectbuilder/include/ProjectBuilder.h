@@ -679,6 +679,12 @@ class ProjectBuilder {
 //        glm::mat4 depthMVP;
 //    #endif //HELIOS_VISUALIZER
 
+    //! Function to delete arrows denoting rig movement
+    void deleteArrows();
+
+    //! Function to update arrows for rig movement
+    void updateArrows();
+
   public:
     //! Function to update spectra based on saved information
     void updateSpectra();
