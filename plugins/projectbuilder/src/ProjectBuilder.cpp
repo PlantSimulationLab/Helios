@@ -87,6 +87,10 @@ std::vector<vec3> interpolate(std::vector<int> keypoints, std::vector<vec3> posi
     for (int i = 0; i < keypoints.size(); i++){
         keypoints_loc.insert({keypoints[i], i});
     }
+    if (keypoints.size() == 1){
+        std::fill(result.begin(), result.end(), positions[0]);
+        return result;
+    }
     if (keypoints_sorted[keypoints_sorted.size() - 1] != num_points - 1){
         keypoints_sorted.push_back(num_points - 1);
         keypoints_loc.insert({num_points - 1, keypoints.size()});
@@ -288,7 +292,7 @@ void ProjectBuilder::record(){
     for (std::string rig_label : rig_labels){
         int rig_index = rig_dict[rig_label];
         std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
-        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]); //TODO: test with 1 lookat position
+        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
         for (int i = 0; i < interpolated_camera_positions.size(); i++){
             // ADD RIG LIGHTS
             for (std::string light : rig_light_labels[rig_dict[rig_label]]){
@@ -1251,7 +1255,10 @@ void ProjectBuilder::visualize(){
 
             // ImGui::SetNextWindowSize(ImVec2(500, 400));
             ImVec2 windowSize = ImGui::GetWindowSize();
-
+            // int windowSize_x = 0;
+            // int windowSize_y = 0;
+            // glfwGetWindowSize((GLFWwindow*)window, &windowSize_x, &windowSize_y );
+            // ImVec2 windowSize(windowSize_x, windowSize_y);
             // TEST
             glm::mat4 perspectiveTransformationMatrix = visualizer->getPerspectiveTransformationMatrix();
             glm::vec4 origin_position;
