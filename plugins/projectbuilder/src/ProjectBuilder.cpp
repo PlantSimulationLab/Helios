@@ -520,8 +520,27 @@ void ProjectBuilder::buildFromXML(){
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
+        if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+            helios_runtime_error(xml_error_string);
+        }
+        xmlGetValues();
         // RIG BLOCK
-        context->loadXML( "plugins/radiation/spectral_data/camera_spectral_library.xml", true);
+        // *** Loading any XML files needed for cameras *** //
+        for (auto &xml_file : camera_xml_library_files) {
+            if( xml_file.empty() || !std::filesystem::exists(xml_file) ){
+                std::cout << "WARNING: Could not find camera XML library file: " + xml_file << ". Skipping..." << std::endl;
+                continue;
+            }
+            context->loadXML( xml_file.c_str() );
+        }
+        // *** Loading any XML files needed for lights *** //
+        for (auto &xml_file : light_xml_library_files) {
+            if( xml_file.empty() || !std::filesystem::exists(xml_file) ){
+                std::cout << "WARNING: Could not find light XML library file: " + xml_file << ". Skipping..." << std::endl;
+                continue;
+            }
+            context->loadXML( xml_file.c_str() );
+        }
 
         // if (enable_solarposition && enable_radiation){
         #ifdef ENABLE_RADIATION_MODEL
@@ -539,19 +558,9 @@ void ProjectBuilder::buildFromXML(){
             radiation->enforcePeriodicBoundary("xy");
         // } //SOLARPOSITION && RADIATION_MODEL
         #endif //SOLARPOSITION && RADIATION_MODEL
-
-        if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
-            helios_runtime_error(xml_error_string);
-        }
-
-        rig_dict = getNodeLabels("label", "rig", rig_labels);
-        xmlGetValues("camera_position", "rig", camera_positions);
-        xmlGetValues("camera_lookat", "rig", camera_lookats);
-        xmlGetValues("camera_label", "rig", camera_labels);
     }
     // RIG BLOCK
     num_images = 5;
-    xmlGetValues();
     updateArrows();
     for (std::string rig_label : rig_labels){
         int rig_index = rig_dict[rig_label];
@@ -939,7 +948,13 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 
 void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::set<std::string>& default_set){
     helios = xmldoc.child("helios");
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+    pugi::xml_node p_;
+    if (parent != "helios") {
+        p_ = helios.child(parent.c_str());
+    }else{
+        p_ = helios;
+    }
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
             const char *node_str = node.child_value();
             std::string default_value;
@@ -1130,7 +1145,13 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
 void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
     int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+    pugi::xml_node p_;
+    if (parent != "helios") {
+        p_ = helios.child(parent.c_str());
+    }else{
+        p_ = helios;
+    }
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
         std::vector<pugi::xml_node> remove{};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
             remove.push_back(node);
@@ -1151,7 +1172,13 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
 void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::set<std::string>& default_set){
     helios = xmldoc.child("helios");
     int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+    pugi::xml_node p_;
+    if (parent != "helios") {
+        p_ = helios.child(parent.c_str());
+    }else{
+        p_ = helios;
+    }
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
         std::vector<pugi::xml_node> remove{};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
             remove.push_back(node);
@@ -1619,6 +1646,7 @@ void ProjectBuilder::visualize(){
             // if (enable_radiation){
             #ifdef ENABLE_RADIATION_MODEL
                 if (ImGui::BeginTabItem("Radiation")){
+                    current_tab = "Radiation";
                     // LOAD XML LIBRARY FILE
                     ImGui::SetNextItemWidth(60);
                     if (ImGui::Button("Load XML Library File")){
@@ -1632,7 +1660,6 @@ void ProjectBuilder::visualize(){
                             context->loadXML( new_xml_library_file.c_str() );
                         }
                     }
-                    current_tab = "Radiation";
                     // ####### DIRECT RAY COUNT ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("Direct Ray Count", &direct_ray_count);
@@ -2042,6 +2069,19 @@ void ProjectBuilder::visualize(){
                 // CAMERA TAB
                 if (ImGui::BeginTabItem("Camera")){
                     current_tab = "Camera";
+                    // LOAD XML LIBRARY FILE
+                    ImGui::SetNextItemWidth(60);
+                    if (ImGui::Button("Load XML Library File")){
+                        std::string new_xml_library_file = file_dialog();
+                        if (!new_xml_library_file.empty()){
+                            if ( camera_xml_library_files.find(new_xml_library_file) == camera_xml_library_files.end() ){
+                                camera_xml_library_files.insert(new_xml_library_file);
+                                std::vector<std::string> current_camera_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
+                                possible_camera_calibrations.insert(possible_camera_calibrations.end(), current_camera_file.begin(), current_camera_file.end());
+                            }
+                            context->loadXML( new_xml_library_file.c_str() );
+                        }
+                    }
                     if (ImGui::BeginCombo("##camera_combo", current_cam.c_str())){
                         for (int n = 0; n < camera_names.size(); n++){
                             bool is_cam_selected = (current_cam == camera_names[n]);
@@ -2063,6 +2103,7 @@ void ProjectBuilder::visualize(){
                         }
                         camera_dict.insert({new_cam_name, camera_names.size()});
                         camera_resolutions.push_back(camera_resolution);
+                        camera_calibrations.push_back(camera_calibrations[camera_dict[current_cam]]);
                         focal_plane_distances.push_back(focal_plane_distance);
                         lens_diameters.push_back(lens_diameter);
                         FOV_aspect_ratios.push_back(FOV_aspect_ratio);
@@ -2089,6 +2130,20 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     ImGui::Text("Camera Label");
+                    // ####### CAMERA CALIBRATION ####### //
+                    std::string prev_cam_calibration = camera_calibrations[camera_dict[current_cam]];
+                    if (ImGui::BeginCombo("##camera_calibration_combo", camera_calibrations[camera_dict[current_cam]].c_str())){
+                        for (int n = 0; n < possible_camera_calibrations.size(); n++){
+                            bool is_cam_calibration_selected = (camera_calibrations[camera_dict[current_cam]] == possible_camera_calibrations[n]);
+                            if (ImGui::Selectable(possible_camera_calibrations[n].c_str(), is_cam_calibration_selected))
+                                camera_calibrations[camera_dict[current_cam]] = possible_camera_calibrations[n];
+                            if (is_cam_calibration_selected)
+                                ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Camera Calibration");
                     // ####### CAMERA RESOLUTION ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
@@ -2115,6 +2170,19 @@ void ProjectBuilder::visualize(){
                 // LIGHT TAB
                 if (ImGui::BeginTabItem("Light")){
                     current_tab = "Light";
+                    // LOAD XML LIBRARY FILE
+                    ImGui::SetNextItemWidth(60);
+                    if (ImGui::Button("Load XML Library File")){
+                        std::string new_xml_library_file = file_dialog();
+                        if (!new_xml_library_file.empty()){
+                            if ( light_xml_library_files.find(new_xml_library_file) == light_xml_library_files.end() ){
+                                light_xml_library_files.insert(new_xml_library_file);
+                                std::vector<std::string> current_light_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
+                                possible_light_spectra.insert(possible_light_spectra.end(), current_light_file.begin(), current_light_file.end());
+                            }
+                            context->loadXML( new_xml_library_file.c_str() );
+                        }
+                    }
                     if (ImGui::BeginCombo("##light_combo", current_light.c_str())){
                         for (int n = 0; n < light_names.size(); n++){
                             bool is_light_selected = (current_light == light_names[n]);
@@ -2135,6 +2203,7 @@ void ProjectBuilder::visualize(){
                             new_light_name = default_light_name + "_" + std::to_string(count);
                         }
                         light_dict.insert({new_light_name, light_names.size()});
+                        light_spectra.push_back(light_spectra[light_dict[current_light]]);
                         light_types.push_back(light_types[light_dict[current_light]]);
                         light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);
                         light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[current_light]]);
@@ -2163,6 +2232,20 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     ImGui::Text("Light Label");
+                    // ####### LIGHT SPECTRA ####### //
+                    std::string prev_light_spectra = light_spectra[light_dict[current_light]];
+                    if (ImGui::BeginCombo("##light_spectra_combo", light_spectra[light_dict[current_light]].c_str())){
+                        for (int n = 0; n < possible_light_spectra.size(); n++){
+                            bool is_light_spectra_selected = (light_spectra[light_dict[current_light]] == possible_light_spectra[n]);
+                            if (ImGui::Selectable(possible_light_spectra[n].c_str(), is_light_spectra_selected))
+                                light_spectra[light_dict[current_light]] = possible_light_spectra[n];
+                            if (is_light_spectra_selected)
+                                ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Light Spectrum");
                     // ####### LIGHT TYPE ############ //
                     if (ImGui::BeginCombo("##light_type_combo", light_types[light_dict[current_light]].c_str())){
                         for (int n = 0; n < all_light_types.size(); n++){
@@ -2284,6 +2367,8 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValue("domain_extent", "helios", domain_extent);
     xmlSetValue("ground_resolution", "helios", ground_resolution);
     xmlSetValue("ground_texture_file", "helios", ground_texture_file);
+    xmlSetValues("camera_xml_library_file", "helios", camera_xml_library_files);
+    xmlSetValues("light_xml_library_file", "helios", light_xml_library_files);
     // CANOPY BLOCK
     canopy_labels = setNodeLabels("label", "canopy_block", labels);
     xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
@@ -2319,12 +2404,14 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValue("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
     xmlSetValue("HFOV", "camera", HFOV);
     xmlSetValues("camera_resolution", "camera", camera_resolutions);
+    xmlSetValues("camera_calibration", "camera", camera_calibrations);
     xmlSetValues("focal_plane_distance", "camera", focal_plane_distances);
     xmlSetValues("lens_diameter", "camera", lens_diameters);
     xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     xmlSetValues("HFOV", "camera", HFOVs);
     // LIGHT BLOCK
     xmlSetValues("light_type", "light", light_types);
+    xmlSetValues("light_spectra", "light", light_spectra);
     xmlSetValues("light_direction", "light", light_direction_vec);
     xmlSetValues("light_rotation", "light", light_rotation_vec);
     xmlSetValues("light_size", "light", light_size_vec);
@@ -2366,6 +2453,24 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValue("domain_extent", "helios", domain_extent);
     xmlGetValue("ground_resolution", "helios", ground_resolution);
     xmlGetValue("ground_texture_file", "helios", ground_texture_file);
+    xmlGetValues("camera_xml_library_file", "helios", camera_xml_library_files);
+    possible_camera_calibrations.clear();
+    for (auto &xml_library_file : camera_xml_library_files){
+        if( xml_library_file.empty() || !std::filesystem::exists(xml_library_file) ){
+            continue;
+        }
+        std::vector<std::string> current_camera_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
+        possible_camera_calibrations.insert(possible_camera_calibrations.end(), current_camera_file.begin(), current_camera_file.end());
+    }
+    xmlGetValues("light_xml_library_file", "helios", light_xml_library_files);
+    possible_light_spectra.clear();
+    for (auto &xml_library_file : light_xml_library_files){
+        if( xml_library_file.empty() || !std::filesystem::exists(xml_library_file) ){
+            continue;
+        }
+        std::vector<std::string> current_light_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
+        possible_light_spectra.insert(possible_light_spectra.end(), current_light_file.begin(), current_light_file.end());
+    }
     // CANOPY BLOCK
     labels.clear();
     canopy_labels = getNodeLabels("label", "canopy_block", labels);
@@ -2423,6 +2528,8 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValue("HFOV", "camera", HFOV);
     camera_resolutions.clear();
     xmlGetValues("camera_resolution", "camera", camera_resolutions);
+    camera_calibrations.clear();
+    xmlGetValues("camera_calibration", "camera", camera_calibrations);
     focal_plane_distances.clear();
     xmlGetValues("focal_plane_distance", "camera", focal_plane_distances);
     lens_diameters.clear();
@@ -2446,6 +2553,8 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("light_size", "light", light_size_vec);
     light_radius_vec.clear();
     xmlGetValues("light_radius", "light", light_radius_vec);
+    light_spectra.clear();
+    xmlGetValues("light_spectra", "light", light_spectra);
     light_names.clear();
     light_dict = getNodeLabels("label", "light", light_names);
     current_light = light_names[0];
@@ -2460,6 +2569,9 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("load_xml_library_file", "radiation", xml_library_files);
     possible_spectra.clear();
     for (auto &xml_library_file : xml_library_files){
+        if( xml_library_file.empty() || !std::filesystem::exists(xml_library_file) ){
+            continue;
+        }
         std::vector<std::string> current_spectra_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
         possible_spectra.insert(possible_spectra.end(), current_spectra_file.begin(), current_spectra_file.end());
     }

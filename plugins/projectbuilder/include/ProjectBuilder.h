@@ -455,12 +455,30 @@ class ProjectBuilder {
     //! Air turbidity
     float air_turbidity = 0.05;
 
-    //! XML library files
+    //! XML spectral library files
     std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml",
-                                                    "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
+                                                 "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
 
-    //! Possible spectra vector
+    //! Possible spectra vector from spectral library files
     std::vector<std::string> possible_spectra;
+
+    //! Camera XML library files
+    std::set<std::string> camera_xml_library_files = {"plugins/radiation/spectral_data/camera_spectral_library.xml"};
+
+    //! Possible camera calibrations vector from camera library files
+    std::vector<std::string> possible_camera_calibrations;
+
+    //! Camera calibration selection for each camera
+    std::vector<std::string> camera_calibrations;
+
+    //! Light XML library files
+    std::set<std::string> light_xml_library_files = {"plugins/radiation/spectral_data/light_spectral_library.xml"};
+
+    //! Possible light spectra vector from light library files
+    std::vector<std::string> possible_light_spectra;
+
+    //! Spectra selection for each light
+    std::vector<std::string> light_spectra;
 
     //! Solar direct spectrum
     std::string solar_direct_spectrum = "ASTMG173";
