@@ -663,6 +663,9 @@ class ProjectBuilder {
     //! Fruit emissivity spectrum
     std::string fruit_emissivity_spectrum = "";
 
+    //! All possible visualization types
+    std::set<std::string> visualization_types = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+
     //! Visualization type
     std::string visualization_type = "RGB";
 
@@ -707,6 +710,9 @@ class ProjectBuilder {
   public:
     //! Function to update spectra based on saved information
     void updateSpectra();
+
+    //! Function to update cameras based on saved information
+    void updateCameras();
 
     //! Function to "record", or save camera images with bounding boxes for each rig
     void record();

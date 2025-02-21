@@ -284,6 +284,36 @@ void ProjectBuilder::updateSpectra(){
     }
 }
 
+void ProjectBuilder::updateCameras(){
+    #ifdef ENABLE_RADIATION_MODEL
+    for (std::string rig_label : rig_labels){
+        int rig_index = rig_dict[rig_label];
+        for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+            int camera_index = camera_dict[rig_camera_label];
+
+            /* Load properties of camera */
+            cameraproperties = new CameraProperties();
+            cameraproperties->camera_resolution = camera_resolutions[camera_index];
+            cameraproperties->focal_plane_distance = focal_plane_distances[camera_index];
+            cameraproperties->lens_diameter = lens_diameters[camera_index];
+            cameraproperties->FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
+            cameraproperties->HFOV = HFOVs[camera_index];
+
+            /* Create new camera */
+            std::string camera_label_ = rig_label + "_" + rig_camera_label;
+            vec3 camera_position_ = camera_positions[rig_index];
+            vec3 camera_lookat_ = camera_lookats[rig_index];
+            radiation->addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, *cameraproperties, 100);
+            for (auto &band : bandlabels){
+                radiation->setCameraSpectralResponse(camera_label_, band, camera_calibrations[camera_index] + "_" + band);
+            }
+            radiation->updateGeometry();
+        }
+    }
+    radiation->runBand(bandlabels);
+    #endif //RADIATION_MODEL
+}
+
 void ProjectBuilder::record(){
     #ifdef ENABLE_RADIATION_MODEL
     std::string image_dir = "./saved/";
@@ -562,45 +592,9 @@ void ProjectBuilder::buildFromXML(){
     // RIG BLOCK
     num_images = 5;
     updateArrows();
-    for (std::string rig_label : rig_labels){
-        int rig_index = rig_dict[rig_label];
-        for (std::string rig_camera_label : rig_camera_labels[rig_index]){
-            int camera_index = camera_dict[rig_camera_label];
+    updateCameras();
 
-            /* Load properties of camera */
-            // if (enable_radiation){
-            #ifdef ENABLE_RADIATION_MODEL
-                cameraproperties = new CameraProperties();
-                cameraproperties->camera_resolution = camera_resolutions[camera_index];
-                cameraproperties->focal_plane_distance = focal_plane_distances[camera_index];
-                cameraproperties->lens_diameter = lens_diameters[camera_index];
-                cameraproperties->FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
-                cameraproperties->HFOV = HFOVs[camera_index];
-
-                /* Create new camera */
-                std::string camera_label_ = rig_label + "_" + rig_camera_label;
-                vec3 camera_position_ = camera_positions[rig_index];
-                vec3 camera_lookat_ = camera_lookats[rig_index];
-                radiation->addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, *cameraproperties, 100);
-                radiation->setCameraSpectralResponse(camera_label_, "red", "calibrated_sun_NikonB500_spectral_response_red");
-                radiation->setCameraSpectralResponse(camera_label_, "green","calibrated_sun_NikonB500_spectral_response_green");
-                radiation->setCameraSpectralResponse(camera_label_, "blue", "calibrated_sun_NikonB500_spectral_response_blue");
-                radiation->updateGeometry();
-            // } //RADIATION_MODEL
-            #endif //RADIATION_MODEL
-        }
-    }
-    // if (enable_radiation){
-    #ifdef ENABLE_RADIATION_MODEL
-        radiation->runBand(bandlabels);
-    // } //RADIATION_MODEL
-    #endif //RADIATION_MODEL
-
-    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
-        helios_runtime_error(xml_error_string);
-    }
     helios = xmldoc.child("helios");
-    pugi::xml_node node;
 }
 
 
@@ -911,7 +905,13 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 
 void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+    pugi::xml_node p_;
+    if (parent != "helios") {
+        p_ = helios.child(parent.c_str());
+    }else{
+        p_ = helios;
+    }
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
         std::vector<vec3> curr_vec = {};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
             const char *node_str = node.child_value();
@@ -929,7 +929,13 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 
 void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
     helios = xmldoc.child("helios");
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+    pugi::xml_node p_;
+    if (parent != "helios") {
+        p_ = helios.child(parent.c_str());
+    }else{
+        p_ = helios;
+    }
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
         std::set<std::string> curr_vec = {};
         for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
             const char *node_str = node.child_value();
@@ -1215,9 +1221,11 @@ void ProjectBuilder::visualize(){
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        // io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Nimbus-sans.ttf", 18.0f);
-        // io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/OpenSans-Regular.ttf", 18.0f);
-        io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Arial.ttf", 16.0f);
+        // ImFont* font_awesome = io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/FontAwesome.ttf", 16.0f);
+        ImFont* arial = io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Arial.ttf", 16.0f);
+        io.Fonts->Build();
+        // ImGui::PushFont(arial);
+        io.FontDefault = arial;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -1348,25 +1356,30 @@ void ProjectBuilder::visualize(){
                     if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
                     ImGui::EndMenu();
                 }
-                if (ImGui::BeginMenu("Visualization"))
-                {
-                    if (ImGui::MenuItem("RGB (Default)") && visualization_type != "RGB")
-                    {
+                if (ImGui::BeginMenu("Visualization")){
+                    // ImGui::PushFont(font_awesome);
+                    // io.FontDefault = font_awesome;
+                    if (ImGui::MenuItem("! REFRESH LIST !")){
+                        visualization_types.clear();
+                        std::vector<uint> allUUIDs = context->getAllUUIDs();
+                        for (auto &UUID : allUUIDs){
+                            std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
+                            for (auto &data : primitiveData){
+                                visualization_types.insert(data);
+                            }
+                        }
+                    }
+                    // ImGui::PopFont();
+                    // io.FontDefault = arial;
+                    if (ImGui::MenuItem("RGB (Default)") && visualization_type != "RGB"){
                         visualization_type = "RGB";
                         switch_visualization = true;
                     }
-                    if (ImGui::MenuItem("PAR") && visualization_type != "radiation_flux_PAR")
-                    {
-                        visualization_type = "radiation_flux_PAR";
-                        switch_visualization = true;
-                    }
-                    if (ImGui::MenuItem("NIR") && visualization_type != "radiation_flux_NIR")  {
-                        visualization_type = "radiation_flux_NIR";
-                        switch_visualization = true;
-                    }
-                    if (ImGui::MenuItem("LW") && visualization_type != "radiation_flux_LW")  {
-                        visualization_type = "radiation_flux_LW";
-                        switch_visualization = true;
+                    for (auto &type : visualization_types){
+                        if (ImGui::MenuItem(type.c_str()) && visualization_type != type)  {
+                            visualization_type = type;
+                            switch_visualization = true;
+                        }
                     }
                     if (switch_visualization){
                         const char* font_name = "LCD";
@@ -1376,8 +1389,9 @@ void ProjectBuilder::visualize(){
                         visualizer->clearGeometry();
                         if (visualization_type != "RGB") {
                             visualizer->colorContextPrimitivesByData(visualization_type.c_str());
+                            visualizer->enableColorbar();
                             visualizer->addCoordinateAxes();
-                        } else{
+                        }else{
                             visualizer->clearColor();
                             visualizer->disableColorbar();
                             visualizer->addCoordinateAxes();
@@ -1441,6 +1455,7 @@ void ProjectBuilder::visualize(){
             if (ImGui::Button("Record")){
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
                 updateSpectra();
+                // updateCameras(); //TODO: figure out why this causes an error
                 record();
             }
             #endif //RADIATION_MODEL
@@ -1500,10 +1515,10 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Domain Extent");
                     // ####### GROUND RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(80);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth(80);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
@@ -1617,7 +1632,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[current_canopy]].x);
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth(70);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels[current_canopy]].y);
                     ImGui::SameLine();
                     ImGui::Text("Plant Count");
