@@ -216,9 +216,13 @@ class ProjectBuilder {
     //! Fruit UUIDs
     std::vector<uint> fruit_UUIDs;
 
-    //! Primitive names
+    //! Primitive names vector
     std::vector<std::string> primitive_names = {"All", "Ground", "Leaf", "Petiolule", "Petiole", "Internode",
                                                 "Peduncle", "Petal", "Pedicel", "Fruit"};
+
+    //! Primitive names set
+    std::set<std::string> primitive_names_set = {"All", "Ground", "Leaf", "Petiolule", "Petiole", "Internode",
+                                             "Peduncle", "Petal", "Pedicel", "Fruit"};
 
     //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
     std::map<std::string, std::vector<uint>*> primitive_types;
@@ -227,10 +231,10 @@ class ProjectBuilder {
     std::map<std::string, std::vector<bool>> primitive_continuous;
 
     //! Map keyed by primitive names that returns spectra (reflectivity, transmissivity, emissivity)
-    std::map<std::string,  std::vector<std::string*>> primitive_spectra;
+    std::map<std::string,  std::vector<std::string>> primitive_spectra;
 
     //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
-    std::map<std::string, std::map<std::string, std::vector<float*>>> primitive_values;
+    std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
 
     //! Ground area
     float ground_area;
@@ -361,6 +365,9 @@ class ProjectBuilder {
 
     //! Vector of sizes for each light.
     std::vector<float> light_radius_vec;
+
+    //! Vector of source flux for each light.
+    std::vector<float> light_flux_vec;
 
     //! Dictionary keyed by light name that returns light index (in light_names).
     std::map<std::string, int> light_dict;
@@ -707,6 +714,9 @@ class ProjectBuilder {
     //! Function to update arrows for rig movement
     void updateArrows();
 
+    //! Function to update primitive types
+    void updatePrimitiveTypes();
+
   public:
     //! Function to update spectra based on saved information
     void updateSpectra();
@@ -1038,26 +1048,26 @@ class ProjectBuilder {
                               {"Fruit", {false, false, false}}};
       bandlabels = {"red", "green", "blue"};
       for (std::string band : bandlabels){
-       primitive_values[band] = {{"Ground", {&ground_reflectivity, &ground_transmissivity, &ground_emissivity}},
-                                 {"Leaf", {&leaf_reflectivity, &leaf_transmissivity, &leaf_emissivity}},
-                                 {"Petiolule", {&petiolule_reflectivity, &petiolule_transmissivity, &petiolule_emissivity}},
-                                 {"Petiole", {&petiole_reflectivity, &petiole_transmissivity, &petiole_emissivity}},
-                                 {"Internode", {&internode_reflectivity, &internode_transmissivity, &internode_emissivity}},
-                                 {"Peduncle", {&peduncle_reflectivity, &peduncle_transmissivity, &peduncle_emissivity}},
-                                 {"Petal", {&petal_reflectivity, &petal_transmissivity, &petal_emissivity}},
-                                 {"Pedicel", {&pedicel_reflectivity, &pedicel_transmissivity, &pedicel_emissivity}},
-                                 {"Fruit", {&fruit_reflectivity, &fruit_transmissivity, &fruit_emissivity}}};
+       primitive_values[band] = {{"Ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                 {"Leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                 {"Petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                 {"Petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                 {"Internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                 {"Peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                 {"Petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                 {"Pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                 {"Fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
       }
-      primitive_spectra = {{"All", {&reflectivity_spectrum, &transmissivity_spectrum, &emissivity_spectrum}},
-                             {"Ground", {&ground_reflectivity_spectrum, &ground_transmissivity_spectrum, &ground_emissivity_spectrum}},
-                             {"Leaf", {&leaf_reflectivity_spectrum, &leaf_transmissivity_spectrum, &leaf_emissivity_spectrum}},
-                             {"Petiolule", {&petiolule_reflectivity_spectrum, &petiolule_transmissivity_spectrum, &petiolule_emissivity_spectrum}},
-                             {"Petiole", {&petiole_reflectivity_spectrum, &petiole_transmissivity_spectrum, &petiole_emissivity_spectrum}},
-                             {"Internode", {&internode_reflectivity_spectrum, &internode_transmissivity_spectrum, &internode_emissivity_spectrum}},
-                             {"Peduncle", {&peduncle_reflectivity_spectrum, &peduncle_transmissivity_spectrum, &peduncle_emissivity_spectrum}},
-                             {"Petal", {&petal_reflectivity_spectrum, &petal_transmissivity_spectrum, &petal_emissivity_spectrum}},
-                             {"Pedicel", {&pedicel_reflectivity_spectrum, &pedicel_transmissivity_spectrum, &pedicel_emissivity_spectrum}},
-                             {"Fruit", {&fruit_reflectivity_spectrum, &fruit_transmissivity_spectrum, &fruit_emissivity_spectrum}}};
+      primitive_spectra = {{"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}},
+                             {"Ground", {ground_reflectivity_spectrum, ground_transmissivity_spectrum, ground_emissivity_spectrum}},
+                             {"Leaf", {leaf_reflectivity_spectrum, leaf_transmissivity_spectrum, leaf_emissivity_spectrum}},
+                             {"Petiolule", {petiolule_reflectivity_spectrum, petiolule_transmissivity_spectrum, petiolule_emissivity_spectrum}},
+                             {"Petiole", {petiole_reflectivity_spectrum, petiole_transmissivity_spectrum, petiole_emissivity_spectrum}},
+                             {"Internode", {internode_reflectivity_spectrum, internode_transmissivity_spectrum, internode_emissivity_spectrum}},
+                             {"Peduncle", {peduncle_reflectivity_spectrum, peduncle_transmissivity_spectrum, peduncle_emissivity_spectrum}},
+                             {"Petal", {petal_reflectivity_spectrum, petal_transmissivity_spectrum, petal_emissivity_spectrum}},
+                             {"Pedicel", {pedicel_reflectivity_spectrum, pedicel_transmissivity_spectrum, pedicel_emissivity_spectrum}},
+                             {"Fruit", {fruit_reflectivity_spectrum, fruit_transmissivity_spectrum, fruit_emissivity_spectrum}}};
     }
 
     //! Destructor
