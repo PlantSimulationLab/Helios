@@ -703,11 +703,6 @@ class ProjectBuilder {
     //! Currently selected radiation band for emissivity in the GUI
     std::string current_band_emissivity = "red";
 
-    //! Depth MVP matrix
-//    #ifdef HELIOS_VISUALIZER
-//        glm::mat4 depthMVP;
-//    #endif //HELIOS_VISUALIZER
-
     //! Function to delete arrows denoting rig movement
     void deleteArrows();
 
