@@ -162,30 +162,6 @@ class ProjectBuilder {
     //! Sun ID
     uint sun_ID;
 
-    //! Context
-    helios::Context *context = nullptr;
-
-    //! Visualizer
-    Visualizer *visualizer = nullptr;
-
-    //! Plant Architecture
-    PlantArchitecture *plantarchitecture = nullptr;
-
-    //! Radiation Model
-    RadiationModel *radiation = nullptr;
-
-    //! Solar Position
-    SolarPosition *solarposition = nullptr;
-
-    //! Energy Balance Model
-    EnergyBalanceModel *energybalancemodel = nullptr;
-
-    //! Boundary Layer Conductance
-    BLConductanceModel *boundarylayerconductance = nullptr;
-
-    //! Camera Properties
-    CameraProperties *cameraproperties = nullptr;
-
     //! Band Labels
     std::vector<std::string> bandlabels;
 
@@ -713,6 +689,30 @@ class ProjectBuilder {
     void updatePrimitiveTypes();
 
   public:
+    //! Context
+    helios::Context *context = nullptr;
+
+    //! Visualizer
+    Visualizer *visualizer = nullptr;
+
+    //! Plant Architecture
+    PlantArchitecture *plantarchitecture = nullptr;
+
+    //! Radiation Model
+    RadiationModel *radiation = nullptr;
+
+    //! Solar Position
+    SolarPosition *solarposition = nullptr;
+
+    //! Energy Balance Model
+    EnergyBalanceModel *energybalancemodel = nullptr;
+
+    //! Boundary Layer Conductance
+    BLConductanceModel *boundarylayerconductance = nullptr;
+
+    //! Camera Properties
+    CameraProperties *cameraproperties = nullptr;
+
     //! Function to update spectra based on saved information
     void updateSpectra();
 
