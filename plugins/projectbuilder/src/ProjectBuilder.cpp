@@ -2430,6 +2430,12 @@ void ProjectBuilder::buildAndVisualize(std::string xml_path){
 }
 
 
+void ProjectBuilder::buildAndVisualize(){
+    buildFromXML();
+    visualize();
+}
+
+
 void ProjectBuilder::xmlSetValues(){
     // MAIN BLOCK
     xmlSetValue("latitude", "helios", latitude);

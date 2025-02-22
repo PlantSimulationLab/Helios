@@ -734,7 +734,10 @@ class ProjectBuilder {
     //! Function to visualize XML plot
     void visualize();
 
-    //! Function to visualize XML plot
+    //! Function to build and visualize XML simulation
+    void buildAndVisualize();
+
+    //! Function to build and visualize XML simulation
     /**
      * \param[in] xml_input_file Name of XML input file
     */
