@@ -139,7 +139,7 @@ class ProjectBuilder {
     pugi::xml_document xmldoc;
 
     //! XML Document path
-    std::string xml_input_file;
+    std::string xml_input_file = "plugins/projectbuilder/inputs/inputs.xml";
 
     //! User input
     bool user_input;
@@ -394,7 +394,7 @@ class ProjectBuilder {
     int UTC_offset = 8;
 
     //! CSV weather file path
-    std::string csv_weather_file = "../inputs/weather_data.csv";
+    std::string csv_weather_file = "plugins/projectbuilder/inputs/weather_data.csv";
 
     //! Domain origin
     helios::vec3 domain_origin = {0,0,0};
@@ -515,7 +515,7 @@ class ProjectBuilder {
     float ground_transmissivity = 0.0;
 
     //! Ground emissivity
-    float ground_emissivity = 0.0;
+    float ground_emissivity = 1.0;
 
     //! Petiolule reflectivity
     float petiolule_reflectivity = 0.0;

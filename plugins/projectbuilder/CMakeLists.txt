@@ -203,3 +203,5 @@ if("visualizer" IN_LIST PLUGINS)
 else()
     set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};" PARENT_SCOPE )
 endif()
+
+file( COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/plugins/projectbuilder/ )
