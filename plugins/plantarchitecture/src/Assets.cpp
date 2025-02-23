@@ -246,7 +246,7 @@ void AsparagusPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint
 
 }
 
-uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_unifoliate.obj", true );
 
@@ -254,7 +254,7 @@ uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivi
     return objID;
 }
 
-uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     if( compound_leaf_index==0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BeanLeaf_tip.obj", true );
@@ -310,20 +310,20 @@ uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, b
     return objID;
 }
 
-uint CheeseweedLeafPrototype( helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint CheeseweedLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CheeseweedLeaf.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }
 
-uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_unifoliate.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
 
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
 }
 
-uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index ){
+uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs;
     if( compound_leaf_index<0 ){
         UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_highres.obj", make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );

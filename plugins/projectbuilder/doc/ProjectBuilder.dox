@@ -1,0 +1,40 @@
+/*! \page ProjectBuilderDoc %ProjectBuilder Plugin Documentation
+
+	\tableofcontents
+
+	\section ProjectBuilderIntro Introduction
+
+	This is the ProjectBuilder plugin which saves and builds simulations to and from an XML file. This plugin also allows scenes to be visualized with an interactive GUI.
+
+	\section ProjectBuilderDepends Dependencies
+
+	This plugin has no dependencies.
+
+	\section ProjectBuilderAcknowledgements Acknowledgements
+
+     This plug-in uses all or parts of the following open-sourced software libraries:
+
+     The OpenGL Extension Wrangler Library:
+     Copyright (C) 2008-2016, Nigel Stewart <nigels[]users sourceforge net>
+     Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>
+     Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>
+     Copyright (C) 2002, Lev Povalahev
+     All rights reserved.
+
+     The FreeType Project:
+     Portions of this software are copyright © 2019 The FreeType
+     Project (www.freetype.org).  All rights reserved.
+
+     GLFW:
+     Copyright © 2002-2006 Marcus Geelnard
+     Copyright © 2006-2019 Camilla Löwy
+
+     OpenGL Mathematics (GLM):
+     Copyright (c) 2005 - 2014 G-Truc Creation
+
+     Dear ImGui:
+     The MIT License (MIT)
+     Copyright (c) 2014-2024 Omar Cornut
+
+
+*/

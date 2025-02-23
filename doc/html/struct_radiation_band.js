@@ -11,7 +11,6 @@ var struct_radiation_band =
     [ "emissionFlag", "struct_radiation_band.html#ace749bf8f3e89cf3ea93fb58d3e28e1b", null ],
     [ "label", "struct_radiation_band.html#a2929fde6f333f2aeba923886fc84887f", null ],
     [ "minScatterEnergy", "struct_radiation_band.html#a2f54d84dc4a82db6bdd50ba3648cae59", null ],
-    [ "radiativepropertiesinitialized", "struct_radiation_band.html#ac4e08f643cd7c5d85a02a475c7c9bdbf", null ],
     [ "scatteringDepth", "struct_radiation_band.html#a1e6751a77faec064c49aba70539865de", null ],
     [ "wavebandBounds", "struct_radiation_band.html#a11a0c1b2fe1f6be6efb8052fa247b396", null ]
 ];

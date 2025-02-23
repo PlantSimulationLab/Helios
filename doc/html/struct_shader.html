@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Shader Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -114,7 +149,7 @@ $(function(){initNavTree('struct_shader.html',''); initResizable(true); });
 </div><!--header-->
 <div class="contents">
 
-<p>OpenGL <a class="el" href="struct_shader.html" title="OpenGL Shader data structure.">Shader</a> data structure.  
+<p>OpenGL Shader data structure.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>&gt;</code></p>
@@ -131,7 +166,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a7a7ec6989dd0c90dcf290b07fab781a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable texture maps and color fragments using an RGB texture map.  <br /></td></tr>
 <tr class="separator:a7a7ec6989dd0c90dcf290b07fab781a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7800ac33a9f3fdaefad983d6fe851fa7" id="r_a7800ac33a9f3fdaefad983d6fe851fa7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7800ac33a9f3fdaefad983d6fe851fa7">setTextureMask</a> (const <a class="el" href="class_glyph.html">Glyph</a> *glyph, uint &amp;textureID)</td></tr>
-<tr class="memdesc:a7800ac33a9f3fdaefad983d6fe851fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set fragment opacity using a <a class="el" href="class_glyph.html" title="Glyph object - 2D matrix shape.">Glyph</a> (red channel)  <br /></td></tr>
+<tr class="memdesc:a7800ac33a9f3fdaefad983d6fe851fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set fragment opacity using a Glyph (red channel)  <br /></td></tr>
 <tr class="separator:a7800ac33a9f3fdaefad983d6fe851fa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acabe2ce63e1a7fc5773803e3174de7ac" id="r_acabe2ce63e1a7fc5773803e3174de7ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acabe2ce63e1a7fc5773803e3174de7ac">setTextureMask</a> (const char *texture_file, uint &amp;textureID, <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;texture_size)</td></tr>
 <tr class="memdesc:acabe2ce63e1a7fc5773803e3174de7ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set fragment opacity using a texture map file (red channel)  <br /></td></tr>
@@ -185,7 +220,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:aae0fb1989e147682b8a18940b893c42e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>OpenGL <a class="el" href="struct_shader.html" title="OpenGL Shader data structure.">Shader</a> data structure. </p>
+<div class="textblock"><p>OpenGL Shader data structure. </p>
 
 <p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l00090">90</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
@@ -204,7 +239,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04083">4083</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04283">4283</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -226,7 +261,7 @@ Data Fields</h2></td></tr>
 
 <p>Disable texture maps and color fragments by interpolating vertex colors. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04088">4088</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04288">4288</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -247,7 +282,7 @@ Data Fields</h2></td></tr>
 
 <p>Enable texture maps and color fragments using an RGB texture map. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04172">4172</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04372">4372</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -268,7 +303,7 @@ Data Fields</h2></td></tr>
 
 <p>Enable texture masks and color fragments by interpolating vertex colors. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04292">4292</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -300,7 +335,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03932">3932</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04132">4132</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -321,7 +356,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the depth bias matrix for shadows. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04311">4311</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04511">4511</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -342,7 +377,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the direction of the light (sun) </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04315">4315</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04515">4515</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -363,7 +398,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the lighting model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04319">4319</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04519">4519</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -384,7 +419,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the intensity of the light source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04323">4323</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04523">4523</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -422,7 +457,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04093">4093</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04293">4293</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -460,7 +495,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04232">4232</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04432">4432</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -483,16 +518,16 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Set fragment opacity using a <a class="el" href="class_glyph.html" title="Glyph object - 2D matrix shape.">Glyph</a> (red channel) </p>
+<p>Set fragment opacity using a Glyph (red channel) </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td>Pointer to <a class="el" href="class_glyph.html" title="Glyph object - 2D matrix shape.">Glyph</a> object for texture mask </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td>Pointer to Glyph object for texture mask </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">textureID</td><td>Identifier of the texture map. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04188">4188</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04388">4388</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -513,7 +548,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04307">4307</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04507">4507</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -534,7 +569,7 @@ Data Fields</h2></td></tr>
 
 <p>Set shader as current. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04327">4327</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04527">4527</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

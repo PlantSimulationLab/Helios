@@ -24,143 +24,40 @@
 */
 var NAVTREE =
 [
-  [ ".", "index.html", [
-    [ "Helios Documentation", "index.html", null ],
-    [ "User's Guide", "usergroup0.html", [
-      [ "Overview", "_overview.html", null ],
+  [ "Helios", "index.html", [
+    [ "Overview", "index.html", null ],
+    [ "User's Guide", "_overview.html", [
+      [ "Introduction", "_overview.html", null ],
       [ "Install and Set-up", "_dependent_software.html", null ],
       [ "User/API Guide", "_a_p_i.html", null ],
-      [ "File I/O", "_i_o.html", null ],
-      [ "Tutorials", "_tutorials.html", null ]
+      [ "File I/O", "_i_o.html", null ]
     ] ],
-    [ "Plug-ins", "_plug_ins.html", null ],
-    [ "Using the CLion IDE with Helios", "_c_lion_i_d_e.html", [
-      [ "Setting up CMake and compilers (Toolchains)", "_c_lion_i_d_e.html#CLionToolchains", null ],
-      [ "Opening and building a project", "_c_lion_i_d_e.html#CLionProject", null ],
-      [ "Debugging code errors", "_c_lion_i_d_e.html#CLionDebug", null ],
-      [ "Git/GitHub integration", "_c_lion_i_d_e.html#CLionGit", null ],
-      [ "Doxygen", "_c_lion_i_d_e.html#CLionDox", null ]
+    [ "Plugins", "_plug_ins.html", [
+      [ "Visualizer", "_visualizer_doc.html#VisualizerDoc", null ],
+      [ "Radiation Model", "_radiation_doc.html#RadiationDoc", null ],
+      [ "Energy Balance Model", "_energy_balance_doc.html#EnergyBalanceDoc", null ],
+      [ "Boundary-Layer Conductance", "_b_l_conductance_doc.html#BLConductanceDoc", null ],
+      [ "Terrestrial LiDAR", "_li_d_a_r_doc.html#LiDARDoc", null ],
+      [ "Aerial LiDAR", "_aerial_li_d_a_r_doc.html#AerialLiDARDoc", null ],
+      [ "Photosynthesis Models", "_photosynthesis_doc.html#PhotosynthesisDoc", null ],
+      [ "Stomatal Conductance Models", "_stomatal_doc.html#StomatalDoc", null ],
+      [ "Solar Positoin and Fluxes Model", "_solar_position_doc.html#SolarPositionDoc", null ],
+      [ "Voxel Intersection", "_voxel_intersection_doc.html#VoxelIntersectionDoc", null ],
+      [ "Plant Architecture", "_plant_architecture_doc.html#PlantArchitectureDoc", null ],
+      [ "Canopy Generator", "_canopy_generator_doc.html#CanopyGeneratorDoc", null ],
+      [ "Weber-Penn Tree", "_weber_penn_doc.html#WeberPennDoc", null ],
+      [ "Project Builder", "_project_builder_doc.html#ProjectBuilderDoc", null ]
     ] ],
-    [ "Tutorials", "_tutorials.html", "_tutorials" ],
-    [ "Overview", "_overview.html", [
-      [ "What is an API?", "_overview.html#whatisAPI", null ],
-      [ "C++ Prerequisites", "_overview.html#Prereqs", null ],
-      [ "Helios Prerequisites", "_overview.html#PrereqsHelios", null ],
-      [ "Model Geometry and Data", "_overview.html#ModelGeom", null ],
-      [ "The Helios Context", "_overview.html#ContextOverview", null ],
-      [ "Model Plug-ins", "_overview.html#PluginsOverview", null ],
-      [ "Using the Documentation", "_overview.html#DocOverview", null ]
-    ] ],
-    [ "Plug-ins", "_plug_ins.html", "_plug_ins" ],
-    [ "Install and Set-up", "_dependent_software.html", [
-      [ "Which platform to use for Helios programming?", "_dependent_software.html#WhichPlatform", null ],
-      [ "Set-up on Windows PC", "_dependent_software.html#SetupPC", [
-        [ "Install Microsoft Visual Studio C++ compiler tools", "_dependent_software.html#SetupPCMSVC", null ],
-        [ "Setting up basic build functionality", "_dependent_software.html#SetupPCCLion", null ],
-        [ "Setting up NVIDIA CUDA", "_dependent_software.html#SetupPCCUDA", [
-          [ "Increasing Timout Detection (TDR) Delay", "_dependent_software.html#TdrDelay", null ],
-          [ "Manually installing OptiX if using Windows Subsystem for Linux (WSL)", "_dependent_software.html#OptiXWSL", null ]
-        ] ]
-      ] ],
-      [ "Set-up on Linux", "_dependent_software.html#SetupLinux", [
-        [ "Setting up basic build functionality", "_dependent_software.html#SetupLinuxCLion", null ],
-        [ "Setting up NVIDIA CUDA", "_dependent_software.html#SetupLinuxCUDA", null ],
-        [ "Dependencies of the Visualizer Plug-in", "_dependent_software.html#SetupLinuxVis", null ]
-      ] ],
-      [ "Set-up on Mac", "_dependent_software.html#SetupMac", [
-        [ "Setting up basic build functionality", "_dependent_software.html#SetupMacCLion", null ]
-      ] ]
-    ] ],
-    [ "User/API Guide", "_a_p_i.html", [
-      [ "Building and Compiling Your Own Projects", "_a_p_i.html#BuildCompile", [
-        [ "Basic Directory Structure", "_a_p_i.html#DirStruct", null ],
-        [ "Build Directory", "_a_p_i.html#BuildDir", null ],
-        [ "Main and auxiliary .cpp files", "_a_p_i.html#Source", null ],
-        [ "CMakeLists.txt File", "_a_p_i.html#CMake", null ],
-        [ "New Project Script", "_a_p_i.html#DirScript", null ],
-        [ "C++ Standard Library Include Files", "_a_p_i.html#GlobalInclude", null ]
-      ] ],
-      [ "Context", "_a_p_i.html#ContextSect", null ],
-      [ "Vector Types", "_a_p_i.html#VecTypes", [
-        [ "R-G-B(-A) color vectors", "_a_p_i.html#RGB", null ]
-      ] ],
-      [ "Coordinate System", "_a_p_i.html#Coord", null ],
-      [ "Geometry", "_a_p_i.html#Geom", [
-        [ "Primitive Types", "_a_p_i.html#PrimitiveTypes", null ],
-        [ "Adding Primitives", "_a_p_i.html#AddingPrims", [
-          [ "Adding Patches", "_a_p_i.html#AddingPatch", null ],
-          [ "Adding Triangles", "_a_p_i.html#AddingTriangle", null ],
-          [ "Adding Voxels", "_a_p_i.html#AddingVoxel", null ]
-        ] ],
-        [ "Primitive Transformations", "_a_p_i.html#PrimTransform", null ],
-        [ "Primitive Properties", "_a_p_i.html#PrimProps", null ],
-        [ "Texture Mapping", "_a_p_i.html#Texture", null ],
-        [ "Coloring Primitives by Texture Map", "_a_p_i.html#TextureColor", null ],
-        [ "Masking Primitives by Image Transparency Channel", "_a_p_i.html#TextureMask", null ],
-        [ "Compound Geometry", "_a_p_i.html#Compound", null ],
-        [ "Objects", "_a_p_i.html#Objects", null ]
-      ] ],
-      [ "Data Structures", "_a_p_i.html#Data", [
-        [ "Primitive Data", "_a_p_i.html#PrimData", [
-          [ "Setting Primitive Data Values", "_a_p_i.html#SetPrimData", null ],
-          [ "Getting Primitive Data Values", "_a_p_i.html#GetPrimData", null ],
-          [ "Primitive Data Query Functions", "_a_p_i.html#PrimDataHelpers", null ]
-        ] ],
-        [ "Global Data", "_a_p_i.html#GlobalData", null ],
-        [ "Data Timeseries (Weather Inputs)", "_a_p_i.html#DataTimeseries", null ]
-      ] ]
-    ] ],
-    [ "File Input/Output", "_i_o.html", [
-      [ "XML File Structure", "_i_o.html#XMLstructure", [
-        [ "Adding Primitives", "_i_o.html#PrimXML", null ],
-        [ "Adding Timeseries Data", "_i_o.html#TimeXML", null ]
-      ] ],
-      [ "Adding Timeseries (Weather) Data from Tabular Text Files", "_i_o.html#ASCIItimeseries", null ],
-      [ "Reading XML Files", "_i_o.html#XMLread", null ],
-      [ "Reading Standard Polygon File Formats", "_i_o.html#Poly", [
-        [ "Reading PLY (Stanford Polygon) Files", "_i_o.html#PLYread", null ],
-        [ "Reading OBJ (Wavefront) Files", "_i_o.html#OBJread", null ],
-        [ "Writing PLY (Stanford Polygon) Files", "_i_o.html#PLYwrite", null ],
-        [ "Writing OBJ (Wavefront) Files", "_i_o.html#OBJwrite", null ]
-      ] ],
-      [ "Exporting Project to XML File Format", "_i_o.html#Export", null ],
-      [ "Exporting Primitive Data to Text File", "_i_o.html#ExportASCII", null ]
-    ] ],
-    [ "Writing Plugins", "_plugins.html", [
-      [ "Introduction", "_plugins.html#PluginIntro", null ],
-      [ "Writing Documentation", "_plugins.html#PluginWriting", null ],
-      [ "CMakeLists.txt file", "_plugins.html#cmake", [
-        [ "Include Directories", "_plugins.html#include", null ]
-      ] ]
-    ] ],
-    [ "Making texture mask files with transparency using GIMP", "_making_masks.html", [
-      [ "Choosing the image", "_making_masks.html#One", null ],
-      [ "Rotating and cropping (OPTIONAL)", "_making_masks.html#Two", null ],
-      [ "Removing the background", "_making_masks.html#Three", null ],
-      [ "Exporting to .png format", "_making_masks.html#Four", null ]
-    ] ],
-    [ "Converting polygon file formats to .ply using Blender", "_convert_p_l_y.html", null ],
-    [ "Choosing the right CUDA and OptiX version", "_choosing_c_u_d_a.html", [
-      [ "CUDA Version", "_choosing_c_u_d_a.html#chooseCUDA", null ],
-      [ "OptiX Version", "_choosing_c_u_d_a.html#chooseOptiX", null ]
-    ] ],
-    [ "Increasing graphics driver timeout", "_p_c_g_p_u_timeout.html", null ],
-    [ "Dummy Model Plugin Documentation", "_dummy.html", [
-      [ "Introduction", "_dummy.html#DummyIntro", null ],
-      [ "Dependencies", "_dummy.html#DummyDepends", null ]
-    ] ],
-    [ "Data Structures", "annotated.html", [
-      [ "Data Structures", "annotated.html", "annotated_dup" ],
-      [ "Data Structure Index", "classes.html", null ],
-      [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
-      [ "Data Fields", "functions.html", [
-        [ "All", "functions.html", "functions_dup" ],
-        [ "Functions", "functions_func.html", "functions_func" ],
-        [ "Variables", "functions_vars.html", "functions_vars" ],
-        [ "Enumerations", "functions_enum.html", null ],
-        [ "Enumerator", "functions_eval.html", null ],
-        [ "Related Symbols", "functions_rela.html", null ]
-      ] ]
+    [ "Tutorials", "_tutorials.html", [
+      [ "Tutorial 0: Context Self-Test", "context_selftest_tutorial.html#context_selftest_tutorial", null ],
+      [ "Tutorial 1: Helios Vector Types", "context_vectors_tutorial.html#context_vectors_tutorial", null ],
+      [ "Tutorial 2: Working with Context Geometry", "context_primitives_tutorial.html#context_primitives_tutorial", null ],
+      [ "Tutorial 5: Primitive Data", "context_primdata_tutorial.html#context_primdata_tutorial", null ],
+      [ "Tutorial 6: Global Data", "context_globaldata_tutorial.html#context_globaldata_tutorial", null ],
+      [ "Tutorial 7: Visualizer Basics", "visualizer_basics_tutorial.html#visualizer_basics_tutorial", null ],
+      [ "Tutorial 8: Visualizing Variable and Primitive Data", "visualizer_pdata_tutorial.html#visualizer_pdata_tutorial", null ],
+      [ "Tutorial 10: Tree light interception", "radiation_basics_tutorial.html#radiation_basics_tutorial", null ],
+      [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ]
     ] ],
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],
@@ -176,15 +73,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"_photosynthesis_doc.html#FvCBPhotoParams",
-"annotated.html",
-"class_li_d_a_rcloud.html#abf2f7677b1a92cba5b51ad0336e3743e",
-"class_synthetic_annotation.html#a04117857ddc185b3b3595fcc2cfa97ae",
-"classhelios_1_1_context.html#a074b0b3ba7069e416206ab3c84138b93",
-"classhelios_1_1_context.html#a8c4ec2d90ccd3d44a97597ecd80d78b6",
-"classhelios_1_1_tube.html#aceabd5281c442abf90725bb3728caf8b",
-"struct_base_grape_vine_parameters.html#a400d6647ac782d95810095028b3fc896",
-"struct_sorghum_canopy_parameters.html#a016f6dbe9526e4411d9b7f1480e562b6"
+"helios__vector__types_8h_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

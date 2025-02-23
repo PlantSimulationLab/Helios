@@ -17,16 +17,18 @@ void ApplePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
 uint AsparagusLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
 void AsparagusPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 
-uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
-uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+uint BeanLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
+uint BeanLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
 uint BeanFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 uint BeanFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 
 uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 
-uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
-uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, uint subdivisions, int compound_leaf_index );
+uint CheeseweedLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
+
+uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
+uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
 uint CowpeaFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 uint CowpeaFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void CowpeaPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );

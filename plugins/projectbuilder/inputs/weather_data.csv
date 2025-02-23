@@ -1,0 +1,3 @@
+date, hour, net_radiation, air_temperature, air_humidity
+2020-02-01, 1300, 800, 35.32343, 0.26
+2020-02-01, 1400, 700, 36.23432, 0.31

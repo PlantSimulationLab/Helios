@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: helios::vec4 Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -132,28 +167,28 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a94756adab8fcf1382e2bde79c00014f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
 <tr class="separator:a94756adab8fcf1382e2bde79c00014f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fbcf26c016cdceafd9f3354b430363d" id="r_a2fbcf26c016cdceafd9f3354b430363d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2fbcf26c016cdceafd9f3354b430363d">vec4</a> (const std::vector&lt; float &gt; &amp;v)</td></tr>
-<tr class="memdesc:a2fbcf26c016cdceafd9f3354b430363d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> using a vector of floats.  <br /></td></tr>
+<tr class="memdesc:a2fbcf26c016cdceafd9f3354b430363d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec4 using a vector of floats.  <br /></td></tr>
 <tr class="separator:a2fbcf26c016cdceafd9f3354b430363d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab92cc5f8e93238b01c9639f011347281" id="r_ab92cc5f8e93238b01c9639f011347281"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab92cc5f8e93238b01c9639f011347281">vec4</a> (const float v[4])</td></tr>
-<tr class="memdesc:ab92cc5f8e93238b01c9639f011347281"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> using an array of floats.  <br /></td></tr>
+<tr class="memdesc:ab92cc5f8e93238b01c9639f011347281"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec3 using an array of floats.  <br /></td></tr>
 <tr class="separator:ab92cc5f8e93238b01c9639f011347281"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ade4e8c762963b0ce0a195805f1ebccbd" id="r_ade4e8c762963b0ce0a195805f1ebccbd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade4e8c762963b0ce0a195805f1ebccbd">vec4</a> (float v0, float v1, float v2, float v3)</td></tr>
-<tr class="memdesc:ade4e8c762963b0ce0a195805f1ebccbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> using four floats.  <br /></td></tr>
+<tr class="memdesc:ade4e8c762963b0ce0a195805f1ebccbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec4 using four floats.  <br /></td></tr>
 <tr class="separator:ade4e8c762963b0ce0a195805f1ebccbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac2e0c4e83c5996aaae993fc465793c46" id="r_ac2e0c4e83c5996aaae993fc465793c46"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2e0c4e83c5996aaae993fc465793c46">operator*</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:ac2e0c4e83c5996aaae993fc465793c46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dot (scalar) product of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors.  <br /></td></tr>
+<tr class="memdesc:ac2e0c4e83c5996aaae993fc465793c46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dot (scalar) product of two vec4 vectors.  <br /></td></tr>
 <tr class="separator:ac2e0c4e83c5996aaae993fc465793c46"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a12ed9a7a675ba5a734326d90d82d4ffc" id="r_a12ed9a7a675ba5a734326d90d82d4ffc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12ed9a7a675ba5a734326d90d82d4ffc">operator+</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a12ed9a7a675ba5a734326d90d82d4ffc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sum of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors.  <br /></td></tr>
+<tr class="memdesc:a12ed9a7a675ba5a734326d90d82d4ffc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sum of two vec4 vectors.  <br /></td></tr>
 <tr class="separator:a12ed9a7a675ba5a734326d90d82d4ffc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a795da5aba8f107010589dffda7f11d4d" id="r_a795da5aba8f107010589dffda7f11d4d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a795da5aba8f107010589dffda7f11d4d">operator+=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a)</td></tr>
-<tr class="memdesc:a795da5aba8f107010589dffda7f11d4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector.  <br /></td></tr>
+<tr class="memdesc:a795da5aba8f107010589dffda7f11d4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment vec4 vector.  <br /></td></tr>
 <tr class="separator:a795da5aba8f107010589dffda7f11d4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5cff99d238392c388015d1a0ac4456ae" id="r_a5cff99d238392c388015d1a0ac4456ae"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5cff99d238392c388015d1a0ac4456ae">operator-=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a)</td></tr>
-<tr class="memdesc:a5cff99d238392c388015d1a0ac4456ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector.  <br /></td></tr>
+<tr class="memdesc:a5cff99d238392c388015d1a0ac4456ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement vec4 vector.  <br /></td></tr>
 <tr class="separator:a5cff99d238392c388015d1a0ac4456ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a98039082899cd4872d383e039cc0b812" id="r_a98039082899cd4872d383e039cc0b812"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a98039082899cd4872d383e039cc0b812">operator-</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a98039082899cd4872d383e039cc0b812"><td class="mdescLeft">&#160;</td><td class="mdescRight">Difference of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors.  <br /></td></tr>
+<tr class="memdesc:a98039082899cd4872d383e039cc0b812"><td class="mdescLeft">&#160;</td><td class="mdescRight">Difference of two vec4 vectors.  <br /></td></tr>
 <tr class="separator:a98039082899cd4872d383e039cc0b812"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4405b9a3827567189c0386ce937ed1b" id="r_af4405b9a3827567189c0386ce937ed1b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af4405b9a3827567189c0386ce937ed1b">operator*</a> (float a) const</td></tr>
 <tr class="memdesc:af4405b9a3827567189c0386ce937ed1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by scalar (scalar is multiplied on right: vec4*a)  <br /></td></tr>
@@ -168,10 +203,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:afd6f6b82dd6d3512cc8e1560e218bab2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract a scalar from each element (scalar is subtracted on right: vec4-a)  <br /></td></tr>
 <tr class="separator:afd6f6b82dd6d3512cc8e1560e218bab2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa8f6ace5ba502b2b958b64b1d032d1c3" id="r_aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8f6ace5ba502b2b958b64b1d032d1c3">operator==</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors  <br /></td></tr>
+<tr class="memdesc:aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
 <tr class="separator:aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a628c2b9a02267a04a7a0cea2f81751ea" id="r_a628c2b9a02267a04a7a0cea2f81751ea"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a628c2b9a02267a04a7a0cea2f81751ea">operator!=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a628c2b9a02267a04a7a0cea2f81751ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors  <br /></td></tr>
+<tr class="memdesc:a628c2b9a02267a04a7a0cea2f81751ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
 <tr class="separator:a628c2b9a02267a04a7a0cea2f81751ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64f1627b4f2c6487231f315527afbf15" id="r_a64f1627b4f2c6487231f315527afbf15"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64f1627b4f2c6487231f315527afbf15">operator-</a> () const</td></tr>
 <tr class="memdesc:a64f1627b4f2c6487231f315527afbf15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by -1.  <br /></td></tr>
@@ -195,7 +230,7 @@ Data Fields</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
 <tr class="memitem:a32f014dbb41084ece2ad85f19c540874" id="r_a32f014dbb41084ece2ad85f19c540874"><td class="memItemLeft" align="right" valign="top">std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a32f014dbb41084ece2ad85f19c540874">operator&lt;&lt;</a> (std::ostream &amp;os, const <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &amp;vec)</td></tr>
-<tr class="memdesc:a32f014dbb41084ece2ad85f19c540874"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> to output stream.  <br /></td></tr>
+<tr class="memdesc:a32f014dbb41084ece2ad85f19c540874"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write vec4 to output stream.  <br /></td></tr>
 <tr class="separator:a32f014dbb41084ece2ad85f19c540874"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -256,7 +291,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Initialize <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> using a vector of floats. </p>
+<p>Initialize vec4 using a vector of floats. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00708">708</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -285,7 +320,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Initialize <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> using an array of floats. </p>
+<p>Initialize vec3 using an array of floats. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00718">718</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -328,7 +363,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Initialize <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> using four floats. </p>
+<p>Initialize vec4 using four floats. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00721">721</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -417,7 +452,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>check for equality of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors </p>
+<p>check for equality of two vec4 vectors </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00832">832</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -446,7 +481,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Dot (scalar) product of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors. </p>
+<p>Dot (scalar) product of two vec4 vectors. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00772">772</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -504,7 +539,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Sum of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors. </p>
+<p>Sum of two vec4 vectors. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00776">776</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -562,7 +597,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Increment <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector. </p>
+<p>Increment vec4 vector. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00780">780</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -620,7 +655,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Difference of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors. </p>
+<p>Difference of two vec4 vectors. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00804">804</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -678,7 +713,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Decrement <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector. </p>
+<p>Decrement vec4 vector. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00788">788</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -736,7 +771,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>check for equality of two <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vectors </p>
+<p>check for equality of two vec4 vectors </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00828">828</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
@@ -770,7 +805,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Write <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> to output stream. </p>
+<p>Write vec4 to output stream. </p>
 
 <p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00749">749</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 

@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/plantarchitecture/src/Assets.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -140,10 +175,10 @@ Functions</h2></td></tr>
 <tr class="separator:a162f78661ecdc991e9724391f9668f7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89a768b369f38579bf9f65beec901ca7" id="r_a89a768b369f38579bf9f65beec901ca7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89a768b369f38579bf9f65beec901ca7">AsparagusPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
 <tr class="separator:a89a768b369f38579bf9f65beec901ca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a06566bda7a60f4976cf1ef0e24c18b62" id="r_a06566bda7a60f4976cf1ef0e24c18b62"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06566bda7a60f4976cf1ef0e24c18b62">BeanLeafPrototype_unifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
-<tr class="separator:a06566bda7a60f4976cf1ef0e24c18b62"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab080ea0c3b6aea8e7eee45c1fa0fc5e0" id="r_ab080ea0c3b6aea8e7eee45c1fa0fc5e0"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab080ea0c3b6aea8e7eee45c1fa0fc5e0">BeanLeafPrototype_trifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
-<tr class="separator:ab080ea0c3b6aea8e7eee45c1fa0fc5e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c999f46525c12ac3fcf382cb66a1e89" id="r_a0c999f46525c12ac3fcf382cb66a1e89"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c999f46525c12ac3fcf382cb66a1e89">BeanLeafPrototype_unifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
+<tr class="separator:a0c999f46525c12ac3fcf382cb66a1e89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0dcf9c21e81b32f393fc0549a682fe9" id="r_ab0dcf9c21e81b32f393fc0549a682fe9"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0dcf9c21e81b32f393fc0549a682fe9">BeanLeafPrototype_trifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
+<tr class="separator:ab0dcf9c21e81b32f393fc0549a682fe9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a171bde117761c32fff7ad4d3f0b029ae" id="r_a171bde117761c32fff7ad4d3f0b029ae"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a171bde117761c32fff7ad4d3f0b029ae">BeanFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions)</td></tr>
 <tr class="separator:a171bde117761c32fff7ad4d3f0b029ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1dc9d2bfe0473b8443d9af56be6eea35" id="r_a1dc9d2bfe0473b8443d9af56be6eea35"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1dc9d2bfe0473b8443d9af56be6eea35">BeanFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
@@ -152,12 +187,12 @@ Functions</h2></td></tr>
 <tr class="separator:ab7b12236699c8358939c4ed6fb073c1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f867eddd90d2a350a7337731f676163" id="r_a9f867eddd90d2a350a7337731f676163"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f867eddd90d2a350a7337731f676163">BindweedFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
 <tr class="separator:a9f867eddd90d2a350a7337731f676163"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a551cbb31d94276648dc5d462c83bbd4f" id="r_a551cbb31d94276648dc5d462c83bbd4f"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a551cbb31d94276648dc5d462c83bbd4f">CheeseweedLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
-<tr class="separator:a551cbb31d94276648dc5d462c83bbd4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa310cbde1a548656b33e225f53982c89" id="r_aa310cbde1a548656b33e225f53982c89"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa310cbde1a548656b33e225f53982c89">CowpeaLeafPrototype_unifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
-<tr class="separator:aa310cbde1a548656b33e225f53982c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3cd49cdb5290d764de3ddd802f26082" id="r_af3cd49cdb5290d764de3ddd802f26082"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3cd49cdb5290d764de3ddd802f26082">CowpeaLeafPrototype_trifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, int compound_leaf_index)</td></tr>
-<tr class="separator:af3cd49cdb5290d764de3ddd802f26082"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3ee42415f0d9822004b781787971387" id="r_af3ee42415f0d9822004b781787971387"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3ee42415f0d9822004b781787971387">CheeseweedLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
+<tr class="separator:af3ee42415f0d9822004b781787971387"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af616b7219a9462f21604424a533714d7" id="r_af616b7219a9462f21604424a533714d7"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af616b7219a9462f21604424a533714d7">CowpeaLeafPrototype_unifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
+<tr class="separator:af616b7219a9462f21604424a533714d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96341bf7f8c6d52f1d9835b78e30cec1" id="r_a96341bf7f8c6d52f1d9835b78e30cec1"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a96341bf7f8c6d52f1d9835b78e30cec1">CowpeaLeafPrototype_trifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
+<tr class="separator:a96341bf7f8c6d52f1d9835b78e30cec1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8631a1af67cfb436485a8201fa442a1e" id="r_a8631a1af67cfb436485a8201fa442a1e"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8631a1af67cfb436485a8201fa442a1e">CowpeaFruitPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions)</td></tr>
 <tr class="separator:a8631a1af67cfb436485a8201fa442a1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aebaf8388d9e932a75ec2bb1b90f3176f" id="r_aebaf8388d9e932a75ec2bb1b90f3176f"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aebaf8388d9e932a75ec2bb1b90f3176f">CowpeaFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
@@ -586,8 +621,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ab080ea0c3b6aea8e7eee45c1fa0fc5e0" name="ab080ea0c3b6aea8e7eee45c1fa0fc5e0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab080ea0c3b6aea8e7eee45c1fa0fc5e0">&#9670;&#160;</a></span>BeanLeafPrototype_trifoliate_OBJ()</h2>
+<a id="ab0dcf9c21e81b32f393fc0549a682fe9" name="ab0dcf9c21e81b32f393fc0549a682fe9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0dcf9c21e81b32f393fc0549a682fe9">&#9670;&#160;</a></span>BeanLeafPrototype_trifoliate_OBJ()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -600,7 +635,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+          <td class="paramtype"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *</td>          <td class="paramname"><span class="paramname"><em>prototype_parameters</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -614,8 +649,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a06566bda7a60f4976cf1ef0e24c18b62" name="a06566bda7a60f4976cf1ef0e24c18b62"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a06566bda7a60f4976cf1ef0e24c18b62">&#9670;&#160;</a></span>BeanLeafPrototype_unifoliate_OBJ()</h2>
+<a id="a0c999f46525c12ac3fcf382cb66a1e89" name="a0c999f46525c12ac3fcf382cb66a1e89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c999f46525c12ac3fcf382cb66a1e89">&#9670;&#160;</a></span>BeanLeafPrototype_unifoliate_OBJ()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -628,7 +663,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+          <td class="paramtype"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *</td>          <td class="paramname"><span class="paramname"><em>prototype_parameters</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -746,8 +781,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a551cbb31d94276648dc5d462c83bbd4f" name="a551cbb31d94276648dc5d462c83bbd4f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a551cbb31d94276648dc5d462c83bbd4f">&#9670;&#160;</a></span>CheeseweedLeafPrototype()</h2>
+<a id="af3ee42415f0d9822004b781787971387" name="af3ee42415f0d9822004b781787971387"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3ee42415f0d9822004b781787971387">&#9670;&#160;</a></span>CheeseweedLeafPrototype()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -760,7 +795,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+          <td class="paramtype"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *</td>          <td class="paramname"><span class="paramname"><em>prototype_parameters</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -825,8 +860,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="af3cd49cdb5290d764de3ddd802f26082" name="af3cd49cdb5290d764de3ddd802f26082"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af3cd49cdb5290d764de3ddd802f26082">&#9670;&#160;</a></span>CowpeaLeafPrototype_trifoliate_OBJ()</h2>
+<a id="a96341bf7f8c6d52f1d9835b78e30cec1" name="a96341bf7f8c6d52f1d9835b78e30cec1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a96341bf7f8c6d52f1d9835b78e30cec1">&#9670;&#160;</a></span>CowpeaLeafPrototype_trifoliate_OBJ()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -839,7 +874,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+          <td class="paramtype"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *</td>          <td class="paramname"><span class="paramname"><em>prototype_parameters</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -853,8 +888,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aa310cbde1a548656b33e225f53982c89" name="aa310cbde1a548656b33e225f53982c89"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa310cbde1a548656b33e225f53982c89">&#9670;&#160;</a></span>CowpeaLeafPrototype_unifoliate_OBJ()</h2>
+<a id="af616b7219a9462f21604424a533714d7" name="af616b7219a9462f21604424a533714d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af616b7219a9462f21604424a533714d7">&#9670;&#160;</a></span>CowpeaLeafPrototype_unifoliate_OBJ()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -867,7 +902,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>subdivisions</em></span>, </td>
+          <td class="paramtype"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *</td>          <td class="paramname"><span class="paramname"><em>prototype_parameters</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

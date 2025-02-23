@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/boundarylayerconductance/src/BoundaryLayerConductanceModel.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -117,7 +152,7 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">using namespace </span>helios;</div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
 <div class="foldopen" id="foldopen00020" data-start="{" data-end="}">
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a">   20</a></span><a class="code hl_function" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a">BLConductanceModel::BLConductanceModel</a>( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>* __context ){</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a">   20</a></span><a class="code hl_function" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a" title="Constructor.">BLConductanceModel::BLConductanceModel</a>( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* __context ){</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>  wind_speed_default = 1.f;</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
@@ -134,13 +169,13 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
 <div class="foldopen" id="foldopen00035" data-start="{" data-end="}">
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4">   35</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4">BLConductanceModel::selfTest</a>(){</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4">   35</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4" title="Self-test.">BLConductanceModel::selfTest</a>(){</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running boundary-layer conductance model self-test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>  <span class="keywordtype">float</span> err_tol = 1e-3;</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>  </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>  <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context_1;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_1;</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>  <span class="keywordtype">float</span> TL = 300;</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>  <span class="keywordtype">float</span> Ta = 290;</div>
@@ -148,32 +183,32 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  std::vector&lt;uint&gt; UUID_1;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;air_temperature&quot;</span>, Ta );</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;temperature&quot;</span>, TL );</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;wind_speed&quot;</span>, U );</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;air_temperature&quot;</span>, Ta );</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;temperature&quot;</span>, TL );</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;wind_speed&quot;</span>, U );</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a">BLConductanceModel</a> blc_1(&amp;context_1);</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720">disableMessages</a>();</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a" title="Constructor.">BLConductanceModel</a> blc_1(&amp;context_1);</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>( UUID_1.at(0), <span class="stringliteral">&quot;Polhausen&quot;</span> );</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>( UUID_1.at(1), <span class="stringliteral">&quot;InclinedPlate&quot;</span> );</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>( UUID_1.at(2), <span class="stringliteral">&quot;Sphere&quot;</span> );</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>( UUID_1.at(3), <span class="stringliteral">&quot;Ground&quot;</span> );</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>( UUID_1.at(0), <span class="stringliteral">&quot;Pohlhausen&quot;</span> );</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>( UUID_1.at(1), <span class="stringliteral">&quot;InclinedPlate&quot;</span> );</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>( UUID_1.at(2), <span class="stringliteral">&quot;Sphere&quot;</span> );</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>( UUID_1.at(3), <span class="stringliteral">&quot;Ground&quot;</span> );</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">run</a>();</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049" title="Run boundary-layer conductance calculations for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>  std::vector&lt;float&gt; gH;</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>  gH.resize(UUID_1.size());</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>( UUID_1.at(0), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(0) );</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>( UUID_1.at(1), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(1) );</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>( UUID_1.at(2), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(2) );</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>( UUID_1.at(3), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(3) );</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>( UUID_1.at(0), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(0) );</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>( UUID_1.at(1), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(1) );</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>( UUID_1.at(2), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(2) );</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>( UUID_1.at(3), <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gH.at(3) );</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  <span class="keywordflow">if</span>( fabs(gH.at(0)-0.20914112f)/gH.at(0)&gt;err_tol || fabs(gH.at(1)-0.133763f)/gH.at(1)&gt;err_tol || fabs(gH.at(2)-0.087149f)/gH.at(2)&gt;err_tol || fabs(gH.at(3)-0.465472f)/gH.at(3)&gt;err_tol ){</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;failed boundary-layer conductance model check #1.&quot;</span> &lt;&lt; std::endl;</div>
@@ -187,37 +222,37 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 </div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
 <div class="foldopen" id="foldopen00086" data-start="{" data-end="}">
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817">   86</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817">BLConductanceModel::enableMessages</a>(){</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817">   86</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817" title="Enable standard output from this plug-in (default)">BLConductanceModel::enableMessages</a>(){</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  message_flag = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>}</div>
 </div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
 <div class="foldopen" id="foldopen00090" data-start="{" data-end="}">
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720">   90</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720">BLConductanceModel::disableMessages</a>(){</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720">   90</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720" title="Disable standard output from this plug-in.">BLConductanceModel::disableMessages</a>(){</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>  message_flag = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>}</div>
 </div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
 <div class="foldopen" id="foldopen00094" data-start="{" data-end="}">
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">   94</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">BLConductanceModel::setBoundaryLayerModel</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">   94</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">BLConductanceModel::setBoundaryLayerModel</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>  std::vector&lt;uint&gt; UUIDs = context-&gt;getAllUUIDs();</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>(UUIDs,gH_model);</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>(UUIDs,gH_model);</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>}</div>
 </div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
 <div class="foldopen" id="foldopen00099" data-start="{" data-end="}">
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#ab07e423e0cbc9a431368b9fddcfd93c7">   99</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">BLConductanceModel::setBoundaryLayerModel</a>( uint UUID, <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#ab07e423e0cbc9a431368b9fddcfd93c7">   99</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">BLConductanceModel::setBoundaryLayerModel</a>( uint UUID, <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>  std::vector&lt;uint&gt; UUIDs{UUID};</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel</a>(UUIDs,gH_model);</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>(UUIDs,gH_model);</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>}</div>
 </div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
 <div class="foldopen" id="foldopen00104" data-start="{" data-end="}">
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a0a9e992d831834b188474e973cd41ee4">  104</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">BLConductanceModel::setBoundaryLayerModel</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a0a9e992d831834b188474e973cd41ee4">  104</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">BLConductanceModel::setBoundaryLayerModel</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keyword">const</span> <span class="keywordtype">char</span>* gH_model ){</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span> </div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>  uint model = 0;</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>  </div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>  <span class="keywordflow">if</span>( strcmp(gH_model,<span class="stringliteral">&quot;Polhausen&quot;</span>)==0 ){</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>  <span class="keywordflow">if</span>( strcmp(gH_model,<span class="stringliteral">&quot;Pohlhausen&quot;</span>)==0 || strcmp(gH_model,<span class="stringliteral">&quot;Polhausen&quot;</span>)==0 ){</div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    model = 0;</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( strcmp(gH_model,<span class="stringliteral">&quot;InclinedPlate&quot;</span>)==0 ){</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    model = 1;</div>
@@ -238,15 +273,15 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 </div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
 <div class="foldopen" id="foldopen00127" data-start="{" data-end="}">
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">  127</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run</a>(){</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">  127</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049" title="Run boundary-layer conductance calculations for all primitives in the Context.">BLConductanceModel::run</a>(){</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">run</a>( context-&gt;getAllUUIDs() );</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049" title="Run boundary-layer conductance calculations for all primitives in the Context.">run</a>( context-&gt;getAllUUIDs() );</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  </div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>}</div>
 </div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
 <div class="foldopen" id="foldopen00133" data-start="{" data-end="}">
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a0b46d5ade5b84be8e8a44723c5dcf720">  133</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno"><a class="line" href="class_b_l_conductance_model.html#a0b46d5ade5b84be8e8a44723c5dcf720">  133</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049" title="Run boundary-layer conductance calculations for all primitives in the Context.">BLConductanceModel::run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
 <div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs ){</div>
 <div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span> </div>
@@ -286,7 +321,7 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span> </div>
 <div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <span class="comment">//Number of primitive faces</span></div>
 <div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordtype">char</span> Nsides = 2; <span class="comment">//default is 2</span></div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">HELIOS_TYPE_UINT</a> ){</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a> ){</div>
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>      uint flag;</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>      context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>      <span class="keywordflow">if</span>( flag==0 ){</div>
@@ -294,8 +329,8 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>      }</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    }</div>
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> norm = context-&gt;getPrimitiveNormal(UUID);</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keywordtype">float</span> inclination = <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd">cart2sphere</a>( norm ).<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643">zenith</a>;</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> norm = context-&gt;getPrimitiveNormal(UUID);</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keywordtype">float</span> inclination = <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">cart2sphere</a>( norm ).<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643" title="Zenithal angle (radians)">zenith</a>;</div>
 <div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keywordtype">float</span> gH = calculateBoundaryLayerConductance( boundarylayer_model[UUID], U, L, Nsides, inclination, T, Ta );</div>
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
@@ -317,8 +352,8 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="keywordflow">return</span> 0;</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>  }</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>  <span class="keywordflow">if</span>( gH_model==0 ){ <span class="comment">//Polhausen equation</span></div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">//This comes from the correlation by Polhausen - see Eq. XX of Campbell and Norman (1998). It assumes a flat plate parallel to the direction of the flow, which extends infinitely in the cross-stream direction and &quot;L&quot; in the streamwise direction. It also assumes that the air is at standard temperature and pressure, and flow is laminar, forced convection.</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>  <span class="keywordflow">if</span>( gH_model==0 ){ <span class="comment">//Pohlhausen equation</span></div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">//This comes from the correlation by Pohlhausen - see Eq. XX of Campbell and Norman (1998). It assumes a flat plate parallel to the direction of the flow, which extends infinitely in the cross-stream direction and &quot;L&quot; in the streamwise direction. It also assumes that the air is at standard temperature and pressure, and flow is laminar, forced convection.</span></div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span> </div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    gH = 0.135f*sqrt(U/L)*float(Nsides);</div>
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span> </div>
@@ -386,24 +421,6 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>  <span class="keywordflow">return</span> gH;</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>}</div>
-<div class="ttc" id="a_boundary_layer_conductance_model_8h_html"><div class="ttname"><a href="_boundary_layer_conductance_model_8h.html">BoundaryLayerConductanceModel.h</a></div></div>
-<div class="ttc" id="a_context_8h_html_a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f"><div class="ttname"><a href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">helios::HELIOS_TYPE_UINT</a></div><div class="ttdeci">@ HELIOS_TYPE_UINT</div><div class="ttdoc">unsigned integer data type</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l00045">Context.h:45</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_a11bd8193606442d8393bf22131fa0720"><div class="ttname"><a href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720">BLConductanceModel::disableMessages</a></div><div class="ttdeci">void disableMessages()</div><div class="ttdoc">Disable standard output from this plug-in.</div><div class="ttdef"><b>Definition</b> <a href="#l00090">BoundaryLayerConductanceModel.cpp:90</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_a601d3eba5024cff7290fa564f619c9df"><div class="ttname"><a href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">BLConductanceModel::setBoundaryLayerModel</a></div><div class="ttdeci">void setBoundaryLayerModel(const char *gH_model)</div><div class="ttdoc">Set the boundary-layer conductance model to be used for all primitives in the Context.</div><div class="ttdef"><b>Definition</b> <a href="#l00094">BoundaryLayerConductanceModel.cpp:94</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_a6e85abcd1e8544d66af25394cace6ed4"><div class="ttname"><a href="class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4">BLConductanceModel::selfTest</a></div><div class="ttdeci">int selfTest()</div><div class="ttdoc">Self-test.</div><div class="ttdef"><b>Definition</b> <a href="#l00035">BoundaryLayerConductanceModel.cpp:35</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_aaa522103af850ee1fff89c0f698ee049"><div class="ttname"><a href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run</a></div><div class="ttdeci">void run()</div><div class="ttdoc">Run boundary-layer conductance calculations for all primitives in the Context.</div><div class="ttdef"><b>Definition</b> <a href="#l00127">BoundaryLayerConductanceModel.cpp:127</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_af507e5b75f21372ec225d5e5c0c8c97a"><div class="ttname"><a href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a">BLConductanceModel::BLConductanceModel</a></div><div class="ttdeci">BLConductanceModel(helios::Context *context)</div><div class="ttdoc">Constructor.</div><div class="ttdef"><b>Definition</b> <a href="#l00020">BoundaryLayerConductanceModel.cpp:20</a></div></div>
-<div class="ttc" id="aclass_b_l_conductance_model_html_afd2d53808eb3ab1d3b104229c7bf3817"><div class="ttname"><a href="class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817">BLConductanceModel::enableMessages</a></div><div class="ttdeci">void enableMessages()</div><div class="ttdoc">Enable standard output from this plug-in (default)</div><div class="ttdef"><b>Definition</b> <a href="#l00086">BoundaryLayerConductanceModel.cpp:86</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a2144eea981e4030c973287ce2c38315e"><div class="ttname"><a href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">helios::Context::getPrimitiveData</a></div><div class="ttdeci">void getPrimitiveData(uint UUID, const char *label, int &amp;data) const</div><div class="ttdoc">Get data associated with a primitive element.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l01001">Context_data.cpp:1001</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ac7677094a3bbcb62506ce461d982af1d"><div class="ttname"><a href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">helios::Context::setPrimitiveData</a></div><div class="ttdeci">void setPrimitiveData(const uint &amp;UUID, const char *label, const int &amp;data)</div><div class="ttdoc">Add data value (int) associated with a primitive element.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l00655">Context_data.cpp:655</a></div></div>
-<div class="ttc" id="agroup__functions_html_ga32a34b00e0a28f4b35e501b8b34cfccd"><div class="ttname"><a href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd">helios::cart2sphere</a></div><div class="ttdeci">SphericalCoord cart2sphere(const vec3 &amp;Cartesian)</div><div class="ttdoc">Convert Cartesian coordinates to spherical coordinates.</div><div class="ttdef"><b>Definition</b> <a href="global_8cpp_source.html#l00610">global.cpp:610</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01212">Context.cpp:1212</a></div></div>
-<div class="ttc" id="agroup__vectors_html_ga7e3752eb5ff9909862380d188d2b3f24"><div class="ttname"><a href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">helios::make_vec2</a></div><div class="ttdeci">vec2 make_vec2(float x, float y)</div><div class="ttdoc">Make a vec2 from two floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00433">helios_vector_types.h:433</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_aa19986ef06f067d450534135735bc36b"><div class="ttname"><a href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float x, float y, float z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00589">helios_vector_types.h:589</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_ad89212892cf1bdc45eeae189e6d490a1"><div class="ttname"><a href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float elevation_radians, float azimuth_radians)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01602">helios_vector_types.h:1602</a></div></div>
-<div class="ttc" id="astructhelios_1_1_spherical_coord_html_a1cf17b1a139ed955ab0dd765e49b0643"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643">helios::SphericalCoord::zenith</a></div><div class="ttdeci">const float &amp; zenith</div><div class="ttdoc">Zenithal angle (radians)</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01553">helios_vector_types.h:1553</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

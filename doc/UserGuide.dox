@@ -1,4 +1,4 @@
-/*! \mainpage Helios Documentation
+/*! \mainpage Overview
 
   <p> <br> </p>
 
@@ -77,7 +77,7 @@ $ git pull
   
 */
 
-/*! \page "Overview" Overview
+/*! \page "Overview" Introduction
 
   \tableofcontents
 
@@ -156,6 +156,7 @@ $ git pull
   - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
+  - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
 
 */
 
@@ -179,7 +180,7 @@ $ git pull
 
   As Helios is simply C++ code, it can be used on any platform that supports C++ programming. If you prefer to use an interactive development environment (IDE), two great options are <a href="https://www.jetbrains.com/clion/">CLion</a> by JetBrains (recommended) and <a href="https://code.visualstudio.com">VS Code</a>. These IDEs are available on Windows, Linux, and Mac, and make setting up Helios projects relatively easy. CLion is free for educational purposes, and is loaded with very nice features for C++ development such as direct display of Helios documentation. VS Code also works, but is a little more clunky. Building and compiling from the command-line and using any text editor such as Vim or Emacs also works just fine.
 
-  \subsubsection Automatically Installing Helios Dependencies
+  \subsection Automatically Installing Helios Dependencies
 
   Running Helios requires several dependent packages to be installed, depending on the plug-ins you are using. The sections below detail manual installation of dependent packages for Windows, Linux, and MacOS.
 
@@ -435,6 +436,7 @@ $ git pull
    <tr><td>\<memory\></td></tr>
    <tr><td>\<cmath\></td></tr>
    <tr><td>\<map\></td></tr>
+   <tr><td>\<unordered_map\></td></tr>
    <tr><td>\<algorithm\></td></tr>
    <tr><td>\<ctime\></td></tr>
    <tr><td>\<random\></td></tr>
@@ -478,12 +480,12 @@ $ git pull
  }
  ~~~
 
- The Context is usually passed to plugins (see \ref Plugins), which gives them access to geometry and data.
+ The Context is usually passed to plugins (see \ref PlugIns), which gives them access to geometry and data.
 
  <!-- **************** VECTOR TYPES ***************** -->
  \section VecTypes Vector Types
  
- There are several vector types commonly used by the Context and other plugins (see \ref Plugins).  These are C++ structures with at least two member variables.  Helios vector types are defined by including the header file:
+ There are several vector types commonly used by the Context and other plugins (see \ref PlugIns).  These are C++ structures with at least two member variables.  Helios vector types are defined by including the header file:
 
  ~~~~~~{.cpp}
  #include "helios_vector_types.h"
@@ -563,11 +565,11 @@ $ git pull
 
  \subsection PrimitiveTypes Primitive Types
  
- All primitives inherit the class '\ref helios::Primitive "Primitive"', which give them common properties and functions.  The available geometric primitive types are detailed below.  Each primitive type has an enumeration that can be used in the code to reference each primitive type.
+ The available geometric primitive types are detailed below.  Each primitive type has an enumeration that can be used in the code to reference each primitive type.
  
  <table>
   <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
-  <tr><td>\ref helios::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
+  <tr><td>\ref ::helios::Primitive::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
   <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
   <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
  </table>	
@@ -896,7 +898,7 @@ $ git pull
      
      	  vec3 position = make_vec3( i*3, 0, 0 );
 
-	      context.translatePrimitive( position );
+	      context.translatePrimitive( UUID_copy, position );
 
      }
 
@@ -1818,44 +1820,6 @@ $ git pull
     ~~~~~~
 
     By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file.
-
-*/
-
-
-
-/*! \page Plugins Writing Plugins	
-
-  \tableofcontents
-
-  \section PluginIntro Introduction
-	
-  \section PluginWriting Writing Documentation
-
-  In order to add new documentation to Helios, the program 'doxgen' must be installed.
-  
-  A Doxygen documentation file should be placed in a subdirectory 'doc' within the plugin folder.  The file can have any name, but must have the extension '.dox'.  When documentation is generated from the main Helios folder, it will recursively search all plugin folders for '.dox' files.  It is important to note that all file paths should be relative to the html folder within the main Helios documentation folder.  For example, an image for the 'Dummy' model documentation should be referenced using href='../../plugins/dummy/doc/images/image.jpg'.
-
-  \section cmake CMakeLists.txt file
-
-  \subsection include Include Directories
-
-  If the plugin header files includes header files that are not in the system's include path, the compiler will need to know where to find them.  Below is an example situation. Say that your plugin 'DummyModel' is dependent on a library that requires a header file called 'somelibrary.h'.  The DummyModel's header file may look something like:
-
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.4;">
-  <pre><code> \c//DummyModel.h
-   #include "somelibrary.h"
-   class %DummyModel{
-      ...
-   };</code></pre>
-  </div>
-
-  When DummyModel.h is included in the project's main file (say main.cpp), the compiler will not be able to find 'somelibary.h'.  
-
-  To resolve this problem, add a command to the plugin's CMakeList.txt file that looks something like:
-
-  <code> set( PLUGIN_INCLUDE_PATHS "/path/to/somelibrary/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE ) </code>	
-
-  This command prepends the variable 'PLUGIN_INCLUDE_PATHS' with the path to the include file.  Note that multiple paths are separated by a semicolon.
 
 */
 

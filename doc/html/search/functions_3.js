@@ -44,9 +44,8 @@ var searchData=
   ['doesprimitivedataexist_41',['doesPrimitiveDataExist',['../classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b',1,'helios::Context']]],
   ['doesprimitiveexist_42',['doesPrimitiveExist',['../classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66',1,'helios::Context::doesPrimitiveExist(uint UUID) const'],['../classhelios_1_1_context.html#a0c478e8ce47bfad4db16829f76305946',1,'helios::Context::doesPrimitiveExist(const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
   ['doestimeseriesvariableexist_43',['doesTimeseriesVariableExist',['../group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2',1,'helios::Context']]],
-  ['dummymodel_44',['DummyModel',['../class_dummy_model.html#ae48cd297d1bf8b94c296218e767b9f70',1,'DummyModel']]],
-  ['duplicateglobaldata_45',['duplicateGlobalData',['../classhelios_1_1_context.html#ae89abaa03d7585e7f3abc6c5f16a0223',1,'helios::Context']]],
-  ['duplicateobjectdata_46',['duplicateObjectData',['../classhelios_1_1_context.html#a613366ab9fdbfd69428535d5c1867b73',1,'helios::Context']]],
-  ['duplicateplantinstance_47',['duplicatePlantInstance',['../class_plant_architecture.html#acd6de0d13dbc534992b94a203a16b76d',1,'PlantArchitecture']]],
-  ['duplicateprimitivedata_48',['duplicatePrimitiveData',['../classhelios_1_1_context.html#a86be37149a98b13141175da5793d053e',1,'helios::Context::duplicatePrimitiveData(uint UUID, const char *old_label, const char *new_label)'],['../classhelios_1_1_context.html#a3796eae362aec38408e40a3a83b3d8a4',1,'helios::Context::duplicatePrimitiveData(const char *existing_data_label, const char *copy_data_label)']]]
+  ['duplicateglobaldata_44',['duplicateGlobalData',['../classhelios_1_1_context.html#ae89abaa03d7585e7f3abc6c5f16a0223',1,'helios::Context']]],
+  ['duplicateobjectdata_45',['duplicateObjectData',['../classhelios_1_1_context.html#a613366ab9fdbfd69428535d5c1867b73',1,'helios::Context']]],
+  ['duplicateplantinstance_46',['duplicatePlantInstance',['../class_plant_architecture.html#acd6de0d13dbc534992b94a203a16b76d',1,'PlantArchitecture']]],
+  ['duplicateprimitivedata_47',['duplicatePrimitiveData',['../classhelios_1_1_context.html#a86be37149a98b13141175da5793d053e',1,'helios::Context::duplicatePrimitiveData(uint UUID, const char *old_label, const char *new_label)'],['../classhelios_1_1_context.html#a3796eae362aec38408e40a3a83b3d8a4',1,'helios::Context::duplicatePrimitiveData(const char *existing_data_label, const char *copy_data_label)']]]
 ];

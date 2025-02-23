@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: core/include/global.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -130,6 +165,7 @@ $(function(){initNavTree('global_8h.html',''); initResizable(true); });
 <code>#include &lt;memory&gt;</code><br />
 <code>#include &lt;ctime&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
+<code>#include &lt;unordered_map&gt;</code><br />
 <code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;random&gt;</code><br />
 <code>#include &lt;chrono&gt;</code><br />
@@ -144,7 +180,7 @@ $(function(){initNavTree('global_8h.html',''); initResizable(true); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html">helios::Timer</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call <a class="el" href="structhelios_1_1_timer.html#a47d04d3a8054ad2b6bbb9623c000090c" title="Start timer.">tic()</a> to start timer, call <a class="el" href="structhelios_1_1_timer.html#a9d3f79551cc1089cb6dd81d3bb68f537" title="Stop timer and print elapsed time.">toc()</a> to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call tic() to start timer, call toc() to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
@@ -210,22 +246,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga97e12cf9fda6bf8b65b3ccc17e788c12"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert Spherical coordinates to Cartesian coordinates.  <br /></td></tr>
 <tr class="separator:ga97e12cf9fda6bf8b65b3ccc17e788c12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga18616cd1df8b05b03eb6c2be0de54e3b" id="r_ga18616cd1df8b05b03eb6c2be0de54e3b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga18616cd1df8b05b03eb6c2be0de54e3b">helios::string2vec2</a> (const char *str)</td></tr>
-<tr class="memdesc:ga18616cd1df8b05b03eb6c2be0de54e3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector.  <br /></td></tr>
+<tr class="memdesc:ga18616cd1df8b05b03eb6c2be0de54e3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a vec2 vector.  <br /></td></tr>
 <tr class="separator:ga18616cd1df8b05b03eb6c2be0de54e3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga65954cbb0f79c3fd5032f2cc27ad3b4f" id="r_ga65954cbb0f79c3fd5032f2cc27ad3b4f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga65954cbb0f79c3fd5032f2cc27ad3b4f">helios::string2vec3</a> (const char *str)</td></tr>
-<tr class="memdesc:ga65954cbb0f79c3fd5032f2cc27ad3b4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector.  <br /></td></tr>
+<tr class="memdesc:ga65954cbb0f79c3fd5032f2cc27ad3b4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a vec3 vector.  <br /></td></tr>
 <tr class="separator:ga65954cbb0f79c3fd5032f2cc27ad3b4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gadf3012a1d77a5aa50347de3a7175cb1a" id="r_gadf3012a1d77a5aa50347de3a7175cb1a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gadf3012a1d77a5aa50347de3a7175cb1a">helios::string2vec4</a> (const char *str)</td></tr>
-<tr class="memdesc:gadf3012a1d77a5aa50347de3a7175cb1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector.  <br /></td></tr>
+<tr class="memdesc:gadf3012a1d77a5aa50347de3a7175cb1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into a vec4 vector.  <br /></td></tr>
 <tr class="separator:gadf3012a1d77a5aa50347de3a7175cb1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga2f83561e691aad4ecd41ac3879e59568" id="r_ga2f83561e691aad4ecd41ac3879e59568"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga2f83561e691aad4ecd41ac3879e59568">helios::string2int2</a> (const char *str)</td></tr>
-<tr class="memdesc:ga2f83561e691aad4ecd41ac3879e59568"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector.  <br /></td></tr>
+<tr class="memdesc:ga2f83561e691aad4ecd41ac3879e59568"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an int2 vector.  <br /></td></tr>
 <tr class="separator:ga2f83561e691aad4ecd41ac3879e59568"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad1dbf51cdf1912828487e67ca51cccef" id="r_gad1dbf51cdf1912828487e67ca51cccef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int3.html">int3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad1dbf51cdf1912828487e67ca51cccef">helios::string2int3</a> (const char *str)</td></tr>
-<tr class="memdesc:gad1dbf51cdf1912828487e67ca51cccef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector.  <br /></td></tr>
+<tr class="memdesc:gad1dbf51cdf1912828487e67ca51cccef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an int3 vector.  <br /></td></tr>
 <tr class="separator:gad1dbf51cdf1912828487e67ca51cccef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga4aa73326d27fdaba24fac984db5b8009" id="r_ga4aa73326d27fdaba24fac984db5b8009"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int4.html">int4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4aa73326d27fdaba24fac984db5b8009">helios::string2int4</a> (const char *str)</td></tr>
-<tr class="memdesc:ga4aa73326d27fdaba24fac984db5b8009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector.  <br /></td></tr>
+<tr class="memdesc:ga4aa73326d27fdaba24fac984db5b8009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an int4 vector.  <br /></td></tr>
 <tr class="separator:ga4aa73326d27fdaba24fac984db5b8009"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a162c3d8c139c75bac9607b512768b937" id="r_a162c3d8c139c75bac9607b512768b937"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a162c3d8c139c75bac9607b512768b937">helios::parse_float</a> (const std::string &amp;input_string, float &amp;converted_float)</td></tr>
 <tr class="memdesc:a162c3d8c139c75bac9607b512768b937"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a float with error checking.  <br /></td></tr>
@@ -237,22 +273,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:a6b9de37fd00d939cb9e049a9002e8db0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an integer with error checking.  <br /></td></tr>
 <tr class="separator:a6b9de37fd00d939cb9e049a9002e8db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a142375b255b9dcb456764558725becc1" id="r_a142375b255b9dcb456764558725becc1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a142375b255b9dcb456764558725becc1">helios::parse_int2</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1int2.html">int2</a> &amp;converted_int2)</td></tr>
-<tr class="memdesc:a142375b255b9dcb456764558725becc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> with error checking.  <br /></td></tr>
+<tr class="memdesc:a142375b255b9dcb456764558725becc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an int2 with error checking.  <br /></td></tr>
 <tr class="separator:a142375b255b9dcb456764558725becc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a88766e5973accffb6a548fb321c288df" id="r_a88766e5973accffb6a548fb321c288df"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88766e5973accffb6a548fb321c288df">helios::parse_int3</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1int3.html">int3</a> &amp;converted_int3)</td></tr>
-<tr class="memdesc:a88766e5973accffb6a548fb321c288df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> with error checking.  <br /></td></tr>
+<tr class="memdesc:a88766e5973accffb6a548fb321c288df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an int3 with error checking.  <br /></td></tr>
 <tr class="separator:a88766e5973accffb6a548fb321c288df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a51430e9e359c2aad9d22d41650b2221a" id="r_a51430e9e359c2aad9d22d41650b2221a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a51430e9e359c2aad9d22d41650b2221a">helios::parse_uint</a> (const std::string &amp;input_string, uint &amp;converted_uint)</td></tr>
 <tr class="memdesc:a51430e9e359c2aad9d22d41650b2221a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an unsigned integer with error checking.  <br /></td></tr>
 <tr class="separator:a51430e9e359c2aad9d22d41650b2221a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e1e35a11454f9616bad5639ccb49ff3" id="r_a3e1e35a11454f9616bad5639ccb49ff3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e1e35a11454f9616bad5639ccb49ff3">helios::parse_vec2</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;converted_vec2)</td></tr>
-<tr class="memdesc:a3e1e35a11454f9616bad5639ccb49ff3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> with error checking.  <br /></td></tr>
+<tr class="memdesc:a3e1e35a11454f9616bad5639ccb49ff3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a vec2 with error checking.  <br /></td></tr>
 <tr class="separator:a3e1e35a11454f9616bad5639ccb49ff3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2e62477aa096b070d49a68b88427f7a5" id="r_a2e62477aa096b070d49a68b88427f7a5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2e62477aa096b070d49a68b88427f7a5">helios::parse_vec3</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;converted_vec3)</td></tr>
-<tr class="memdesc:a2e62477aa096b070d49a68b88427f7a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> with error checking.  <br /></td></tr>
+<tr class="memdesc:a2e62477aa096b070d49a68b88427f7a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into a vec3 with error checking.  <br /></td></tr>
 <tr class="separator:a2e62477aa096b070d49a68b88427f7a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a786c694c21d9115a7c3e18deba6a8732" id="r_a786c694c21d9115a7c3e18deba6a8732"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a786c694c21d9115a7c3e18deba6a8732">helios::parse_RGBcolor</a> (const std::string &amp;input_string, <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;converted_rgb)</td></tr>
-<tr class="memdesc:a786c694c21d9115a7c3e18deba6a8732"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> with error checking.  <br /></td></tr>
+<tr class="memdesc:a786c694c21d9115a7c3e18deba6a8732"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an RGBcolor with error checking.  <br /></td></tr>
 <tr class="separator:a786c694c21d9115a7c3e18deba6a8732"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:affd6907db209d4696779a3d2497cfab5" id="r_affd6907db209d4696779a3d2497cfab5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#affd6907db209d4696779a3d2497cfab5">helios::open_xml_file</a> (const std::string &amp;xml_file, pugi::xml_document &amp;xmldoc, std::string &amp;error_string)</td></tr>
 <tr class="separator:affd6907db209d4696779a3d2497cfab5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -263,16 +299,16 @@ Functions</h2></td></tr>
 <tr class="memdesc:a0627913352046dda81c72c9ce234a7e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a float value.  <br /></td></tr>
 <tr class="separator:a0627913352046dda81c72c9ce234a7e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d4fc938af8d1e0db7836a610b7feda0" id="r_a6d4fc938af8d1e0db7836a610b7feda0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d4fc938af8d1e0db7836a610b7feda0">helios::parse_xml_tag_vec2</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
-<tr class="memdesc:a6d4fc938af8d1e0db7836a610b7feda0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> value (i.e., two space delimited floats)  <br /></td></tr>
+<tr class="memdesc:a6d4fc938af8d1e0db7836a610b7feda0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a vec2 value (i.e., two space delimited floats)  <br /></td></tr>
 <tr class="separator:a6d4fc938af8d1e0db7836a610b7feda0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b7e887e4b92085bc9f52a00227ca1d0" id="r_a1b7e887e4b92085bc9f52a00227ca1d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b7e887e4b92085bc9f52a00227ca1d0">helios::parse_xml_tag_vec3</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
-<tr class="memdesc:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> value (i.e., three space delimited floats)  <br /></td></tr>
+<tr class="memdesc:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a vec3 value (i.e., three space delimited floats)  <br /></td></tr>
 <tr class="separator:a1b7e887e4b92085bc9f52a00227ca1d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8a48786337175ba01ad180ef493f460b" id="r_a8a48786337175ba01ad180ef493f460b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a48786337175ba01ad180ef493f460b">helios::parse_xml_tag_string</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
 <tr class="memdesc:a8a48786337175ba01ad180ef493f460b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing a string.  <br /></td></tr>
 <tr class="separator:a8a48786337175ba01ad180ef493f460b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8180158609698aae15da7574b085b817" id="r_ga8180158609698aae15da7574b085b817"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8180158609698aae15da7574b085b817">helios::string2RGBcolor</a> (const char *str)</td></tr>
-<tr class="memdesc:ga8180158609698aae15da7574b085b817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an <a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> vector.  <br /></td></tr>
+<tr class="memdesc:ga8180158609698aae15da7574b085b817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a space-delimited string into an RGBcolor vector.  <br /></td></tr>
 <tr class="separator:ga8180158609698aae15da7574b085b817"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad5aa3cd5124a2e1e526d6070e53c2bc8" id="r_gad5aa3cd5124a2e1e526d6070e53c2bc8"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad5aa3cd5124a2e1e526d6070e53c2bc8">helios::deblank</a> (const char *input)</td></tr>
 <tr class="memdesc:gad5aa3cd5124a2e1e526d6070e53c2bc8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove all whitespace from character array.  <br /></td></tr>
@@ -303,7 +339,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:gabdeaa8440597bcdcf1f43cd3a8f2383f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum value of a vector of ints.  <br /></td></tr>
 <tr class="separator:gabdeaa8440597bcdcf1f43cd3a8f2383f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga656494728a1221b22464a693936d41f5" id="r_ga656494728a1221b22464a693936d41f5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga656494728a1221b22464a693936d41f5">helios::min</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;vect)</td></tr>
-<tr class="memdesc:ga656494728a1221b22464a693936d41f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum value of a vector of <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>'s.  <br /></td></tr>
+<tr class="memdesc:ga656494728a1221b22464a693936d41f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum value of a vector of vec3's.  <br /></td></tr>
 <tr class="separator:ga656494728a1221b22464a693936d41f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga828d302d1bb6e0aee3e2bf5efd670f86" id="r_ga828d302d1bb6e0aee3e2bf5efd670f86"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86">helios::max</a> (const std::vector&lt; float &gt; &amp;vect)</td></tr>
 <tr class="memdesc:ga828d302d1bb6e0aee3e2bf5efd670f86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum value of a vector of floats.  <br /></td></tr>
@@ -312,7 +348,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga812947a11191483677a73636e0b7ed06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum value of a vector of ints.  <br /></td></tr>
 <tr class="separator:ga812947a11191483677a73636e0b7ed06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa3b7bf55e065bf2ab8a9d975963ce7ca" id="r_gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaa3b7bf55e065bf2ab8a9d975963ce7ca">helios::max</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;vect)</td></tr>
-<tr class="memdesc:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum value of a vector of <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>'s.  <br /></td></tr>
+<tr class="memdesc:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum value of a vector of vec3's.  <br /></td></tr>
 <tr class="separator:gaa3b7bf55e065bf2ab8a9d975963ce7ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8a9b7ab24b0bb17b901c3ba41af760ec" id="r_ga8a9b7ab24b0bb17b901c3ba41af760ec"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8a9b7ab24b0bb17b901c3ba41af760ec">helios::stdev</a> (const std::vector&lt; float &gt; &amp;vect)</td></tr>
 <tr class="memdesc:ga8a9b7ab24b0bb17b901c3ba41af760ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard deviation of a vector of floats.  <br /></td></tr>
@@ -414,22 +450,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga8148b3dd86a772edcee01ed3e788c344"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D double vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga8148b3dd86a772edcee01ed3e788c344"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa82d824f02499ea89a35f49837c73c16" id="r_gaa82d824f02499ea89a35f49837c73c16"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaa82d824f02499ea89a35f49837c73c16">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaa82d824f02499ea89a35f49837c73c16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gaa82d824f02499ea89a35f49837c73c16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gaa82d824f02499ea89a35f49837c73c16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga1d91aa279bfa52924ce4ad1ff25e73fa" id="r_ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga1d91aa279bfa52924ce4ad1ff25e73fa">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab81afa45742b33913932e93d18027bb9" id="r_gab81afa45742b33913932e93d18027bb9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gab81afa45742b33913932e93d18027bb9">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gab81afa45742b33913932e93d18027bb9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gab81afa45742b33913932e93d18027bb9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gab81afa45742b33913932e93d18027bb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7d6b41f67d574ad1eda29386f7602fd3" id="r_ga7d6b41f67d574ad1eda29386f7602fd3"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga7d6b41f67d574ad1eda29386f7602fd3">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga7d6b41f67d574ad1eda29386f7602fd3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga7d6b41f67d574ad1eda29386f7602fd3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga7d6b41f67d574ad1eda29386f7602fd3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaacf3de9501039033bbf3ce1192a5b980" id="r_gaacf3de9501039033bbf3ce1192a5b980"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaacf3de9501039033bbf3ce1192a5b980">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaacf3de9501039033bbf3ce1192a5b980"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gaacf3de9501039033bbf3ce1192a5b980"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gaacf3de9501039033bbf3ce1192a5b980"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaba0182e0dee319764079263d3c6515cb" id="r_gaba0182e0dee319764079263d3c6515cb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaba0182e0dee319764079263d3c6515cb">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaba0182e0dee319764079263d3c6515cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gaba0182e0dee319764079263d3c6515cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gaba0182e0dee319764079263d3c6515cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gacba6e64852b80969f8529e7e4ca9cd0c" id="r_gacba6e64852b80969f8529e7e4ca9cd0c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gacba6e64852b80969f8529e7e4ca9cd0c">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::string &gt; &gt; &amp;vec)</td></tr>
 <tr class="memdesc:gacba6e64852b80969f8529e7e4ca9cd0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D string vector into a 1D vector.  <br /></td></tr>
@@ -447,22 +483,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga480225bd53c0fbc332edca0a0d9a9ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D double vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga480225bd53c0fbc332edca0a0d9a9ebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga69b9012c4d9aa9c34bba25cca4e53119" id="r_ga69b9012c4d9aa9c34bba25cca4e53119"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga69b9012c4d9aa9c34bba25cca4e53119">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga69b9012c4d9aa9c34bba25cca4e53119"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga69b9012c4d9aa9c34bba25cca4e53119"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga69b9012c4d9aa9c34bba25cca4e53119"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga31baa6f6552d52b2cc79561fc3457a88" id="r_ga31baa6f6552d52b2cc79561fc3457a88"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga31baa6f6552d52b2cc79561fc3457a88">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga31baa6f6552d52b2cc79561fc3457a88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga31baa6f6552d52b2cc79561fc3457a88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga31baa6f6552d52b2cc79561fc3457a88"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga82feb62a40fb10cba137a8d38eacf003" id="r_ga82feb62a40fb10cba137a8d38eacf003"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga82feb62a40fb10cba137a8d38eacf003">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga82feb62a40fb10cba137a8d38eacf003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga82feb62a40fb10cba137a8d38eacf003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga82feb62a40fb10cba137a8d38eacf003"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga96b392b637a3fcc21a7944000323e57e" id="r_ga96b392b637a3fcc21a7944000323e57e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga96b392b637a3fcc21a7944000323e57e">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga96b392b637a3fcc21a7944000323e57e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga96b392b637a3fcc21a7944000323e57e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga96b392b637a3fcc21a7944000323e57e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gadc8836b0f49c4a8b5bc5bcab058a63ad" id="r_gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gadc8836b0f49c4a8b5bc5bcab058a63ad">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573" id="r_ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4e10f3b2de7e94bf1d7e6c7c4e5f2573">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0da91aa5e844a63b491026a1b772cea9" id="r_ga0da91aa5e844a63b491026a1b772cea9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga0da91aa5e844a63b491026a1b772cea9">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::string &gt; &gt; &gt; &amp;vec)</td></tr>
 <tr class="memdesc:ga0da91aa5e844a63b491026a1b772cea9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D string vector into a 1D vector.  <br /></td></tr>
@@ -480,22 +516,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga1872f5844481b4cd876848cb7282a76a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D double vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga1872f5844481b4cd876848cb7282a76a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga17ade4062b75a329ec1b59f28d854614" id="r_ga17ade4062b75a329ec1b59f28d854614"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga17ade4062b75a329ec1b59f28d854614">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga17ade4062b75a329ec1b59f28d854614"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga17ade4062b75a329ec1b59f28d854614"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga17ade4062b75a329ec1b59f28d854614"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad0ba764dc082b4fe92c2edf2b691df06" id="r_gad0ba764dc082b4fe92c2edf2b691df06"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad0ba764dc082b4fe92c2edf2b691df06">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gad0ba764dc082b4fe92c2edf2b691df06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gad0ba764dc082b4fe92c2edf2b691df06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gad0ba764dc082b4fe92c2edf2b691df06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga4bcec227cba69446f0c211a8efa79fa7" id="r_ga4bcec227cba69446f0c211a8efa79fa7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4bcec227cba69446f0c211a8efa79fa7">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga4bcec227cba69446f0c211a8efa79fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga4bcec227cba69446f0c211a8efa79fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga4bcec227cba69446f0c211a8efa79fa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga228d0ed0a34866dd6ae4be83ec7d3246" id="r_ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga228d0ed0a34866dd6ae4be83ec7d3246">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int2 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac15b07838d4cd90b7b7f863821d34665" id="r_gac15b07838d4cd90b7b7f863821d34665"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gac15b07838d4cd90b7b7f863821d34665">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gac15b07838d4cd90b7b7f863821d34665"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gac15b07838d4cd90b7b7f863821d34665"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int3 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gac15b07838d4cd90b7b7f863821d34665"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac6c182edd6f37635bbce1abbb5306a20" id="r_gac6c182edd6f37635bbce1abbb5306a20"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gac6c182edd6f37635bbce1abbb5306a20">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gac6c182edd6f37635bbce1abbb5306a20"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> vector into a 1D vector.  <br /></td></tr>
+<tr class="memdesc:gac6c182edd6f37635bbce1abbb5306a20"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int4 vector into a 1D vector.  <br /></td></tr>
 <tr class="separator:gac6c182edd6f37635bbce1abbb5306a20"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga14adccb0f309850b9d5aa740588b8624" id="r_ga14adccb0f309850b9d5aa740588b8624"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga14adccb0f309850b9d5aa740588b8624">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; std::string &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
 <tr class="memdesc:ga14adccb0f309850b9d5aa740588b8624"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D string vector into a 1D vector.  <br /></td></tr>
@@ -513,22 +549,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:a8240b43ac3ce36bc7a4d52128bc9fda3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a string.  <br /></td></tr>
 <tr class="separator:a8240b43ac3ce36bc7a4d52128bc9fda3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f3041e69cbe61a909866a24c8d77457" id="r_a1f3041e69cbe61a909866a24c8d77457"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1f3041e69cbe61a909866a24c8d77457">helios::XMLloadvec2</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:a1f3041e69cbe61a909866a24c8d77457"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>.  <br /></td></tr>
+<tr class="memdesc:a1f3041e69cbe61a909866a24c8d77457"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a vec2.  <br /></td></tr>
 <tr class="separator:a1f3041e69cbe61a909866a24c8d77457"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa4c58cabe7bc5244435613ffdb00cf34" id="r_aa4c58cabe7bc5244435613ffdb00cf34"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa4c58cabe7bc5244435613ffdb00cf34">helios::XMLloadvec3</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:aa4c58cabe7bc5244435613ffdb00cf34"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>.  <br /></td></tr>
+<tr class="memdesc:aa4c58cabe7bc5244435613ffdb00cf34"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a vec3.  <br /></td></tr>
 <tr class="separator:aa4c58cabe7bc5244435613ffdb00cf34"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a928c91522128145370150652ca59f3af" id="r_a928c91522128145370150652ca59f3af"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">helios::vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a928c91522128145370150652ca59f3af">helios::XMLloadvec4</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:a928c91522128145370150652ca59f3af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a>.  <br /></td></tr>
+<tr class="memdesc:a928c91522128145370150652ca59f3af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a vec4.  <br /></td></tr>
 <tr class="separator:a928c91522128145370150652ca59f3af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae55d4cef14213f642705952dc1ad4659" id="r_ae55d4cef14213f642705952dc1ad4659"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">helios::int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae55d4cef14213f642705952dc1ad4659">helios::XMLloadint2</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:ae55d4cef14213f642705952dc1ad4659"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>.  <br /></td></tr>
+<tr class="memdesc:ae55d4cef14213f642705952dc1ad4659"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a vec2.  <br /></td></tr>
 <tr class="separator:ae55d4cef14213f642705952dc1ad4659"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae4661a50a9f13eb6fb645e9f767b51a2" id="r_ae4661a50a9f13eb6fb645e9f767b51a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int3.html">helios::int3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae4661a50a9f13eb6fb645e9f767b51a2">helios::XMLloadint3</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:ae4661a50a9f13eb6fb645e9f767b51a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a>.  <br /></td></tr>
+<tr class="memdesc:ae4661a50a9f13eb6fb645e9f767b51a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a int3.  <br /></td></tr>
 <tr class="separator:ae4661a50a9f13eb6fb645e9f767b51a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a08c21d08fc1e1dd07ff612f8b503e295" id="r_a08c21d08fc1e1dd07ff612f8b503e295"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int4.html">helios::int4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08c21d08fc1e1dd07ff612f8b503e295">helios::XMLloadint4</a> (pugi::xml_node node, const char *field)</td></tr>
-<tr class="memdesc:a08c21d08fc1e1dd07ff612f8b503e295"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a>.  <br /></td></tr>
+<tr class="memdesc:a08c21d08fc1e1dd07ff612f8b503e295"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into a int4.  <br /></td></tr>
 <tr class="separator:a08c21d08fc1e1dd07ff612f8b503e295"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb80e4e13497682968468c596a9b3690" id="r_acb80e4e13497682968468c596a9b3690"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb80e4e13497682968468c596a9b3690">helios::XMLloadrgb</a> (pugi::xml_node node, const char *field)</td></tr>
 <tr class="memdesc:acb80e4e13497682968468c596a9b3690"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to load and convert a field in a pugi XML node into an RGB color vector.  <br /></td></tr>
@@ -569,10 +605,10 @@ Variables</h2></td></tr>
 <tr class="memitem:a2d6b12d3f019b61b427ec3c63270143d" id="r_a2d6b12d3f019b61b427ec3c63270143d"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2d6b12d3f019b61b427ec3c63270143d">PI_F</a> = 3.14159265358979323846f</td></tr>
 <tr class="separator:a2d6b12d3f019b61b427ec3c63270143d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adcd5a98ec7c45292736ec8e19ce9de51" id="r_adcd5a98ec7c45292736ec8e19ce9de51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a> = <a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0,0)</td></tr>
-<tr class="memdesc:adcd5a98ec7c45292736ec8e19ce9de51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null <a class="el" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> that applies no rotation.  <br /></td></tr>
+<tr class="memdesc:adcd5a98ec7c45292736ec8e19ce9de51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null SphericalCoord that applies no rotation.  <br /></td></tr>
 <tr class="separator:adcd5a98ec7c45292736ec8e19ce9de51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a876dc18d1da8ace50c131f428f8883be" id="r_a876dc18d1da8ace50c131f428f8883be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a> = <a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0)</td></tr>
-<tr class="memdesc:a876dc18d1da8ace50c131f428f8883be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> that gives the origin (0,0,0)  <br /></td></tr>
+<tr class="memdesc:a876dc18d1da8ace50c131f428f8883be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null vec3 that gives the origin (0,0,0)  <br /></td></tr>
 <tr class="separator:a876dc18d1da8ace50c131f428f8883be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -632,7 +668,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00060">60</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00061">61</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>

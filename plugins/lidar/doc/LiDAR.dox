@@ -27,13 +27,13 @@
   <table>
   <caption>Installing dependent packages</caption>
   <tr>
-	<th>Package</th><td>\image html apple-logo.jpg</td>
+	<th>Package</th><td>\image html apple-logo.png</td>
 	<td>\image html unix-logo.png</td>
-	<td>\image html windows-logo.jpg</td>
+	<td>\image html windows-logo.png</td>
   </tr>
   <tr>
 	<td>NVIDIA CUDA 9.0+</td>
-	<td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+	<td>Mac OSX: Not available.</td>
 	<td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
     <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
   </tr>

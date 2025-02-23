@@ -1025,6 +1025,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             }else {
                 parent_shoot->internode_tube_objID = context_ptr->addTubeObject(Ndiv_internode_radius, phytomer_internode_vertices, phytomer_internode_radii, internode_colors);
             }
+            context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), "object_label", "shoot");
         }else{ //appending internode to shoot
             for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
                 if( !phytomer_parameters.internode.image_texture.empty() ) {
@@ -1033,6 +1034,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                     context_ptr->appendTubeSegment(parent_shoot->internode_tube_objID, phytomer_internode_vertices.at(inode_segment), phytomer_internode_radii.at(inode_segment), internode_colors.at(inode_segment));
                 }
             }
+            context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), "object_label", "shoot");
         }
     }
 
@@ -1085,6 +1087,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
         if( build_context_geometry_petiole && petiole_radii.at(petiole).front() > 0.f ) {
             petiole_objIDs.at(petiole) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
+            context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole)), "object_label", "petiole");
         }
 
         //--- create buds ---//
@@ -1124,19 +1127,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 leaf_rotation_axis = cross(internode_axis, petiole_tip_axis);
 
         // Create unique leaf prototypes for each shoot type so we can simply copy them for each leaf
-        // if( phytomer_parameters.leaf.prototype.unique_prototypes>0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.prototype_function) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() ) {
-        //     plantarchitecture_ptr->unique_leaf_prototype_objIDs[phytomer_parameters.leaf.prototype.prototype_function].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
-        //     for( int prototype = 0; prototype < phytomer_parameters.leaf.prototype.unique_prototypes; prototype++ ) {
-        //         for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
-        //             float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
-        //             uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
-        //             plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.prototype_function).at(prototype).push_back(objID_leaf);
-        //             std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData( context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule" );
-        //             context_ptr->setPrimitiveColor( petiolule_UUIDs, phytomer_parameters.petiole.color );
-        //             context_ptr->hideObject({objID_leaf});
-        //         }
-        //     }
-        // }
         assert( phytomer_parameters.leaf.prototype.unique_prototype_identifier!=0 );
         if( phytomer_parameters.leaf.prototype.unique_prototypes>0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() ) {
             plantarchitecture_ptr->unique_leaf_prototype_objIDs[phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
@@ -1144,6 +1134,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                 for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                     float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                     uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
+                    if ( phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype ) {
+                        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "leaf" );
+                    }
                     plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
                     std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData( context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule" );
                     context_ptr->setPrimitiveColor( petiolule_UUIDs, phytomer_parameters.petiole.color );
@@ -1156,12 +1149,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
 
             uint objID_leaf;
-            // if( phytomer_parameters.leaf.prototype.unique_prototypes>0 ) { //copy the existing prototype
-            //     int prototype = context_ptr->randu(0, phytomer_parameters.leaf.prototype.unique_prototypes - 1);
-            //     objID_leaf = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.prototype_function).at(prototype).at(leaf));
-            // }else{ //load a new prototype
-            //     objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
-            // }
             if( phytomer_parameters.leaf.prototype.unique_prototypes>0 ) { //copy the existing prototype
                 int prototype = context_ptr->randu(0, phytomer_parameters.leaf.prototype.unique_prototypes - 1);
                 assert( plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) != plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() );
@@ -1319,6 +1306,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
     if( build_context_geometry_peduncle) {
         fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
+        context_ptr->setPrimitiveData( context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle" );
     }
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf

@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Visualizer Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -197,7 +232,7 @@ $(function(){initNavTree('_visualizer_doc.html',''); initResizable(true); });
 <tr>
 <th>CMakeLists.txt </th><td>set( PLUGINS "visualizer" )  </td></tr>
 <tr>
-<th>Header File </th><td>#include "Visualizer.h"  </td></tr>
+<th>Header File </th><td>include "Visualizer.h"  </td></tr>
 <tr>
 <th>Class </th><td><a class="el" href="class_visualizer.html">Visualizer</a>  </td></tr>
 </table>
@@ -207,18 +242,18 @@ Dependencies</h1>
 <caption>Installing dependent packages</caption>
 <tr>
 <th>Package </th><td><div class="image">
-<img src="apple-logo.jpg" alt=""/>
+<img src="apple-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
 <img src="unix-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
-<img src="windows-logo.jpg" alt=""/>
+<img src="windows-logo.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>X11/xorg </td><td><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/xquartz</code></div> </td><td>Debian/Ubuntu:<br  />
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code></div> </td><td>None (if using Visual Studio)  </td></tr>
+<td>X11/xorg </td><td><code>$ brew install Caskroom/cask/xquartz</code> </td><td>Debian/Ubuntu:<br  />
+<code>$ sudo apt-get install libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev</code> </td><td>None (if using Visual Studio)  </td></tr>
 </table>
 <h1><a class="anchor" id="VisIssues"></a>
 Known Issues</h1>
@@ -238,14 +273,12 @@ Class Constructor(s)</h1>
 <tr>
 <td><a class="el" href="class_visualizer.html#ac39e631c7d248c0e0f4f9ebba58a6dc4">Visualizer( uint Wdisplay, uint Hdisplay )</a>  </td></tr>
 </table>
-<p>The class associated with the visualization is called <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. The class constructor takes one or two arguments that specifies the size of the graphics window. If only one argument is provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay )</a>), the argument is an integer that specifies the width of the diplay window in pixels, with the hight of the window specified according to the default aspect ratio. If two arguments are provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay, uint Hdisplay )</a>), the two arguments correspond respectively to the width and height of the display window in pixels. Below is an example program:</p>
+<p>The class associated with the visualization is called Visualizer. The class constructor takes one or two arguments that specifies the size of the graphics window. If only one argument is provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay )</a>), the argument is an integer that specifies the width of the diplay window in pixels, with the hight of the window specified according to the default aspect ratio. If two arguments are provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay, uint Hdisplay )</a>), the two arguments correspond respectively to the width and height of the display window in pixels. Below is an example program:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line">  </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">    <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 ); <span class="comment">//Opens a graphics window of width 1200 pixels with default aspect ratio</span></div>
+<div class="line">    <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 ); <span class="comment">//Opens a graphics window of width 1200 pixels with default aspect ratio</span></div>
 <div class="line">}</div>
-<div class="ttc" id="a_visualizer_8h_html"><div class="ttname"><a href="_visualizer_8h.html">Visualizer.h</a></div></div>
-<div class="ttc" id="aclass_visualizer_html"><div class="ttname"><a href="class_visualizer.html">Visualizer</a></div><div class="ttdoc">Class for visualization of simulation results.</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00275">Visualizer.h:275</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="UseVis"></a>
 Using the Visualizer Plug-in</h1>
 <h2><a class="anchor" id="coord"></a>
@@ -273,7 +306,7 @@ Visualization Window</h2>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line">   vis.plotUpdate(); <span class="comment">//we have not added geometry, so window is blank</span></div>
 <div class="line">   vis.printWindow(<span class="stringliteral">&quot;blank_window.jpg&quot;</span>);</div>
 <div class="line">   vis.closeWindow();</div>
@@ -284,7 +317,7 @@ Window background</h2>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line">   vis.addSkyDomeByCenter( 100, make_vec3(0,0,0), 20, <span class="stringliteral">&quot;plugins/visualizer/textures/SkyDome_clouds.jpg&quot;</span>, 0 );</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>In the example, we have created a sky dome with a radius of 100 centered at the origin (0,0,0), 20 divisions in the spherical coordinate directions (elevation,azimuth), and on layer 0.</p>
@@ -374,14 +407,13 @@ Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &amp;
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
 <div class="line">   vec3 center = make_vec3(0,0,0);</div>
 <div class="line">   vec2 size = make_vec2(1,1);</div>
 <div class="line">   SphericalCoord rotation = make_SphericalCoord(0,0);</div>
-<div class="line">   vis.addRectangleByCenter(center, size, rotation, RGB::red, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4">Visualizer::COORDINATES_CARTESIAN</a>);</div>
+<div class="line">   vis.addRectangleByCenter(center, size, rotation, RGB::red, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_visualizer_html_a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4"><div class="ttname"><a href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4">Visualizer::COORDINATES_CARTESIAN</a></div><div class="ttdeci">@ COORDINATES_CARTESIAN</div><div class="ttdoc">Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00326">Visualizer.h:326</a></div></div>
 </div><!-- fragment --><h3><a class="anchor" id="ContextGeom"></a>
 Automatically importing Context geometry</h3>
 <p>The visualizer can automatically import some or all geometry from the Context. This is accomplished using the buildContextGeometry command. To add all primitives in the Context, the buildContextGeometry command would be issued, which is passed the Context. We can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.</p>
@@ -400,23 +432,16 @@ Automatically importing Context geometry</h3>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1);</div>
-<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>(center,size);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(center,size);</div>
 <div class="line">   </div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
 <div class="line">   vis.buildContextGeometry(&amp;context);</div>
 <div class="line">}</div>
-<div class="ttc" id="a_context_8h_html"><div class="ttname"><a href="_context_8h.html">Context.h</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01212">Context.cpp:1212</a></div></div>
-<div class="ttc" id="agroup__vectors_html_ga7e3752eb5ff9909862380d188d2b3f24"><div class="ttname"><a href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">helios::make_vec2</a></div><div class="ttdeci">vec2 make_vec2(float x, float y)</div><div class="ttdoc">Make a vec2 from two floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00433">helios_vector_types.h:433</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_aa19986ef06f067d450534135735bc36b"><div class="ttname"><a href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float x, float y, float z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00589">helios_vector_types.h:589</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00346">helios_vector_types.h:346</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="PlotWindow"></a>
 Plotting Geometry</h2>
 <p>To this point, we have not actually plotted anything in the Visualizer window. A final command is neede to display all of the geometry added to the Visualizer in the window we have opened. There are two functions for doing this, which are detailed below.</p>
@@ -429,13 +454,13 @@ plotInteractive()</h3>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   context.addRectangleByCenter(center,size);</div>
 <div class="line">   </div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
 <div class="line">   vis.buildContextGeometry(&amp;context);</div>
 <div class="line"> </div>
@@ -485,13 +510,13 @@ plotUpdate()</h3>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1);</div>
-<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>(center,size);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(center,size);</div>
 <div class="line">   </div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
 <div class="line">   vis.buildContextGeometry(&amp;context);</div>
 <div class="line"> </div>
@@ -550,8 +575,7 @@ Coloring by pseudocolor map</h3>
 <td><a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> </td><td>N/A  </td></tr>
 </table>
 <p>The colormap to be used is set using the following command setColormap( Ctable colormap_name ), where &lsquo;colormap_name&rsquo; is one of the enumerations in the table above. For example, to set the &lsquo;hot&rsquo; colormap one would use:</p>
-<div class="fragment"><div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026">Visualizer::COLORMAP_HOT</a> );</div>
-<div class="ttc" id="aclass_visualizer_html_a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026"><div class="ttname"><a href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026">Visualizer::COLORMAP_HOT</a></div><div class="ttdeci">@ COLORMAP_HOT</div><div class="ttdoc">&quot;Hot&quot; colormap</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00333">Visualizer.h:333</a></div></div>
+<div class="fragment"><div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026" title="&quot;Hot&quot; colormap">Visualizer::COLORMAP_HOT</a> );</div>
 </div><!-- fragment --><p>To set a custom color table, the same command is used with the <a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> argument, plus additional arguments that define the custom color table. These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the &lsquo;hot&rsquo; color table is defined:</p>
 <table class="doxtable">
 <tr>
@@ -568,14 +592,14 @@ Coloring by pseudocolor map</h3>
 <td>(1, 1, 0) <div style="width:50px;height:30px;background-color:rgb(255,255,0);"></div> </td><td>1  </td></tr>
 </table>
 <p>Example code on how to implement the color table creation is given below:</p>
-<div class="fragment"><div class="line"><a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis(1000);</div>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(1000);</div>
 <div class="line"> </div>
 <div class="line">std::vector&lt;RGBcolor&gt; ctable_colors;</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor</a>( 0.f, 0.f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor</a>( 0.5f, 0.f, 0.5f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor</a>( 1.f, 0.f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor</a>( 1.f, 0.5f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor</a>( 1.f, 1.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.f, 0.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.5f, 0.f, 0.5f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.5f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 1.f, 0.f ) );</div>
 <div class="line"> </div>
 <div class="line">std::vector&lt;float&gt; ctable_positions;</div>
 <div class="line">ctable_positions.push_back( 0.f );</div>
@@ -584,9 +608,7 @@ Coloring by pseudocolor map</h3>
 <div class="line">ctable_positions.push_back( 0.75f );</div>
 <div class="line">ctable_positions.push_back( 1.f );</div>
 <div class="line">   </div>
-<div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a>, ctable_colors, ctable_positions );</div>
-<div class="ttc" id="aclass_visualizer_html_a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7"><div class="ttname"><a href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a></div><div class="ttdeci">@ COLORMAP_CUSTOM</div><div class="ttdoc">Custom colormap.</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00345">Visualizer.h:345</a></div></div>
-<div class="ttc" id="agroup__vectors_html_gae5b981fa224fe6f30b850467ec655c0b"><div class="ttname"><a href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">helios::make_RGBcolor</a></div><div class="ttdeci">RGBcolor make_RGBcolor(float r, float g, float b)</div><div class="ttdoc">Make an RGBcolor vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00954">helios_vector_types.h:954</a></div></div>
+<div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7" title="Custom colormap.">Visualizer::COLORMAP_CUSTOM</a>, ctable_colors, ctable_positions );</div>
 </div><!-- fragment --><h3><a class="anchor" id="Cbar"></a>
 Colorbar</h3>
 <p>The colorbar is the legend showing how values are mapped to the color table. The table below gives functions for customizing colorbar behavior, including for example its position, size, and visibility.</p>
@@ -632,21 +654,18 @@ Shading</h3>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2</a>(1,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0,0);</div>
-<div class="line">   vis.addRectangleByCenter(center,size,rotation,RGB::red,<a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4">Visualizer::COORDINATES_CARTESIAN</a>,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0);</div>
+<div class="line">   vis.addRectangleByCenter(center,size,rotation,RGB::red,<a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>,0);</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> light_direction = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(1,1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> light_direction = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
 <div class="line"> </div>
-<div class="line">   vis.setLightingModel( <a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864">Visualizer::LIGHTING_PHONG_SHADOWED</a> );</div>
+<div class="line">   vis.setLightingModel( <a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864" title="Phong lighting model plus shadowing is applied to add shading effects to the diffuse color.">Visualizer::LIGHTING_PHONG_SHADOWED</a> );</div>
 <div class="line">   vis.setLightDirection( light_direction );</div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_visualizer_html_a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864"><div class="ttname"><a href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864">Visualizer::LIGHTING_PHONG_SHADOWED</a></div><div class="ttdeci">@ LIGHTING_PHONG_SHADOWED</div><div class="ttdoc">Phong lighting model plus shadowing is applied to add shading effects to the diffuse color.</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00390">Visualizer.h:390</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_ad89212892cf1bdc45eeae189e6d490a1"><div class="ttname"><a href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float elevation_radians, float azimuth_radians)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01602">helios_vector_types.h:1602</a></div></div>
-<div class="ttc" id="astructhelios_1_1_spherical_coord_html"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a></div><div class="ttdoc">Vector of spherical coordinates (elevation,azimuth)</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01534">helios_vector_types.h:1534</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="Options"></a>
 View Options</h2>
 <p>The default camera position is at an elevation angle of 20 degrees and to the North, with the camera looking toward the origin. The distance of the camera from the origin is automatically adjusted to fit all primitives in view.</p>
@@ -670,7 +689,6 @@ Acknowledgements</h1>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="_plug_ins.html">Plug-ins</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/radiation/src/primitiveIntersection.cu Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -215,8 +250,8 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>      }   </div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    }<span class="keywordflow">else</span>{  <span class="comment">//use transparency mask</span></div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>      <span class="keywordtype">float</span> amag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(a);</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>      <span class="keywordtype">float</span> bmag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(b);</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>      <span class="keywordtype">float</span> amag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(a);</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>      <span class="keywordtype">float</span> bmag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(b);</div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>      float2 uv = make_float2( ddota/amag/amag, 1.f-ddotb/bmag/bmag );</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>      int2 sz = masksize[ maskID[ID] ];</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>      uint3 ind;</div>
@@ -620,8 +655,8 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>  </div>
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>      <span class="keywordflow">if</span> (ddotb &gt; 0.0 &amp;&amp; ddotb &lt; dot(b,b) ){</div>
 <div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span> </div>
-<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>    <span class="keywordtype">float</span> amag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(a);</div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    <span class="keywordtype">float</span> bmag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(b);</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>    <span class="keywordtype">float</span> amag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(a);</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    <span class="keywordtype">float</span> bmag = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(b);</div>
 <div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );</div>
 <div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span> </div>
 <div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    uint U = tile_UUID[objID];</div>
@@ -670,21 +705,6 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>  aabb-&gt;set(min, max);</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>}</div>
 </div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html"><div class="ttname"><a href="_ray_tracing_8cu_8h.html">RayTracing.cu.h</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_a59b52bcf03b8801f444e081e943f7138"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a></div><div class="ttdeci">__device__ float d_magnitude(const float3 v)</div><div class="ttdoc">Function to calculate the magnitude of float3 vector on the GPU.</div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00329">RayTracing.cu.h:329</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a0a93209b8d30eee91f87b1b714991b3a"><div class="ttname"><a href="primitive_intersection_8cu.html#a0a93209b8d30eee91f87b1b714991b3a">triangle_bounds</a></div><div class="ttdeci">RT_PROGRAM void triangle_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00254">primitiveIntersection.cu:254</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a31b2bef2ed3e97edbd08bfa1243e9d40"><div class="ttname"><a href="primitive_intersection_8cu.html#a31b2bef2ed3e97edbd08bfa1243e9d40">rectangle_bounds</a></div><div class="ttdeci">RT_PROGRAM void rectangle_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00155">primitiveIntersection.cu:155</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a393a839ba1216483ca3d447e45d930ab"><div class="ttname"><a href="primitive_intersection_8cu.html#a393a839ba1216483ca3d447e45d930ab">triangle_intersect</a></div><div class="ttdeci">RT_PROGRAM void triangle_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00171">primitiveIntersection.cu:171</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a45dc4da4927abe579fd24be608e4cd75"><div class="ttname"><a href="primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75">disk_intersect</a></div><div class="ttdeci">RT_PROGRAM void disk_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00269">primitiveIntersection.cu:269</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a463610deabc8971f8d92607f462e28f3"><div class="ttname"><a href="primitive_intersection_8cu.html#a463610deabc8971f8d92607f462e28f3">bbox_bounds</a></div><div class="ttdeci">RT_PROGRAM void bbox_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00463">primitiveIntersection.cu:463</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a4b1369e96290adffabbbcc86b92d8560"><div class="ttname"><a href="primitive_intersection_8cu.html#a4b1369e96290adffabbbcc86b92d8560">bbox_intersect</a></div><div class="ttdeci">RT_PROGRAM void bbox_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00415">primitiveIntersection.cu:415</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a4fd84a7124be9fea427690a9a2442b3b"><div class="ttname"><a href="primitive_intersection_8cu.html#a4fd84a7124be9fea427690a9a2442b3b">tile_bounds</a></div><div class="ttdeci">RT_PROGRAM void tile_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00551">primitiveIntersection.cu:551</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a84078834a363095c77877d20e45cc16b"><div class="ttname"><a href="primitive_intersection_8cu.html#a84078834a363095c77877d20e45cc16b">rectangle_intersect</a></div><div class="ttdeci">RT_PROGRAM void rectangle_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00073">primitiveIntersection.cu:73</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_a904cdd1733732aa1a8dbaf2e958176a9"><div class="ttname"><a href="primitive_intersection_8cu.html#a904cdd1733732aa1a8dbaf2e958176a9">voxel_bounds</a></div><div class="ttdeci">RT_PROGRAM void voxel_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00403">primitiveIntersection.cu:403</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_aab2e16ff4d5a4bca2d90c49f777500e9"><div class="ttname"><a href="primitive_intersection_8cu.html#aab2e16ff4d5a4bca2d90c49f777500e9">disk_bounds</a></div><div class="ttdeci">RT_PROGRAM void disk_bounds(int objID, float result[6])</div><div class="ttdef"><b>Definition</b> <a href="#l00304">primitiveIntersection.cu:304</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_ac0a2a895d2e98227a3905e56939228fe"><div class="ttname"><a href="primitive_intersection_8cu.html#ac0a2a895d2e98227a3905e56939228fe">voxel_intersect</a></div><div class="ttdeci">RT_PROGRAM void voxel_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00316">primitiveIntersection.cu:316</a></div></div>
-<div class="ttc" id="aprimitive_intersection_8cu_html_ac645addc8bc3071933ca33a0f053af07"><div class="ttname"><a href="primitive_intersection_8cu.html#ac645addc8bc3071933ca33a0f053af07">tile_intersect</a></div><div class="ttdeci">RT_PROGRAM void tile_intersect(int objID)</div><div class="ttdef"><b>Definition</b> <a href="#l00479">primitiveIntersection.cu:479</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html"><div class="ttname"><a href="struct_per_ray_data.html">PerRayData</a></div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00025">RayTracing.cu.h:26</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

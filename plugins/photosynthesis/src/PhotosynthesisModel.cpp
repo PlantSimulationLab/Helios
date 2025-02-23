@@ -65,10 +65,10 @@ int PhotosynthesisModel::selfTest() {
 
     FarquharModelCoefficients fcoeffs; //these are prior default model parameters, which is what was used for this test
 
-    fcoeffs.setVcmax(78.5);
-    fcoeffs.setJmax(150, 43.54);
-    fcoeffs.setRd(2.12);
-    fcoeffs.setQuantumEfficiency_alpha(0.45);
+    fcoeffs.setVcmax(78.5f,65.33f);
+    fcoeffs.setJmax(150.f, 43.54f);
+    fcoeffs.setRd(2.12f,46.39f);
+    fcoeffs.setQuantumEfficiency_alpha(0.45f);
 
 
     photomodel.setModelCoefficients(fcoeffs);
@@ -225,80 +225,80 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
     FarquharModelCoefficients fmc;
     bool defaultSpecies = false;
     if (s == "Almond" || s == "almond") {
-        fmc.setVcmax(105.9);
+        fmc.setVcmax(105.9,65.33f);
         fmc.setJmax(166.34, 46.36);
-        fmc.setRd(1.49);
+        fmc.setRd(1.49,46.39f);
         fmc.setQuantumEfficiency_alpha(0.336);
     } else if (s == "Apple" || s == "apple") {
-        fmc.setVcmax(101.08);
+        fmc.setVcmax(101.08,65.33f);
         fmc.setJmax(167.03, 47.62);
-        fmc.setRd(3.00);
+        fmc.setRd(3.00,46.39f);
         fmc.setQuantumEfficiency_alpha(0.432);
     } else if (s == "Cherry" || s == "cherry") {
-        fmc.setVcmax(75.65);
+        fmc.setVcmax(75.65,65.33f);
         fmc.setJmax(129.06, 48.49);
-        fmc.setRd(2.12);
+        fmc.setRd(2.12,46.39f);
         fmc.setQuantumEfficiency_alpha(0.404);
     } else if (s == "Prune" || s == "prune") {
-        fmc.setVcmax(75.88);
+        fmc.setVcmax(75.88,65.33f);
         fmc.setJmax(129.41, 48.58);
-        fmc.setRd(1.56);
+        fmc.setRd(1.56,46.39f);
         fmc.setQuantumEfficiency_alpha(0.402);
     } else if (s == "Pear" || s == "pear") {
-        fmc.setVcmax(107.69);
+        fmc.setVcmax(107.69,65.33f);
         fmc.setJmax(176.71, 46.04);
-        fmc.setRd(1.510);
+        fmc.setRd(1.510,46.39f);
         fmc.setQuantumEfficiency_alpha(0.274);
     } else if (s == "PistachioFemale" || s == "pistachiofemale" || s == "pistachio_female" ||
                s == "Pistachio_Female" || s == "Pistachio_female" || s == "pistachio" || s == "Pistachio") {
-        fmc.setVcmax(138.99);
+        fmc.setVcmax(138.99,65.33f);
         fmc.setJmax(221.76, 43.80);
-        fmc.setRd(2.850);
+        fmc.setRd(2.850,46.39f);
         fmc.setQuantumEfficiency_alpha(0.366);
     } else if (s == "PistachioMale" || s == "pistachiomale" || s == "pistachio_male" ||
                s == "Pistachio_Male" || s == "Pistachio_male") {
-        fmc.setVcmax(154.17);
+        fmc.setVcmax(154.17,65.33f);
         fmc.setJmax(243.20, 50.89);
-        fmc.setRd(2.050);
+        fmc.setRd(2.050,46.39f);
         fmc.setQuantumEfficiency_alpha(0.335);
     } else if (s == "Walnut" || s == "walnut") {
-        fmc.setVcmax(121.85);
+        fmc.setVcmax(121.85,65.33f);
         fmc.setJmax(197.25,48.35);
-        fmc.setRd(1.960);
+        fmc.setRd(1.960,46.39f);
         fmc.setQuantumEfficiency_alpha(0.404);
     } else if (s == "Grape" || s == "grape") {
         //cv. Cabernet Sauvignon
         fmc.setVcmax(74.5, 76.1, 318.8 - 273.15, 499.8);
         fmc.setJmax(180.2, 23.0, 313.8 - 273.15, 502.3);
         fmc.setTPU(7.7, 24.0, 314.6 - 273.15, 496.4);
-        fmc.setRd(1.3);
+        fmc.setRd(1.3,46.39f);
         fmc.setQuantumEfficiency_alpha(0.304);
         fmc.setLightResponseCurvature_theta(0.06);
     } else if (s == "Elderberry" || s == "elderberry" || s == "blue_elderberry") {
         fmc.setVcmax(37.7, 66.0, 319.4 - 273.15, 496.0);
         fmc.setJmax(149.7, 24.5, 314.8 - 273.15, 492.9);
         fmc.setTPU(7.3, 33.6, 314.5 - 273.15, 497.5);
-        fmc.setRd(1.3);
+        fmc.setRd(1.3,46.39f);
         fmc.setQuantumEfficiency_alpha(0.202);
         fmc.setLightResponseCurvature_theta(0.472);
     } else if (s == "Toyon" || s == "toyon") {
         fmc.setVcmax(52.8, 42.1, 315.1 - 273.15, 483.0);
         fmc.setJmax(142.4, 9.0, 313.0 - 273.15, 486.2);
         fmc.setTPU(6.6, 14.0, 314.8 - 273.15, 493.8);
-        fmc.setRd(0.8);
+        fmc.setRd(0.8,46.39f);
         fmc.setQuantumEfficiency_alpha(0.290);
         fmc.setLightResponseCurvature_theta(0.532);
     } else if (s == "Big_Leaf_Maple" || s == "big_leaf_maple" || s == "Maple" || s == "maple") {
         fmc.setVcmax(96.4, 48.9, 307.1 - 273.15, 505.0);
         fmc.setJmax(168.0, 8.5, 304.7 - 273.15, 476.7);
         fmc.setTPU(2.7, 32.1, 308.3 - 273.15, 471.6);
-        fmc.setRd(0.1);
+        fmc.setRd(0.1,46.39f);
         fmc.setQuantumEfficiency_alpha(0.077);
     } else if (s == "Western_Redbud" || s == "western_redbud" || s == "Redbud" || s == "redbud") {
         fmc.setVcmax(68.5, 66.6, 315.1 - 273.15, 496.0);
         fmc.setJmax(132.4, 41.2, 313.1 - 273.15, 474.0);
         fmc.setTPU(6.6, 34.3, 312.8 - 273.15, 463.2);
-        fmc.setRd(0.8);
+        fmc.setRd(0.8,46.39f);
         fmc.setQuantumEfficiency_alpha(0.41);
         fmc.setLightResponseCurvature_theta(0.04);
     } else if (s == "Baylaurel" || s == "baylaurel" || s == "Bay_Laurel" || s == "bay_laurel" || s == "bay" ||
@@ -306,13 +306,13 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setVcmax(97.5, 49.1, 308.6 - 273.15, 505.8);
         fmc.setJmax(193.0, 34.0, 308.5 - 273.15, 456.7);
         fmc.setTPU(3.3, 0.1, 309.4 - 273.15, 477.5);
-        fmc.setRd(0.1);
+        fmc.setRd(0.1,46.39f);
         fmc.setQuantumEfficiency_alpha(0.037);
     } else if (s == "Olive" || s == "olive") {
         fmc.setVcmax(75.9, 55.4, 315.2 - 273.15, 497.0);
         fmc.setJmax(170.4, 32.2, 312.5 - 273.15, 493.4);
         fmc.setTPU(8.3, 37.2, 311.7 - 273.15, 498.9);
-        fmc.setRd(1.9);
+        fmc.setRd(1.9,46.39f);
         fmc.setQuantumEfficiency_alpha(0.398);
     } else if (s == "EasternRedbudSunlit" || s == "easternredbudsunlit" || s == "easternredbud_sunlit" ||
                s == "EasternRedbud_Sunlit" || s == "EasternRedbud_sunlit" || s == "sunlitEasternRedbud" ||
@@ -320,15 +320,15 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setVcmax(104.35, 54.9927, 313.8828 - 273.15, 365.1581);
         fmc.setJmax(211.3090, 46.5415, 310.9710 - 273.15, 200.3197);
         fmc.setTPU(9.9965, 48.4469, 310.3164 - 273.15, 167.9181);
-        fmc.setRd(1.4136);
+        fmc.setRd(1.4136,46.39f);
         fmc.setQuantumEfficiency_alpha(0.4151);
     } else if (s == "EasternRedbudShaded" || s == "easternredbudshaded" || s == "easternredbud_shaded" ||
                s == "EasternRedbud_Shaded" || s == "EasternRedbud_shaded" || s == "shadedEasternRedbud" ||
                s == "ShadedEasternRedbud" || s == "eastern_redbud_shaded" || s == "Eastern_Redbud_Shaded") {
-        fmc.setVcmax(84.7);
+        fmc.setVcmax(84.7,65.33f);
         fmc.setJmax(190.53, 0.249);
         fmc.setTPU(9.53, 0.0747);
-        fmc.setRd(1.13);
+        fmc.setRd(1.13,46.39f);
         fmc.setQuantumEfficiency_alpha(0.713);
     } else {
         defaultSpecies = true;

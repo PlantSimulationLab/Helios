@@ -21,15 +21,15 @@ GNU General Public License for more details.
 struct PhotosyntheticTemperatureResponseParameters {
     PhotosyntheticTemperatureResponseParameters() {
         value_at_25C = 100.0f;
-        dHa = 2.0f;
-        dHd = 2.0f;
-        Topt = 273.15f + 38.f;
+        dHa = 60.0f;
+        dHd = 600.0f;
+        Topt = 10000.f;
     }
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C) {
         this->value_at_25C = value_at_25C;
-        this->dHa = 60.f;
-        this->dHd = 1000.f;
+        this->dHa = 0.f;
+        this->dHd = 600.f;
         this->Topt = 10000.f;
     }
 
@@ -164,46 +164,248 @@ public:
     float dH_Kc;
     float dH_Ko;
 
-    void setVcmax(float Vcmax_25C, float rate_of_increase_dHa = 65.33f, float optimum_temperature_in_C = 10000.f,
-                  float rate_of_decrease_dHd = 1000.f) {
-        this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_25C, rate_of_increase_dHa,
-                                                                              optimum_temperature_in_C,
-                                                                              rate_of_decrease_dHd);
+    //! Set Vcmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.
+    /**
+    * \param[in] Vcmax Value of Vcmax.
+    */
+    void setVcmax(float Vcmax) {
+        this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax);
     }
 
-    void setJmax(float Jmax_25C, float rate_of_increase_dHa = 46.36f, float optimum_temperature_in_C = 10000.f,
-                 float rate_of_decrease_dHd = 1000.f) {
-        this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_25C, rate_of_increase_dHa,
-                                                                             optimum_temperature_in_C,
-                                                                             rate_of_decrease_dHd);
+    //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] Vcmax_at_25_C Value of Vcmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Vcmax with temperature.
+    */
+    void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa) {
+        this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa);
     }
 
-    void setTPU(float TPU_25C, float rate_of_increase_dHa = 46.0f, float optimum_temperature_in_C = 10000.f,
-                float rate_of_decrease_dHd = 1000.f) {
-        this->TPUTempResponse = PhotosyntheticTemperatureResponseParameters(TPU_25C, rate_of_increase_dHa,
-                                                                            optimum_temperature_in_C,
-                                                                            rate_of_decrease_dHd);
+    //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] Vcmax_at_25_C Value of Vcmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Vcmax in Celcius.
+    * \note The rate of decrease of Vcmax with temperature will be assumed with a biologically reasonable default value if not specified.
+    */
+    void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] Vcmax_at_25_C Value of Vcmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Vcmax in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of Vcmax with temperature beyond the optimum.
+    */
+    void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set Jmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
+    /**
+    * \param[in] Jmax Value of Jmax.
+    */
+    void setJmax(float Jmax) {
+        this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax);
+    }
+
+    //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] Jmax_at_25_C Value of Jmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Jmax with temperature.
+    */
+    void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa) {
+        this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa);
+    }
+
+    //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] Jmax_at_25_C Value of Jmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Jmax in Celcius.
+    */
+    void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] Jmax_at_25_C Value of Jmax at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Jmax in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of Jmax with temperature beyond the optimum.
+    */
+    void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
+    /**
+    * \param[in] TPU Value of TPU at a reference of 25 Celcius.
+    */
+    void setTPU(float TPU) {
+        this->TPUTempResponse = PhotosyntheticTemperatureResponseParameters(TPU);
         this->TPU_flag = 1;
     }
 
-    void setRd(float Rd_25C, float rate_of_increase_dHa = 46.39f, float optimum_temperature_in_C = 10000.f,
-               float rate_of_decrease_dHd = 1000.f) {
-        this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_25C, rate_of_increase_dHa,
-                                                                           optimum_temperature_in_C,
-                                                                           rate_of_decrease_dHd);
+    //! Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] TPU_at_25_C Value of TPU at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of TPU with temperature.
+    * \note A temperature optimum will not be assumed if not specified.
+    */
+    void setTPU(float TPU_at_25_C, float rate_of_increase_dHa) {
+        this->TPUTempResponse = PhotosyntheticTemperatureResponseParameters(TPU_at_25_C, rate_of_increase_dHa);
+        this->TPU_flag = 1;
     }
 
-    void setQuantumEfficiency_alpha(float alpha_25C, float rate_of_increase_dHa = 0.f, float optimum_temperature_in_C = 10000.f, float rate_of_decrease_dHd = 1000.f) {
-        this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_25C, rate_of_increase_dHa,
-                                                                              optimum_temperature_in_C,
-                                                                              rate_of_decrease_dHd);
+    //! Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] TPU_at_25_C Value of TPU at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of TPU in Celcius.
+    * \note The rate of decrease will be assumed with a biologically reasonable default value if not specified.
+    */
+    void setTPU(float TPU_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->TPUTempResponse = PhotosyntheticTemperatureResponseParameters(TPU_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->TPU_flag = 1;
     }
 
-    void
-    setLightResponseCurvature_theta(float theta_25C, float rate_of_increase_dHa = 0.f, float optimum_temperature_in_C = 10000.f, float rate_of_decrease_dHd = 1000.f) {
-        this->thetaTempResponse = PhotosyntheticTemperatureResponseParameters(theta_25C, rate_of_increase_dHa,
-                                                                              optimum_temperature_in_C,
-                                                                              rate_of_decrease_dHd);
+    //! Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] TPU_at_25_C Value of TPU at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of TPU in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of TPU with temperature beyond the optimum.
+    */
+    void setTPU(float TPU_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->TPUTempResponse = PhotosyntheticTemperatureResponseParameters(TPU_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->TPU_flag = 1;
+    }
+
+    //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
+    /**
+    * \param[in] Rd Value of Rd at a reference of 25 Celcius.
+    */
+    void setRd(float Rd) {
+        this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd);
+    }
+
+    //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] Rd_at_25_C Value of Rd at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Rd with temperature.
+    */
+    void setRd(float Rd_at_25_C, float rate_of_increase_dHa) {
+        this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa);
+    }
+
+    //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] Rd_at_25_C Value of Rd at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Rd in Celcius.
+    * \note The rate of decrease will be assumed with a biologically reasonable default value if not specified.
+    */
+    void setRd(float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response ccording to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] Rd_at_25_C Value of Rd at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of Rd in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of Rd with temperature beyond the optimum.
+    */
+    void setRd(float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
+    /**
+    * \param[in] alpha Value of alpha at a reference of 25 Celcius.
+    */
+    void setQuantumEfficiency_alpha(float alpha) {
+        this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha);
+    }
+
+    //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] alpha_at_25_C Value of alpha at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of alpha with temperature.
+    */
+    void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa) {
+        this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa);
+    }
+
+    //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] alpha_at_25_C Value of alpha at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of alpha in Celcius.
+    * \note The rate of decrease will be assumed with a biologically reasonable default value if not specified.
+    */
+    void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] alpha_at_25_C Value of alpha at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of alpha in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of alpha with temperature beyond the optimum.
+    */
+    void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
+    /**
+    * \param[in] theta Value of theta at a reference of 25 Celcius.
+    */
+    void setLightResponseCurvature_theta(float theta) {
+        this->thetaTempResponse = PhotosyntheticTemperatureResponseParameters(theta);
+    }
+
+    //! Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
+    /**
+    * \param[in] theta_at_25_C Value of theta at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of theta with temperature.
+    */
+    void setLightResponseCurvature_theta(float theta_at_25_C, float rate_of_increase_dHa) {
+        this->thetaTempResponse = PhotosyntheticTemperatureResponseParameters(theta_at_25_C, rate_of_increase_dHa);
+    }
+
+    //! Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
+    /**
+    * \param[in] theta_at_25_C Value of theta at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of theta with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of theta in Celcius.
+    * \note The rate of decrease will be assumed with a biologically reasonable default value if not specified.
+    */
+    void setLightResponseCurvature_theta(float theta_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        float rate_of_decrease_dHd = 10.f*rate_of_increase_dHa;
+        this->thetaTempResponse = PhotosyntheticTemperatureResponseParameters(theta_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+    }
+
+    //! Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
+    /**
+    * \param[in] theta_at_25_C Value of theta at a reference of 25 Celcius.
+    * \param[in] rate_of_increase_dHa Activation energy dHa controlling the rate of increase of theta with temperature before the optimum.
+    * \param[in] optimum_temperature_in_C Temperature optimum of reaction in Celcius.
+    * \param[in] rate_of_decrease_dHd Dectivation energy dHd controlling the rate of decrease of theta with temperature beyond the optimum.
+    */
+    void setLightResponseCurvature_theta(float theta_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        this->thetaTempResponse = PhotosyntheticTemperatureResponseParameters(theta_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
     }
 
     PhotosyntheticTemperatureResponseParameters getVcmaxTempResponse() {
@@ -318,7 +520,6 @@ public:
      * \return Farquhar-von Caemmerer-Berry model coefficients for the species.
      */
     FarquharModelCoefficients getFarquharCoefficientsFromLibrary(const std::string &species);
-
 
     //! Run the model for all UUIDs in the Context
     void run();

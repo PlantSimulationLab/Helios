@@ -2307,9 +2307,58 @@ void Visualizer::addTextboxByCenter( const char* textstring, const vec3 &center,
     std::vector<std::vector<uint> > maskData; //This will hold the letter mask data
 
     //Load the font
-    char font[100];
-    std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
-    if(FT_New_Face(ft, font, 0, &face)!=0) {
+    std::string font;
+    // std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
+    font = "plugins/visualizer/fonts/" + (std::string) fontname + ".ttf";
+    auto error = FT_New_Face(ft, font.c_str(), 0, &face);
+    if (error != 0) {
+        switch (error) {
+            case FT_Err_Ok: ; // do nothing
+            case FT_Err_Cannot_Open_Resource: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot open resource.");
+            case FT_Err_Unknown_File_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unknown file format.");
+            case FT_Err_Invalid_File_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid file format.");
+            case FT_Err_Invalid_Version: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid FreeType version.");
+            case FT_Err_Lower_Module_Version: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Lower module version.");
+            case FT_Err_Invalid_Argument: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid argument.");
+            case FT_Err_Unimplemented_Feature: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unimplemented feature.");
+            case FT_Err_Invalid_Table: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid table.");
+            case FT_Err_Invalid_Offset: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid offset.");
+            case FT_Err_Array_Too_Large: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Array too large.");
+            case FT_Err_Missing_Module: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Missing module.");
+            case FT_Err_Out_Of_Memory: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Out of memory.");
+            case FT_Err_Invalid_Face_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid face handle.");
+            case FT_Err_Invalid_Size_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid size handle.");
+            case FT_Err_Invalid_Slot_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid slot handle.");
+            case FT_Err_Invalid_CharMap_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid charmap handle.");
+            case FT_Err_Invalid_Glyph_Index: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid glyph index.");
+            case FT_Err_Invalid_Character_Code: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid character code.");
+            case FT_Err_Invalid_Glyph_Format: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid glyph format.");
+            case FT_Err_Cannot_Render_Glyph: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Cannot render glyph.");
+            case FT_Err_Invalid_Outline: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid outline.");
+            case FT_Err_Invalid_Composite: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid composite glyph.");
+            case FT_Err_Too_Many_Hints: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too many hints.");
+            case FT_Err_Invalid_Pixel_Size: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid pixel size.");
+            case FT_Err_Invalid_Library_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid library handle.");
+            case FT_Err_Invalid_Stream_Handle: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid stream handle.");
+            case FT_Err_Invalid_Frame_Operation: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid frame operation.");
+            case FT_Err_Nested_Frame_Access: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Nested frame access.");
+            case FT_Err_Invalid_Frame_Read: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid frame read.");
+            case FT_Err_Raster_Uninitialized: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster uninitialized.");
+            case FT_Err_Raster_Corrupted: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster corrupted.");
+            case FT_Err_Raster_Overflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster overflow.");
+            case FT_Err_Raster_Negative_Height: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Raster negative height.");
+            case FT_Err_Too_Many_Caches: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too many caches.");
+            case FT_Err_Invalid_Opcode: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Invalid opcode.");
+            case FT_Err_Too_Few_Arguments: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Too few arguments.");
+            case FT_Err_Stack_Overflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Stack overflow.");
+            case FT_Err_Stack_Underflow: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Stack underflow.");
+            case FT_Err_Ignore: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Ignore.");
+            case FT_Err_No_Unicode_Glyph_Name: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): No Unicode glyph name.");
+            case FT_Err_Missing_Property: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Missing property.");
+            default: helios_runtime_error( "ERROR (Visualizer::addTextboxByCenter): Unknown FreeType error.");
+        }
+    }
+    if(error!=0) {
         helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not open font '" + std::string(fontname) + "'");
     }
 
@@ -3462,6 +3511,157 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
 }
 
+glm::mat4 Visualizer::plotInit() {
+
+    if( message_flag ){
+        std::cout << "Generating interactive plot..." << std::endl;
+    }
+
+//    glfwShowWindow( (GLFWwindow*) window);
+
+//    openWindow();
+
+    //Update the Context geometry (if needed)
+    if( contextGeomNeedsUpdate ){
+        buildContextGeometry_private();
+    }else{
+        colormap_current.setRange( colorbar_min, colorbar_max );
+    }
+
+    //Update
+    if( colorbar_flag==2 ){
+        addColorbarByCenter( colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current );
+    }
+
+    //Watermark
+    if( isWatermarkVisible ){
+        float hratio = float(Wdisplay)/float(Hdisplay);
+        float width = 0.2389f/0.8f/hratio;
+        addRectangleByCenter( make_vec3(0.75f*width,0.95f,0), make_vec2(width,0.07), make_SphericalCoord(0,0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED );
+    }
+
+    setupPlot();
+
+    //domain bounding box
+    vec2 xbounds, ybounds, zbounds;
+    getDomainBoundingBox( xbounds, ybounds, zbounds );
+
+    glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
+    //float bound_R = 2.f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
+    float bound_R = 0.75*sqrtf( pow(xbounds.y-xbounds.x,2) + pow(ybounds.y-ybounds.x,2) + pow(zbounds.y-zbounds.x,2) );
+
+    glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
+
+    bool shadow_flag = false;
+    for( uint m=0; m<primaryLightingModel.size(); m++ ){
+        if( primaryLightingModel.at(m) == Visualizer::LIGHTING_PHONG_SHADOWED ){
+            shadow_flag = true;
+            break;
+        }
+    }
+
+    glm::mat4 depthMVP;
+
+    if( shadow_flag ){
+
+        // Depth buffer for shadows
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+        glViewport(0,0,8192,8192); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+        //glViewport(0,0,16384,16384); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+
+        // Clear the screen
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+        depthShader.useShader();
+
+        // Compute the MVP matrix from the light's point of view
+        glm::mat4 depthProjectionMatrix = glm::ortho<float>(-bound_R,bound_R,-bound_R,bound_R,-bound_R,bound_R);
+        glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir, view_center, glm::vec3(0,0,1));
+        depthMVP = depthProjectionMatrix * depthViewMatrix;
+
+        depthShader.setTransformationMatrix( depthMVP );
+
+        //bind depth texture
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
+
+        depthShader.enableTextureMaps();
+        depthShader.enableTextureMasks();
+
+        render( 1 );
+
+    }else{
+
+        depthMVP = glm::mat4(1.0);
+
+    }
+
+    assert(checkerrors());
+
+    std::vector<vec3> camera_output;
+
+    glfwShowWindow( (GLFWwindow*) window);
+
+    return depthMVP;
+
+}
+
+void Visualizer::plotOnce(glm::mat4 depthMVP, bool getKeystrokes) {
+    // Render to the screen
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+    glViewport(0,0,Wframebuffer,Hframebuffer);
+
+    glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
+
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    primaryShader.useShader();
+
+    updatePerspectiveTransformation( camera_lookat_center, camera_eye_location );
+
+    glm::mat4 biasMatrix(
+            0.5, 0.0, 0.0, 0.0,
+            0.0, 0.5, 0.0, 0.0,
+            0.0, 0.0, 0.5, 0.0,
+            0.5, 0.5, 0.5, 1.0
+    );
+
+    glm::mat4 DepthBiasMVP = biasMatrix*depthMVP;
+
+    primaryShader.setDepthBiasMatrix( DepthBiasMVP );
+
+    primaryShader.setTransformationMatrix( perspectiveTransformationMatrix );
+
+    primaryShader.enableTextureMaps();
+    primaryShader.enableTextureMasks();
+
+    primaryShader.setLightingModel( primaryLightingModel.at(0) );
+    primaryShader.setLightIntensity( lightintensity );
+
+    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glUniform1i(primaryShader.shadowmapUniform,1);
+
+    render( 0 );
+
+    // glfwPollEvents();
+    if ( getKeystrokes ){
+        getViewKeystrokes( camera_eye_location, camera_lookat_center );
+    }
+
+    // glfwSwapBuffers((GLFWwindow*)window);
+
+    // glfwWaitEvents();
+
+    int width, height;
+    //glfwGetWindowSize((GLFWwindow*)window, &width, &height );
+    //Wdisplay = width;
+    //Hdisplay = height;
+    glfwGetFramebufferSize((GLFWwindow*)window, &width, &height );
+    Wframebuffer = width;
+    Hframebuffer = height;
+}
+
 void Visualizer::setupPlot(){
 
     glEnableVertexAttribArray(0); //position
@@ -4480,6 +4680,49 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     camera_eye_location = sphere2cart( make_SphericalCoord(radius,theta,phi) ) + center;
 
 
+}
+
+void* Visualizer::getWindow(){
+    return window;
+}
+
+std::vector<uint> Visualizer::getFrameBufferSize(){
+    std::vector<uint> frameBufferSize = {Wframebuffer, Hframebuffer};
+    return frameBufferSize;
+}
+
+void Visualizer::setFrameBufferSize(int width, int height){
+    Wframebuffer = width;
+    Hframebuffer = height;
+}
+
+helios::RGBcolor Visualizer::getBackgroundColor(){
+    return backgroundColor;
+}
+
+Shader Visualizer::getPrimaryShader(){
+    return primaryShader;
+}
+
+std::vector<helios::vec3> Visualizer::getCameraPosition(){
+    std::vector<helios::vec3> cameraPosition = {camera_lookat_center, camera_eye_location};
+    return cameraPosition;
+}
+
+glm::mat4 Visualizer::getPerspectiveTransformationMatrix(){
+    return perspectiveTransformationMatrix;
+}
+
+std::vector<Visualizer::LightingModel> Visualizer::getPrimaryLightingModel(){
+    return primaryLightingModel;
+}
+
+uint Visualizer::getDepthTexture(){
+    return depthTexture;
+}
+
+void Visualizer::clearColor(){
+    colorPrimitivesByData = "";
 }
 
 std::string errorString( GLenum err ){

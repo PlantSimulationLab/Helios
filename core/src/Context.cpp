@@ -175,16 +175,11 @@ uint Primitive::getParentObjectID() const{
 }
 
 void Primitive::getTransformationMatrix( float (&T)[16] )const {
-    for( int i=0; i<16; i++ ){
-        T[i]=transform[i];
-    }
+    std::memcpy(T, transform, 16 * sizeof(float));
 }
 
 void Primitive::setTransformationMatrix( float (&T)[16] ){
-
-    for( int i=0; i<16; i++ ){
-        transform[i] = T[i];
-    }
+    std::memcpy(transform, T, 16 * sizeof(float));
 }
 
 float Patch::getArea() const{
@@ -1650,9 +1645,11 @@ uint Context::copyPrimitive( uint UUID ){
 }
 
 Primitive* Context::getPrimitivePointer_private( uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getPrimitivePointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
+#endif
     return primitives.at(UUID);
 }
 
@@ -1673,42 +1670,51 @@ bool Context::doesPrimitiveExist( const std::vector<uint> &UUIDs ) const{
 }
 
 Patch* Context::getPatchPointer_private(uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
         helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
+#endif
     return dynamic_cast<Patch*>(primitives.at(UUID));
 }
 
 helios::vec2 Context::getPatchSize( uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
         helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
+#endif
     return dynamic_cast<Patch*>(primitives.at(UUID))->getSize();
 }
 
 helios::vec3 Context::getPatchCenter( uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_PATCH ){
         helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
+#endif
     return dynamic_cast<Patch*>(primitives.at(UUID))->getCenter();
 }
 
 Triangle* Context::getTrianglePointer_private(uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
         helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " is not a triangle.");
     }
+#endif
     return dynamic_cast<Triangle*>(primitives.at(UUID));
 }
 
 helios::vec3 Context::getTriangleVertex( uint UUID, uint number ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getTriangleVertex): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_TRIANGLE ){
@@ -1716,43 +1722,49 @@ helios::vec3 Context::getTriangleVertex( uint UUID, uint number ) const{
     }else if( number>2 ){
         helios_runtime_error("ERROR (Context::getTriangleVertex): Vertex index must be one of 0, 1, or 2.");
     }
+#endif
     return dynamic_cast<Triangle*>(primitives.at(UUID))->getVertex( number );
 }
 
 void Context::setTriangleVertices( uint UUID, const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 ) {
-
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ) {
         helios_runtime_error("ERROR (Context::setTriangleVertices): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
-
+#endif
     dynamic_cast<Triangle*>(primitives.at(UUID))->setVertices(vertex0, vertex1, vertex2);
-
 }
 
 Voxel* Context::getVoxelPointer_private(uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
         helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
     }
+#endif
     return dynamic_cast<Voxel*>(primitives.at(UUID));
 }
 
 helios::vec3 Context::getVoxelSize( uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
         helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
+#endif
     return dynamic_cast<Voxel*>(primitives.at(UUID))->getSize();
 }
 
 helios::vec3 Context::getVoxelCenter( uint UUID ) const{
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( primitives.at(UUID)->getType()!=PRIMITIVE_TYPE_VOXEL ){
         helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
     }
+#endif
     return dynamic_cast<Voxel*>(primitives.at(UUID))->getCenter();
 }
 
@@ -1763,7 +1775,7 @@ uint Context::getPrimitiveCount() const{
 std::vector<uint> Context::getAllUUIDs() const{
     std::vector<uint> UUIDs(primitives.size());
     size_t i=0;
-    for( auto primitive : primitives){
+    for( const auto &primitive : primitives){
         if( primitive.second->ishidden ){
             continue;
         }
@@ -2044,48 +2056,57 @@ std::vector<std::string> Context::listTimeseriesVariables() const{
 
 
 void Context::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zbounds ) const{
-
-    xbounds.x = 1e8;
-    xbounds.y = -1e8;
-    ybounds.x = 1e8;
-    ybounds.y = -1e8;
-    zbounds.x = 1e8;
-    zbounds.y = -1e8;
-
-    for( auto primitive : primitives){
-
-        const std::vector<vec3> &verts = getPrimitivePointer_private(primitive.first)->getVertices();
-
-        for( auto & vert : verts){
-            if( vert.x<xbounds.x ){
-                xbounds.x = vert.x;
-            }else if( vert.x>xbounds.y ){
-                xbounds.y = vert.x;
-            }
-            if( vert.y<ybounds.x ){
-                ybounds.x = vert.y;
-            }else if( vert.y>ybounds.y ){
-                ybounds.y = vert.y;
-            }
-            if( vert.z<zbounds.x ){
-                zbounds.x = vert.z;
-            }else if( vert.z>zbounds.y ){
-                zbounds.y = vert.z;
-            }
-        }
-
-    }
-
+    getDomainBoundingBox( getAllUUIDs(), xbounds, ybounds, zbounds );
 }
 
 void Context::getDomainBoundingBox( const std::vector<uint>& UUIDs, vec2& xbounds, vec2& ybounds, vec2& zbounds ) const{
 
-    xbounds.x = 1e8;
-    xbounds.y = -1e8;
-    ybounds.x = 1e8;
-    ybounds.y = -1e8;
-    zbounds.x = 1e8;
-    zbounds.y = -1e8;
+    // Global bounding box initialization
+    xbounds.x = 1e8;  // global min x
+    xbounds.y = -1e8; // global max x
+    ybounds.x = 1e8;  // global min y
+    ybounds.y = -1e8; // global max y
+    zbounds.x = 1e8;  // global min z
+    zbounds.y = -1e8; // global max z
+
+    // Parallel region over the primitives (UUIDs)
+#ifdef USE_OPENMP
+    #pragma omp parallel
+    {
+        // Each thread creates its own local bounding box.
+        float local_xmin = 1e8, local_xmax = -1e8;
+        float local_ymin = 1e8, local_ymax = -1e8;
+        float local_zmin = 1e8, local_zmax = -1e8;
+
+        // Parallelize the outer loop over primitives. Use "for" inside the parallel region.
+        #pragma omp for nowait
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            // For each primitive:
+            const std::vector<vec3>& verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
+            // Update local bounding box for each vertex in this primitive.
+            for (const auto &vert : verts) {
+                local_xmin = std::min(local_xmin, vert.x);
+                local_xmax = std::max(local_xmax, vert.x);
+                local_ymin = std::min(local_ymin, vert.y);
+                local_ymax = std::max(local_ymax, vert.y);
+                local_zmin = std::min(local_zmin, vert.z);
+                local_zmax = std::max(local_zmax, vert.z);
+            }
+        }
+
+        // Merge the thread-local bounds into the global bounds.
+        #pragma omp critical
+        {
+            xbounds.x = std::min(xbounds.x, local_xmin);
+            xbounds.y = std::max(xbounds.y, local_xmax);
+            ybounds.x = std::min(ybounds.x, local_ymin);
+            ybounds.y = std::max(ybounds.y, local_ymax);
+            zbounds.x = std::min(zbounds.x, local_zmin);
+            zbounds.y = std::max(zbounds.y, local_zmax);
+        }
+    } // end parallel region
+
+#else
 
     for( uint UUID : UUIDs){
 
@@ -2110,6 +2131,8 @@ void Context::getDomainBoundingBox( const std::vector<uint>& UUIDs, vec2& xbound
         }
 
     }
+
+#endif
 
 }
 
@@ -2572,9 +2595,11 @@ void Context::cleanDeletedObjectIDs( std::vector<std::vector<std::vector<uint>>>
 }
 
 CompoundObject* Context::getObjectPointer( uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return objects.at(ObjID);
 }
 
@@ -3310,9 +3335,11 @@ Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, c
 }
 
 Tile* Context::getTileObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Tile*>(objects.at(ObjID));
 }
 
@@ -3408,9 +3435,11 @@ Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, cons
 }
 
 Sphere* Context::getSphereObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Sphere*>(objects.at(ObjID));
 }
 
@@ -3484,9 +3513,11 @@ Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3>
 }
 
 Tube* Context::getTubeObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Tube*>(objects.at(ObjID));
 }
 
@@ -3979,9 +4010,11 @@ Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, con
 }
 
 Box* Context::getBoxObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Box*>(objects.at(ObjID));
 }
 
@@ -4047,9 +4080,11 @@ Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const ch
 }
 
 Disk* Context::getDiskObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Disk*>(objects.at(ObjID));
 }
 
@@ -4106,9 +4141,11 @@ Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_t
 }
 
 Polymesh* Context::getPolymeshObjectPointer(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Polymesh*>(objects.at(ObjID));
 }
 
@@ -4148,9 +4185,11 @@ Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, co
 }
 
 Cone* Context::getConeObjectPointer( const uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return dynamic_cast<Cone*>(objects.at(ObjID));
 }
 
@@ -7919,9 +7958,11 @@ void Context::printObjectInfo(uint ObjID) const{
 }
 
 CompoundObject* Context::getObjectPointer_private( uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     return objects.at(ObjID);
 }
 

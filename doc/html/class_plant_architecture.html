@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: PlantArchitecture Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -179,10 +214,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a48c8a01f66fb38357bddc9eac35173e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance plant growth by a specified time interval for a single plant.  <br /></td></tr>
 <tr class="separator:a48c8a01f66fb38357bddc9eac35173e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9700f223b8f60bf37852ad87d30e7fc0" id="r_a9700f223b8f60bf37852ad87d30e7fc0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9700f223b8f60bf37852ad87d30e7fc0">defineShootType</a> (const std::string &amp;shoot_type_label, const <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> &amp;shoot_params)</td></tr>
-<tr class="memdesc:a9700f223b8f60bf37852ad87d30e7fc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define a new shoot type based on a set of <a class="el" href="struct_shoot_parameters.html">ShootParameters</a>.  <br /></td></tr>
+<tr class="memdesc:a9700f223b8f60bf37852ad87d30e7fc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define a new shoot type based on a set of ShootParameters.  <br /></td></tr>
 <tr class="separator:a9700f223b8f60bf37852ad87d30e7fc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a32e88ebd4d0bb468f6c0a2655833bff6" id="r_a32e88ebd4d0bb468f6c0a2655833bff6"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a32e88ebd4d0bb468f6c0a2655833bff6">addBaseStemShoot</a> (uint plantID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &amp;shoot_type_label)</td></tr>
-<tr class="memdesc:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the <a class="el" href="#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance()</a> method.  <br /></td></tr>
+<tr class="memdesc:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the addPlantInstance() method.  <br /></td></tr>
 <tr class="separator:a32e88ebd4d0bb468f6c0a2655833bff6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a25a69b3eee4eab6501a8bedc777b8c55" id="r_a25a69b3eee4eab6501a8bedc777b8c55"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25a69b3eee4eab6501a8bedc777b8c55">appendShoot</a> (uint plantID, int parent_shoot_ID, uint current_node_number, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &amp;shoot_type_label)</td></tr>
 <tr class="memdesc:a25a69b3eee4eab6501a8bedc777b8c55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually append a new shoot at the end of an existing shoot. This is used when the characteristics of a shoot change along its length (e.g., from a unifoliate to trifoliate leaf).  <br /></td></tr>
@@ -457,24 +492,24 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the <a class="el" href="#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance()</a> method. </p>
+<p>Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the addPlantInstance() method. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">current_node_number</td><td>Number of nodes of the stem shoot. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">base_rotation</td><td><a class="el" href="struct_axis_rotation.html">AxisRotation</a> object (pitch, yaw, roll) specifying the orientation of the base of the shoot. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">base_rotation</td><td>AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_radius</td><td>Radius of the internodes along the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_max</td><td>Maximum length (i.e., fully elongated) of the internodes along the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_scale_factor_fraction</td><td>Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">leaf_scale_factor_fraction</td><td>Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">radius_taper</td><td>Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the <a class="el" href="#a9700f223b8f60bf37852ad87d30e7fc0" title="Define a new shoot type based on a set of ShootParameters.">defineShootType()</a> method. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new shoot to be used to reference it later. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01982">1982</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01970">1970</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -554,20 +589,20 @@ Friends</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">parent_shoot_ID</td><td>ID of the shoot to which the new shoot will be added. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">parent_node_index</td><td>Number of the node of the parent shoot at which the new shoot will be added. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">current_node_number</td><td>Number of nodes of the newly added shoot. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_base_rotation</td><td><a class="el" href="struct_axis_rotation.html">AxisRotation</a> object (pitch, yaw, roll) specifying the orientation of the base of the shoot. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_base_rotation</td><td>AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_radius</td><td>Initial radius of the internodes along the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_max</td><td>Length of the internode of the newly appended shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_scale_factor_fraction</td><td>Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">leaf_scale_factor_fraction</td><td>Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">radius_taper</td><td>Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the <a class="el" href="#a9700f223b8f60bf37852ad87d30e7fc0" title="Define a new shoot type based on a set of ShootParameters.">defineShootType()</a> method. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">petiole_index</td><td>[OPTIONAL] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode) </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the newly generated shoot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02057">2057</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02045">2045</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -648,13 +683,13 @@ Friends</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_scale_factor_fraction</td><td>Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">leaf_scale_factor_fraction</td><td>Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">radius_taper</td><td>Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the <a class="el" href="#a9700f223b8f60bf37852ad87d30e7fc0" title="Define a new shoot type based on a set of ShootParameters.">defineShootType()</a> method. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the newly generated shoot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02100">2100</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02088">2088</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -687,7 +722,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the plant instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02851">2851</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02839">2839</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -714,7 +749,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02959">2959</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02947">2947</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -746,7 +781,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02967">2967</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02955">2955</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -778,7 +813,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02975">2975</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02963">2963</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -841,7 +876,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of generated phytomer </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02136">2136</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02124">2124</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -910,19 +945,19 @@ Friends</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>ID of the plant instance. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">parent_shoot_ID</td><td>ID of the shoot to which the new shoot will be appended. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">current_node_number</td><td>Number of nodes/phytomers of the newly appended shoot. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">base_rotation</td><td><a class="el" href="struct_axis_rotation.html">AxisRotation</a> object (pitch, yaw, roll) specifying the orientation of the base of the shoot relative to the parent shoot. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">base_rotation</td><td>AxisRotation object (pitch, yaw, roll) specifying the orientation of the base of the shoot relative to the parent shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_radius</td><td>Initial radius of the internodes along the shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_max</td><td>Length of the internode of the newly appended shoot. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">internode_length_scale_factor_fraction</td><td>Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">leaf_scale_factor_fraction</td><td>Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">radius_taper</td><td>Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the <a class="el" href="#a9700f223b8f60bf37852ad87d30e7fc0" title="Define a new shoot type based on a set of ShootParameters.">defineShootType()</a> method. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new shoot to be used to reference it later. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02013">2013</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02001">2001</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -941,7 +976,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02530">2530</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02518">2518</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1048,7 +1083,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Define a new shoot type based on a set of <a class="el" href="struct_shoot_parameters.html">ShootParameters</a>. </p>
+<p>Define a new shoot type based on a set of ShootParameters. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">shoot_type_label</td><td>User-defined label for the new shoot type. This string is used later to reference this type of shoot. </td></tr>
@@ -1084,7 +1119,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02924">2924</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02912">2912</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1111,7 +1146,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02914">2914</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02902">2902</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1130,7 +1165,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02847">2847</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02835">2835</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1151,7 +1186,7 @@ Friends</h2></td></tr>
 
 <p>Do not build internode primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02215">2215</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02203">2203</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1172,7 +1207,7 @@ Friends</h2></td></tr>
 
 <p>Do not build peduncle primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02223">2223</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02211">2211</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1193,7 +1228,7 @@ Friends</h2></td></tr>
 
 <p>Do not build petiole primitive geometry in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02219">2219</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02207">2207</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1212,7 +1247,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02950">2950</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02938">2938</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1256,7 +1291,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID of the new plant instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02866">2866</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02854">2854</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1275,7 +1310,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02843">2843</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02831">2831</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1314,7 +1349,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02201">2201</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02189">2189</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1341,7 +1376,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02227">2227</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02215">2215</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1409,7 +1444,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing flower primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all flower primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02814">2814</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02802">2802</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1431,7 +1466,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing fruit primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all fruit primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02824">2824</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02812">2812</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1453,7 +1488,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing internode primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all internode primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02784">2784</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02772">2772</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1475,7 +1510,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing leaf primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all leaf primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02774">2774</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02762">2762</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1497,7 +1532,7 @@ Friends</h2></td></tr>
 <p>Get object IDs for all existing plant compound objects. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all plant compound objects. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02834">2834</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02822">2822</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1519,7 +1554,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing peduncle primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all peduncle primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02804">2804</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02792">2792</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1541,7 +1576,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing petiole primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all petiole primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02794">2794</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02782">2782</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1563,7 +1598,7 @@ Friends</h2></td></tr>
 <p>Get IDs for all plant instances. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of plant IDs for all plant instances </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02586">2586</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02574">2574</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1591,7 +1626,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all organs in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02598">2598</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02586">2586</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1619,7 +1654,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of primitive UUIDs for all primitives in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02629">2629</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02617">2617</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1641,7 +1676,7 @@ Friends</h2></td></tr>
 <p>Get UUIDs for all existing plant primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for all plant primitives. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02765">2765</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02753">2753</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1661,7 +1696,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get the phytomer parameters structure for all shoot types in the current plant model. </p>
-<dl class="section return"><dt>Returns</dt><dd>Map of phytomer parameters for all type labels to <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> structure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Map of phytomer parameters for all type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding PhytomerParameters structure. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00110">110</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
@@ -1683,7 +1718,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get the shoot parameters structure for all shoot types in the current plant model. </p>
-<dl class="section return"><dt>Returns</dt><dd>Map of shoot type labels to <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Map of shoot type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding ShootParameters structure. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00103">103</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
@@ -1711,7 +1746,7 @@ Friends</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd><a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure for the specified shoot type. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>ShootParameters structure for the specified shoot type. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_plant_library_8cpp_source.html#l00094">94</a> of file <a class="el" href="_plant_library_8cpp_source.html">PlantLibrary.cpp</a>.</p>
 
@@ -1732,7 +1767,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02462">2462</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02450">2450</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1751,7 +1786,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02306">2306</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02294">2294</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1779,7 +1814,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all inflorescences in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02715">2715</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02703">2703</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1807,7 +1842,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all fruits in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02740">2740</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02728">2728</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1835,7 +1870,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Height of the highest element in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02368">2368</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02356">2356</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1863,7 +1898,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all internodes in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02633">2633</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02621">2621</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1891,7 +1926,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total number of leaves on the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02414">2414</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02402">2402</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1924,7 +1959,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Histogram of leaf inclination angles. Bins are evenly spaced between 0 and 90 degrees. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02382">2382</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02370">2370</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1952,7 +1987,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all leaves in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02672">2672</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02660">2660</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1971,7 +2006,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02455">2455</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02443">2443</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1999,7 +2034,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all peduncles in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02692">2692</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02680">2680</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2027,7 +2062,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of object IDs for all petioles in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02652">2652</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02640">2640</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2055,7 +2090,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Height of the last internode on the base stem/shoot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02331">2331</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02319">2319</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2097,7 +2132,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02556">2556</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02544">2544</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2120,7 +2155,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02565">2565</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02553">2553</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2139,7 +2174,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02471">2471</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02459">2459</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2172,7 +2207,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02231">2231</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02219">2219</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2288,7 +2323,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02518">2518</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02506">2506</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2315,7 +2350,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03383">3383</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03371">3371</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2342,7 +2377,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03391">3391</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03379">3379</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2370,7 +2405,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02540">2540</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02528">2528</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2412,7 +2447,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02506">2506</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02494">2494</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2435,7 +2470,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02490">2490</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02478">2478</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2497,7 +2532,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02271">2271</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02259">2259</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2520,7 +2555,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02450">2450</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02438">2438</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2543,7 +2578,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02292">2292</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02280">2280</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2618,7 +2653,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02930">2930</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02918">2918</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2646,7 +2681,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total one-sided leaf area of all leaves in the plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02315">2315</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02303">2303</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -2740,7 +2775,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02424">2424</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l02412">2412</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>

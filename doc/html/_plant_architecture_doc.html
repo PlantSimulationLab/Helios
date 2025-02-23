@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Plant Architecture Model Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -264,7 +299,7 @@ $(function(){initNavTree('_plant_architecture_doc.html',''); initResizable(true)
 <tr>
 <th>CMakeLists.txt</th><td>set( PLUGINS "plantarchitecture" ) </td></tr>
 <tr>
-<th>Header File</th><td>#include "PlantArchitecture.h" </td></tr>
+<th>Header File</th><td>include "PlantArchitecture.h" </td></tr>
 <tr>
 <th>Class</th><td><a class="el" href="class_plant_architecture.html">PlantArchitecture</a> </td></tr>
 </table>
@@ -306,7 +341,6 @@ Optional Output Object Data</h2>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.optionalOutputData(<span class="stringliteral">&quot;plantID&quot;</span>); <span class="comment">//insert appropriate label from the table above</span></div>
-<div class="ttc" id="aclass_plant_architecture_html"><div class="ttname"><a href="class_plant_architecture.html">PlantArchitecture</a></div><div class="ttdef"><b>Definition</b> <a href="_plant_architecture_8h_source.html#l01113">PlantArchitecture.h:1113</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchOverview"></a>
 Plug-in Overview</h1>
 <p>This plug-in provides a generalized framework for creating dynamic procedural plant models for a very wide range of species. The plug-in comes with a library of a number of different plant models, which have a common set of parameters that can be adjusted by the user. Parameters defining the plant can be set to constant values, or randomized based on a number of different distributions. The plant model can be grown over time, and will transition through different phenological stages such as dormancy, flowering, fruit set, and senescence. Users can also create their own plant models by changing model parameters, or build custom plants branch-by-branch.</p>
@@ -368,20 +402,17 @@ Loading a Plant from the Library with Default Parameters</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">float</span> age = 45;</div>
-<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>, age );</div>
+<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, age );</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
-<div class="ttc" id="a_plant_architecture_8h_html"><div class="ttname"><a href="_plant_architecture_8h.html">PlantArchitecture.h</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
-<div class="ttc" id="aglobal_8h_html_a876dc18d1da8ace50c131f428f8883be"><div class="ttname"><a href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a></div><div class="ttdeci">vec3 nullorigin</div><div class="ttdoc">Default null vec3 that gives the origin (0,0,0)</div><div class="ttdef"><b>Definition</b> <a href="global_8cpp_source.html#l00058">global.cpp:58</a></div></div>
 </div><!-- fragment --><p>This will create a default bean plant that is 45 days old (i.e., 45 days since emergence).</p>
 <p>Multiple plants can be created manually by calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method multiple times with different base positions. There is also a method available to build a canopy of regularly-spaced plants: <a class="el" href="class_plant_architecture.html#a9cc3b3b4f6e37fa416c139f6bf1618bd">PlantArchitecture::buildPlantCanopyFromLibrary()</a>.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
@@ -389,23 +420,20 @@ Loading a Plant from the Library with Default Parameters</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> canopy_center = <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>;</div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html">vec2</a> plant_spacing(0.5, 0.15);</div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1int2.html">int2</a> plant_count(3,3);</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> canopy_center = <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>;</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> plant_spacing(0.5, 0.15);</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> plant_count(3,3);</div>
 <div class="line">    <span class="keywordtype">float</span> age = 45;</div>
 <div class="line">    plantarchitecture.buildPlantCanopyFromLibrary( canopy_center, plant_spacing, plant_count, age );</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
-<div class="ttc" id="astructhelios_1_1int2_html"><div class="ttname"><a href="structhelios_1_1int2.html">helios::int2</a></div><div class="ttdoc">Vector of two elements of type &#39;int&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00044">helios_vector_types.h:44</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec2_html"><div class="ttname"><a href="structhelios_1_1vec2.html">helios::vec2</a></div><div class="ttdoc">Vector of two elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00346">helios_vector_types.h:346</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="PlantArchGrowth"></a>
 Growing the Model over Time</h2>
 <p>The model can be grown over time by calling the <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a> method after the plant instance has been created, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to <a class="el" href="class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7">PlantArchitecture::advanceTime()</a>.</p>
@@ -442,41 +470,41 @@ Growth Phenology</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">"apple"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1460 days (4 years)    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"bean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"bean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"bindweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">50 days    </td></tr>
+<td class="markdownTableBodyNone">"bindweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">50 days    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"butterlettuce"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"butterlettuce"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"cheeseweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40 days    </td></tr>
+<td class="markdownTableBodyNone">"cheeseweed"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40 days    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"cowpea"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"cowpea"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">"easternredbud"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">2 years   </td><td class="markdownTableBodyNone">1460 days (4 years)    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">"grapevine_VSP"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">45   </td><td class="markdownTableBodyNone">45   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"maize"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"maize"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">"olive"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1825 days (5 years)    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">"pistachio"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1095 days (3 years)    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"puncturevine"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">45 days    </td></tr>
+<td class="markdownTableBodyNone">"puncturevine"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">14   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">45 days    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"rice"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">15   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"rice"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">15   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"sorghum"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"sorghum"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"soybean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"soybean"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">"sugarbeet"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"sugarbeet"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"tomato"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
+<td class="markdownTableBodyNone">"tomato"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">40   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">30   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">"walnut"   </td><td class="markdownTableBodyNone">165   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">3   </td><td class="markdownTableBodyNone">7   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">200   </td><td class="markdownTableBodyNone">3 years   </td><td class="markdownTableBodyNone">1095 days (3 years)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">"wheat"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone"><img class="formulaInl" alt="$\infty$" src="form_162.png" width="15" height="8"/>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)   </td></tr>
+<td class="markdownTableBodyNone">"wheat"   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">-1   </td><td class="markdownTableBodyNone">4   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">\(\infty\)   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">365 days (1 year)   </td></tr>
 </table>
 <h2><a class="anchor" id="PlantArchCollision"></a>
 Ground Collision Detection</h2>
@@ -487,7 +515,7 @@ Ground Collision Detection</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
@@ -495,7 +523,7 @@ Ground Collision Detection</h2>
 <div class="line"> </div>
 <div class="line">    plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
 <div class="line"> </div>
-<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>, 45 );</div>
+<div class="line">    plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 45 );</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
@@ -531,14 +559,12 @@ Randomization of Parameters</h2>
 <div class="line">param = 5;</div>
 <div class="line"><span class="comment">// Alternative approach</span></div>
 <div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> other_param(5);</div>
-<div class="ttc" id="astruct_random_parameter__float_html"><div class="ttname"><a href="struct_random_parameter__float.html">RandomParameter_float</a></div><div class="ttdef"><b>Definition</b> <a href="_plant_architecture_8h_source.html#l00027">PlantArchitecture.h:27</a></div></div>
 </div><!-- fragment --><p>In order to randomize the variable, member methods can be called to set the distribution type and specify the distribution parameters. It is also required to initialize the variable with a random number generator. It is recommended that this be based on the Context's generator to keep everything consistent. Below is an example.</p>
-<div class="fragment"><div class="line"><a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="fragment"><div class="line"><a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> param(context.<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">getRandomGenerator</a>());</div>
+<div class="line"><a class="code hl_struct" href="struct_random_parameter__float.html">RandomParameter_float</a> param(context.<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63" title="Get the random number generator engine.">getRandomGenerator</a>());</div>
 <div class="line">param.uniformDistribution(0,7.5);</div>
 <div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Random value: &quot;</span> &lt;&lt; param.val() &lt;&lt; std::endl;</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a96a928fa28d3d771ba310f798b56bd63"><div class="ttname"><a href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63">helios::Context::getRandomGenerator</a></div><div class="ttdeci">std::minstd_rand0 * getRandomGenerator()</div><div class="ttdoc">Get the random number generator engine.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l00049">Context.cpp:49</a></div></div>
 </div><!-- fragment --><p>Available distributions for <a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> are listed below</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -562,24 +588,24 @@ Randomization of Parameters</h2>
 <h1><a class="anchor" id="PlantArchPhytomerParams"></a>
 Defining the Phytomer and its Parameters</h1>
 <p>Phytomers are defined by a set of parameters that specify its geometry. These parameters are stored in a data structure called <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>. The phytomer parameters are parameters that are generally constant across space and time (aside from randomization), and are usually species-specific.</p>
-<p>The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary substantially with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. <a class="el" href="struct_shoot.html">Shoot</a> parameters are described below in <a class="el" href="#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
+<p>The table below lists the parameters that define the geometry of the phytomer, and their descriptions. There are some parameters that are notably absent, such as the internode length and radius. Since these parameters vary substantially with age and position along the shoot, these are considered to be parameters of the shoot and not the phytomer. Shoot parameters are described below in <a class="el" href="#PlantArchShoot">Defining Shoots and their Parameters</a>.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Type   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Description    </th></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="4">&mdash; <b>internode</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this &gt;0 creates a zig-zag shoot.    </td></tr>
+<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the phytomer internode with respect to the previous phytomer along the shoot. Setting this &gt;0 creates a zig-zag shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">phyllotactic_angle   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis.    </td></tr>
+<td class="markdownTableBodyNone">phyllotactic_angle   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle between the petioles/buds of two successive phytomers along the shoot. See <a href="https://en.wikipedia.org/wiki/Phyllotaxis">this page</a> for more information on phyllotaxis.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">radius_initial   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Initial radius of the internode when it is created.    </td></tr>
+<td class="markdownTableBodyNone">radius_initial   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Initial radius of the internode when it is created.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">max_vegetative_buds_per_petiole   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability.    </td></tr>
+<td class="markdownTableBodyNone">max_vegetative_buds_per_petiole   </td><td class="markdownTableBodyNone">RandomParameter_int   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">max_floral_buds_per_petiole   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability.    </td></tr>
+<td class="markdownTableBodyNone">max_floral_buds_per_petiole   </td><td class="markdownTableBodyNone">RandomParameter_int   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the internode tube.    </td></tr>
+<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone">helios::RGBcolor   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the internode tube.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the internode tube.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -589,17 +615,17 @@ Defining the Phytomer and its Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">petioles_per_internode   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the petiole base axis with respect to its parent phytomer axis.    </td></tr>
+<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the petiole base axis with respect to its parent phytomer axis.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of petiole cross-section. (radius = 0 does not create any petiole)    </td></tr>
+<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of petiole cross-section. (radius = 0 does not create any petiole)    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the petiole tube. (length = 0 does not create any petiole)    </td></tr>
+<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the petiole tube. (length = 0 does not create any petiole)    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward.    </td></tr>
+<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">taper   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip).    </td></tr>
+<td class="markdownTableBodyNone">taper   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the petiole tube.    </td></tr>
+<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone">helios::RGBcolor   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the petiole tube.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the petiole tube.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -609,33 +635,33 @@ Defining the Phytomer and its Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">leaves_per_petiole   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of leaves on each petiole. &gt;1 creates a compound leaf.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the leaf axis with respect to its parent petiole axis.    </td></tr>
+<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the leaf axis with respect to its parent petiole axis.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">yaw   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about its base along the plane of its lamina.    </td></tr>
+<td class="markdownTableBodyNone">yaw   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about its base along the plane of its lamina.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about it's own axis (midrib).    </td></tr>
+<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the leaf about it's own axis (midrib).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">leaflet_offset   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value.    </td></tr>
+<td class="markdownTableBodyNone">leaflet_offset   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">leaflet_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (&lt;1 scales down, &gt;1 scales up).    </td></tr>
+<td class="markdownTableBodyNone">leaflet_scale   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If a compound leaf (leaves_per_petiole&gt;1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (&lt;1 scales down, &gt;1 scales up).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf.    </td></tr>
+<td class="markdownTableBodyNone">prototype_scale   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">prototype   </td><td class="markdownTableBodyNone"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> struct   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Structure containing information to build leaf prototypes.    </td></tr>
+<td class="markdownTableBodyNone">prototype   </td><td class="markdownTableBodyNone">LeafPrototype struct   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Structure containing information to build leaf prototypes.    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="4">&mdash; <b>peduncle</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the peduncle (inflorescence supporting structure).    </td></tr>
+<td class="markdownTableBodyNone">length   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Length of the peduncle (inflorescence supporting structure).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of the peduncle.    </td></tr>
+<td class="markdownTableBodyNone">radius   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Radius of the peduncle.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the peduncle axis with respect to its parent internode axis.    </td></tr>
+<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the peduncle axis with respect to its parent internode axis.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the peduncle about it's own axis.    </td></tr>
+<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the peduncle about it's own axis.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward.    </td></tr>
+<td class="markdownTableBodyNone">curvature   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone"><a class="el" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the peduncle tube.    </td></tr>
+<td class="markdownTableBodyNone">color   </td><td class="markdownTableBodyNone">helios::RGBcolor   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Diffuse color of the peduncle tube.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">length_segments   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of longitudinal segment subdivisions of the inflorescence supporting structure.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -643,21 +669,21 @@ Defining the Phytomer and its Parameters</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone" colspan="4">&mdash; <b>inflorescence</b> &mdash;    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">flowers_per_peduncle   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of flowers per peduncle (rachis).    </td></tr>
+<td class="markdownTableBodyNone">flowers_per_peduncle   </td><td class="markdownTableBodyNone">RandomParameter_int   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of flowers per peduncle (rachis).    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">flower_offset   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If peduncle has multiple flowers/fruit (flowers_per_peduncle&gt;1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length.    </td></tr>
+<td class="markdownTableBodyNone">flower_offset   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">If peduncle has multiple flowers/fruit (flowers_per_peduncle&gt;1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the fruit axis with respect to its parent peduncle axis.    </td></tr>
+<td class="markdownTableBodyNone">pitch   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the fruit axis with respect to its parent peduncle axis.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the fruit about it's own axis (x-axis of fruit prototype).    </td></tr>
+<td class="markdownTableBodyNone">roll   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Rotation angle of the fruit about it's own axis (x-axis of fruit prototype).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">flower_prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower.    </td></tr>
+<td class="markdownTableBodyNone">flower_prototype_scale   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">flower_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the flower prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint).    </td></tr>
+<td class="markdownTableBodyNone">flower_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">fruit_prototype_scale   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit.    </td></tr>
+<td class="markdownTableBodyNone">fruit_prototype_scale   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">fruit_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the fruit prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint).    </td></tr>
+<td class="markdownTableBodyNone">fruit_prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint).    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">unique_prototypes   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">uint</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model.   </td></tr>
 </table>
@@ -669,7 +695,6 @@ Defining the Phytomer and its Parameters</h1>
 <div class="line">phytomer.leaf.pitch = 10;</div>
 <div class="line">phytomer.leaf.prototype_scale = 0.1;</div>
 <div class="line">phytomer.peduncle.length = 0.1;</div>
-<div class="ttc" id="astruct_phytomer_parameters_html"><div class="ttname"><a href="struct_phytomer_parameters.html">PhytomerParameters</a></div><div class="ttdef"><b>Definition</b> <a href="_plant_architecture_8h_source.html#l00455">PlantArchitecture.h:455</a></div></div>
 </div><!-- fragment --><p>The figure below provides some examples of how various shoot growth patterns (e.g., alternate, opposite) can be created by varying the model parameters.</p>
 <div class="image">
 <img src="growth_pattern_schematic.jpeg" alt=""/>
@@ -729,19 +754,19 @@ Leaf Prototypes</h3>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="4">&mdash; <b>building leaf from custom prototype function</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">null   </td><td class="markdownTableBodyNone">Pointer to a function that generates the leaf prototype model. Function takes arguments ( <a class="el" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, LeafPrototype*, int compound_leaf_index ) and returns an object ID (uint).   </td></tr>
+<td class="markdownTableBodyNone">prototype_function   </td><td class="markdownTableBodyNone">function pointer   </td><td class="markdownTableBodyNone">null   </td><td class="markdownTableBodyNone">Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, LeafPrototype*, int compound_leaf_index ) and returns an object ID (uint).   </td></tr>
 </table>
 <p>If the value of  <font face="courier" color="blue">OBJ_model_file</font> is not empty, the leaf prototype function will load the leaf model from the specified OBJ file and ignore all other parameters. If the value of  <font face="courier" color="blue">prototype_function</font> is not null, the leaf prototype function will call the user-defined function to generate the leaf model. Otherwise, the model will use the default procedural leaf generation method based on the parameters given (note that the leaf texture file must be specified).</p>
 <h3><a class="anchor" id="FlowerPrototypes"></a>
 Flower Prototypes</h3>
 <p>Flower geometry is generated within the model by calling a user-defined function that generates the flower prototype. The function must return an object ID ( <font face="courier" color="green">uint</font>) corresponding to the compound object created in the function. Arguments to the prototype function are as follows:</p>
-<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
+<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open )</div>
 </div><!-- fragment --><p>Usually, the prototype function simply load an OBJ model from file.</p>
 <p>The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed. The  <font face="courier" color="green">subdivisions</font> argument can be used to specify the level of detail of the flower model. The  <font face="courier" color="blue">flower_is_open argument</font> is a boolean that allows for generation of open and closed flower models.</p>
 <h3><a class="anchor" id="FruitPrototypes"></a>
 Fruit Prototypes</h3>
 <p>Fruit geometry creation is similar to that of flowers, except the prototype function has one less argument.</p>
-<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html">helios::Context</a>*, uint subdivisions )</div>
+<div class="fragment"><div class="line">uint(*prototype_function)( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>*, uint subdivisions )</div>
 </div><!-- fragment --><h2><a class="anchor" id="PlantArch_compound"></a>
 Compound Leaves</h2>
 <p>Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter  <font face="courier" color="blue">leaves_per_petiole</font> in the <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> structure (if  <font face="courier" color="blue">leaves_per_petiole</font> = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter  <font face="courier" color="blue">leaf_prototype_scale</font>. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter  <font face="courier" color="blue">leaflet_offset</font>, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter  <font face="courier" color="blue">leaflet_offset</font>. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter  <font face="courier" color="blue">leaflet_scale</font> (&lt;1 gets smaller, &gt;1 gets bigger).</p>
@@ -768,49 +793,49 @@ Defining Shoots and their Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="5">&mdash; <b>Phytomer Parameters</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">phytomer_parameters   </td><td class="markdownTableBodyNone"><a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Parameters defining the geometry of the phytomers comprising this shoot.    </td></tr>
+<td class="markdownTableBodyNone">phytomer_parameters   </td><td class="markdownTableBodyNone">PhytomerParameters   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Parameters defining the geometry of the phytomers comprising this shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="5">&mdash; <b>Geometric Parameters</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">max_nodes   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers along a shoot.    </td></tr>
+<td class="markdownTableBodyNone">max_nodes   </td><td class="markdownTableBodyNone">RandomParameter_int   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers along a shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">max_nodes_per_season   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a>   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers that a shoot can produce in a single season ( <img class="formulaInl" alt="$\leq$" src="form_163.png" width="11" height="14"/> max_nodes).    </td></tr>
+<td class="markdownTableBodyNone">max_nodes_per_season   </td><td class="markdownTableBodyNone">RandomParameter_int   </td><td class="markdownTableBodyNone">10   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Maximum number of nodes/phytomers that a shoot can produce in a single season ( \(\leq\) max_nodes).    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">insertion_angle_tip   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot.    </td></tr>
+<td class="markdownTableBodyNone">insertion_angle_tip   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">20   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">insertion_angle_decay_rate   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/node   </td><td class="markdownTableBodyNone">Rate of increase of the child insertion angle moving down the parent shoot.    </td></tr>
+<td class="markdownTableBodyNone">insertion_angle_decay_rate   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/node   </td><td class="markdownTableBodyNone">Rate of increase of the child insertion angle moving down the parent shoot.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">internode_length_max   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.02   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Maximum length (with respect to position along the parent shoot) of the internode of a child shoot.    </td></tr>
+<td class="markdownTableBodyNone">internode_length_max   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0.02   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Maximum length (with respect to position along the parent shoot) of the internode of a child shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">internode_length_min   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.002   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Minimum length (with respect to position along the parent shoot) of the internode of a child shoot.    </td></tr>
+<td class="markdownTableBodyNone">internode_length_min   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0.002   </td><td class="markdownTableBodyNone">meters   </td><td class="markdownTableBodyNone">Minimum length (with respect to position along the parent shoot) of the internode of a child shoot.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">internode_length_decay_rate   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">meters/node   </td><td class="markdownTableBodyNone">Rate of decrease of the internode length moving down the parent shoot.    </td></tr>
+<td class="markdownTableBodyNone">internode_length_decay_rate   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">meters/node   </td><td class="markdownTableBodyNone">Rate of decrease of the internode length moving down the parent shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">base_roll   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot.    </td></tr>
+<td class="markdownTableBodyNone">base_roll   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">base_yaw   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Yaw angle of the shoot relative to the parent shoot.    </td></tr>
+<td class="markdownTableBodyNone">base_yaw   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees   </td><td class="markdownTableBodyNone">Yaw angle of the shoot relative to the parent shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">gravitropic_curvature   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward.    </td></tr>
+<td class="markdownTableBodyNone">gravitropic_curvature   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/meter   </td><td class="markdownTableBodyNone">Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">tortuosity   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/(meters)^0.5   </td><td class="markdownTableBodyNone">Factor determining the amount of random "wiggle" in internode growth along the shoot.    </td></tr>
+<td class="markdownTableBodyNone">tortuosity   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">degrees/(meters)^0.5   </td><td class="markdownTableBodyNone">Factor determining the amount of random "wiggle" in internode growth along the shoot.    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone" colspan="5">&mdash; <b>Growth Parameters</b> &mdash;    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">phyllochron_min   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">1.0   </td><td class="markdownTableBodyNone">days/leaf   </td><td class="markdownTableBodyNone">Minimum time between the emergence of successive phytomers along the shoot (minimum time or maximum growth rate). The actual phyllochron can be increased dynamically if the carbohydrate model is enabled.    </td></tr>
+<td class="markdownTableBodyNone">phyllochron_min   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">1.0   </td><td class="markdownTableBodyNone">days/leaf   </td><td class="markdownTableBodyNone">Minimum time between the emergence of successive phytomers along the shoot (minimum time or maximum growth rate). The actual phyllochron can be increased dynamically if the carbohydrate model is enabled.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">elongation_rate_max   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0.2   </td><td class="markdownTableBodyNone">meter/meter/day   </td><td class="markdownTableBodyNone">Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled.    </td></tr>
+<td class="markdownTableBodyNone">elongation_rate_max   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0.2   </td><td class="markdownTableBodyNone">meter/meter/day   </td><td class="markdownTableBodyNone">Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">girth_area_factor   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">cm^2 branch area / m^2 downstream leaf area   </td><td class="markdownTableBodyNone">Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.    </td></tr>
+<td class="markdownTableBodyNone">girth_area_factor   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">cm^2 branch area / m^2 downstream leaf area   </td><td class="markdownTableBodyNone">Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">vegetative_bud_break_time   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">days   </td><td class="markdownTableBodyNone">Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break.    </td></tr>
+<td class="markdownTableBodyNone">vegetative_bud_break_time   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">5   </td><td class="markdownTableBodyNone">days   </td><td class="markdownTableBodyNone">Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">vegetative_bud_break_probability_decay_rate   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">1/nodes   </td><td class="markdownTableBodyNone">Rate at which the probability a bud produces a shoot changes along the shoot. If &gt;0, probability is 1 at the shoot base and decreases to a value of  <font face="courier" color="blue">vegetative_bud_break_probability_min</font>. If &lt;0, the probability is 1 at the shoot tip and decreases backward.    </td></tr>
+<td class="markdownTableBodyNone">vegetative_bud_break_probability_decay_rate   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">1/nodes   </td><td class="markdownTableBodyNone">Rate at which the probability a bud produces a shoot changes along the shoot. If &gt;0, probability is 1 at the shoot base and decreases to a value of  <font face="courier" color="blue">vegetative_bud_break_probability_min</font>. If &lt;0, the probability is 1 at the shoot tip and decreases backward.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">vegetative_bud_break_probability_min   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a bud breaking dormancy and emerging as a shoot.    </td></tr>
+<td class="markdownTableBodyNone">vegetative_bud_break_probability_min   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a bud breaking dormancy and emerging as a shoot.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">flower_bud_break_probability   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a flower bud emerging as a flower.    </td></tr>
+<td class="markdownTableBodyNone">flower_bud_break_probability   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a flower bud emerging as a flower.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">fruit_set_probability   </td><td class="markdownTableBodyNone"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a flower becoming a fruit.    </td></tr>
+<td class="markdownTableBodyNone">fruit_set_probability   </td><td class="markdownTableBodyNone">RandomParameter_float   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Probability of a flower becoming a fruit.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">growth_requires_dormancy   </td><td class="markdownTableBodyNone"> <font face="courier" color="green">bool</font>   </td><td class="markdownTableBodyNone"> <font face="courier" color="orange">false</font>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period.    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -860,10 +885,10 @@ gravitropic_curvature</h3>
 tortuosity</h3>
 <p>Random "wiggle" can be added to shoot growth using the  <font face="courier" color="blue">tortuosity</font> parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter  <font face="courier" color="blue">gravitropic_curvature</font>. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
-\]" src="form_164.png" width="165" height="32"/>
+\[    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
+\]
 </p>
-<p>where <img class="formulaInl" alt="$d\theta$" src="form_165.png" width="15" height="12"/> is the change in curvature angle of the current phytomer internode relative to the previous internode, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/> is the integrated curvature angle relative to the base of the shoot, <img class="formulaInl" alt="$dL$" src="form_166.png" width="18" height="12"/> is the internode length, <img class="formulaInl" alt="$T$" src="form_167.png" width="12" height="11"/> is the tortuosity, and <img class="formulaInl" alt="$\xi (dL)$" src="form_168.png" width="38" height="17"/> is a Gaussian process with variance of <img class="formulaInl" alt="$dL$" src="form_166.png" width="18" height="12"/>.</p>
+<p>where \(d\theta\) is the change in curvature angle of the current phytomer internode relative to the previous internode, \(\theta\) is the integrated curvature angle relative to the base of the shoot, \(dL\) is the internode length, \(T\) is the tortuosity, and \(\xi (dL)\) is a Gaussian process with variance of \(dL\).</p>
 <h2><a class="anchor" id="ShootParametersGrowth"></a>
 Growth Parameters of the Shoot</h2>
 <h3><a class="anchor" id="ShootParam_phyllochron"></a>
@@ -888,8 +913,7 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line">shoot_parameters.phytomer_parameters.internode.pitch = 10;</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.updateCurrentShootParameters( <span class="stringliteral">&quot;trunk&quot;</span>, shoot_parameters );</div>
-<div class="line">plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>, 0 );</div>
-<div class="ttc" id="astruct_shoot_parameters_html"><div class="ttname"><a href="struct_shoot_parameters.html">ShootParameters</a></div><div class="ttdef"><b>Definition</b> <a href="_plant_architecture_8h_source.html#l00661">PlantArchitecture.h:661</a></div></div>
+<div class="line">plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 0 );</div>
 </div><!-- fragment --><p>Below is an example of modifying the parameters for all shoot types:</p>
 <div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>
@@ -901,21 +925,21 @@ Modifying Parameters of a Plant from the Library</h3>
 <div class="line">    P.phytomer_parameters.internode.pitch = 10;</div>
 <div class="line">    plantarchitecture.updateCurrentShootParameters( shoot_type, P );</div>
 <div class="line">}</div>
-<div class="line">plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>, 0 );</div>
+<div class="line">plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 0 );</div>
 </div><!-- fragment --><h2><a class="anchor" id="PlantArchPhenoMod"></a>
 Modifying Phenological Threshold Parameters</h2>
 <p>Thresholds determining phenological transitions are set using the <a class="el" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301">PlantArchitecture::setPlantPhenologicalThresholds()</a> method. The thresholds are in arbitrary time units, which should be consistent with the timestep units and units of other parameters. The table below describes each of the phenological parameters. Setting any parameter to a negative value will skip that phenological stage.</p>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;bean&quot;</span> );</div>
-<div class="line">uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be">nullorigin</a>, 0 );</div>
+<div class="line">uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 0 );</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );</div>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchQuery"></a>
 Retrieving Information from the Model</h1>
 <h2><a class="anchor" id="PlantArchQueryobjIDs"></a>
 Getting Object IDs and Primitive UUIDs of Model Geometry</h2>
-<p>The Object IDs and Primitive UUIDs of an entire plant, or organ groups in the plant, can be retrieved using several methods available in the <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> class. These are listed in the table below.</p>
+<p>The Object IDs and Primitive UUIDs of an entire plant, or organ groups in the plant, can be retrieved using several methods available in the PlantArchitecture class. These are listed in the table below.</p>
 <table class="doxtable">
 <tr>
 <th>Method</th><th>Description </th></tr>
@@ -971,8 +995,7 @@ Getting Primitive UUIDs for Organ Sub-Components</h2>
 </table>
 <p>The UUIDs for a given sub-organ group can be retrieved by calling the Context method <a class="el" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">helios::Context::filterPrimitivesByData()</a>. Below is an example for getting the leaf vein UUIDs.</p>
 <div class="fragment"><div class="line">std::vector&lt;uint&gt; plant_UUIDs = plantarchitecture.getAllPlantUUIDs( plantID );</div>
-<div class="line">std::vector&lt;uint&gt; leaf_vein_UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">filterPrimitivesByData</a>( plant_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;veins&quot;</span> );</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a416b75bbf3ddf4ca0184df35651f41b7"><div class="ttname"><a href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">helios::Context::filterPrimitivesByData</a></div><div class="ttdeci">std::vector&lt; uint &gt; filterPrimitivesByData(const std::vector&lt; uint &gt; &amp;UUIDs, const std::string &amp;primitive_data_label, float filter_value, const std::string &amp;comparator)</div><div class="ttdoc">Filter a set of primitives based on their primitive data and a condition and float value.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l02299">Context_data.cpp:2299</a></div></div>
+<div class="line">std::vector&lt;uint&gt; leaf_vein_UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7" title="Filter a set of primitives based on their primitive data and a condition and float value.">filterPrimitivesByData</a>( plant_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;veins&quot;</span> );</div>
 </div><!-- fragment --><p>For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
@@ -980,7 +1003,6 @@ Getting Primitive UUIDs for Organ Sub-Components</h2>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="_plug_ins.html">Plug-ins</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>
