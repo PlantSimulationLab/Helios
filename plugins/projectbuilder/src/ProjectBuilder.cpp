@@ -5,6 +5,11 @@
     #include <windows.h>
     #include <iostream>
     #include <commdlg.h>
+#elif defined(__APPLE__)
+    #import <Foundation/Foundation.h>
+    #import <Cocoa/Cocoa.h>
+#elif defined(linux)
+    #include <gtk/gtk.h>
 #endif
 
 #include "ProjectBuilder.h"
@@ -177,7 +182,68 @@ std::string file_dialog(){
         SetCurrentDirectory(CWD);
 
         file_name = (std::string)ofn.lpstrFile;
+    #elif defined(__APPLE__)
+        // From: https://warwick.ac.uk/research/rtp/bioinformatics/aboutus/dyer/software/cpposxfileopendialog/
+        char const * const aTitle ,
+        char const * const aDefaultPathAndFile ,
+        const std::vector<std::string> & filters) {
+
+         int i;
+         std::vector<std::string> fileList;
+         // Create a File Open Dialog class.
+         NSOpenPanel* openDlg = [NSOpenPanel openPanel];
+         [openDlg setLevel:CGShieldingWindowLevel()];
+         // Set array of file types
+
+         NSMutableArray * fileTypesArray = [NSMutableArray array];
+         for (i = 0;i < filters.size(); i++){
+             NSString * filt =[NSString stringWithUTF8String:filters[i].c_str()];
+             [fileTypesArray addObject:filt];
+         }
+
+         // Enable options in the dialog.
+         [openDlg setCanChooseFiles:YES];
+         [openDlg setAllowedFileTypes:fileTypesArray];
+         [openDlg setAllowsMultipleSelection:NO];
+         [openDlg setDirectoryURL:[NSURL URLWithString:[NSString stringWithUTF8String:aDefaultPathAndFile ] ] ];
+
+         // Display the dialog box. If the OK pressed,
+         // process the files.
+         if ( [openDlg runModal] == NSOKButton ) {
+             NSURL *fileURL = [[openDlg URLs] firstObject];
+             if (fileURL != nil) {
+                 file_name = std::string([[fileURL path] UTF8String]);
+             }
+         }
+    #elif defined(linux)
+        // From: https://docs.gtk.org/gtk3/class.FileChooserDialog.html
+        GtkWidget *dialog;
+        gtk_init(0, nullptr);
+        GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+        gint res;
+
+        dialog = gtk_file_chooser_dialog_new ("Open File",
+                                              parent_window,
+                                              action,
+                                              _("_Cancel"),
+                                              GTK_RESPONSE_CANCEL,
+                                              _("_Open"),
+                                              GTK_RESPONSE_ACCEPT,
+                                              NULL);
+
+        res = gtk_dialog_run (GTK_DIALOG (dialog));
+        if (res == GTK_RESPONSE_ACCEPT){
+            char *filename;
+            GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+            filename = gtk_file_chooser_get_filename (chooser);
+            open_file (filename);
+            file_name = filename;
+            g_free (filename);
+        }
+
+        gtk_widget_destroy (dialog);
     #endif
+    // TODO: make sure file dialog works on macOS and Linux
 
     return file_name;
 }
