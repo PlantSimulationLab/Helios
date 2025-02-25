@@ -93,6 +93,21 @@ if("visualizer" IN_LIST PLUGINS)
         "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp/imgui_stdlib.cpp"
     )
+    if(UNIX AND NOT APPLE)
+        #nfd
+        list(APPEND SOURCES
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_common.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_gtk.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_zenity.c"
+        )
+    endif(UNIX AND NOT APPLE)
+    if(APPLE)
+        #nfd
+        list(APPEND SOURCES
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_cocoa.m"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_common.c"
+        )
+    endif(APPLE)
 endif()
 
 include_directories(include)
@@ -133,13 +148,11 @@ if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
             message("Using OptiX version 6.5")
         endif()
         include_directories(${OPTIX_PATH}include)
-        add_subdirectory(${OPTIX_PATH} "plugins/radiation")
         target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.so )
     endif(UNIX AND NOT APPLE)
     if(APPLE)
         set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/mac64-4.0.2/)
         include_directories(${OPTIX_PATH}include)
-        add_subdirectory(${OPTIX_PATH})
         target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.dylib )
     endif(APPLE)
     if(WIN32)
@@ -166,6 +179,10 @@ if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
     message(STATUS "OptiX include directory: ${OPTIX_PATH}include")
 endif()
 # CUDA + OPTIX END
+
+if("boundarylayerconductance" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder boundarylayerconductance )
+endif()
 
 if("energybalance" IN_LIST PLUGINS)
     target_link_libraries( projectbuilder energybalance )
@@ -201,6 +218,11 @@ add_dependencies( projectbuilder helios )
 if("visualizer" IN_LIST PLUGINS)
     set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/backends;${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/misc/cpp" PARENT_SCOPE )
     if(UNIX AND NOT APPLE)
+        #nfd
+        include_directories(lib/nativefiledialog/src)
+        include_directories(lib/nativefiledialog/src/include)
+        target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
+        target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(GTK REQUIRED gtkmm-3.0)
         include_directories(${GTK_INCLUDE_DIRS})
@@ -208,7 +230,7 @@ if("visualizer" IN_LIST PLUGINS)
         add_definitions(${GTK_CFLAGS_OTHER})
         target_include_directories( projectbuilder PUBLIC ${GTK_INCLUDE_DIRS} )
         target_link_directories( projectbuilder PUBLIC ${GTK_LIBRARY_DIRS} )
-        target_link_libraries( projectbuilder PUBLIC ${GTK_LIBRARIES} )
+        target_link_libraries( projectbuilder ${GTK_LIBRARIES} )
     endif(UNIX AND NOT APPLE)
     if(APPLE)
         find_library(COCOA_LIBRARY Cocoa REQUIRED)
@@ -221,6 +243,11 @@ if("visualizer" IN_LIST PLUGINS)
         )
         # list(APPEND CMAKE_C_FLAGS  "-x objective-c++")
         # list(APPEND CMAKE_CXX_FLAGS "-x objective-c++")
+        #nfd
+        include_directories(lib/nativefiledialog/src)
+        include_directories(lib/nativefiledialog/src/include)
+        target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
+        target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
     endif(APPLE)
 else()
     set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};" PARENT_SCOPE )
