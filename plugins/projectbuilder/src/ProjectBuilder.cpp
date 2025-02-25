@@ -1528,7 +1528,6 @@ void ProjectBuilder::visualize(){
                 visualizer->addCoordinateAxes();
                 visualizer->plotUpdate();
             }
-            ImGui::SameLine();
             std::string image_dir = "./saved/";
             bool dir = std::filesystem::create_directories(image_dir);
             if (!dir && !std::filesystem::exists(image_dir)){
@@ -1538,6 +1537,7 @@ void ProjectBuilder::visualize(){
             // plant segmentation bounding boxes
             // plant ID bounding boxes (plant architecture->optional plant output data)
             #ifdef ENABLE_RADIATION_MODEL
+            ImGui::SameLine();
             if (ImGui::Button("Record")){
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
                 updateSpectra();
@@ -1744,8 +1744,8 @@ void ProjectBuilder::visualize(){
                 }
             // } //PLANT_ARCHITECTURE
             #endif //PLANT_ARCHITECTURE
-            // if (enable_radiation){
             #ifdef ENABLE_RADIATION_MODEL
+            if (enable_radiation){
                 if (ImGui::BeginTabItem("Radiation")){
                     current_tab = "Radiation";
                     // LOAD XML LIBRARY FILE
@@ -1986,8 +1986,9 @@ void ProjectBuilder::visualize(){
 
                     ImGui::EndTabItem();
                 }
-            // } //RADIATION_MODEL
+            } //RADIATION_MODEL
             #endif //RADIATION_MODEL
+            if (enable_radiation){
                 // RIG TAB
                 if (ImGui::BeginTabItem("Rig")){
                     current_tab = "Rig";
@@ -2428,6 +2429,7 @@ void ProjectBuilder::visualize(){
                     // LIGHT END
                     ImGui::EndTabItem();
                 }
+            }
                 ImGui::EndTabBar();
             }
             // ImGui::Text("Hello, world %d", 123);
