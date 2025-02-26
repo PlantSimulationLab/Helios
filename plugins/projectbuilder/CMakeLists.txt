@@ -237,6 +237,7 @@ if("visualizer" IN_LIST PLUGINS)
         if(NOT COCOA_LIBRARY)
             message(FATAL_ERROR "Cocoa library not found.")
         endif()
+        target_link_libraries( projectbuilder ${COCODA_LIBRARY} )
         add_compile_options(
             "$<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>"
             "$<$<COMPILE_LANGUAGE:C>:-x objective-c++>"
