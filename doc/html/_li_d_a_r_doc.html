@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: LiDAR Point Cloud Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -195,18 +230,18 @@ $(function(){initNavTree('_li_d_a_r_doc.html',''); initResizable(true); });
 <table class="doxtable">
 <tr>
 <th>Dependencies</th><td>NVIDIA CUDA 9.0+ <br  />
-<a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in </td></tr>
+Visualizer plug-in </td></tr>
 <tr>
 <th>CMakeLists.txt</th><td>set( PLUGINS "lidar" ) </td></tr>
 <tr>
-<th>Header File</th><td>#include "LiDAR.h" </td></tr>
+<th>Header File</th><td>include "LiDAR.h" </td></tr>
 <tr>
 <th>Class</th><td><a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> </td></tr>
 </table>
 <h1><a class="anchor" id="LiDARissues"></a>
 Known Issues</h1>
 <ul>
-<li>The LiDAR plug-in requires the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in to be loaded in the CMakeLists.txt file.</li>
+<li>The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.</li>
 <li>The current version of calculateLeafAreaGPU() assumes data is discrete-return. The version calculateLeafAreaGPU_testing() does both discrete-return and waveform data, but it has not been thoroughly tested.</li>
 </ul>
 <h1><a class="anchor" id="LiDARintro"></a>
@@ -218,18 +253,17 @@ Dependencies</h1>
 <caption>Installing dependent packages</caption>
 <tr>
 <th>Package</th><td><div class="image">
-<img src="apple-logo.jpg" alt=""/>
+<img src="apple-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
 <img src="unix-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
-<img src="windows-logo.jpg" alt=""/>
+<img src="windows-logo.png" alt=""/>
 </div>
   </td></tr>
 <tr>
-<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX:<br  />
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
+<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX: Not available. </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
 </table>
 <p>For help choosing the correct CUDA toolkit version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
 <p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Install and Set-up</a></p>
@@ -249,14 +283,14 @@ Input Primitive Data</h1>
 <tr>
 <th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value </th></tr>
 <tr>
-<td>reflectivity_lidar</td><td><img class="formulaInl" alt="$\rho_l$" src="form_85.png" width="12" height="11"/></td><td>unitless</td><td> <font face="courier" color="green">float</font></td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0 </td></tr>
+<td>reflectivity_lidar</td><td>\(\rho_l\)</td><td>unitless</td><td> <font face="courier" color="green">float</font></td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0 </td></tr>
 </table>
 <h1><a class="anchor" id="LiDARbg"></a>
 Background information</h1>
 <h2><a class="anchor" id="LiDARcoord"></a>
 Coordinates and scan pattern</h2>
-<p>The algorithms associated with the LiDAR plug-in work with data obtained from a rectangular scan pattern. In this scan pattern, points are sampled at equally spaced intervals in both the zenithal ( <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/>) and azimuthal ( <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/>) directions. At a given azimuthal angle, some range of zenithal angles are consecutively scanned, which represents a "scan line". Each scan line starts at some zenithal angle <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub> and ends at some zenithal angle <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>max</sub>. After recording a scan line at the first azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>, the scanner incrementally moves to the next adjacent azimuthal scan direction and records the next scan line until it reaches the azimuthal angle <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub>.</p>
-<p>The number of zenithal points within each scan line is given by <img class="formulaInl" alt="$\mathrm{N}_{\theta}$" src="form_86.png" width="18" height="15"/>, and the total number of scan lines (i.e., number of individual azimuthal directions) is given by <img class="formulaInl" alt="$\mathrm{N}_{\varphi}$" src="form_87.png" width="20" height="17"/>.</p>
+<p>The algorithms associated with the LiDAR plug-in work with data obtained from a rectangular scan pattern. In this scan pattern, points are sampled at equally spaced intervals in both the zenithal ( \(\theta\)) and azimuthal ( \(\varphi\)) directions. At a given azimuthal angle, some range of zenithal angles are consecutively scanned, which represents a "scan line". Each scan line starts at some zenithal angle \(\theta\)<sub>min</sub> and ends at some zenithal angle \(\theta\)<sub>max</sub>. After recording a scan line at the first azimuthal angle \(\varphi\)<sub>min</sub>, the scanner incrementally moves to the next adjacent azimuthal scan direction and records the next scan line until it reaches the azimuthal angle \(\varphi\)<sub>max</sub>.</p>
+<p>The number of zenithal points within each scan line is given by \(\mathrm{N}_{\theta}\), and the total number of scan lines (i.e., number of individual azimuthal directions) is given by \(\mathrm{N}_{\varphi}\).</p>
 <p>Angles are typically specified as degrees. Distance units are arbitrary, but must be used consistently.</p>
 <div class="image">
 <img src="CoordinateSystem.jpeg" alt=""/>
@@ -290,13 +324,13 @@ Scan metadata</h2>
 <tr>
 <td>size</td><td>&lt;size&gt;</td><td>Number of scan points in the theta (zenithal) and phi (azimuthal) directions. Values should be separated by a space in the XML file.</td><td>None: REQUIRED </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub> (degrees)</td><td>&lt;thetaMin&gt;</td><td>Minimum scan theta (zenital) angle. <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub>=0 if the scan starts from upward vertical, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0 </td></tr>
+<td>\(\theta\)<sub>min</sub> (degrees)</td><td>&lt;thetaMin&gt;</td><td>Minimum scan theta (zenital) angle. \(\theta\)<sub>min</sub>=0 if the scan starts from upward vertical, \(\theta\)<sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0 </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>max</sub> (degrees)</td><td>&lt;thetaMax&gt;</td><td>Maximum scan theta (zenital) angle. <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>max</sub>=90 if the scan ends at horizontal, <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/><sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180 </td></tr>
+<td>\(\theta\)<sub>max</sub> (degrees)</td><td>&lt;thetaMax&gt;</td><td>Maximum scan theta (zenital) angle. \(\theta\)<sub>max</sub>=90 if the scan ends at horizontal, \(\theta\)<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180 </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub> (degrees)</td><td>&lt;phiMin&gt;</td><td>Minimum scan phi (azimuthal) angle. <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>=0 if the scan starts pointing in the +y direction, <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>=90 if the scan starts pointing in the +x direction, etc. </td><td>0 </td></tr>
+<td>\(\varphi\)<sub>min</sub> (degrees)</td><td>&lt;phiMin&gt;</td><td>Minimum scan phi (azimuthal) angle. \(\varphi\)<sub>min</sub>=0 if the scan starts pointing in the +y direction, \(\varphi\)<sub>min</sub>=90 if the scan starts pointing in the +x direction, etc. </td><td>0 </td></tr>
 <tr>
-<td><img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub> (degrees)</td><td>&lt;phiMax&gt;</td><td>Maximum scan phi (azimuthal) angle. <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub>=90 if the scan ends pointing in the +x direction, <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>=180 if the scan ends pointing in the -y direction, etc. NOTE: <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub> could be greater than 360 if <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>&gt;0 and the scanner makes a full rotation in the in the azimuthal direction, in which case <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>max</sub>= <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/><sub>min</sub>+360.</td><td>360 </td></tr>
+<td>\(\varphi\)<sub>max</sub> (degrees)</td><td>&lt;phiMax&gt;</td><td>Maximum scan phi (azimuthal) angle. \(\varphi\)<sub>max</sub>=90 if the scan ends pointing in the +x direction, \(\varphi\)<sub>min</sub>=180 if the scan ends pointing in the -y direction, etc. NOTE: \(\varphi\)<sub>max</sub> could be greater than 360 if \(\varphi\)<sub>min</sub>&gt;0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \(\varphi\)<sub>max</sub>= \(\varphi\)<sub>min</sub>+360.</td><td>360 </td></tr>
 <tr>
 <td>translation</td><td>&lt;translation&gt;</td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit points.</td><td>No translation. </td></tr>
 <tr>
@@ -313,7 +347,7 @@ Scan metadata</h2>
 <h2><a class="anchor" id="AddHits"></a>
 Hit point data</h2>
 <p>In addition to scan metadata, the data collected by the scan itself must also be added to the plug-in. This can be achieved by either reading data from an ASCII text file, or performing a synthetic scan. At a minimum, point cloud data consists of the Cartesian (x,y,z) coordinates of each hit in the scan. Additionally, hit points may also have an associated r-g-b color value, or some other scalar data value such as intensity or temperature.</p>
-<p>For the processing algorithms to work, the scan direction associated with each hit point must also be known. This can be specified directly as a ( <img class="formulaInl" alt="$\theta$" src="form_19.png" width="8" height="12"/>, <img class="formulaInl" alt="$\varphi$" src="form_20.png" width="9" height="11"/>) spherical coordinate, or using the row (i.e., index in the scanline: 1... <img class="formulaInl" alt="$\mathrm{N}_\theta$" src="form_88.png" width="18" height="15"/>) and column (i.e., scanline index: 1... <img class="formulaInl" alt="$\mathrm{N}_\varphi$" src="form_89.png" width="20" height="17"/>). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.</p>
+<p>For the processing algorithms to work, the scan direction associated with each hit point must also be known. This can be specified directly as a ( \(\theta\), \(\varphi\)) spherical coordinate, or using the row (i.e., index in the scanline: 1... \(\mathrm{N}_\theta\)) and column (i.e., scanline index: 1... \(\mathrm{N}_\varphi\)). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.</p>
 <p>For full-waveform data, additional information is needed about the hit points. Specifically, the total number of hit points along the pulse. IfThe index can start at 0 or 1 for the first hit along the pulse, it just should be consistent for all points.</p>
 <h1><a class="anchor" id="ScanIO"></a>
 Loading scan data from file</h1>
@@ -376,14 +410,11 @@ Loading scan data from file</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);</div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);</div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="a_li_d_a_r_8h_html"><div class="ttname"><a href="_li_d_a_r_8h.html">LiDAR.h</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html"><div class="ttname"><a href="class_li_d_a_rcloud.html">LiDARcloud</a></div><div class="ttdoc">Primary class for terrestrial LiDAR scan.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8h_source.html#l00270">LiDAR.h:270</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a6bd7e1839d1a6ecb738233b20b93f1f7"><div class="ttname"><a href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">LiDARcloud::loadXML</a></div><div class="ttdeci">void loadXML(const char *filename)</div><div class="ttdoc">Read an XML file containing scan information.</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00022">fileIO.cpp:22</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="LiDARgrid"></a>
 Establishing grid cells</h1>
 <p>Rectangular grid cells are used as the basis for processing point cloud data. For example, total leaf area (or leaf area density) may be calculated for each grid cell. Grid cells or "voxels" are parallelpiped volumes. The top and bottom faces are always horizontal, but the cells can be rotated in the azimuthal direction.</p>
@@ -424,45 +455,42 @@ Processing LiDAR data</h1>
 <h2><a class="anchor" id="LiDARtri"></a>
 Hit point triangulation</h2>
 <p>A triangulation between adjacent points is typically required for any of the available data processing algorithms. In the triangulation, adjacent hit points are connected to form a mesh of triangular solid surfaces. The algorithm for performing this triangulation is described in detail in <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a>.</p>
-<p>There are two possible options to be specified when performing the triangulation. A required option is <img class="formulaInl" alt="$L_{max}$" src="form_90.png" width="33" height="15"/>, which is the maximum allowable length of a triangle side. This parameter prevents triangles from connecting adjacent leaves (i.e., we only want triangles to be formed with neighboring points on the same leaf). Typically we want <img class="formulaInl" alt="$L_{max}$" src="form_90.png" width="33" height="15"/> to be much larger than the spacing between adjacent hit points, and much smaller than the characteristic length of a leaf. For example, <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a> used 5cm for a cottonwood tree.</p>
-<p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the <img class="formulaInl" alt="$L_{max}$" src="form_90.png" width="33" height="15"/> parameter, and works better in some cases.</p>
+<p>There are two possible options to be specified when performing the triangulation. A required option is \(L_{max}\), which is the maximum allowable length of a triangle side. This parameter prevents triangles from connecting adjacent leaves (i.e., we only want triangles to be formed with neighboring points on the same leaf). Typically we want \(L_{max}\) to be much larger than the spacing between adjacent hit points, and much smaller than the characteristic length of a leaf. For example, <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a> used 5cm for a cottonwood tree.</p>
+<p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the \(L_{max}\) parameter, and works better in some cases.</p>
 <p>The following code sample illustrates how to perform a triangulation.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5 </span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5 </span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_ac495385c9dc7cc7773819ce77175242a"><div class="ttname"><a href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">LiDARcloud::triangulateHitPoints</a></div><div class="ttdeci">void triangulateHitPoints(float Lmax, float max_aspect_ratio)</div><div class="ttdoc">Perform triangulation on all hit points in point cloud.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01382">LiDAR.cpp:1382</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARleafarea"></a>
 Calculating leaf area for each grid cell</h2>
 <p>Using the triangulation and defined grid cells, the plug-in can calculate the leaf area (and leaf area density) for each grid cell. The algorithm for calculating leaf area is described in detail in <a href="dx.doi.org/doi:10.1088/1361-6501/aa5cfd">Bailey and Mahaffee (2017b)</a> (except that in the current implementation, weighting by the sine of the scan zenith direction has been removed).</p>
-<p>Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( <img class="formulaInl" alt="$G=0.5$" src="form_91.png" width="51" height="12"/>). The leaf area calculation also requires that at least one grid cell was defined.</p>
+<p>Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand. If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation ( \(G=0.5\)). The leaf area calculation also requires that at least one grid cell was defined.</p>
 <p>When using real LiDAR data, it is recommended to gapfill sky/miss points using the <a class="el" href="class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330">LiDARcloud::gapfillMisses()</a> method if this has not already been done by the scanner or in pre-processing. When a laser pulse does not intersect any object and reaches the sky, many scanners do not record any hit points. These miss points are important for accurate determination of leaf area.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330">gapfillMisses</a>(); <span class="comment">//Gapfill sky/miss points if necessary</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330" title="For scans that are missing points (e.g., sky points), this function will attempt to fill in missing p...">gapfillMisses</a>(); <span class="comment">//Gapfill sky/miss points if necessary</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a53b80def6bff07231b8d2b10eb3e0330"><div class="ttname"><a href="class_li_d_a_rcloud.html#a53b80def6bff07231b8d2b10eb3e0330">LiDARcloud::gapfillMisses</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; gapfillMisses()</div><div class="ttdoc">For scans that are missing points (e.g., sky points), this function will attempt to fill in missing p...</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l00492">LiDAR.cu:492</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aff9aeedaa500516d1c227e5161fb599a"><div class="ttname"><a href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">LiDARcloud::calculateLeafAreaGPU</a></div><div class="ttdeci">void calculateLeafAreaGPU()</div><div class="ttdoc">Calculate the leaf area for each grid volume.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l00897">LiDAR.cu:897</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARresonstruction"></a>
 Plant reconstruction</h2>
 <p>A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.</p>
@@ -475,24 +503,21 @@ Plant reconstruction</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">leafReconstructionAlphaMask</a>( 0.001, 0.02, <span class="stringliteral">&quot;plugins/visualizer/textures/ElmLeaf.png&quot;</span> ); <span class="comment">//Perform the reconstruction</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935" title="Perform a leaf reconstruction based on texture-masked Patches within each gridcell....">leafReconstructionAlphaMask</a>( 0.001, 0.02, <span class="stringliteral">&quot;plugins/visualizer/textures/ElmLeaf.png&quot;</span> ); <span class="comment">//Perform the reconstruction</span></div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context; <span class="comment">//Initialize the Context</span></div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c">addLeafReconstructionToContext</a>( &amp;context );</div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c" title="Add reconstructed leaves (texture-masked patches) to the Context.">addLeafReconstructionToContext</a>( &amp;context );</div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aba102c6c5036ffb99b105fb2b4850935"><div class="ttname"><a href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">LiDARcloud::leafReconstructionAlphaMask</a></div><div class="ttdeci">void leafReconstructionAlphaMask(float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, const char *mask_file)</div><div class="ttdoc">Perform a leaf reconstruction based on texture-masked Patches within each gridcell....</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l02074">LiDAR.cpp:2074</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aeca8578d8b5ecbc92fa669c612196f8c"><div class="ttname"><a href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c">LiDARcloud::addLeafReconstructionToContext</a></div><div class="ttdeci">std::vector&lt; uint &gt; addLeafReconstructionToContext(helios::Context *context) const</div><div class="ttdoc">Add reconstructed leaves (texture-masked patches) to the Context.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00845">LiDAR.cpp:845</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="LiDARsynthetic"></a>
 Generating Synthetic (Simulated) LiDAR Data</h1>
 <p>The LiDAR plug-in can simulate the measurements of discrete-return and full-waveform instruments based on the geometry in the Context. Ray-tracing is used to simulate the emission of radiation from the instrument, and based on ray-object intersection tests with primitive geometry in the model domain, the simulated hit points can be determined. Currently, only a rectangular scan pattern is supported.</p>
@@ -506,7 +531,7 @@ XML parameter file</h2>
 <h2><a class="anchor" id="LiDARsynthdiscrete"></a>
 Synthetic discrete-return data</h2>
 <p>Once the <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling LiDARcloud::syntheticScan( helios::Context*, const char* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.</p>
-<p>The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the <a class="el" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">LiDARcloud::loadXML()</a> function should either be absolute or relative to the directory in which the executable is being run (usually build/).</p>
+<p>The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).</p>
 <div class="fragment"><div class="line">&lt;<span class="keywordtype">helios</span>&gt;</div>
 <div class="line"> </div>
 <div class="line">  &lt;<span class="keywordtype">scan</span>&gt;</div>
@@ -526,22 +551,19 @@ Synthetic discrete-return data</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>(); <span class="comment">// create some model geometry here</span></div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(); <span class="comment">// create some model geometry here</span></div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context );  <span class="comment">//generate synthetic data</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context );  <span class="comment">//generate synthetic data</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">exportPointCloud</a>( <span class="stringliteral">&quot;/path/to/file.xyz&quot;</span> );  <span class="comment">//write to ASCII file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322" title="Export to file all points in the point cloud to an ASCII text file following the column format specif...">exportPointCloud</a>( <span class="stringliteral">&quot;/path/to/file.xyz&quot;</span> );  <span class="comment">//write to ASCII file</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a2d0c11c6d8001171269232ff5d7f6322"><div class="ttname"><a href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">LiDARcloud::exportPointCloud</a></div><div class="ttdeci">void exportPointCloud(const char *filename)</div><div class="ttdoc">Export to file all points in the point cloud to an ASCII text file following the column format specif...</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00800">fileIO.cpp:800</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aac5cafa2281f9d479f2bb56be0780e31"><div class="ttname"><a href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">LiDARcloud::syntheticScan</a></div><div class="ttdeci">void syntheticScan(helios::Context *context)</div><div class="ttdoc">Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l03093">LiDAR.cu:3093</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01212">Context.cpp:1212</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARsynthwaveform"></a>
 Synthetic waveform data</h2>
 <p>Generation of synthetic full-waveform data is similar to discrete-return, except that additional information is needed to define the scan and simulation. In the XML file, the user must specify the diameter of the laser beam at the scan origin using the &lt;exitDiameter&gt; &lt;/exitDiameter&gt; tags, as well as the angle of beam divergence in radians using the &lt;beamDivergence&gt; &lt;/beamDivergence&gt; tags. If the exit diameter value is not specified, the default value of 0 is used, which means that the model will revert to discrete-return data generation. If the beam divergence value is not specified, a default beam divergence of 0 will be assumed, which effectively just means that the beam will remain perfectly cylindrical with diameter of exitDiameter.</p>
@@ -569,27 +591,27 @@ Synthetic waveform data</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>(); <span class="comment">// create some model geometry here</span></div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(); <span class="comment">// create some model geometry here</span></div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">int</span> rays_per_pulse = 100;</div>
 <div class="line">   <span class="keywordtype">float</span> pulse_distance_threshold = 0.02; </div>
 <div class="line">    </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context, rays_per_pulse, pulse_distance_threshold );  <span class="comment">//generate synthetic data</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context, rays_per_pulse, pulse_distance_threshold );  <span class="comment">//generate synthetic data</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">exportPointCloud</a>( <span class="stringliteral">&quot;/path/to/file.xyz&quot;</span> );  <span class="comment">//write to ASCII file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322" title="Export to file all points in the point cloud to an ASCII text file following the column format specif...">exportPointCloud</a>( <span class="stringliteral">&quot;/path/to/file.xyz&quot;</span> );  <span class="comment">//write to ASCII file</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the &lt;ASCII_format&gt; tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.</p>
 <h1><a class="anchor" id="LiDARvis"></a>
 Visualizing results</h1>
-<p>Results can be visualized using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>
-<p>The second option is to add any geometry directly to the <a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>. There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.</p>
+<p>Results can be visualized using the Visualizer plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>
+<p>The second option is to add any geometry directly to the Visualizer. There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.</p>
 <table class="doxtable">
 <tr>
 <th>Function</th><th>Description </th></tr>
@@ -609,20 +631,17 @@ Visualizing results</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_visualizer.html">Visualizer</a> vis( 1000 ); <span class="comment">//Initialize the visualizer</span></div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1000 ); <span class="comment">//Initialize the visualizer</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">addHitsToVisualizer</a>( &amp;vis, 1 );  <span class="comment">//Add the hit points to visualizer</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18" title="Add all hit points to the visualizer plug-in, and color them by their r-g-b color.">addHitsToVisualizer</a>( &amp;vis, 1 );  <span class="comment">//Add the hit points to visualizer</span></div>
 <div class="line"> </div>
 <div class="line">   vis.plotInteractive();</div>
 <div class="line">   </div>
 <div class="line">}</div>
-<div class="ttc" id="a_visualizer_8h_html"><div class="ttname"><a href="_visualizer_8h.html">Visualizer.h</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a2102dd4711658414cca10fd40a66af18"><div class="ttname"><a href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">LiDARcloud::addHitsToVisualizer</a></div><div class="ttdeci">void addHitsToVisualizer(Visualizer *visualizer, uint pointsize) const</div><div class="ttdoc">Add all hit points to the visualizer plug-in, and color them by their r-g-b color.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00521">LiDAR.cpp:521</a></div></div>
-<div class="ttc" id="aclass_visualizer_html"><div class="ttname"><a href="class_visualizer.html">Visualizer</a></div><div class="ttdoc">Class for visualization of simulation results.</div><div class="ttdef"><b>Definition</b> <a href="_visualizer_8h_source.html#l00275">Visualizer.h:275</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="LiDARoutput"></a>
 Writing results to file</h1>
 <p>Results of data processing can be easily written to file for external analysis. The following table lists these functions. Data is written to an ASCII text file, where each line in the file corresponds to a different data point (e.g., hit point, triangle, etc.).</p>
@@ -650,15 +669,15 @@ Writing results to file</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);  <span class="comment">//Load the XML file</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
 <div class="line"> </div>
-<div class="line">   uint Ncells = pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">getGridCellCount</a>(); <span class="comment">//Get the number of grid cells</span></div>
+<div class="line">   uint Ncells = pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>(); <span class="comment">//Get the number of grid cells</span></div>
 <div class="line">   </div>
 <div class="line">   <span class="keywordtype">char</span> f_normals[50], f_areas[50];</div>
 <div class="line">   <span class="keywordflow">for</span>( uint i=0; i&lt;Ncells; i++ ){ <span class="comment">//loop over grid cells</span></div>
@@ -666,27 +685,21 @@ Writing results to file</h1>
 <div class="line">        sprintf(f_normals,<span class="stringliteral">&quot;../output/triangle_normals_%d.txt&quot;</span>,i);</div>
 <div class="line">        sprintf(f_areas,<span class="stringliteral">&quot;../output/triangle_areas_%d.txt&quot;</span>,i);</div>
 <div class="line"> </div>
-<div class="line">        pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a">exportTriangleNormals</a>( f_normals, i );</div>
-<div class="line">        pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7">exportTriangleAreas</a>( f_areas, i );</div>
+<div class="line">        pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a" title="Export to file the normal vectors (nx,ny,nz) for all triangles formed.">exportTriangleNormals</a>( f_normals, i );</div>
+<div class="line">        pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7" title="Export to file the area of all triangles formed.">exportTriangleAreas</a>( f_areas, i );</div>
 <div class="line">   }</div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a8e8bd43bf3b2c107994fee402c41240f">exportLeafAreas</a>( <span class="stringliteral">&quot;../output/leaf_areas.txt&quot;</span> );</div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6e438fd60af7f54f4d1c09ac64fd7338">exportLeafAreaDensities</a>( <span class="stringliteral">&quot;../output/leaf_area_densities.txt&quot;</span> );</div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a8e8bd43bf3b2c107994fee402c41240f" title="Export to file the leaf area within each grid cell. Lines of the file correspond to each grid cell.">exportLeafAreas</a>( <span class="stringliteral">&quot;../output/leaf_areas.txt&quot;</span> );</div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6e438fd60af7f54f4d1c09ac64fd7338" title="Export to file the leaf area density within each grid cell. Lines of the file correspond to each grid...">exportLeafAreaDensities</a>( <span class="stringliteral">&quot;../output/leaf_area_densities.txt&quot;</span> );</div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322">exportPointCloud</a>( <span class="stringliteral">&quot;../output/pointcloud.xyz&quot;</span> );                   </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a2d0c11c6d8001171269232ff5d7f6322" title="Export to file all points in the point cloud to an ASCII text file following the column format specif...">exportPointCloud</a>( <span class="stringliteral">&quot;../output/pointcloud.xyz&quot;</span> );                   </div>
 <div class="line">   </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a28297a71becd69b30820d69b110fcc90"><div class="ttname"><a href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">LiDARcloud::getGridCellCount</a></div><div class="ttdeci">uint getGridCellCount() const</div><div class="ttdoc">Get the number of cells in the grid.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01791">LiDAR.cpp:1791</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a416638f486c4fd2572a9589b69605fe7"><div class="ttname"><a href="class_li_d_a_rcloud.html#a416638f486c4fd2572a9589b69605fe7">LiDARcloud::exportTriangleAreas</a></div><div class="ttdeci">void exportTriangleAreas(const char *filename)</div><div class="ttdoc">Export to file the area of all triangles formed.</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00562">fileIO.cpp:562</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a6e438fd60af7f54f4d1c09ac64fd7338"><div class="ttname"><a href="class_li_d_a_rcloud.html#a6e438fd60af7f54f4d1c09ac64fd7338">LiDARcloud::exportLeafAreaDensities</a></div><div class="ttdeci">void exportLeafAreaDensities(const char *filename)</div><div class="ttdoc">Export to file the leaf area density within each grid cell. Lines of the file correspond to each grid...</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00760">fileIO.cpp:760</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a8e8bd43bf3b2c107994fee402c41240f"><div class="ttname"><a href="class_li_d_a_rcloud.html#a8e8bd43bf3b2c107994fee402c41240f">LiDARcloud::exportLeafAreas</a></div><div class="ttdeci">void exportLeafAreas(const char *filename)</div><div class="ttdoc">Export to file the leaf area within each grid cell. Lines of the file correspond to each grid cell.</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00740">fileIO.cpp:740</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_ad030fdddcfa669d6af513eb66a9cbd1a"><div class="ttname"><a href="class_li_d_a_rcloud.html#ad030fdddcfa669d6af513eb66a9cbd1a">LiDARcloud::exportTriangleNormals</a></div><div class="ttdeci">void exportTriangleNormals(const char *filename)</div><div class="ttdoc">Export to file the normal vectors (nx,ny,nz) for all triangles formed.</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00499">fileIO.cpp:499</a></div></div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="_plug_ins.html">Plug-ins</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

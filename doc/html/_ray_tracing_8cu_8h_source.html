@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/radiation/include/RayTracing.cu.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -124,14 +159,14 @@ $(function(){initNavTree('_ray_tracing_8cu_8h_source.html',''); initResizable(tr
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html">   25</a></span><span class="keyword">struct </span><a class="code hl_struct" href="struct_per_ray_data.html">PerRayData</a></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>{</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span></div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">   29</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">strength</a>;  </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868">   31</a></span>  uint <a class="code hl_variable" href="struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868">origin_UUID</a>;</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#afc61137cf7b0e132eeb05b908b899790">   33</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="struct_per_ray_data.html#afc61137cf7b0e132eeb05b908b899790">face</a>;</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407">   35</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407">area</a>;</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd">   37</a></span>  uint <a class="code hl_variable" href="struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd">seed</a>;</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">   39</a></span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> <a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">periodic_depth</a>;</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">   29</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935" title="&quot;strength&quot; or amount of energy associated with the ray.">strength</a>;  </div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868">   31</a></span>  uint <a class="code hl_variable" href="struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868" title="UUID of primitive from which ray originated.">origin_UUID</a>;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#afc61137cf7b0e132eeb05b908b899790">   33</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="struct_per_ray_data.html#afc61137cf7b0e132eeb05b908b899790" title="Face of primitive from which ray was launched (true=top, false=bottom)">face</a>;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407">   35</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407" title="Area of primitive (note for voxels, this is area density)">area</a>;</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd">   37</a></span>  uint <a class="code hl_variable" href="struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd" title="Seed for curand random number generator.">seed</a>;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">   39</a></span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> <a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5" title="Number of periodic boundary intersections for ray.">periodic_depth</a>;</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span></div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a1c5097650f40749e55c984db780e1b1a">   44</a></span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> <a class="code hl_variable" href="struct_per_ray_data.html#a1c5097650f40749e55c984db780e1b1a">source_ID</a>;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="struct_per_ray_data.html#a1c5097650f40749e55c984db780e1b1a">   44</a></span>  <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> <a class="code hl_variable" href="struct_per_ray_data.html#a1c5097650f40749e55c984db780e1b1a" title="Numerical identifier for radiation source corresponding to each ray.">source_ID</a>;</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>};</div>
 </div>
@@ -402,7 +437,7 @@ $(function(){initNavTree('_ray_tracing_8cu_8h_source.html',''); initResizable(tr
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span> </div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span></div>
 <div class="foldopen" id="foldopen00316" data-start="{" data-end="}">
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">  316</a></span>__device__ <span class="keywordtype">void</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>( <span class="keyword">const</span> <span class="keywordtype">float</span> (&amp;transform_matrix)[16], float3 &amp;v ){</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">  316</a></span>__device__ <span class="keywordtype">void</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>( <span class="keyword">const</span> <span class="keywordtype">float</span> (&amp;transform_matrix)[16], float3 &amp;v ){</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span> </div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>  float3 V;</div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
@@ -416,38 +451,38 @@ $(function(){initNavTree('_ray_tracing_8cu_8h_source.html',''); initResizable(tr
 </div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span></div>
 <div class="foldopen" id="foldopen00329" data-start="{" data-end="}">
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">  329</a></span>__device__ <span class="keywordtype">float</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>( <span class="keyword">const</span> float3 v ){</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">  329</a></span>__device__ <span class="keywordtype">float</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>( <span class="keyword">const</span> float3 v ){</div>
 <div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>  <span class="keywordflow">return</span> sqrtf( v.x*v.x+v.y*v.y+v.z*v.z );</div>
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>}</div>
 </div>
 <div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span></div>
 <div class="foldopen" id="foldopen00334" data-start="{" data-end="}">
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a216a63a21845766a5ad1fe4b8002e983">  334</a></span>__device__ <span class="keywordtype">float</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a216a63a21845766a5ad1fe4b8002e983">d_calculatePrimitiveArea</a>( <span class="keyword">const</span> uint primitive_type, <span class="keyword">const</span> <span class="keywordtype">float</span> (&amp;transform_matrix)[16] ){</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno"><a class="line" href="_ray_tracing_8cu_8h.html#a216a63a21845766a5ad1fe4b8002e983">  334</a></span>__device__ <span class="keywordtype">float</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a216a63a21845766a5ad1fe4b8002e983" title="Function to calculate the surface area of a primitive.">d_calculatePrimitiveArea</a>( <span class="keyword">const</span> uint primitive_type, <span class="keyword">const</span> <span class="keywordtype">float</span> (&amp;transform_matrix)[16] ){</div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span> </div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>  <span class="keywordflow">if</span>( primitive_type == 0 || primitive_type == 3 ){ <span class="comment">//Patch or AlphaMask</span></div>
 <div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span> </div>
 <div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    float3 s0 = make_float3(0,0,0);</div>
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    float3 s1 = make_float3(1,1,0);</div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    float3 s2 = make_float3(0,1,0);</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,s0);</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,s1);</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,s2);</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(s2-s0)*<a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(s2-s1);</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,s0);</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,s1);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,s2);</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(s2-s0)*<a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(s2-s1);</div>
 <div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span> </div>
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( primitive_type == 1 ){ <span class="comment">//Triangle</span></div>
 <div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span> </div>
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    float3 v0 = make_float3(0,0,0);</div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,v0);</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,v0);</div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    float3 v1 = make_float3(0,1,0);</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,v1);</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,v1);</div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    float3 v2 = make_float3(1,1,0);</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(transform_matrix,v2);</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(transform_matrix,v2);</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>    float3 A(v1-v0);</div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    float3 B(v2-v0);</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    float3 C(v2-v1);</div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="keywordtype">float</span> a = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(A);</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    <span class="keywordtype">float</span> b = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(B);</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordtype">float</span> c = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a>(C);</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="keywordtype">float</span> a = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(A);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    <span class="keywordtype">float</span> b = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(B);</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordtype">float</span> c = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138" title="Function to calculate the magnitude of float3 vector on the GPU.">d_magnitude</a>(C);</div>
 <div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>    <span class="keywordtype">float</span> s = 0.5f*( a+b+c );</div>
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">return</span> sqrtf(s*(s-a)*(s-b)*(s-c));</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
@@ -571,18 +606,6 @@ $(function(){initNavTree('_ray_tracing_8cu_8h_source.html',''); initResizable(tr
 <div class="line"><a id="l00479" name="l00479"></a><span class="lineno">  479</span>  <span class="keywordflow">else</span> <span class="keywordflow">if</span> (x &gt; 1.0) x = 1.0 ;</div>
 <div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>  <span class="keywordflow">return</span> asin(x) ;</div>
 <div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>}</div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_a216a63a21845766a5ad1fe4b8002e983"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#a216a63a21845766a5ad1fe4b8002e983">d_calculatePrimitiveArea</a></div><div class="ttdeci">__device__ float d_calculatePrimitiveArea(const uint primitive_type, const float(&amp;transform_matrix)[16])</div><div class="ttdoc">Function to calculate the surface area of a primitive.</div><div class="ttdef"><b>Definition</b> <a href="#l00334">RayTracing.cu.h:334</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_a515aa9bdd11a5648143611f9c9d76500"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a></div><div class="ttdeci">__device__ void d_transformPoint(const float(&amp;transform_matrix)[16], float3 &amp;v)</div><div class="ttdoc">Function to transform a 3D point based on current affine transformation matrix on the GPU.</div><div class="ttdef"><b>Definition</b> <a href="#l00316">RayTracing.cu.h:316</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_a59b52bcf03b8801f444e081e943f7138"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#a59b52bcf03b8801f444e081e943f7138">d_magnitude</a></div><div class="ttdeci">__device__ float d_magnitude(const float3 v)</div><div class="ttdoc">Function to calculate the magnitude of float3 vector on the GPU.</div><div class="ttdef"><b>Definition</b> <a href="#l00329">RayTracing.cu.h:329</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_af48d117e18e1319cd61b4af9ef999b01"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a></div><div class="ttdeci">__device__ float3 d_rotatePoint(const float3 &amp;position, const float &amp;theta, const float &amp;phi)</div><div class="ttdef"><b>Definition</b> <a href="#l00106">RayTracing.cu.h:106</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html"><div class="ttname"><a href="struct_per_ray_data.html">PerRayData</a></div><div class="ttdef"><b>Definition</b> <a href="#l00025">RayTracing.cu.h:26</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a1c5097650f40749e55c984db780e1b1a"><div class="ttname"><a href="struct_per_ray_data.html#a1c5097650f40749e55c984db780e1b1a">PerRayData::source_ID</a></div><div class="ttdeci">unsigned char source_ID</div><div class="ttdoc">Numerical identifier for radiation source corresponding to each ray.</div><div class="ttdef"><b>Definition</b> <a href="#l00044">RayTracing.cu.h:44</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a3510f98e1f2a49183edf5173a2d9f935"><div class="ttname"><a href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">PerRayData::strength</a></div><div class="ttdeci">double strength</div><div class="ttdoc">&quot;strength&quot; or amount of energy associated with the ray.</div><div class="ttdef"><b>Definition</b> <a href="#l00029">RayTracing.cu.h:29</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a3bf336505e26e0fe714a4347524f7407"><div class="ttname"><a href="struct_per_ray_data.html#a3bf336505e26e0fe714a4347524f7407">PerRayData::area</a></div><div class="ttdeci">float area</div><div class="ttdoc">Area of primitive (note for voxels, this is area density)</div><div class="ttdef"><b>Definition</b> <a href="#l00035">RayTracing.cu.h:35</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a6eb01aac11b5c8d4cfe02f15330dd868"><div class="ttname"><a href="struct_per_ray_data.html#a6eb01aac11b5c8d4cfe02f15330dd868">PerRayData::origin_UUID</a></div><div class="ttdeci">uint origin_UUID</div><div class="ttdoc">UUID of primitive from which ray originated.</div><div class="ttdef"><b>Definition</b> <a href="#l00031">RayTracing.cu.h:31</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a757f60a4367093c4aa8bf21e6042c1dd"><div class="ttname"><a href="struct_per_ray_data.html#a757f60a4367093c4aa8bf21e6042c1dd">PerRayData::seed</a></div><div class="ttdeci">uint seed</div><div class="ttdoc">Seed for curand random number generator.</div><div class="ttdef"><b>Definition</b> <a href="#l00037">RayTracing.cu.h:37</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_ad10350ee3268a1f18cca466d764247a5"><div class="ttname"><a href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">PerRayData::periodic_depth</a></div><div class="ttdeci">unsigned char periodic_depth</div><div class="ttdoc">Number of periodic boundary intersections for ray.</div><div class="ttdef"><b>Definition</b> <a href="#l00039">RayTracing.cu.h:39</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_afc61137cf7b0e132eeb05b908b899790"><div class="ttname"><a href="struct_per_ray_data.html#afc61137cf7b0e132eeb05b908b899790">PerRayData::face</a></div><div class="ttdeci">bool face</div><div class="ttdoc">Face of primitive from which ray was launched (true=top, false=bottom)</div><div class="ttdef"><b>Definition</b> <a href="#l00033">RayTracing.cu.h:33</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

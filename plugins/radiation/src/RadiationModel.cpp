@@ -2884,7 +2884,18 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 for (uint s = 0; s < Nsources; s++) {
-                    if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
+                    //if reflectivity was manually set, or a spectrum was given and the global data exists
+                    if ( rho_s != rho_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str())) {
+
+                        rho.at(s).at(u).at(b) = rho_s;
+
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
+                        }
+
+                    //use spectrum
+                    } else {
 
                         rho.at(s).at(u).at(b) = rho_unique.at(spectrum_label).at(b).at(s);
 
@@ -2893,14 +2904,6 @@ void RadiationModel::updateRadiativeProperties() {
                             rho_cam.at(s).at(u).at(b).at(cam) = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                         }
 
-                        //assign default value if there is no primitive data or spectral data
-                    } else {
-                        rho.at(s).at(u).at(b) = rho_s;
-
-                        //cameras
-                        for( uint cam=0; cam<Ncameras; cam++ ){
-                            rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
-                        }
                     }
 
                     //error checking
@@ -2950,7 +2953,18 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 for (uint s = 0; s < Nsources; s++) {
-                    if (!spectrum_label.empty() && context->doesGlobalDataExist(spectrum_label.c_str())) {
+                    //if transmissivity was manually set, or a spectrum was given and the global data exists
+                    if ( tau_s != tau_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str())) {
+
+                        tau.at(s).at(u).at(b) = tau_s;
+
+                        //cameras
+                        for( uint cam=0; cam<Ncameras; cam++ ){
+                            tau_cam.at(s).at(u).at(b).at(cam) = tau_s;
+                        }
+
+                    }else{
+
                         tau.at(s).at(u).at(b) = tau_unique.at(spectrum_label).at(b).at(s);
 
                         //cameras
@@ -2958,14 +2972,6 @@ void RadiationModel::updateRadiativeProperties() {
                             tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                         }
 
-                        //assign default value if there is no primitive data or spectral data
-                    } else {
-                        tau.at(s).at(u).at(b) = tau_s;
-
-                        //cameras
-                        for( uint cam=0; cam<Ncameras; cam++ ){
-                            tau_cam.at(s).at(u).at(b).at(cam) = tau_s;
-                        }
                     }
 
                     //error checking
@@ -3436,6 +3442,7 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
             }
 
             for (auto b = 0; b < Nbands_launch; b++) {
+              //\todo For emissivity and twosided_flag, this should be done in updateRadiativeProperties() to avoid having to do it on every runBand() call
                 if (radiation_bands.at(band_labels.at(b)).emissionFlag) {
                     std::string prop = "emissivity_" + band_labels.at(b);
                     for (size_t u = 0; u < Nprimitives; u++) {
@@ -3725,14 +3732,15 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     for(auto b=0; b < Nbands_launch; b++ ) {
 
         std::string prop = "radiation_flux_" + band_labels.at(b);
+        std::vector<float> R(Nprimitives);
         for (size_t u = 0; u < Nprimitives; u++) {
             size_t ind = u * Nbands_launch + b;
-            float R = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
-            context->setPrimitiveData(context_UUIDs.at(u), prop.c_str(), R);
+            R.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
             if (radiation_flux_data.at(ind) != radiation_flux_data.at(ind)) {
                 std::cout << "NaN here " << ind << std::endl;
             }
         }
+        context->setPrimitiveData( context_UUIDs, prop.c_str(), R );
 
         if( UUIDs_context_all.size()!=Nprimitives ){
             for( uint UUID : UUIDs_context_all ){

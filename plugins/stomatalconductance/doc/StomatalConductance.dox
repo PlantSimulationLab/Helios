@@ -530,34 +530,35 @@ In order to modify model coefficients from the default values, one should 1) dec
 
 <p> <br> </p>
 
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code> %BMFcoefficients modelcoeffs;
+```
+ BMFcoefficients modelcoeffs;
  modelcoeffs.Em = 9.3;
  modelcoeffs.i0 = 5.3;
  modelcoeffs.k = 672;
- modelcoeffs.b = 6.7;</code></pre></div>
+ modelcoeffs.b = 6.7;
+```
 
 \subsection StomatalRun Running the Model (steady-state mode)
 
 There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> &UUIDs )).
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "StomatalConductanceModel.h"
+  ```
+  #include "StomatalConductanceModel.h"
 
   using namespace helios;
 
   int main(){
 
-     \c//Initialize the Context and add some geometry
+     //Initialize the Context and add some geometry
      Context context;
 
      context.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
 
-     \c//Initialize the stomatal conductance model
-     %StomatalConductanceModel stomatalmodel( &context );
+     //Initialize the stomatal conductance model
+     StomatalConductanceModel stomatalmodel( &context );
 
-     \c//Initialize model coefficients and modify their values
-     %BMFcoefficients modelcoeffs;  //values are initialized with default values
+     //Initialize model coefficients and modify their values
+     BMFcoefficients modelcoeffs;  //values are initialized with default values
      modelcoeffs.Em = 9.3;  //we can modify one or more parameters
      modelcoeffs.i0 = 5.3;
      modelcoeffs.k = 672;
@@ -565,12 +566,13 @@ There are two possible functions to run the model: one to run the model for all 
 
      stomatalmodel.setModelCoefficients( modelcoeffs );
 
-     \c//-- Normally you would initialize and run some other models (e.g., radiation, energybalance) here --//
+     //-- Normally you would initialize and run some other models (e.g., radiation, energybalance) here --//
 
-     \c//Run the stomatal conductance model (for all primitives)
+     //Run the stomatal conductance model (for all primitives)
      stomatalmodel.run();
 
-  }</code></pre></div>
+  }
+  ```
 
   \subsection StomatalRunDyn Running the Model in Dynamic Mode
 
@@ -594,31 +596,31 @@ There are two possible functions to run the model: one to run the model for all 
 
   Below is and example of running the model in dynamic mode.
 
-  <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code>  #include "StomatalConductanceModel.h"
+  ```
+  #include "StomatalConductanceModel.h"
 
   using namespace helios;
 
   int main(){
 
-    \c//Initialize the Context and add some geometry
+    //Initialize the Context and add some geometry
     Context context;
 
     uint UUID = context.addPatch();
 
-    \c//Initialize the stomatal conductance model
-    %StomatalConductanceModel stomatalmodel( &context );
+    //Initialize the stomatal conductance model
+    StomatalConductanceModel stomatalmodel( &context );
 
-    \c//Initialize model coefficients with default values
-    %BMFcoefficients modelcoeffs;  //values are initialized with default values
+    //Initialize model coefficients with default values
+    BMFcoefficients modelcoeffs;  //values are initialized with default values
     stomatalmodel.setModelCoefficients( modelcoeffs );
 
-    \c//Set the response time constants (seconds)
+    //Set the response time constants (seconds)
     float tau_open = 10;
     float tau_close = 10;
     stomatalmodel.setDynamicTimeConstants(tau_open, tau_close);
 
-    \c//Set the initial stomatal conductance value
+    //Set the initial stomatal conductance value
     float gs_initial = 0.2f;
     context.setPrimitiveData( UUID, "moisture_conductance", gs_initial );
 
@@ -627,16 +629,17 @@ There are two possible functions to run the model: one to run the model for all 
 
     for( int t=0; t<Nsteps; t++ ){
 
-        \c//Run the model for each timestep
+        //Run the model for each timestep
         stomatalmodel.run(dt);
 
-        \c//Get and print the stomatal conductance value
+        //Get and print the stomatal conductance value
         float gs_dyn;
         context.getPrimitiveData( UUID, "moisture_conductance", gs_dyn );
         std::cout << "Timestep " << t << ": " << gs_dyn << std::endl;
 
     }
 
-  }</code></pre></div>
+  }
+ ```
     
 */

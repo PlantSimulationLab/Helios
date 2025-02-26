@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Solar Position Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -165,7 +200,7 @@ $(function(){initNavTree('_solar_position_doc.html',''); initResizable(true); })
 <tr>
 <th>CMakeLists.txt</th><td>set( PLUGINS "solarposition" ) </td></tr>
 <tr>
-<th>Header File</th><td>#include "SolarPosition.h" </td></tr>
+<th>Header File</th><td>include "SolarPosition.h" </td></tr>
 <tr>
 <th>Class</th><td><a class="el" href="class_solar_position.html">SolarPosition</a> </td></tr>
 </table>
@@ -184,7 +219,7 @@ SolarPosition Class Constructor</h1>
 </table>
 <p>The <a class="el" href="class_solar_position.html">SolarPosition</a> class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).</p>
 <table class="doxtable">
-<caption>\ref <a class="el" href="class_solar_position.html">SolarPosition</a> constructor inputs</caption>
+<caption>\ref SolarPosition constructor inputs</caption>
 <tr>
 <th>Input Parameter</th><th>Description</th><th>Convention</th><th>Default Behavior </th></tr>
 <tr>
@@ -202,16 +237,16 @@ Model Theory</h1>
 <h2><a class="anchor" id="SolarPosTheory"></a>
 Position of the Sun</h2>
 <p>The solar position model was implemented following the description in <a href="https://www.sciencedirect.com/science/article/pii/B9780123737502500069">Chapter 1 of Iqbal (1983)</a>.</p>
-<p>The day angle <img class="formulaInl" alt="$\Gamma$" src="form_97.png" width="11" height="12"/> given as the polar angle of the earth relative to the sun ( <img class="formulaInl" alt="$\Gamma=0$" src="form_190.png" width="38" height="12"/> on Jan. 1) is calculated as</p>
-<center> <img class="formulaInl" alt="$\Gamma = 2\pi(DOY-1)/365.25$" src="form_191.png" width="171" height="17"/>, (1) </center><p>where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
+<p>The day angle \(\Gamma\) given as the polar angle of the earth relative to the sun ( \(\Gamma=0\) on Jan. 1) is calculated as</p>
+<center> \(\Gamma = 2\pi(DOY-1)/365.25\), (1) </center><p>where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.</p>
 <p>The solar declination angle is then calculated as</p>
-<center> <img class="formulaInl" alt="$\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)$" src="form_192.png" width="575" height="35"/>. (2) </center><p>The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
-<center> <img class="formulaInl" alt="$EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))$" src="form_193.png" width="527" height="35"/>, (3) </center><p>The hour angle is given by</p>
-<center> <img class="formulaInl" alt="$h=15(LST-12)$" src="form_194.png" width="119" height="17"/>, (4) </center><p>with</p>
-<center> <img class="formulaInl" alt="$LST=hour+minute/60+TC/60$" src="form_195.png" width="234" height="17"/>, (5) </center><p>and</p>
-<center> <img class="formulaInl" alt="$TC=4(15UTC-longitude)+EoT$" src="form_196.png" width="242" height="17"/>, (6) </center><p>Finally, the solar elevation angle is given by</p>
-<center> <img class="formulaInl" alt="$\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )$" src="form_197.png" width="378" height="20"/>, (7) </center><p>and the solar azimuthal angle is given by</p>
-<center> <img class="formulaInl" alt="$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))$" src="form_198.png" width="416" height="18"/>. (8) </center><p>Note that <img class="formulaInl" alt="$\mathrm{cos}^{-1}$" src="form_199.png" width="36" height="14"/> gives angles between 0 and <img class="formulaInl" alt="$\pi$" src="form_21.png" width="11" height="8"/>, so to get a <img class="formulaInl" alt="$\phi_s$" src="form_183.png" width="14" height="15"/> between 0 and <img class="formulaInl" alt="$2\pi$" src="form_200.png" width="17" height="11"/>, we take <img class="formulaInl" alt="$\phi_s=2\pi-\phi_s$" src="form_201.png" width="84" height="15"/> if <img class="formulaInl" alt="$LST&gt;12$" src="form_202.png" width="66" height="14"/>.</p>
+<center> \(\delta = 0.006918 - 0.399912\,\mathrm{cos}(\Gamma) + 0.070257\,\mathrm{sin}(\Gamma)- 0.006758\,\mathrm{cos}(2\Gamma) + 0.000907\,\mathrm{sin}(2\Gamma) - 0.002697\,\mathrm{cos}(3\Gamma) + 0.00148\,\mathrm{sin}(3\Gamma)\). (2) </center><p>The <a href="https://en.wikipedia.org/wiki/Equation_of_time">equation of time</a> is calculated as</p>
+<center> \(EoT = 229.18(0.000075 + 0.001868\,\mathrm{cos}(\Gamma) - 0.032077\,\mathrm{sin}(\Gamma) - 0.014615\,\mathrm{cos}(2\Gamma) - 0.04089\,\mathrm{sin}(2\Gamma))\), (3) </center><p>The hour angle is given by</p>
+<center> \(h=15(LST-12)\), (4) </center><p>with</p>
+<center> \(LST=hour+minute/60+TC/60\), (5) </center><p>and</p>
+<center> \(TC=4(15UTC-longitude)+EoT\), (6) </center><p>Finally, the solar elevation angle is given by</p>
+<center> \(\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )\), (7) </center><p>and the solar azimuthal angle is given by</p>
+<center> \(\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))\). (8) </center><p>Note that \(\mathrm{cos}^{-1}\) gives angles between 0 and \(\pi\), so to get a \(\phi_s\) between 0 and \(2\pi\), we take \(\phi_s=2\pi-\phi_s\) if \(LST&gt;12\).</p>
 <h2><a class="anchor" id="SolarFluxTheory"></a>
 Direct and Diffuse Solar Flux</h2>
 <p>Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.</p>
@@ -219,9 +254,9 @@ Direct and Diffuse Solar Flux</h2>
 Ambient Longwave Flux</h2>
 <p>The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.</p>
 <p>The model surmounts to calculating the effective emissivity of the sky as a function of precipitable water in the atmosphere</p>
-<center> <img class="formulaInl" alt="$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)$" src="form_203.png" width="240" height="29"/>, </center><p>where <img class="formulaInl" alt="$u$" src="form_204.png" width="11" height="8"/> is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
+<center> \(\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)\), </center><p>where \(u\) is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.</p>
 <p>The downwelling longwave radiation flux on a horizontal surface is given by</p>
-<center> <img class="formulaInl" alt="$R_L=\epsilon_s\sigma T_a^4$" src="form_205.png" width="78" height="18"/>, </center><p>where <img class="formulaInl" alt="$\sigma=5.67\times10^{-8}$" src="form_206.png" width="104" height="14"/> W/m<sup>2</sup>-K<sup>4</sup>, and <img class="formulaInl" alt="$T_a$" src="form_43.png" width="17" height="14"/> is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
+<center> \(R_L=\epsilon_s\sigma T_a^4\), </center><p>where \(\sigma=5.67\times10^{-8}\) W/m<sup>2</sup>-K<sup>4</sup>, and \(T_a\) is the air temperature in Kelvin measured near the ground (say 2 m height).</p>
 <h1><a class="anchor" id="SolarLib"></a>
 Using the SolarPosition Plug-in</h1>
 <h2><a class="anchor" id="SolarPos"></a>
@@ -261,7 +296,6 @@ Getting the Direction of the Sun</h2>
 <div class="line">    <span class="keywordtype">float</span> azimuth = sun.getSunAzimuth(); <span class="comment">//azimuthal angle (radians)</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-<div class="ttc" id="aclass_solar_position_html"><div class="ttname"><a href="class_solar_position.html">SolarPosition</a></div><div class="ttdef"><b>Definition</b> <a href="_solar_position_8h_source.html#l00021">SolarPosition.h:21</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="SolarFlux"></a>
 Getting the Solar Flux</h2>
 <p>The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the <a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a> function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.</p>
@@ -312,20 +346,20 @@ Calibrating the turbidity using weather station (radiometer) data</h3>
 <h3><a class="anchor" id="SolarFluxClouds"></a>
 Incorporating the effects of clouds</h3>
 <p>The REST2 model for solar fluxes was developed for clear-sky conditions and cannot directly be used when clouds are present. If incident solar radiation data is available (e.g., from a weather station), this can be used to calibrate the model to account for the possible presence of clouds. A simple model is described below for doing so.</p>
-<p>Consider <img class="formulaInl" alt="$R_{meas,h}$" src="form_207.png" width="50" height="17"/> to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and <img class="formulaInl" alt="$R_{clear}$" src="form_208.png" width="38" height="15"/> to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to</p>
+<p>Consider \(R_{meas,h}\) to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and \(R_{clear}\) to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
-\]" src="form_209.png" width="149" height="17"/>
+\[    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
+\]
 </p>
 <p>The diffuse fraction can be approximated as</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
-\]" src="form_210.png" width="206" height="36"/>
+\[    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+\]
 </p>
-<p>where it is enforced that <img class="formulaInl" alt="$0\leq f_{diff} \leq 1$" src="form_211.png" width="89" height="17"/>. The resulting flux that is output from the model is (flux perpendicular to the sun)</p>
+<p>where it is enforced that \(0\leq f_{diff} \leq 1\). The resulting flux that is output from the model is (flux perpendicular to the sun)</p>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
-\]" src="form_212.png" width="162" height="36"/>
+\[   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+\]
 </p>
 <p>In order to enable flux calibration for cloudy conditions, you must 1) Load timeseries data into the Context containing the measured all-wave solar radiation flux. This data must cover the entire period of the simulation. 2) Call <a class="el" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f">SolarPosition::enableCloudCalibration()</a>, which requires a string corresponding to the timeseries data value reference in (1). Below is a code example:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;SolarPosition&quot;</span></div>
@@ -377,7 +411,6 @@ Getting the Sky Longwave Flux</h2>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="_plug_ins.html">Plug-ins</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

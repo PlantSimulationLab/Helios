@@ -1,7 +1,7 @@
-# Blender 3.4.1
+# Blender 4.2.2 LTS
 # www.blender.org
 mtllib Arrow.mtl
-o Cylinder
+o arrow
 v 0.000000 0.075000 0.003984
 v 0.000000 0.075000 0.803984
 v 0.028701 0.069291 0.003984

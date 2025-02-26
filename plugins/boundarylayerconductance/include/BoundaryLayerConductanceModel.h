@@ -43,21 +43,21 @@ public:
 
   //! Set the boundary-layer conductance model to be used for all primitives in the Context
   /**
-   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
+   * \param[in] gH_model String corresponding to model to be run. One of "hhausen", "InclinedPlate", "Sphere", or "Ground".
   */
   void setBoundaryLayerModel( const char* gH_model );
 
   //! Set the boundary-layer conductance model to be used for a set of primitives
   /**
    * \param[in] UUID  Unique universal identifier (UUID) for primitive the conductance model should be used.
-   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
+   * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
   */
   void setBoundaryLayerModel( uint UUID, const char* gH_model );
 
   //! Set the boundary-layer conductance model to be used for a set of primitives
   /**
    * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
-   * \param[in] gH_model String corresponding to model to be run. One of "Polhausen", "InclinedPlate", "Sphere", or "Ground".
+   * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
   */
   void setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char* gH_model );
 

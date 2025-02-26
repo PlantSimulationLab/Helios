@@ -78,7 +78,7 @@
 
  The implementation used here calculates the net rate of CO<sub>2</sub> exchange as
 
- \f[A=\left(1-\frac{\Gamma^*}{C_i}\right)\mathrm{min}\left\{W_c,W_j\right\}-R_d,\f]
+ \f[A=\left(1-\frac{\Gamma^*}{C_i}\right)\mathrm{min}\left\{W_c,W_j,W_p\right\}-R_d,\f]
 
  where
 
@@ -105,6 +105,10 @@
  \f[J(Q) = \dfrac{\alpha Q + J_{max} - \sqrt{(\alpha Q + J_{max})^2 - 4 \theta \alpha Q J_{max}}}{2 \theta}\f]
 
  where \f$\theta\f$ is an additional parameter (unitless) that shapes the light response curve beyond its initial slope. When \f$\theta\f$ approaches zero, the two forms become equivalent. In Photosynthesis Plugin, the rectangular form will be assumed unless \f$\theta\f$ is specified by the user.
+
+ \f[W_p=\dfrac{3\,TPU\,C_i}{C_i-\Gamma^*}\f]
+
+ is the rate limited by triose phosphate utilization. Note that if the TPU parameter is not set by the user, this state is ignored.
 
  The intercellular CO<sub>2</sub> concentration \f$C_i\f$ is determined from the relation
 
@@ -173,7 +177,7 @@ In the Photosynthesis Plugin, the Arrhenius form will be assumed as it requires 
  
  \subsubsection FvCBPhotoParams Summary of FvCB Model Parameters
 
- The table below gives example model coefficients obtained for several different species.
+ The table below gives example model parameters obtained for several different species. These parameters were fit from leaf-level gas exchange data using the <a href="https://github.com/GEMINI-Breeding/photorch">PhoTorch</a> Python package. Note that the parameter sets are based on different temperature response functions depending on the data that was available.
 
 | Species            | \f$V_{cmax25}\f$ | \f$J_{max25}\f$ | \f$TPU_{25}\f$ | \f$R_{d25}\f$ | \f$\alpha\f$ | \f$\theta\f$ | \f$\Delta H_{a,Vcmax}\f$ | \f$T _{opt,Vcmax}\f$ | \f$\Delta H_{d,Vcmax}\f$ | \f$\Delta H_{a,Jmax}\f$ | \f$T _{opt,Jmax}\f$ | \f$\Delta H_{d,Jmax}\f$ | \f$\Delta H_{a,TPU}\f$ | \f$T _{opt,TPU}\f$ | \f$\Delta H_{d,TPU}\f$ |
 | ----------         | ------------ | ----------- | ---------- | --------- | -------- | -------- | -------------------- | ---------------- | -------------------- | ------------------- | --------------- | ------------------- | ------------------ | -------------- | ------------------ |
@@ -194,39 +198,48 @@ In the Photosynthesis Plugin, the Arrhenius form will be assumed as it requires 
 
 \subsubsection FvCBSettingPhotoParams Setting FvCB Model Parameters
 
- ~~~~~~{.cpp}
-  #include "PhotosynthesisModel.h"
+The model coefficients can be set manually or by using the library of coefficients provided in the table above.
 
-  int main(){
+To load the FvCB parameters from the library, call the function \ref PhotosynthesisModel::setFarquharCoefficientsFromLibrary() with the species name as an argument. This will automatically set the parameters for all primitives. Alternatively, a vector of UUIDs can be passed to this function to set the parameters for a subset of primitives.
+
+To set the parameters manually, first declare an instance of the \ref FarquharModelCoefficients structure, and then set the parameters using the member functions of the structure. Finally, call the function \ref PhotosynthesisModel::setModelCoefficients() with the structure as an argument.
+
+Each parameter has a setter function, which is the means by which the underlying response function to be used is specified.
+
+<u>Parameter Temperature Response</u>
+1. No temperature response: Call the setter function (e.g., \ref FarquharModelCoefficients::setVcmax()) with a single argument. This will make the parameter constant with temperature.
+2. Standard Arrhenius temperature response: Call the setter function (e.g., \ref FarquharModelCoefficients::setVcmax()) with two arguments - the first parameter being the value at 25<sup>o</sup>C, and the second being the \f$dH_a\f$ of the parameter temperature response.
+3. Arrhenius temperature response with an optimum: Call the setter function (e.g., \ref FarquharModelCoefficients::setVcmax()) with four arguments - the first parameter being the value at 25<sup>o</sup>C, the second being the \f$dH_a\f$ of the parameter temperature response, the third being the \f$T_{opt}\f$ of the parameter temperature response, and the fourth being the \f$dH_d\f$ of the parameter temperature response.
+
+<u>Light Response</u>
+1. Rectangular hyperbola: Call the setter function \ref FarquharModelCoefficients::setQuantumEfficiency_alpha() to set only the alpha parameter. This will enable the rectangular hyperbola light response. Note also the \ref FarquharModelCoefficients::setQuantumEfficiency_alpha() function can be called with multiple arguments in order to specify a temperature response as described above.
+2. Non-rectangular hyperbola: Call both setter functions \ref FarquharModelCoefficients::setQuantumEfficiency_alpha() and \ref FarquharModelCoefficients::setLightResponseCurvature_theta(). This will enable the non-rectangular hyperbola light response. Each of these can also be called with multiple arguments to specify a temperature response as described above.
+
+Note that the parameter sets in the library vary in terms of which response functions are used based on the data available for parameter fitting.
+
+ ~~~~~~{.cpp}
 	PhotosynthesisModel photosynthesismodel(&context);
 
 	//Use the Farquahar-von Caemmerer-Berry model
 	photosynthesismodel.setModelType_Farquhar();
 
     //Use a species from the library
-    photosynthesis.setModelCoefficients("almond");
+    photosynthesis.setFarquharCoefficientsFromLibrary("almond");
 
-    //Or set parameters manually: fmc.setParam(k25, dHa, Topt(C), dHd)
+    //Or set parameters manually:
     FarquharModelCoefficients fmc;
-    fmc.setVcmax(74.5, 76.1);               // standard Arrhenius
-    fmc.setJmax(180.2, 23.0, 40.65, 502.3); // peaked Arrhenius
-    fmc.setTPU(7.7, 24.0, 41.1, 496.4);
-    fmc.setRd(1.3);
-    fmc.setQuantumEfficiency_alpha(0.304);
-    fmc.setLightResponseCurvature_theta(0.601);
+    fmc.setVcmax(74.5, 76.1);                    // standard Arrhenius
+    fmc.setJmax(180.2, 23.0, 40.65, 502.3);      // Arrhenius with optimum
+    fmc.setTPU(7.7, 24.0, 41.1, 496.4);          // Arrhenius with optimum
+    fmc.setRd(1.3);                              // No temperature response
+    //setting both alpha and theta, so will use non-rectangular hyperbola light response
+    fmc.setQuantumEfficiency_alpha(0.304);       // No temperature response
+    fmc.setLightResponseCurvature_theta(0.601);  // No temperature response
+
+    photosynthesis.setModelCoefficients(fmc); //setting the parameters manually for all primitives (will override the library parameters)
 
 	photosynthesismodel.run();
 
-	//Set model coefficients for different leaf groups
-	photosynthesis.setModelCoefficients("almond", almondleaves);
-	photosynthesis.setModelCoefficients("grape", grapeleaves);
-
-	//Get and modify model coefficients
-	AlmondFarquharModelCoefficients afmc;
-	afmc = photosynthesis.getModelCoefficients("almond");
-	afmc.setVcmax(1.5*fmc.getVcmaxTempResponse().value_at_25C, fmc.getVcmaxTempResponse().dHa);
-	photosynthesis.setModelCoefficients(afmc,almondleaves);
-  }
 ~~~~~~
 
   \section EmpiricalDescription Empirical Model Description

@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/radiation/src/rayHit.cu Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -212,7 +247,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <a class="code hl_struct" href="struct_per_ray_data.html">PerRayData</a> prd_periodic = prd;</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">periodic_depth</a>++;</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5" title="Number of periodic boundary intersections for ray.">periodic_depth</a>++;</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        rtTrace(top_object, ray_periodic, prd_periodic);</div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span> </div>
@@ -253,7 +288,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span> </div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <a class="code hl_struct" href="struct_per_ray_data.html">PerRayData</a> prd_periodic = prd;</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">periodic_depth</a>++;</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5" title="Number of periodic boundary intersections for ray.">periodic_depth</a>++;</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        rtTrace(top_object, ray_periodic, prd_periodic);</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
@@ -273,31 +308,31 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>            float3 s0 = make_float3(0, 0, 0);</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>            float3 s1 = make_float3(1, 0, 0);</div>
 <div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>            float3 s2 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s0);</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s1);</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s2);</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(s1 - s0, s2 - s0);</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s0);</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s1);</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s2);</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(s1 - s0, s2 - s0);</div>
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 1) {<span class="comment">//hit triangle</span></div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>            float3 v0 = make_float3(0, 0, 0);</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v0);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v0);</div>
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>            float3 v1 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v1);</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v1);</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>            float3 v2 = make_float3(1, 1, 0);</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v2);</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(v1 - v0, v2 - v1);</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v2);</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v1);</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 2) {<span class="comment">//hit disk</span></div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>            float3 v0 = make_float3(0, 0, 0);</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v0);</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v0);</div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>            float3 v1 = make_float3(1, 0, 0);</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v1);</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v1);</div>
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>            float3 v2 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v2);</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(v1 - v0, v2 - v0);</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v2);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v0);</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 4) {<span class="comment">//hit voxel</span></div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            float3 vmin = make_float3(-0.5, -0.5, -0.5);</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, vmin);</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, vmin);</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            float3 vmax = make_float3(0.5, 0.5, 0.5);</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, vmax);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, vmax);</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        }</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        normal = normalize(normal);</div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span> </div>
@@ -418,7 +453,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);</div>
 <div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>        <a class="code hl_struct" href="struct_per_ray_data.html">PerRayData</a> prd_periodic = prd;</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">periodic_depth</a>++;</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5" title="Number of periodic boundary intersections for ray.">periodic_depth</a>++;</div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span> </div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        rtTrace(top_object, ray_periodic, prd_periodic);</div>
 <div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span> </div>
@@ -438,31 +473,31 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>            float3 s0 = make_float3(0, 0, 0);</div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>            float3 s1 = make_float3(1, 0, 0);</div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>            float3 s2 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s0);</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s1);</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, s2);</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(s1 - s0, s2 - s0);</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s0);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s1);</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, s2);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(s1 - s0, s2 - s0);</div>
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 1) {<span class="comment">//hit triangle</span></div>
 <div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>            float3 v0 = make_float3(0, 0, 0);</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v0);</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v0);</div>
 <div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>            float3 v1 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v1);</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v1);</div>
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>            float3 v2 = make_float3(1, 1, 0);</div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v2);</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(v1 - v0, v2 - v1);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v2);</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v1);</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 2) {<span class="comment">//hit disk</span></div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            float3 v0 = make_float3(0, 0, 0);</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v0);</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v0);</div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>            float3 v1 = make_float3(1, 0, 0);</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v1);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v1);</div>
 <div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>            float3 v2 = make_float3(0, 1, 0);</div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, v2);</div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">cross</a>(v1 - v0, v2 - v0);</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, v2);</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>            normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v0);</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (primitive_type[UUID] == 4) {<span class="comment">//hit voxel</span></div>
 <div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>            float3 vmin = make_float3(-0.5, -0.5, -0.5);</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, vmin);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, vmin);</div>
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>            float3 vmax = make_float3(0.5, 0.5, 0.5);</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a>(m, vmax);</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>            <a class="code hl_function" href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500" title="Function to transform a 3D point based on current affine transformation matrix on the GPU.">d_transformPoint</a>(m, vmax);</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>        }</div>
 <div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>        normal = normalize(normal);</div>
 <div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
@@ -560,8 +595,8 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span> </div>
 <div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);</div>
 <div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span>        <a class="code hl_struct" href="struct_per_ray_data.html">PerRayData</a> prd_periodic = prd;</div>
-<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">periodic_depth</a>++;</div>
-<div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">strength</a> += t_hit;</div>
+<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5" title="Number of periodic boundary intersections for ray.">periodic_depth</a>++;</div>
+<div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>        prd_periodic.<a class="code hl_variable" href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935" title="&quot;strength&quot; or amount of energy associated with the ray.">strength</a> += t_hit;</div>
 <div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span> </div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>        rtTrace(top_object, ray_periodic, prd_periodic);</div>
 <div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span> </div>
@@ -747,13 +782,6 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    camera_pixel_depth[prd.origin_UUID] = -1;</div>
 <div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span> </div>
 <div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>}</div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html"><div class="ttname"><a href="_ray_tracing_8cu_8h.html">RayTracing.cu.h</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_a515aa9bdd11a5648143611f9c9d76500"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#a515aa9bdd11a5648143611f9c9d76500">d_transformPoint</a></div><div class="ttdeci">__device__ void d_transformPoint(const float(&amp;transform_matrix)[16], float3 &amp;v)</div><div class="ttdoc">Function to transform a 3D point based on current affine transformation matrix on the GPU.</div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00316">RayTracing.cu.h:316</a></div></div>
-<div class="ttc" id="a_ray_tracing_8cu_8h_html_af48d117e18e1319cd61b4af9ef999b01"><div class="ttname"><a href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a></div><div class="ttdeci">__device__ float3 d_rotatePoint(const float3 &amp;position, const float &amp;theta, const float &amp;phi)</div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00106">RayTracing.cu.h:106</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_aa4e7459e7404915c12903a5c08588f5b"><div class="ttname"><a href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b">helios::cross</a></div><div class="ttdeci">vec3 cross(const vec3 &amp;a, const vec3 &amp;b)</div><div class="ttdoc">Cross product of two vec3 vectors.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00599">helios_vector_types.h:599</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html"><div class="ttname"><a href="struct_per_ray_data.html">PerRayData</a></div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00025">RayTracing.cu.h:26</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_a3510f98e1f2a49183edf5173a2d9f935"><div class="ttname"><a href="struct_per_ray_data.html#a3510f98e1f2a49183edf5173a2d9f935">PerRayData::strength</a></div><div class="ttdeci">double strength</div><div class="ttdoc">&quot;strength&quot; or amount of energy associated with the ray.</div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00029">RayTracing.cu.h:29</a></div></div>
-<div class="ttc" id="astruct_per_ray_data_html_ad10350ee3268a1f18cca466d764247a5"><div class="ttname"><a href="struct_per_ray_data.html#ad10350ee3268a1f18cca466d764247a5">PerRayData::periodic_depth</a></div><div class="ttdeci">unsigned char periodic_depth</div><div class="ttdoc">Number of periodic boundary intersections for ray.</div><div class="ttdef"><b>Definition</b> <a href="_ray_tracing_8cu_8h_source.html#l00039">RayTracing.cu.h:39</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

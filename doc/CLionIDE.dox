@@ -7,7 +7,7 @@
 
   \section CLionToolchains Setting up CMake and compilers (Toolchains)
 
-  In order to use CLion to build Helios, you need to first set up the compiler set (called Toolchains) on your system. This is detailed for PC, Linux, and Mac on the page \ref Dependencies "Dependent Software".
+  In order to use CLion to build Helios, you need to first set up the compiler set (called Toolchains) on your system. This is detailed for PC, Linux, and Mac on the page \ref DependentSoftware "Dependent Software".
 
   \section CLionProject Opening and building a project
 

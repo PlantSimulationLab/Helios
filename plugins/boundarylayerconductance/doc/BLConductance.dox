@@ -57,7 +57,7 @@
 
  \subsection BLCModels Boundary-layer Conductance Models
 
- There are four different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref setBoundaryLayerModel() is called for some UUIDs but not others, the plug-in will assume the default model (Polhausen) for any primitives for which no model was explicitly set.
+ There are four different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref setBoundaryLayerModel() is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.
 
  It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development. This is usually necesary when using the boundary-layer conductance model for a sphere, for example.
 
@@ -65,15 +65,15 @@
 
  <table>
  <tr><th>Model<th>string argument
- <tr><td>1. Polhausen Equation (default)<td>"Polhausen"
+ <tr><td>1. Pohlhausen Equation (default)<td>"Pohlhausen"
  <tr><td>2. Inclined Plate<td>"InclinedPlate"
  <tr><td>3. Laminar Sphere<td>"Sphere"
  <tr><td>4. Ground Surface<td>"Ground"
  </table>
 
- \subsubsection BLC1 1. The Polhausen Equation (Laminar Flat Plate, Forced Convection)
+ \subsubsection BLC1 1. The Pohlhausen Equation (Laminar Flat Plate, Forced Convection)
 
- The Polhausen equation is a classical similarity solution describing the boundary-layer conductance to heat for a flat plate parallel with the flow direction that is infinitely wide in the spanwise direction, and has finite length of \f$L\f$ in the streamwise direction. This model also assumes that the plate/primitive boundary-layer is laminar, and that convection is entirely forced (i.e., momentum forces dominate buoyancy forces). The boundary-layer conductance is calculated as
+ The Pohlhausen equation is a classical similarity solution describing the boundary-layer conductance to heat for a flat plate parallel with the flow direction that is infinitely wide in the spanwise direction, and has finite length of \f$L\f$ in the streamwise direction. This model also assumes that the plate/primitive boundary-layer is laminar, and that convection is entirely forced (i.e., momentum forces dominate buoyancy forces). The boundary-layer conductance is calculated as
 
  \f$g_H = 0.135 n_s\sqrt{\frac{U}{L}}\f$,
 

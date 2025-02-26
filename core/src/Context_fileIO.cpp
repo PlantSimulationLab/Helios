@@ -4128,15 +4128,15 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
 
 }
 
-void Context::writeOBJ( const std::string &filename ) const {
-  writeOBJ(filename, getAllUUIDs(),{});
+void Context::writeOBJ( const std::string &filename, bool write_normals ) const {
+  writeOBJ(filename, getAllUUIDs(),{}, write_normals);
 }
 
-void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs ) const {
-  writeOBJ(filename,UUIDs,{});
+void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals ) const {
+  writeOBJ(filename,UUIDs,{}, write_normals);
 }
 
-void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields ) const{
+void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals ) const{
 
   //To-Do list for OBJ writer
   // - it would make more sense to write patches  as quads rather than two triangles
@@ -4183,10 +4183,13 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
   bool voxelwarning = false;
 
   std::vector<vec3> verts;
+  std::vector<vec3> normals;
   std::vector<vec2> uv;
   std::map< uint, std::vector<int3> > faces;
+  std::map< uint, std::vector<int> > normal_inds;
   std::map< uint, std::vector<int3> > uv_inds;
   size_t vertex_count = 1;  //OBJ files start indices at 1
+  size_t normal_count = 0;
   size_t uv_count = 1;
   std::map<uint,std::vector<uint> > UUIDs_write;
 
@@ -4234,6 +4237,12 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       UUIDs_write[material_ID].push_back(p);
     }
 
+    if (write_normals) {
+      vec3 normal = getPrimitiveNormal(p);
+      normals.push_back(normal);
+      normal_count++;
+    }
+
     if (type == PRIMITIVE_TYPE_TRIANGLE) {
 
       faces[material_ID].push_back(make_int3( (int)vertex_count, (int)vertex_count + 1, (int)vertex_count + 2));
@@ -4241,6 +4250,9 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
         verts.push_back(vertices.at(i));
         vertex_count++;
       }
+
+      if (write_normals)
+        normal_inds[material_ID].push_back(static_cast<int>(normal_count));
 
       std::vector < vec2 > uv_v = getTrianglePointer_private(p)->getTextureUV();
       if (getTrianglePointer_private(p)->hasTexture() ) {
@@ -4265,6 +4277,11 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
       std::vector < vec2 > uv_v;
       uv_v = getPatchPointer_private(p)->getTextureUV();
 
+      if (write_normals) {
+        normal_inds[material_ID].push_back(static_cast<int>(normal_count));
+        normal_inds[material_ID].push_back(static_cast<int>(normal_count));
+      }
+
       if (getPatchPointer_private(p)->hasTexture() ) {
         uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 1, (int)uv_count + 2));
         uv_inds[material_ID].push_back(make_int3( (int)uv_count, (int)uv_count + 2, (int)uv_count + 3));
@@ -4288,6 +4305,8 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
     }
   }
 
+  if (write_normals)
+    assert(normal_inds.size() == faces.size());
   //  assert(verts.size() == faces.size());
   assert(uv_inds.size() == faces.size());
   for( int i=0; i<faces.size(); i++ ){
@@ -4312,10 +4331,22 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
 
   objfstream << "# Helios auto-generated OBJ File" << std::endl;
   objfstream << "# baileylab.ucdavis.edu/software/helios" << std::endl;
-  objfstream << "mtllib " << mtlfilename << std::endl;
+  objfstream << "mtllib " << getFileName(mtlfilename) << std::endl;
 
   for( auto &vert : verts) {
     objfstream << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
+  }
+  if (write_normals) {
+    float epsilon = 1e-7;
+    for( auto &n : normals) {
+      if (std::abs(n.x) < epsilon)
+        n.x = 0;
+      if (std::abs(n.y) < epsilon)
+        n.y = 0;
+      if (std::abs(n.z) < epsilon)
+        n.z = 0;
+      objfstream << "vn " << n.x << " " << n.y << " " << n.z << std::endl;
+    }
   }
   for( auto &v : uv){
     objfstream << "vt " << v.x << " " << v.y << std::endl;
@@ -4337,11 +4368,20 @@ void Context::writeOBJ( const std::string &filename, const std::vector<uint> &UU
         objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y
                    << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
       } else {
-        objfstream << "f " << faces.at(mat).at(f).x << "/"
-                   << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y
-                   << "/" << uv_inds.at(mat).at(f).y << " "
-                   << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z
-                   << std::endl;
+        if (write_normals) {
+          objfstream << "f "
+                    << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << "/" << normal_inds.at(mat).at(f) << " "
+                    << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << "/" << normal_inds.at(mat).at(f) << " "
+                    << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << "/" << normal_inds.at(mat).at(f)
+                    << std::endl;
+        }
+        else {
+          objfstream << "f "
+                    << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << " "
+                    << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << " "
+                    << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z
+                    << std::endl;
+        }
       }
     }
 

@@ -872,6 +872,16 @@ public:
   //! Plot current geometry into an interactive graphics window
   std::vector<helios::vec3> plotInteractive();
 
+  //! Plot interactive setup
+  glm::mat4 plotInit();
+
+  //! Run one rendering loop from plotInteractive()
+  /**
+   * \param[in] depthMVP Depth MVP matrix.
+   * \param[in] getKeystrokes If false, do not update visualization with input keystrokes.
+  */
+  void plotOnce(glm::mat4 depthMVP, bool getKeystrokes);
+
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap();
 
@@ -926,6 +936,27 @@ public:
 
   //! Close the graphics window
   void closeWindow();
+
+ void* getWindow();
+
+ std::vector<uint> getFrameBufferSize();
+
+ void setFrameBufferSize(int width, int height);
+
+ helios::RGBcolor getBackgroundColor();
+
+ Shader getPrimaryShader();
+
+ std::vector<helios::vec3> getCameraPosition();
+
+ glm::mat4 getPerspectiveTransformationMatrix();
+
+ std::vector<LightingModel> getPrimaryLightingModel();
+
+ uint getDepthTexture();
+
+ void clearColor();
+
 
 private:
 

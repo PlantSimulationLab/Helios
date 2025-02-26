@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: plugins/lidar/src/selfTest.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -118,7 +153,7 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">using namespace </span>helios;</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
 <div class="foldopen" id="foldopen00021" data-start="{" data-end="}">
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36">   21</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36">LiDARcloud::selfTest</a>() {</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36">   21</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36" title="Self-test (unit test) function.">LiDARcloud::selfTest</a>() {</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running LiDAR self-test...&quot;</span> &lt;&lt; std::endl;;</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
@@ -126,24 +161,24 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>  <span class="keywordtype">float</span> LAD, LAD_exact;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> gsize;</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> gsize;</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>  <span class="comment">//------ Sphere Inside One Voxel ------//</span></div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running single voxel sphere test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud</a> pointcloud;</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">disableMessages</a>();</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c" title="LiDAR point cloud constructor.">LiDARcloud</a> pointcloud;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(<span class="stringliteral">&quot;plugins/lidar/xml/sphere.xml&quot;</span>);</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;plugins/lidar/xml/sphere.xml&quot;</span>);</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.5, 5 );</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.5, 5 );</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>  <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context_1;</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_1;</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a65c36191d1f0f82b77ebd2ffa2fe3821">addTrianglesToContext</a>( &amp;context_1 );</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>  pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a65c36191d1f0f82b77ebd2ffa2fe3821" title="Add triangle geometry to Helios context.">addTrianglesToContext</a>( &amp;context_1 );</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <span class="keywordflow">if</span>( context_1.<a class="code hl_function" href="group__primitives.html#ga4d3447fb04c25e685bcc82599e2b173d">getPrimitiveCount</a>() != 386 ){</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <span class="keywordflow">if</span>( context_1.<a class="code hl_function" href="group__primitives.html#ga4d3447fb04c25e685bcc82599e2b173d" title="Get the total number of Primitives in the Context.">getPrimitiveCount</a>() != 386 ){</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;failed.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    fail_flag++;</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  }<span class="keywordflow">else</span>{</div>
@@ -154,28 +189,28 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running single voxel isotropic patches test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud</a> synthetic_1;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">disableMessages</a>();</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c" title="LiDAR point cloud constructor.">LiDARcloud</a> synthetic_1;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test.xml&quot;</span> );</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test.xml&quot;</span> );</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  gsize = synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55">getCellSize</a>(0);</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  gsize = synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55" title="Get the size of a grid cell by its index.">getCellSize</a>(0);</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context_2;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_2;</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>  std::vector&lt;uint&gt; UUIDs_1 = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">loadXML</a>(<span class="stringliteral">&quot;plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>  std::vector&lt;uint&gt; UUIDs_1 = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>  LAD_exact = 0.f;</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs_1 ){</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    LAD_exact += context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUID)/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>);</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    LAD_exact += context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(UUID)/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>);</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>  }</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context_2 );</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context_2 );</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.04, 10 );</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>();</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.04, 10 );</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>();</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  LAD = synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e">getCellLeafAreaDensity</a>( 0 );</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  LAD = synthetic_1.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e" title="Get the leaf area density of a grid cell in 1/m.">getCellLeafAreaDensity</a>( 0 );</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>  <span class="keywordflow">if</span>( fabs(LAD-LAD_exact)/LAD_exact&gt;0.02 || LAD!=LAD ){</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;failed.&quot;</span> &lt;&lt; std::endl;</div>
@@ -189,43 +224,43 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running eight voxel isotropic patches test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud</a> synthetic_2;</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">disableMessages</a>();</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c" title="LiDAR point cloud constructor.">LiDARcloud</a> synthetic_2;</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test_8.xml&quot;</span> );</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test_8.xml&quot;</span> );</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>  gsize = synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55">getCellSize</a>(0);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>  gsize = synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55" title="Get the size of a grid cell by its index.">getCellSize</a>(0);</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>  std::vector&lt;float&gt; LAD_ex(8,0);</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs_1 ){</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="keywordtype">int</span> i,j,k;</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    i = j = k = 0;</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> v = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">getPrimitiveVertices</a>(UUID).front();</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>&gt;0.f ) {</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed" title="Method to return the (x,y,z) coordinates of the vertices of a Primitive.">getPrimitiveVertices</a>(UUID).front();</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>&gt;0.f ) {</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>      i = 1;</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    }</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>&gt;0.f ) {</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>&gt;0.f ) {</div>
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>      j = 1;</div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    }</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>&gt;0.5f ) {</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keywordflow">if</span>( v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>&gt;0.5f ) {</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>      k = 1;</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    }</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keywordtype">int</span> ID = k*4+j*2+i;</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordtype">float</span> area = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUID);</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    LAD_ex.at(ID) += area/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>);</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordtype">float</span> area = context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(UUID);</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    LAD_ex.at(ID) += area/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>);</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>  }</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context_2);</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context_2);</div>
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.04, 10 );</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>();</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.04, 10 );</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>  synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>();</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>  <span class="keywordtype">float</span> RMSE = 0.f;</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">getGridCellCount</a>(); i++ ){</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>(); i++ ){</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    LAD = synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e">getCellLeafAreaDensity</a>( i );</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    RMSE += powf(LAD-LAD_ex.at(i),2)/float(synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">getGridCellCount</a>());</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    LAD = synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e" title="Get the leaf area density of a grid cell in 1/m.">getCellLeafAreaDensity</a>( i );</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    RMSE += powf(LAD-LAD_ex.at(i),2)/float(synthetic_2.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>());</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span> </div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  }</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>  RMSE = sqrtf(RMSE);</div>
@@ -242,24 +277,24 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span> </div>
 <div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running single voxel anisotropic patches test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud</a> synthetic_3;</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">disableMessages</a>();</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c" title="LiDAR point cloud constructor.">LiDARcloud</a> synthetic_3;</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test.xml&quot;</span> );</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(  <span class="stringliteral">&quot;plugins/lidar/xml/synthetic_test.xml&quot;</span> );</div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span> </div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>  gsize = synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55">getCellSize</a>(0);</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>  gsize = synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55" title="Get the size of a grid cell by its index.">getCellSize</a>(0);</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>  LAD_exact = 0.f;</div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs_1 ){</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    LAD_exact += context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUID)/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>);</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    LAD_exact += context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(UUID)/(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>*gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>);</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>  }</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span> </div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context_2 );</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context_2 );</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.04, 10 );</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>();</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.04, 10 );</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>  synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>();</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>  LAD = synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e">getCellLeafAreaDensity</a>( 0 );</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>  LAD = synthetic_3.<a class="code hl_function" href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e" title="Get the leaf area density of a grid cell in 1/m.">getCellLeafAreaDensity</a>( 0 );</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>  <span class="keywordflow">if</span>( fabs(LAD-LAD_exact)/LAD_exact&gt;0.03 || LAD!=LAD ){</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;failed.&quot;</span> &lt;&lt; std::endl;</div>
@@ -273,26 +308,26 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span> </div>
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>  std::cout &lt;&lt; <span class="stringliteral">&quot;Running synthetic almond tree test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context_4;</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_4;</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span> </div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>  context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>(<span class="stringliteral">&quot;plugins/lidar/xml/AlmondWP.obj&quot;</span>,<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0),6.,<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0,0),RGB::red,<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>  context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>(<span class="stringliteral">&quot;plugins/lidar/xml/AlmondWP.obj&quot;</span>,<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0),6.,<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0),RGB::red,<span class="keyword">true</span>);</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud</a> synthetic_4;</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">disableMessages</a>();</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>  <a class="code hl_function" href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c" title="LiDAR point cloud constructor.">LiDARcloud</a> synthetic_4;</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span> </div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">loadXML</a>( <span class="stringliteral">&quot;plugins/lidar/xml/almond.xml&quot;</span> );</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>( <span class="stringliteral">&quot;plugins/lidar/xml/almond.xml&quot;</span> );</div>
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">syntheticScan</a>( &amp;context_4 );</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...">syntheticScan</a>( &amp;context_4 );</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span> </div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">calculateSyntheticLeafArea</a>( &amp;context_4 );</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a94fe14aa32343dc25e366fe2ad7dfdfd">calculateSyntheticGtheta</a>( &amp;context_4 );</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe" title="Calculate the surface area of all primitives in the context.">calculateSyntheticLeafArea</a>( &amp;context_4 );</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a94fe14aa32343dc25e366fe2ad7dfdfd" title="Calculate the G(theta) of all primitives in the context.">calculateSyntheticGtheta</a>( &amp;context_4 );</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">triangulateHitPoints</a>( 0.05, 5 );</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">calculateLeafAreaGPU</a>();</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 );</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>  synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>();</div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>  <span class="comment">//calculate exact leaf area</span></div>
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>  uint Ncells = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">getGridCellCount</a>();</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>  uint Ncells = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>();</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span> </div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>  std::vector&lt;float&gt; total_area;</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>  total_area.resize(Ncells);</div>
@@ -307,28 +342,28 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>  std::vector&lt;uint&gt; cell_tri_count;</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>  cell_tri_count.resize(Ncells,0);</div>
 <div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span> </div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>  std::vector&lt;uint&gt; UUIDs = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>  std::vector&lt;uint&gt; UUIDs = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> p=0; p&lt;UUIDs.size(); p++ ){</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span> </div>
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    uint UUID = UUIDs.at(p);</div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <span class="keywordflow">if</span>( context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">doesPrimitiveDataExist</a>(UUID,<span class="stringliteral">&quot;gridCell&quot;</span>) ){</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <span class="keywordflow">if</span>( context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b" title="Check if primitive data &#39;label&#39; exists.">doesPrimitiveDataExist</a>(UUID,<span class="stringliteral">&quot;gridCell&quot;</span>) ){</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span> </div>
 <div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>      uint gridCell;</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>      context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a>(UUID, <span class="stringliteral">&quot;gridCell&quot;</span>,gridCell);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>      context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID, <span class="stringliteral">&quot;gridCell&quot;</span>,gridCell);</div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span> </div>
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>      <span class="keywordflow">if</span>( gridCell&gt;=0 &amp;&amp; gridCell&lt;Ncells ){</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        total_area.at(gridCell) += context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(UUID);</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        total_area.at(gridCell) += context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(UUID);</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>      }</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span> </div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>      <span class="keywordflow">for</span>( <span class="keywordtype">int</span> s=0; s&lt;synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aaa463ea1aaebb03abd8c3ec87091291a">getScanCount</a>(); s++ ){</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> origin = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aa657ed32a8831ebf4f2e4a9203b683ef">getScanOrigin</a>(s);</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        std::vector&lt;vec3&gt; vertices = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">getPrimitiveVertices</a>(p);</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordtype">float</span> area = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">getPrimitiveArea</a>(p);</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> normal = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e">getPrimitiveNormal</a>(p);</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> raydir = vertices.front()-origin;</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        raydir.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">normalize</a>();</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keywordtype">float</span> theta = fabs(<a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432">acos_safe</a>(raydir.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a>));</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>      <span class="keywordflow">for</span>( <span class="keywordtype">int</span> s=0; s&lt;synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aaa463ea1aaebb03abd8c3ec87091291a" title="Get number of scans in point cloud.">getScanCount</a>(); s++ ){</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> origin = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#aa657ed32a8831ebf4f2e4a9203b683ef" title="Get the (x,y,z) scan origin.">getScanOrigin</a>(s);</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        std::vector&lt;vec3&gt; vertices = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed" title="Method to return the (x,y,z) coordinates of the vertices of a Primitive.">getPrimitiveVertices</a>(p);</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordtype">float</span> area = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(p);</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = context_4.<a class="code hl_function" href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e" title="Method to return the normal vector of a Primitive.">getPrimitiveNormal</a>(p);</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> raydir = vertices.front()-origin;</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        raydir.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keywordtype">float</span> theta = fabs(<a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(raydir.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>));</div>
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span> </div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        <span class="keywordflow">if</span>( area==area ){ <span class="comment">//in rare cases you can get area=NaN</span></div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
@@ -354,12 +389,12 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>  <span class="keywordtype">float</span> bias_LAD = 0.f;</div>
 <div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>  <span class="keywordtype">float</span> RMSE_Gtheta = 0.f;</div>
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>  <span class="keywordflow">for</span>( uint i=0; i&lt;Ncells; i++ ){</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    LAD = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac9d20a35bdb7ee2d45490ac1cd520117">getCellLeafArea</a>(i);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    LAD = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac9d20a35bdb7ee2d45490ac1cd520117" title="Get the leaf area of a grid cell in m^2.">getCellLeafArea</a>(i);</div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    <span class="keywordflow">if</span>( LAD==LAD &amp;&amp; total_area.at(i)&gt;0 &amp;&amp; total_area.at(i)==total_area.at(i) ){</div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>      RMSE_LAD += pow( LAD - total_area.at(i), 2)/float(Ncells);</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>      bias_LAD += (LAD - total_area.at(i))/float(Ncells);</div>
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    }</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keywordtype">float</span> Gtheta_bar = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a54351e18e3f4155e9d55eb02bd63c722">getCellGtheta</a>(i);</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keywordtype">float</span> Gtheta_bar = synthetic_4.<a class="code hl_function" href="class_li_d_a_rcloud.html#a54351e18e3f4155e9d55eb02bd63c722" title="Get the G(theta) of a grid cell.">getCellGtheta</a>(i);</div>
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    <span class="keywordflow">if</span>( Gtheta_bar==Gtheta_bar &amp;&amp; Gtheta.at(i)&gt;0 &amp;&amp; Gtheta.at(i)==Gtheta.at(i) ){</div>
 <div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>      RMSE_Gtheta += pow( Gtheta_bar - Gtheta.at(i), 2)/float(Ncells);</div>
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    }</div>
@@ -390,42 +425,6 @@ $(function(){initNavTree('plugins_2lidar_2src_2self_test_8cpp_source.html',''); 
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span> </div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>}</div>
 </div>
-<div class="ttc" id="a_li_d_a_r_8h_html"><div class="ttname"><a href="_li_d_a_r_8h.html">LiDAR.h</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a1c946f80a3431e82e48fc54c611dca2c"><div class="ttname"><a href="class_li_d_a_rcloud.html#a1c946f80a3431e82e48fc54c611dca2c">LiDARcloud::LiDARcloud</a></div><div class="ttdeci">LiDARcloud()</div><div class="ttdoc">LiDAR point cloud constructor.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00089">LiDAR.cpp:89</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a22f9c93700be5e5a808b97ecca6752fe"><div class="ttname"><a href="class_li_d_a_rcloud.html#a22f9c93700be5e5a808b97ecca6752fe">LiDARcloud::calculateSyntheticLeafArea</a></div><div class="ttdeci">std::vector&lt; float &gt; calculateSyntheticLeafArea(helios::Context *context)</div><div class="ttdoc">Calculate the surface area of all primitives in the context.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l03712">LiDAR.cu:3712</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a28297a71becd69b30820d69b110fcc90"><div class="ttname"><a href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90">LiDARcloud::getGridCellCount</a></div><div class="ttdeci">uint getGridCellCount() const</div><div class="ttdoc">Get the number of cells in the grid.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01791">LiDAR.cpp:1791</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a3c1744984481f9629dc1371291fa397e"><div class="ttname"><a href="class_li_d_a_rcloud.html#a3c1744984481f9629dc1371291fa397e">LiDARcloud::getCellLeafAreaDensity</a></div><div class="ttdeci">float getCellLeafAreaDensity(uint index) const</div><div class="ttdoc">Get the leaf area density of a grid cell in 1/m.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01938">LiDAR.cpp:1938</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a54351e18e3f4155e9d55eb02bd63c722"><div class="ttname"><a href="class_li_d_a_rcloud.html#a54351e18e3f4155e9d55eb02bd63c722">LiDARcloud::getCellGtheta</a></div><div class="ttdeci">float getCellGtheta(uint index) const</div><div class="ttdoc">Get the G(theta) of a grid cell.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01959">LiDAR.cpp:1959</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a65c36191d1f0f82b77ebd2ffa2fe3821"><div class="ttname"><a href="class_li_d_a_rcloud.html#a65c36191d1f0f82b77ebd2ffa2fe3821">LiDARcloud::addTrianglesToContext</a></div><div class="ttdeci">void addTrianglesToContext(helios::Context *context) const</div><div class="ttdoc">Add triangle geometry to Helios context.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01772">LiDAR.cpp:1772</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a6662330b95ee7ee77ea6647871695c55"><div class="ttname"><a href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55">LiDARcloud::getCellSize</a></div><div class="ttdeci">helios::vec3 getCellSize(uint index) const</div><div class="ttdoc">Get the size of a grid cell by its index.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01829">LiDAR.cpp:1829</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a6bd7e1839d1a6ecb738233b20b93f1f7"><div class="ttname"><a href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">LiDARcloud::loadXML</a></div><div class="ttdeci">void loadXML(const char *filename)</div><div class="ttdoc">Read an XML file containing scan information.</div><div class="ttdef"><b>Definition</b> <a href="lidar_2src_2file_i_o_8cpp_source.html#l00022">fileIO.cpp:22</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_a94fe14aa32343dc25e366fe2ad7dfdfd"><div class="ttname"><a href="class_li_d_a_rcloud.html#a94fe14aa32343dc25e366fe2ad7dfdfd">LiDARcloud::calculateSyntheticGtheta</a></div><div class="ttdeci">std::vector&lt; float &gt; calculateSyntheticGtheta(helios::Context *context)</div><div class="ttdoc">Calculate the G(theta) of all primitives in the context.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01849">LiDAR.cpp:1849</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aa657ed32a8831ebf4f2e4a9203b683ef"><div class="ttname"><a href="class_li_d_a_rcloud.html#aa657ed32a8831ebf4f2e4a9203b683ef">LiDARcloud::getScanOrigin</a></div><div class="ttdeci">helios::vec3 getScanOrigin(uint scanID) const</div><div class="ttdoc">Get the (x,y,z) scan origin.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00258">LiDAR.cpp:258</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aaa2f35f02a65d4a7a731c4989dd9aa36"><div class="ttname"><a href="class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36">LiDARcloud::selfTest</a></div><div class="ttdeci">int selfTest()</div><div class="ttdoc">Self-test (unit test) function.</div><div class="ttdef"><b>Definition</b> <a href="#l00021">selfTest.cpp:21</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aaa463ea1aaebb03abd8c3ec87091291a"><div class="ttname"><a href="class_li_d_a_rcloud.html#aaa463ea1aaebb03abd8c3ec87091291a">LiDARcloud::getScanCount</a></div><div class="ttdeci">uint getScanCount()</div><div class="ttdoc">Get number of scans in point cloud.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00135">LiDAR.cpp:135</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aac5cafa2281f9d479f2bb56be0780e31"><div class="ttname"><a href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">LiDARcloud::syntheticScan</a></div><div class="ttdeci">void syntheticScan(helios::Context *context)</div><div class="ttdoc">Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns onl...</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l03093">LiDAR.cu:3093</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_ac495385c9dc7cc7773819ce77175242a"><div class="ttname"><a href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a">LiDARcloud::triangulateHitPoints</a></div><div class="ttdeci">void triangulateHitPoints(float Lmax, float max_aspect_ratio)</div><div class="ttdoc">Perform triangulation on all hit points in point cloud.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01382">LiDAR.cpp:1382</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_ac9d20a35bdb7ee2d45490ac1cd520117"><div class="ttname"><a href="class_li_d_a_rcloud.html#ac9d20a35bdb7ee2d45490ac1cd520117">LiDARcloud::getCellLeafArea</a></div><div class="ttdeci">float getCellLeafArea(uint index) const</div><div class="ttdoc">Get the leaf area of a grid cell in m^2.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l01928">LiDAR.cpp:1928</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_af5d0590b160e7069826c52eeeb4e0129"><div class="ttname"><a href="class_li_d_a_rcloud.html#af5d0590b160e7069826c52eeeb4e0129">LiDARcloud::disableMessages</a></div><div class="ttdeci">void disableMessages()</div><div class="ttdoc">Disable all print messages to the screen except for fatal error messages.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cpp_source.html#l00100">LiDAR.cpp:100</a></div></div>
-<div class="ttc" id="aclass_li_d_a_rcloud_html_aff9aeedaa500516d1c227e5161fb599a"><div class="ttname"><a href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a">LiDARcloud::calculateLeafAreaGPU</a></div><div class="ttdeci">void calculateLeafAreaGPU()</div><div class="ttdoc">Calculate the leaf area for each grid volume.</div><div class="ttdef"><b>Definition</b> <a href="_li_d_a_r_8cu_source.html#l00897">LiDAR.cu:897</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a129516a8fce035705a541e7b877eba2f"><div class="ttname"><a href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">helios::Context::loadXML</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadXML(const char *filename, bool quiet=false)</div><div class="ttdoc">Load inputs specified in an XML file.</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l01217">Context_fileIO.cpp:1217</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1dafe58b3251d2ef9d09112258b2e85d"><div class="ttname"><a href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">helios::Context::getPrimitiveArea</a></div><div class="ttdeci">float getPrimitiveArea(uint UUID) const</div><div class="ttdoc">Method to return the surface area of a Primitive.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l07080">Context.cpp:7080</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a2144eea981e4030c973287ce2c38315e"><div class="ttname"><a href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">helios::Context::getPrimitiveData</a></div><div class="ttdeci">void getPrimitiveData(uint UUID, const char *label, int &amp;data) const</div><div class="ttdoc">Get data associated with a primitive element.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l01001">Context_data.cpp:1001</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a780d83edd66f25cd38b5059359b48a7b"><div class="ttname"><a href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b">helios::Context::doesPrimitiveDataExist</a></div><div class="ttdeci">bool doesPrimitiveDataExist(uint UUID, const char *label) const</div><div class="ttdoc">Check if primitive data &#39;label&#39; exists.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l01169">Context_data.cpp:1169</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03742">Context_fileIO.cpp:3742</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a98516632daccf958cca6b5b6582310bb"><div class="ttname"><a href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb">helios::Context::getAllUUIDs</a></div><div class="ttdeci">std::vector&lt; uint &gt; getAllUUIDs() const</div><div class="ttdoc">Get all primitive UUIDs currently in the Context.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01763">Context.cpp:1763</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_abfeadf8e6a35eb97da1439abc21c434e"><div class="ttname"><a href="classhelios_1_1_context.html#abfeadf8e6a35eb97da1439abc21c434e">helios::Context::getPrimitiveNormal</a></div><div class="ttdeci">helios::vec3 getPrimitiveNormal(uint UUID) const</div><div class="ttdoc">Method to return the normal vector of a Primitive.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l07131">Context.cpp:7131</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ae8542fd1452150d3302675a0a3d991ed"><div class="ttname"><a href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">helios::Context::getPrimitiveVertices</a></div><div class="ttdeci">std::vector&lt; helios::vec3 &gt; getPrimitiveVertices(uint UUID) const</div><div class="ttdoc">Method to return the (x,y,z) coordinates of the vertices of a Primitive.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l07149">Context.cpp:7149</a></div></div>
-<div class="ttc" id="agroup__functions_html_ga9f732ec5c2153020247c879034f81432"><div class="ttname"><a href="group__functions.html#ga9f732ec5c2153020247c879034f81432">helios::acos_safe</a></div><div class="ttdeci">float acos_safe(float x)</div><div class="ttdoc">arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...</div><div class="ttdef"><b>Definition</b> <a href="global_8cpp_source.html#l00241">global.cpp:241</a></div></div>
-<div class="ttc" id="agroup__primitives_html_ga4d3447fb04c25e685bcc82599e2b173d"><div class="ttname"><a href="group__primitives.html#ga4d3447fb04c25e685bcc82599e2b173d">helios::Context::getPrimitiveCount</a></div><div class="ttdeci">uint getPrimitiveCount() const</div><div class="ttdoc">Get the total number of Primitives in the Context.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01759">Context.cpp:1759</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_aa19986ef06f067d450534135735bc36b"><div class="ttname"><a href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float x, float y, float z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00589">helios_vector_types.h:589</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_ad89212892cf1bdc45eeae189e6d490a1"><div class="ttname"><a href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">helios::make_SphericalCoord</a></div><div class="ttdeci">SphericalCoord make_SphericalCoord(float elevation_radians, float azimuth_radians)</div><div class="ttdoc">Make a SphericalCoord by specifying elevation and azimuth.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01602">helios_vector_types.h:1602</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html_a7a6826239394edc32ce6ae58b4622524"><div class="ttname"><a href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">helios::vec3::normalize</a></div><div class="ttdeci">vec3 normalize()</div><div class="ttdoc">Normalize vector components such that the magnitude is unity.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00514">helios_vector_types.h:514</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html_a80003da235393c031b8561e678a184a1"><div class="ttname"><a href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">helios::vec3::x</a></div><div class="ttdeci">float x</div><div class="ttdoc">First element in vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00507">helios_vector_types.h:507</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html_a870c14ca45729f58e8628a050ce38b6f"><div class="ttname"><a href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">helios::vec3::z</a></div><div class="ttdeci">float z</div><div class="ttdoc">Third element in vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00511">helios_vector_types.h:511</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html_ac0be54042f7a639c99ea4dce377f9a65"><div class="ttname"><a href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">helios::vec3::y</a></div><div class="ttdeci">float y</div><div class="ttdoc">Second element in vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00509">helios_vector_types.h:509</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Weber-Penn Tree Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -174,7 +209,7 @@ $(function(){initNavTree('_weber_penn_doc.html',''); initResizable(true); });
 <tr>
 <th>CMakeLists.txt</th><td>set( PLUGINS "weberpenntree" ) </td></tr>
 <tr>
-<th>Header File</th><td>#include "WeberPennTree.h" </td></tr>
+<th>Header File</th><td>include "WeberPennTree.h" </td></tr>
 <tr>
 <th>Class</th><td><a class="el" href="class_weber_penn_tree.html">WeberPennTree</a> </td></tr>
 </table>
@@ -199,7 +234,7 @@ WeberPennTree Class Constructor</h1>
 Using the Weber-Penn Tree Plug-in</h1>
 <h2><a class="anchor" id="WPTLibrary"></a>
 The XML Tree Library File</h2>
-<p>The parameters that define various tree geometries are specified in an XML file, which is loaded by the plug-in. When the <a class="el" href="class_weber_penn_tree.html">WeberPennTree</a> constructor is called, the defalut tree library is loaded. A list of trees in the default library is listed in the table below. Default tree parameters can be modified by the user, or custom tree libraries can be added, which is detailed in Section <a class="el" href="#WPTCustom">Custom Tree Library Files</a>. An example tree definition is given below. The tree definition is encapsulated by the &lt;WeberPennTree label="..."&gt;...&lt;/WeberPennTree&gt; tag, where label gives a handle used to reference that specific tree geometry. Other tags define various parameters that determine the structure of the tree, which are detailed in the sections below.</p>
+<p>The parameters that define various tree geometries are specified in an XML file, which is loaded by the plug-in. When the WeberPennTree constructor is called, the defalut tree library is loaded. A list of trees in the default library is listed in the table below. Default tree parameters can be modified by the user, or custom tree libraries can be added, which is detailed in Section <a class="el" href="#WPTCustom">Custom Tree Library Files</a>. An example tree definition is given below. The tree definition is encapsulated by the &lt;WeberPennTree label="..."&gt;...&lt;/WeberPennTree&gt; tag, where label gives a handle used to reference that specific tree geometry. Other tags define various parameters that determine the structure of the tree, which are detailed in the sections below.</p>
 <table class="doxtable">
 <tr>
 <th>Tree type</th><th>Sample Image </th></tr>
@@ -249,50 +284,51 @@ The XML Tree Library File</h2>
 </div>
  </td></tr>
 </table>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"> <pre><code> &lt;?xml version=1.0?&gt;
-
-  &lt;helios&gt;
-
-    &lt;WeberPennTree label="Almond"&gt;
-      &lt;Shape&gt; 3 &lt;/Shape&gt;
-      &lt;BaseSize&gt; 0.2 &lt;/BaseSize&gt;
-      &lt;BaseSplits&gt; 2 &lt;/BaseSplits&gt;
-      &lt;BaseSplitSize&gt; 0.2 &lt;/BaseSplitSize&gt;
-      &lt;Scale&gt; 6 &lt;/Scale&gt;
-      &lt;ScaleV&gt; 1 &lt;/ScaleV&gt;
-      &lt;ZScale&gt; 1 &lt;/ZScale&gt;
-      &lt;ZScaleV&gt; 0 &lt;/ZScaleV&gt;
-      &lt;Ratio&gt; 0.02 &lt;/Ratio&gt;
-      &lt;RatioPower&gt; 1.3 &lt;/RatioPower&gt;
-      &lt;Lobes&gt; 5 &lt;/Lobes&gt;
-      &lt;LobeDepth&gt; 0.1 &lt;/LobeDepth&gt;
-      &lt;Flare&gt; 0.25 &lt;/Flare&gt;
-      &lt;Levels&gt; 3 &lt;/Levels&gt;
-      &lt;nSegSplits&gt; 0 0 0 0 &lt;/nSegSplits&gt;
-      &lt;nSplitAngle&gt; 40 10 10 0 &lt;/nSplitAngle&gt;
-      &lt;nSplitAngleV&gt; 0 0 0 0 &lt;/nSplitAngleV&gt;
-      &lt;nCurveRes&gt; 8 5 3 1 &lt;/nCurveRes&gt;
-      &lt;nCurve&gt; -60 -40 10 &lt;/nCurve&gt;
-      &lt;nCurveV&gt; 0 0 0 0 &lt;/nCurveV&gt;
-      &lt;nCurveBack&gt; 0 -70 0 0 &lt;/nCurveBack&gt;
-      &lt;nLength&gt; 1 0.6 0.4 0.3 &lt;/nLength&gt;
-      &lt;nLengthV&gt; 0 0 0 0 &lt;/nLengthV&gt;
-      &lt;nTaper&gt; 1 1 1 1 &lt;/nTaper&gt;
-      &lt;nDownAngle&gt; 0 50 30 0 &lt;/nDownAngle&gt;
-      &lt;nDownAngleV&gt; 0 0 0 0 &lt;/nDownAngleV&gt;
-      &lt;nRotate&gt; 95 95 95 95 &lt;/nRotate&gt;
-      &lt;nRotateV&gt; 0 10 10 0 &lt;/nRotateV&gt;
-      &lt;nBranches&gt; 0 50 30 20 &lt;/nBranches&gt;
-      &lt;Leaves&gt; 16 &lt;/Leaves&gt;
-      &lt;LeafFile&gt; plugins/weberpenntree/leaves/AlmondLeaf.png &lt;/LeafFile&gt;
-      &lt;LeafScale&gt; 0.2 &lt;/LeafScale&gt;
-      &lt;LeafScaleX&gt; 0.3 &lt;/LeafScaleX&gt;
-      &lt;WoodFile&gt; plugins/visualizer/textures/wood2.jpg &lt;/WoodFile&gt;
-    &lt;/WeberPennTree&gt;
-
-  &lt;/helios&gt;</code></pre> </div><h2><a class="anchor" id="WPTadd"></a>
+<div class="fragment"><div class="line">&lt;?xml version=1.0?&gt;</div>
+<div class="line"> </div>
+<div class="line">&lt;helios&gt;</div>
+<div class="line"> </div>
+<div class="line">  &lt;<a class="code hl_class" href="class_weber_penn_tree.html">WeberPennTree</a> label=<span class="stringliteral">&quot;Almond&quot;</span>&gt;</div>
+<div class="line">    &lt;Shape&gt; 3 &lt;/Shape&gt;</div>
+<div class="line">    &lt;BaseSize&gt; 0.2 &lt;/BaseSize&gt;</div>
+<div class="line">    &lt;BaseSplits&gt; 2 &lt;/BaseSplits&gt;</div>
+<div class="line">    &lt;BaseSplitSize&gt; 0.2 &lt;/BaseSplitSize&gt;</div>
+<div class="line">    &lt;Scale&gt; 6 &lt;/Scale&gt;</div>
+<div class="line">    &lt;ScaleV&gt; 1 &lt;/ScaleV&gt;</div>
+<div class="line">    &lt;ZScale&gt; 1 &lt;/ZScale&gt;</div>
+<div class="line">    &lt;ZScaleV&gt; 0 &lt;/ZScaleV&gt;</div>
+<div class="line">    &lt;Ratio&gt; 0.02 &lt;/Ratio&gt;</div>
+<div class="line">    &lt;RatioPower&gt; 1.3 &lt;/RatioPower&gt;</div>
+<div class="line">    &lt;Lobes&gt; 5 &lt;/Lobes&gt;</div>
+<div class="line">    &lt;LobeDepth&gt; 0.1 &lt;/LobeDepth&gt;</div>
+<div class="line">    &lt;Flare&gt; 0.25 &lt;/Flare&gt;</div>
+<div class="line">    &lt;Levels&gt; 3 &lt;/Levels&gt;</div>
+<div class="line">    &lt;nSegSplits&gt; 0 0 0 0 &lt;/nSegSplits&gt;</div>
+<div class="line">    &lt;nSplitAngle&gt; 40 10 10 0 &lt;/nSplitAngle&gt;</div>
+<div class="line">    &lt;nSplitAngleV&gt; 0 0 0 0 &lt;/nSplitAngleV&gt;</div>
+<div class="line">    &lt;nCurveRes&gt; 8 5 3 1 &lt;/nCurveRes&gt;</div>
+<div class="line">    &lt;nCurve&gt; -60 -40 10 &lt;/nCurve&gt;</div>
+<div class="line">    &lt;nCurveV&gt; 0 0 0 0 &lt;/nCurveV&gt;</div>
+<div class="line">    &lt;nCurveBack&gt; 0 -70 0 0 &lt;/nCurveBack&gt;</div>
+<div class="line">    &lt;nLength&gt; 1 0.6 0.4 0.3 &lt;/nLength&gt;</div>
+<div class="line">    &lt;nLengthV&gt; 0 0 0 0 &lt;/nLengthV&gt;</div>
+<div class="line">    &lt;nTaper&gt; 1 1 1 1 &lt;/nTaper&gt;</div>
+<div class="line">    &lt;nDownAngle&gt; 0 50 30 0 &lt;/nDownAngle&gt;</div>
+<div class="line">    &lt;nDownAngleV&gt; 0 0 0 0 &lt;/nDownAngleV&gt;</div>
+<div class="line">    &lt;nRotate&gt; 95 95 95 95 &lt;/nRotate&gt;</div>
+<div class="line">    &lt;nRotateV&gt; 0 10 10 0 &lt;/nRotateV&gt;</div>
+<div class="line">    &lt;nBranches&gt; 0 50 30 20 &lt;/nBranches&gt;</div>
+<div class="line">    &lt;Leaves&gt; 16 &lt;/Leaves&gt;</div>
+<div class="line">    &lt;LeafFile&gt; plugins/weberpenntree/leaves/AlmondLeaf.png &lt;/LeafFile&gt;</div>
+<div class="line">    &lt;LeafScale&gt; 0.2 &lt;/LeafScale&gt;</div>
+<div class="line">    &lt;LeafScaleX&gt; 0.3 &lt;/LeafScaleX&gt;</div>
+<div class="line">    &lt;WoodFile&gt; plugins/visualizer/textures/wood2.jpg &lt;/WoodFile&gt;</div>
+<div class="line">  &lt;/<a class="code hl_class" href="class_weber_penn_tree.html">WeberPennTree</a>&gt;</div>
+<div class="line"> </div>
+<div class="line">&lt;/helios&gt;</div>
+</div><!-- fragment --><h2><a class="anchor" id="WPTadd"></a>
 Adding Trees from the Tree Library</h2>
-<p>The <a class="el" href="class_weber_penn_tree.html">WeberPennTree</a> member function <a class="el" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559">WeberPennTree::buildTree()</a> is used to add and instance of a tree from the library. This function takes two required arguments in addition to one optional argument. The user must specify 1) the label for the tree as defined in the tree library XML file (see above), and 2) the (x,y,z) position to place the tree (note that this position is with respect to the base of the trunk). A third optional argument specifies a scaling factor to apply to the tree, where scale&lt;1 makes the tree smaller, and scale&gt;1 makes the tree bigger. The buildTree function returns a uint that gives an identifier for the particular instance of the tree. This can be used later to reference the tree.</p>
+<p>The WeberPennTree member function <a class="el" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559">WeberPennTree::buildTree()</a> is used to add and instance of a tree from the library. This function takes two required arguments in addition to one optional argument. The user must specify 1) the label for the tree as defined in the tree library XML file (see above), and 2) the (x,y,z) position to place the tree (note that this position is with respect to the base of the trunk). A third optional argument specifies a scaling factor to apply to the tree, where scale&lt;1 makes the tree smaller, and scale&gt;1 makes the tree bigger. The buildTree function returns a uint that gives an identifier for the particular instance of the tree. This can be used later to reference the tree.</p>
 <p>The tree building process involves adding primitives to the Helios context that comprise a particular tree geometry. The UUIDs for the primitives that comprise trees can be queried via the functions getTrunkUUIDs(), getBranchUUIDs(), and getLeafUUIDs() along with the identifier of the tree.</p>
 <table class="doxtable">
 <tr>
@@ -302,24 +338,25 @@ Adding Trees from the Tree Library</h2>
 <tr>
 <td><a class="el" href="class_weber_penn_tree.html#af1dc9499df0c1cc26f3d0c5782da10bd">uint buildTree( const char* treename, helios::vec3 origin, float scale )</a> </td></tr>
 </table>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"> <pre><code> #include "Context.h"
-  #include "WeberPennTree.h"
-
-  int main( void ){
-      Context context; //declare the context
-
-      <code></code>//create an instance of the WeberPennTree class, which we will call "weberpenntree"
-      WeberPennTree weberpenntree( &amp;context );
-
-      <code></code>//Create an almond tree at the point (0,0,0)
-      uint ID_almond = weberpenntree.buildTree( "Almond", make_vec3(0,0,0) );
-
-      <code></code>//Create an orange tree at the point (10,0,0)
-      uint ID_orange = weberpenntree.buildTree( "Orange", make_vec3(10,0,0) );
-
-      <code></code>//Retrieve UUIDs for context primitives making up the almond tree's leaves
-      std::vector&lt;uint&gt; leafUUIDs_almond = weberpenntree.getLeafUUIDs( ID_almond );
-  }</code></pre> </div><h2><a class="anchor" id="WPTCustom"></a>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_weber_penn_tree_8h.html">WeberPennTree.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">    Context context; <span class="comment">//declare the context</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//create an instance of the WeberPennTree class, which we will call &quot;weberpenntree&quot;</span></div>
+<div class="line">    <a class="code hl_class" href="class_weber_penn_tree.html">WeberPennTree</a> weberpenntree( &amp;context );</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">//Create an almond tree at the point (0,0,0)</span></div>
+<div class="line">    uint ID_almond = weberpenntree.buildTree( <span class="stringliteral">&quot;Almond&quot;</span>, make_vec3(0,0,0) );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Create an orange tree at the point (10,0,0)</span></div>
+<div class="line">    uint ID_orange = weberpenntree.buildTree( <span class="stringliteral">&quot;Orange&quot;</span>, make_vec3(10,0,0) );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Retrieve UUIDs for context primitives making up the almond tree&#39;s leaves</span></div>
+<div class="line">    std::vector&lt;uint&gt; leafUUIDs_almond = weberpenntree.getLeafUUIDs( ID_almond );</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="WPTCustom"></a>
 Custom Tree Library Files</h2>
 <p>User-specified XML tree library files can be utilized via the <a class="el" href="class_weber_penn_tree.html#a3cc9a0c0b3039e5fa44fc77a117a72dc">WeberPennTree::loadXML()</a> function. The argument to this function is an absolute or relative path to the XML file to be loaded. Note that as always relative file paths are relative to the project's build directory.</p>
 <h1><a class="anchor" id="WPTreeXML"></a>
@@ -426,16 +463,16 @@ Leaf mask</h3>
 <p>The tree model uses a PNG texture mask to visualize leaves. This is a PNG image of the leaf with a transparent background. An example leaf mask is given in the image below. New leaf masks can be created using Gimp fairly easily. Simply find an image of the leaf, open in Gimp, add an alpha channel to the image, use the &lsquo;Fuzzy Select Tool&rsquo; to select the background, then go to Edit-&gt;Clear, and export in .png format. There are many tutorials online describing how to do this in more detail. Note that the leaf should be oriented as shown in the image below for consistency: petiole pointing to the left. Also note that the petiole is typically cropped out of the image.</p>
 <h2><a class="anchor" id="WPTgL"></a>
 User-Defined Leaf Angle Distribution Functions</h2>
-<p>By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '&lt;LeafAngleDist&gt; ... &lt;/LeafAngleDist&gt;'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from <img class="formulaInl" alt="$\theta_L=0$" src="form_254.png" width="44" height="15"/> to <img class="formulaInl" alt="$\theta_L=\pi$" src="form_255.png" width="45" height="15"/> rad. <br  />
+<p>By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '&lt;LeafAngleDist&gt; ... &lt;/LeafAngleDist&gt;'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \(\theta_L=0\) to \(\theta_L=\pi\) rad. <br  />
 </p>
-<p>Here is an example: Imagine that we wanted to have N=18 discrete leaf angle bins in our leaf angle PDF <img class="formulaInl" alt="$g_L$" src="form_256.png" width="17" height="11"/>. The width of one discrete bin would be <img class="formulaInl" alt="$\Delta \theta_L=\pi/18\approx 0.1795$" src="form_257.png" width="141" height="17"/> rad. Each of the 18 bins of our PDF <img class="formulaInl" alt="$g_L$" src="form_256.png" width="17" height="11"/> should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:</p>
-<center> <img class="formulaInl" alt="$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1$" src="form_258.png" width="105" height="36"/></center><p>If this condition is not met by the PDF input by the user, the program will ignore it and revert to the default behavior.</p>
-<p>As a simple example, imagine we had only one leaf with an inclination of <img class="formulaInl" alt="$\theta_L=0.1$" src="form_259.png" width="54" height="15"/> rad. This leaf would fall in the first discrete bin of <img class="formulaInl" alt="$g_L$" src="form_256.png" width="17" height="11"/>, which would have a value of <img class="formulaInl" alt="$1/\Delta \theta_L$" src="form_260.png" width="42" height="17"/> and all other bins would be zero.</p>
-<p>For a typical almond tree, the PDF for N=18 is tabulated below. Note that we have the capability to have leaves pointing upward from their base ( <img class="formulaInl" alt="$\theta_L&lt;\pi/2$" src="form_261.png" width="60" height="17"/>) or leaves pointiing downward from their base ( <img class="formulaInl" alt="$\theta_L&gt;\pi/2$" src="form_262.png" width="60" height="17"/>). For simplicity, the distribution below considers only upward-facing normals.</p>
+<p>Here is an example: Imagine that we wanted to have N=18 discrete leaf angle bins in our leaf angle PDF \(g_L\). The width of one discrete bin would be \(\Delta \theta_L=\pi/18\approx 0.1795\) rad. Each of the 18 bins of our PDF \(g_L\) should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:</p>
+<center> \(\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1\)</center><p>If this condition is not met by the PDF input by the user, the program will ignore it and revert to the default behavior.</p>
+<p>As a simple example, imagine we had only one leaf with an inclination of \(\theta_L=0.1\) rad. This leaf would fall in the first discrete bin of \(g_L\), which would have a value of \(1/\Delta \theta_L\) and all other bins would be zero.</p>
+<p>For a typical almond tree, the PDF for N=18 is tabulated below. Note that we have the capability to have leaves pointing upward from their base ( \(\theta_L&lt;\pi/2\)) or leaves pointiing downward from their base ( \(\theta_L&gt;\pi/2\)). For simplicity, the distribution below considers only upward-facing normals.</p>
 <center> <table class="doxtable">
 <caption>Typical leaf angle distribution for almond</caption>
 <tr>
-<th><img class="formulaInl" alt="$\theta_L$" src="form_263.png" width="15" height="15"/> bin (degrees)</th><th><img class="formulaInl" alt="$g_L(\theta_L)$" src="form_264.png" width="44" height="17"/> </th></tr>
+<th>\(\theta_L\) bin (degrees)</th><th>\(g_L(\theta_L)\) </th></tr>
 <tr>
 <td>0-10</td><td>0.229 </td></tr>
 <tr>
@@ -474,24 +511,23 @@ User-Defined Leaf Angle Distribution Functions</h2>
 <td>180-180</td><td>0 </td></tr>
 </table>
 </center><p>This data would be input into the tree library XML file as follows:</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"> <pre><code> &lt;?xml version=1.0?&gt;
-
-  &lt;helios&gt;
-
-    &lt;WeberPennTree label="Almond"&gt;
-      &lt;!--
-      Many other parameters here
-      --&gt;
-      &lt;LeafAngleDist&gt;0.2290 0.6650 0.9170 0.9450 0.8650 0.7450 0.6190 0.4240 0.3100 0 0 0 0 0 0 0 0 0&lt;/LeafAngleDist&gt;
-    &lt;/WeberPennTree&gt;
-
-  &lt;/helios&gt;</code></pre> </div> </div></div><!-- contents -->
+<div class="fragment"><div class="line">&lt;?xml version=1.0?&gt;</div>
+<div class="line">&lt;helios&gt;</div>
+<div class="line"> </div>
+<div class="line">  &lt;<a class="code hl_class" href="class_weber_penn_tree.html">WeberPennTree</a> label=<span class="stringliteral">&quot;Almond&quot;</span>&gt;</div>
+<div class="line">    &lt;!--</div>
+<div class="line">    Many other parameters here</div>
+<div class="line">    --&gt;</div>
+<div class="line">    &lt;LeafAngleDist&gt;0.2290 0.6650 0.9170 0.9450 0.8650 0.7450 0.6190 0.4240 0.3100 0 0 0 0 0 0 0 0 0&lt;/LeafAngleDist&gt;</div>
+<div class="line">  &lt;/<a class="code hl_class" href="class_weber_penn_tree.html">WeberPennTree</a>&gt;</div>
+<div class="line"> </div>
+<div class="line">&lt;/helios&gt;</div>
+</div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="_plug_ins.html">Plug-ins</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

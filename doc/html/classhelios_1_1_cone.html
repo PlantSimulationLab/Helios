@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: helios::Cone Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -114,7 +149,7 @@ $(function(){initNavTree('classhelios_1_1_cone.html',''); initResizable(true); }
 </div><!--header-->
 <div class="contents">
 
-<p><a class="el" href="classhelios_1_1_cone.html" title="Cone compound object class.">Cone</a> compound object class.  
+<p>Cone compound object class.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="_context_8h_source.html">Context.h</a>&gt;</code></p>
@@ -135,7 +170,7 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a1812816ea32de6d7a28fae76ebd66f80"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4f380f30c6bb1dbdf2e8c215c05677c" id="r_ac4f380f30c6bb1dbdf2e8c215c05677c"><td class="memItemLeft" align="right" valign="top"><a id="ac4f380f30c6bb1dbdf2e8c215c05677c" name="ac4f380f30c6bb1dbdf2e8c215c05677c"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>~Cone</b> () override=default</td></tr>
-<tr class="memdesc:ac4f380f30c6bb1dbdf2e8c215c05677c"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhelios_1_1_cone.html" title="Cone compound object class.">Cone</a> destructor. <br /></td></tr>
+<tr class="memdesc:ac4f380f30c6bb1dbdf2e8c215c05677c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cone destructor. <br /></td></tr>
 <tr class="separator:ac4f380f30c6bb1dbdf2e8c215c05677c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9eaab4331e325c85ce9f4c101135c966" id="r_a9eaab4331e325c85ce9f4c101135c966"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9eaab4331e325c85ce9f4c101135c966">getNodeCoordinates</a> () const</td></tr>
 <tr class="memdesc:a9eaab4331e325c85ce9f4c101135c966"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Cartesian coordinates of each of the cone object nodes.  <br /></td></tr>
@@ -202,7 +237,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a247e9f55e89ce5bb4621cc395069a20d inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape.  <br /></td></tr>
 <tr class="separator:a247e9f55e89ce5bb4621cc395069a20d inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad40fa98ddefc9ba9d24cd45ca0df44d5 inherit pub_methods_classhelios_1_1_compound_object" id="r_ad40fa98ddefc9ba9d24cd45ca0df44d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#ad40fa98ddefc9ba9d24cd45ca0df44d5">useTextureColor</a> ()</td></tr>
-<tr class="memdesc:ad40fa98ddefc9ba9d24cd45ca0df44d5 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is method reverses a previous call to <a class="el" href="classhelios_1_1_compound_object.html#a247e9f55e89ce5bb4621cc395069a20d" title="Override the color in the texture map for all primitives in the Compound Object, in which case the pr...">overrideTextureColor()</a>. Note that using the texture color is the default behavior.  <br /></td></tr>
+<tr class="memdesc:ad40fa98ddefc9ba9d24cd45ca0df44d5 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is method reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.  <br /></td></tr>
 <tr class="separator:ad40fa98ddefc9ba9d24cd45ca0df44d5 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a547a3a56f24fdaf541d12dc74776318e inherit pub_methods_classhelios_1_1_compound_object" id="r_a547a3a56f24fdaf541d12dc74776318e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a547a3a56f24fdaf541d12dc74776318e">hasTexture</a> () const</td></tr>
 <tr class="memdesc:a547a3a56f24fdaf541d12dc74776318e inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to check whether this object has texture data.  <br /></td></tr>
@@ -262,22 +297,22 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a316d892dd85e920bfb964d3017dc25c4 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (double) associated with a object element.  <br /></td></tr>
 <tr class="separator:a316d892dd85e920bfb964d3017dc25c4 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6442aef7859238fc3a49cb9187548c7c inherit pub_methods_classhelios_1_1_compound_object" id="r_a6442aef7859238fc3a49cb9187548c7c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a6442aef7859238fc3a49cb9187548c7c">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;data)</td></tr>
-<tr class="memdesc:a6442aef7859238fc3a49cb9187548c7c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:a6442aef7859238fc3a49cb9187548c7c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (vec2) associated with a object element.  <br /></td></tr>
 <tr class="separator:a6442aef7859238fc3a49cb9187548c7c inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af93de91ec2dc1cdeca58c09d6f1febb1 inherit pub_methods_classhelios_1_1_compound_object" id="r_af93de91ec2dc1cdeca58c09d6f1febb1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#af93de91ec2dc1cdeca58c09d6f1febb1">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;data)</td></tr>
-<tr class="memdesc:af93de91ec2dc1cdeca58c09d6f1febb1 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:af93de91ec2dc1cdeca58c09d6f1febb1 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (vec3) associated with a object element.  <br /></td></tr>
 <tr class="separator:af93de91ec2dc1cdeca58c09d6f1febb1 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac7815b7cda94f76a87e564f9d9b05a3c inherit pub_methods_classhelios_1_1_compound_object" id="r_ac7815b7cda94f76a87e564f9d9b05a3c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#ac7815b7cda94f76a87e564f9d9b05a3c">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &amp;data)</td></tr>
-<tr class="memdesc:ac7815b7cda94f76a87e564f9d9b05a3c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:ac7815b7cda94f76a87e564f9d9b05a3c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (vec4) associated with a object element.  <br /></td></tr>
 <tr class="separator:ac7815b7cda94f76a87e564f9d9b05a3c inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae19d6e464af601cea45a1c631c8f44b2 inherit pub_methods_classhelios_1_1_compound_object" id="r_ae19d6e464af601cea45a1c631c8f44b2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#ae19d6e464af601cea45a1c631c8f44b2">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;data)</td></tr>
-<tr class="memdesc:ae19d6e464af601cea45a1c631c8f44b2 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:ae19d6e464af601cea45a1c631c8f44b2 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (int2) associated with a object element.  <br /></td></tr>
 <tr class="separator:ae19d6e464af601cea45a1c631c8f44b2 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48d6781ec37e21f405cf368f854ef19a inherit pub_methods_classhelios_1_1_compound_object" id="r_a48d6781ec37e21f405cf368f854ef19a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a48d6781ec37e21f405cf368f854ef19a">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;data)</td></tr>
-<tr class="memdesc:a48d6781ec37e21f405cf368f854ef19a inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:a48d6781ec37e21f405cf368f854ef19a inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (int3) associated with a object element.  <br /></td></tr>
 <tr class="separator:a48d6781ec37e21f405cf368f854ef19a inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3b03b96096e7618e7a3865225413b7b9 inherit pub_methods_classhelios_1_1_compound_object" id="r_a3b03b96096e7618e7a3865225413b7b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a3b03b96096e7618e7a3865225413b7b9">setObjectData</a> (const char *label, const <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &amp;data)</td></tr>
-<tr class="memdesc:a3b03b96096e7618e7a3865225413b7b9 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (<a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a>) associated with a object element.  <br /></td></tr>
+<tr class="memdesc:a3b03b96096e7618e7a3865225413b7b9 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (int4) associated with a object element.  <br /></td></tr>
 <tr class="separator:a3b03b96096e7618e7a3865225413b7b9 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3369928e9718d521cf135051a3f60e81 inherit pub_methods_classhelios_1_1_compound_object" id="r_a3369928e9718d521cf135051a3f60e81"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a3369928e9718d521cf135051a3f60e81">setObjectData</a> (const char *label, const std::string &amp;data)</td></tr>
 <tr class="memdesc:a3369928e9718d521cf135051a3f60e81 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add data value (string) associated with a object element.  <br /></td></tr>
@@ -310,40 +345,40 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ac7af8838d7132683dd9fdbffd1288579 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of doubles)  <br /></td></tr>
 <tr class="separator:ac7af8838d7132683dd9fdbffd1288579 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef1aadca9de0e9a66500ca5879ab3755 inherit pub_methods_classhelios_1_1_compound_object" id="r_aef1aadca9de0e9a66500ca5879ab3755"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#aef1aadca9de0e9a66500ca5879ab3755">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;data) const</td></tr>
-<tr class="memdesc:aef1aadca9de0e9a66500ca5879ab3755 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> scalar)  <br /></td></tr>
+<tr class="memdesc:aef1aadca9de0e9a66500ca5879ab3755 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vec2 scalar)  <br /></td></tr>
 <tr class="separator:aef1aadca9de0e9a66500ca5879ab3755 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af7574c29395681941d4d875e304b93de inherit pub_methods_classhelios_1_1_compound_object" id="r_af7574c29395681941d4d875e304b93de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#af7574c29395681941d4d875e304b93de">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">vec2</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:af7574c29395681941d4d875e304b93de inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>'s)  <br /></td></tr>
+<tr class="memdesc:af7574c29395681941d4d875e304b93de inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of vec2's)  <br /></td></tr>
 <tr class="separator:af7574c29395681941d4d875e304b93de inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acea74a2c138c1e5d832df864a231e486 inherit pub_methods_classhelios_1_1_compound_object" id="r_acea74a2c138c1e5d832df864a231e486"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#acea74a2c138c1e5d832df864a231e486">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;data) const</td></tr>
-<tr class="memdesc:acea74a2c138c1e5d832df864a231e486 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> scalar)  <br /></td></tr>
+<tr class="memdesc:acea74a2c138c1e5d832df864a231e486 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vec3 scalar)  <br /></td></tr>
 <tr class="separator:acea74a2c138c1e5d832df864a231e486 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a797a5fd8f08ff7220b15ae1d5accb6cd inherit pub_methods_classhelios_1_1_compound_object" id="r_a797a5fd8f08ff7220b15ae1d5accb6cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a797a5fd8f08ff7220b15ae1d5accb6cd">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:a797a5fd8f08ff7220b15ae1d5accb6cd inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>'s)  <br /></td></tr>
+<tr class="memdesc:a797a5fd8f08ff7220b15ae1d5accb6cd inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of vec3's)  <br /></td></tr>
 <tr class="separator:a797a5fd8f08ff7220b15ae1d5accb6cd inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a52661efba4b57415b073fcf839069623 inherit pub_methods_classhelios_1_1_compound_object" id="r_a52661efba4b57415b073fcf839069623"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a52661efba4b57415b073fcf839069623">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;data) const</td></tr>
-<tr class="memdesc:a52661efba4b57415b073fcf839069623 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> scalar)  <br /></td></tr>
+<tr class="memdesc:a52661efba4b57415b073fcf839069623 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vec4 scalar)  <br /></td></tr>
 <tr class="separator:a52661efba4b57415b073fcf839069623 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15ef0fda0196b4de933e4379d5f8234f inherit pub_methods_classhelios_1_1_compound_object" id="r_a15ef0fda0196b4de933e4379d5f8234f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a15ef0fda0196b4de933e4379d5f8234f">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:a15ef0fda0196b4de933e4379d5f8234f inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a>'s)  <br /></td></tr>
+<tr class="memdesc:a15ef0fda0196b4de933e4379d5f8234f inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of vec4's)  <br /></td></tr>
 <tr class="separator:a15ef0fda0196b4de933e4379d5f8234f inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a768a439ecb0d6e8449b31cd137317168 inherit pub_methods_classhelios_1_1_compound_object" id="r_a768a439ecb0d6e8449b31cd137317168"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a768a439ecb0d6e8449b31cd137317168">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1int2.html">int2</a> &amp;data) const</td></tr>
-<tr class="memdesc:a768a439ecb0d6e8449b31cd137317168 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a> scalar)  <br /></td></tr>
+<tr class="memdesc:a768a439ecb0d6e8449b31cd137317168 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (int2 scalar)  <br /></td></tr>
 <tr class="separator:a768a439ecb0d6e8449b31cd137317168 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4d1accb01b8dd2f968296c43dfb6d97 inherit pub_methods_classhelios_1_1_compound_object" id="r_af4d1accb01b8dd2f968296c43dfb6d97"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#af4d1accb01b8dd2f968296c43dfb6d97">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1int2.html">int2</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:af4d1accb01b8dd2f968296c43dfb6d97 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">int2</a>'s)  <br /></td></tr>
+<tr class="memdesc:af4d1accb01b8dd2f968296c43dfb6d97 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of int2's)  <br /></td></tr>
 <tr class="separator:af4d1accb01b8dd2f968296c43dfb6d97 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a95f20aead49e80032b0673273de436f2 inherit pub_methods_classhelios_1_1_compound_object" id="r_a95f20aead49e80032b0673273de436f2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a95f20aead49e80032b0673273de436f2">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1int3.html">int3</a> &amp;data) const</td></tr>
-<tr class="memdesc:a95f20aead49e80032b0673273de436f2 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> scalar)  <br /></td></tr>
+<tr class="memdesc:a95f20aead49e80032b0673273de436f2 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (int3 scalar)  <br /></td></tr>
 <tr class="separator:a95f20aead49e80032b0673273de436f2 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cb032fa5f5b6de86f234eb237980586 inherit pub_methods_classhelios_1_1_compound_object" id="r_a6cb032fa5f5b6de86f234eb237980586"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a6cb032fa5f5b6de86f234eb237980586">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1int3.html">int3</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:a6cb032fa5f5b6de86f234eb237980586 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a>'s)  <br /></td></tr>
+<tr class="memdesc:a6cb032fa5f5b6de86f234eb237980586 inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of int3's)  <br /></td></tr>
 <tr class="separator:a6cb032fa5f5b6de86f234eb237980586 inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c0dcefe9e05ec04b001ad94f475f34c inherit pub_methods_classhelios_1_1_compound_object" id="r_a2c0dcefe9e05ec04b001ad94f475f34c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#a2c0dcefe9e05ec04b001ad94f475f34c">getObjectData</a> (const char *label, <a class="el" href="structhelios_1_1int4.html">int4</a> &amp;data) const</td></tr>
-<tr class="memdesc:a2c0dcefe9e05ec04b001ad94f475f34c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (<a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a> scalar)  <br /></td></tr>
+<tr class="memdesc:a2c0dcefe9e05ec04b001ad94f475f34c inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (int4 scalar)  <br /></td></tr>
 <tr class="separator:a2c0dcefe9e05ec04b001ad94f475f34c inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aba75ef4dd5b01b02fc99f9a1d957d70b inherit pub_methods_classhelios_1_1_compound_object" id="r_aba75ef4dd5b01b02fc99f9a1d957d70b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#aba75ef4dd5b01b02fc99f9a1d957d70b">getObjectData</a> (const char *label, std::vector&lt; <a class="el" href="structhelios_1_1int4.html">int4</a> &gt; &amp;data) const</td></tr>
-<tr class="memdesc:aba75ef4dd5b01b02fc99f9a1d957d70b inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of <a class="el" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">int4</a>'s)  <br /></td></tr>
+<tr class="memdesc:aba75ef4dd5b01b02fc99f9a1d957d70b inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (vector of int4's)  <br /></td></tr>
 <tr class="separator:aba75ef4dd5b01b02fc99f9a1d957d70b inherit pub_methods_classhelios_1_1_compound_object"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa77a9712c207752cd56522f2dbca52b inherit pub_methods_classhelios_1_1_compound_object" id="r_afa77a9712c207752cd56522f2dbca52b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_compound_object.html#afa77a9712c207752cd56522f2dbca52b">getObjectData</a> (const char *label, std::string &amp;data) const</td></tr>
 <tr class="memdesc:afa77a9712c207752cd56522f2dbca52b inherit pub_methods_classhelios_1_1_compound_object"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data associated with a object element (string scalar)  <br /></td></tr>
@@ -373,7 +408,7 @@ Friends</h2></td></tr>
 <tr class="separator:aee14c4a401c29fda077f818b00ae3c96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="classhelios_1_1_cone.html" title="Cone compound object class.">Cone</a> compound object class. </p>
+<div class="textblock"><p>Cone compound object class. </p>
 
 <p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00853">853</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
@@ -433,7 +468,7 @@ Friends</h2></td></tr>
 
 <p>Default constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04134">4134</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04171">4171</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -455,7 +490,7 @@ Friends</h2></td></tr>
 
 <p>Get a unit vector pointing in the direction of the cone central axis. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04206">4206</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04245">4245</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -476,7 +511,7 @@ Friends</h2></td></tr>
 
 <p>Get the length of the cone along the axial direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04224">4224</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04263">4263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -504,7 +539,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Cartesian coordinate of the cone node center. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04171">4171</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04210">4210</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -526,7 +561,7 @@ Friends</h2></td></tr>
 <p>Get the Cartesian coordinates of each of the cone object nodes. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of Cartesian coordinates of cone object nodes (length = 2). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04157">4157</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04196">4196</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -548,7 +583,7 @@ Friends</h2></td></tr>
 <p>Get the radius at each of the cone object nodes. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of radii at cone object nodes (length = 2). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04186">4186</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04225">4225</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -576,7 +611,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Radius of the cone node. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04190">4190</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04229">4229</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -597,7 +632,7 @@ Friends</h2></td></tr>
 
 <p>Get the number of sub-triangle divisions of the cone object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04198">4198</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04237">4237</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -618,7 +653,7 @@ Friends</h2></td></tr>
 
 <p>Get the volume of the cone object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04329">4329</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04368">4368</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -645,7 +680,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04288">4288</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04327">4327</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -672,7 +707,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04239">4239</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04278">4278</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -699,7 +734,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04202">4202</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04241">4241</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

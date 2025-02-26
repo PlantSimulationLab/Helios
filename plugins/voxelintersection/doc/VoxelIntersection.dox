@@ -16,9 +16,9 @@
 <table>
     <caption>Installing dependent packages</caption>
     <tr>
-        <th>Package</th><td>\image html apple-logo.jpg</td>
+        <th>Package</th><td>\image html apple-logo.png</td>
         <td>\image html unix-logo.png</td>
-        <td>\image html windows-logo.jpg</td>
+        <td>\image html windows-logo.png</td>
     </tr>
     <tr>
         <td>NVIDIA CUDA 9.0+</td>
@@ -117,13 +117,13 @@ The figure below shows a visualization of square patches that have been sliced b
 
   using namespace helios;
 
-  int main(void)
-  {
+  int main() {
+
     Context context;
   
-    \c// generate an example canopy and get UUIDs
-    %CanopyGenerator cg(&context);
-    %HomogeneousCanopyParameters hcp;
+    // generate an example canopy and get UUIDs
+    CanopyGenerator cg(&context);
+    HomogeneousCanopyParameters hcp;
     hcp.leaf_area_index = 3;
     hcp.canopy_height = 3;
     hcp.canopy_extent = make_vec2(3.5,3);
@@ -131,16 +131,16 @@ The figure below shows a visualization of square patches that have been sliced b
     cg.buildCanopy(hcp);
     std::vector<uint> UUIDs = flatten(cg.getLeafUUIDs(0));
   
-    \c// define a voxel grid
+    // define a voxel grid
     vec3 grid_center = make_vec3(0,0,1.5);
     vec3 grid_size = make_vec3(3,3,3);
     int3 grid_divisions = make_int3(3,3,3);
   
-    \c// slice the UUIDs using the voxel grid
-    %VoxelIntersection vi(&context);
+    // slice the UUIDs using the voxel grid
+    VoxelIntersection vi(&context);
     vi.slicePrimitivesUsingGrid(UUIDs, grid_center , grid_size, grid_divisions);
   
-    \c// get UUIDs inside grid cell 0
+    // get UUIDs inside grid cell 0
     std::vector<std::vector<uint>> cell_primitives = vi.getCellPrimitives();
     std::vector<uint> cell_0_primitives = cell_primitives.at(0);
     std::cout << "Primitive UUIDs in grid cell 0:" << std::endl;
@@ -150,8 +150,8 @@ The figure below shows a visualization of square patches that have been sliced b
     }
   
 
-    \c// visualize by coloring primitives by the cell_ID data field
-    %Visualizer vis(1800, 900);
+    // visualize by coloring primitives by the cell_ID data field
+    Visualizer vis(1800, 900);
     vis.buildContextGeometry(&context);
     vis.colorContextPrimitivesByData("cell_ID");
     vis.setColormap(Visualizer::COLORMAP_RAINBOW);

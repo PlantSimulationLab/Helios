@@ -46,13 +46,13 @@
  <table>
    <tr>	
       <th>Package</th>
-      <td>\image html apple-logo.jpg</td>
+      <td>\image html apple-logo.png</td>
       <td>\image html unix-logo.png</td>
-      <td>\image html windows-logo.jpg</td>
+      <td>\image html windows-logo.png</td>
    </tr>
    <tr>	
       <td>NVIDIA CUDA 9.0+</td>
-      <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+      <td>Mac OSX: Not available</td>
       <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
       <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
    </tr>
@@ -101,15 +101,16 @@
 
  Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan.  The XML file specifies the path to an ASCII text file that contains the data for each scan.  The code below gives a sample XML file for loading multiple scans.  Not all entries are required. At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan.  Additional optional information can be specified for each hit point, as given in the table below.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> <helios>
+ ```
+<helios>
 
 	<scan>
 	  <filename> /path/to/data/file.xyz </filename>
 	  <ASCII_format> x y z zenith azimuth target_count target_index </ASCII_format>
 	</scan>
 	
- </helios></code></pre></div>
+ </helios>
+ ```
 
  The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point.  The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz).  Each entry in the list specifies the meaning of each column.  Possible fields are listed in the table below:
 
@@ -178,19 +179,20 @@
 
  The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
   
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
- <pre><code>  #include "Context.h"
+ ```
+   #include "Context.h"
    #include "LiDAR.h"
 
    using namespace helios;
 
-   int main( void ){
+   int main(){
 
-      %LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
       pointcloud.loadXML("/path/to/file.xml");
       
-  }</code></pre></div>
+  }
+  ```
 
  \section AerialLiDARgrid Establishing grid cells
 
@@ -240,15 +242,16 @@
 
  Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more <grid>...</grid> groups to the XML file.
 
- <div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;">
-  <pre><code> <grid>
+ ```
+   <grid>
 	 \<center> 0 0 0.5 \</center>
 	 \<size> 100 100 10 </size>
 	 \<rotation> 30 </rotation> 
 	 \<Nx> 3 </Nx> 
 	 \<Ny> 3 </Ny> 
 	 \<Nz> 3 </Nz> 
-  </grid></code></pre></div>
+  </grid>
+  ```
 
  \section AerialLiDARprocess Processing LiDAR data
 

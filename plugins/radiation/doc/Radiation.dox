@@ -30,13 +30,13 @@
 <table>
     <tr>
         <th>Package</th>
-        <td>\image html apple-logo.jpg</td>
+        <td>\image html apple-logo.png</td>
         <td>\image html unix-logo.png</td>
-        <td>\image html windows-logo.jpg</td>
+        <td>\image html windows-logo.png</td>
     </tr>
     <tr>
         <td>NVIDIA CUDA 9.0+</td>
-        <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+        <td>Mac OSX: Not available</td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
     </tr>
@@ -252,7 +252,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  2\. Specifying reflectivity and transmissivity based on spectral data
 
- Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) ); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.
+ Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) "RadiationModel::addRadiationBand()"); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.
 
  Below is a code example for specifying the reflectivity and transmissivity for a primitive based on spectral data. In this case, the model will assume the source spectral distribution is constant over all wave bands, and thus total reflectivity/transmissivity is just the integral of the spectral reflectivity/transmissivity. If there was a radiative source with a specified spectral distribution, the total reflectivity/transmissivity would be calculated by integrating the product of the reflectivity/transmissivity and source spectral intensity (example given for reflectivity only):
 
@@ -435,7 +435,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  where 
 
- \f[ \Psi = acos\left( cos\,\theta\,cos\,\theta_s + sin\,\theta\,sin\,\theta_s\,cos\,(\phi-\phi_s) \right), \f]
+ \f[ \Psi = \mathrm{acos}\left( \mathrm{cos}\,\theta\,\mathrm{cos}\,\theta_s + \mathrm{sin}\,\theta\,\mathrm{sin}\,\theta_s\,\mathrm{cos}\,(\phi-\phi_s) \right), \f]
 
  and \f$\theta_s\f$ and \f$\phi_s\f$ are the zenith and azimuth angles of the peak direction. If \f$\Psi<1^\circ\f$, \f$\Psi\f$ is clamped to a value of 1 degree. The \f$f_0\f$ is a normalization factor that is computed such that the integral of \f$f_d\f$ for a one-sided horizontal element is equal to 1, i.e.,
 

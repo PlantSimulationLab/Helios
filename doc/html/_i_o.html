@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: File Input/Output</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -223,23 +258,15 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/weatherfile.csv&quot;</span>, {<span class="stringliteral">&quot;date&quot;</span>, <span class="stringliteral">&quot;hour&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;MMDDYYYY&quot;</span>, 1);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/weatherfile.csv&quot;</span>, {<span class="stringliteral">&quot;date&quot;</span>, <span class="stringliteral">&quot;hour&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;MMDDYYYY&quot;</span>, 1);</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1_date.html">Date</a> date = <a class="code hl_function" href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">make_Date</a>( 2, 1, 2020 );</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1_time.html">Time</a> time = <a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">make_Time</a>( 13, 00, 00 );</div>
-<div class="line">   <span class="keywordtype">float</span> T = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18">queryTimeseriesData</a>( <span class="stringliteral">&quot;temperature&quot;</span>, date, time );</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1_date.html" title="Date vector.">Date</a> date = <a class="code hl_function" href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6" title="Make a Date vector.">make_Date</a>( 2, 1, 2020 );</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> time = <a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>( 13, 00, 00 );</div>
+<div class="line">   <span class="keywordtype">float</span> T = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>( <span class="stringliteral">&quot;temperature&quot;</span>, date, time );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="a_context_8h_html"><div class="ttname"><a href="_context_8h.html">Context.h</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html"><div class="ttname"><a href="classhelios_1_1_context.html">helios::Context</a></div><div class="ttdoc">Stores the state associated with simulation.</div><div class="ttdef"><b>Definition</b> <a href="_context_8h_source.html#l01888">Context.h:1888</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a1dc9a0f79be2477c4873755586744e51"><div class="ttname"><a href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData</a></div><div class="ttdeci">void loadTabularTimeseriesData(const std::string &amp;data_file, const std::vector&lt; std::string &gt; &amp;column_labels, const std::string &amp;delimiter, const std::string &amp;date_string_format=&quot;YYYYMMDD&quot;, uint headerlines=0)</div><div class="ttdoc">Load tabular weather data from text file into timeseries.</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l04552">Context_fileIO.cpp:4552</a></div></div>
-<div class="ttc" id="agroup__timeseries_html_ga8845155a8f5df1e6db968b78f5a5fb18"><div class="ttname"><a href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a></div><div class="ttdeci">float queryTimeseriesData(const char *label, const Date &amp;date, const Time &amp;time) const</div><div class="ttdoc">Get a timeseries data point by specifying a date and time vector.</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01894">Context.cpp:1894</a></div></div>
-<div class="ttc" id="agroup__vectors_html_ga7a29e9916b97d9f7533e87e7125e5b66"><div class="ttname"><a href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">helios::make_Time</a></div><div class="ttdeci">Time make_Time(int hour, int minute)</div><div class="ttdoc">Make a Time vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01427">helios_vector_types.h:1427</a></div></div>
-<div class="ttc" id="agroup__vectors_html_gad4c811a7a39319de43f58c93e14ecda6"><div class="ttname"><a href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6">helios::make_Date</a></div><div class="ttdeci">Date make_Date(int day, int month, int year)</div><div class="ttdoc">Make a Date vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01241">helios_vector_types.h:1241</a></div></div>
-<div class="ttc" id="astructhelios_1_1_date_html"><div class="ttname"><a href="structhelios_1_1_date.html">helios::Date</a></div><div class="ttdoc">Date vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01168">helios_vector_types.h:1168</a></div></div>
-<div class="ttc" id="astructhelios_1_1_time_html"><div class="ttname"><a href="structhelios_1_1_time.html">helios::Time</a></div><div class="ttdoc">Time vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01352">helios_vector_types.h:1352</a></div></div>
 </div><!-- fragment --><p>The above example would read the comma-delimited file "../input/weatherfile.csv". Timeseries data would be added to the Context for values of "temperature", which could be queried based on this label.</p>
 <h1><a class="anchor" id="XMLread"></a>
 Reading XML Files</h1>
@@ -248,12 +275,11 @@ Reading XML Files</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">loadXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a129516a8fce035705a541e7b877eba2f"><div class="ttname"><a href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">helios::Context::loadXML</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadXML(const char *filename, bool quiet=false)</div><div class="ttdoc">Load inputs specified in an XML file.</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l01217">Context_fileIO.cpp:1217</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="Poly"></a>
 Reading Standard Polygon File Formats</h1>
 <h2><a class="anchor" id="PLYread"></a>
@@ -264,27 +290,23 @@ Reading PLY (Stanford Polygon) Files</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// location where PLY model will be centered</span></div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html">vec3</a> origin(0,0,0);</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> origin(0,0,0);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// scaling factor to apply to model</span></div>
 <div class="line">    <span class="keywordtype">float</span> scale = 1.0;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// rotation to apply to model (optional argument to loadPLY)</span></div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> rotation( 0., M_PI );</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation( 0., M_PI );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// default color for model (optional argument to loadPLY)</span></div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> color = RGB::red;</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> color = RGB::red;</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">loadPLY</a>( <span class="stringliteral">&quot;file.ply&quot;</span>, origin, scale, rotation, color );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;file.ply&quot;</span>, origin, scale, rotation, color );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a116724929091eabd6324047ed66cef85"><div class="ttname"><a href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">helios::Context::loadPLY</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadPLY(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03378">Context_fileIO.cpp:3378</a></div></div>
-<div class="ttc" id="astructhelios_1_1_r_g_bcolor_html"><div class="ttname"><a href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a></div><div class="ttdoc">R-G-B color vector.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00844">helios_vector_types.h:844</a></div></div>
-<div class="ttc" id="astructhelios_1_1_spherical_coord_html"><div class="ttname"><a href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a></div><div class="ttdoc">Vector of spherical coordinates (elevation,azimuth)</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l01534">helios_vector_types.h:1534</a></div></div>
-<div class="ttc" id="astructhelios_1_1vec3_html"><div class="ttname"><a href="structhelios_1_1vec3.html">helios::vec3</a></div><div class="ttdoc">Vector of three elements of type &#39;float&#39;.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00503">helios_vector_types.h:503</a></div></div>
 </div><!-- fragment --><p>There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.</p>
 <p>Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default <a class="el" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">helios::Context::loadPLY()</a> assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument <a class="el" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">helios::Context::loadPLY()</a> that can allow you to easily define the up-axis.</p>
 <p>The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format. <a class="el" href="_convert_p_l_y.html">This page</a> gives a tutorial on how to perform such conversions using Blender.</p>
@@ -317,14 +339,11 @@ Reading OBJ (Wavefront) Files</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a>(<span class="stringliteral">&quot;relative/path/to/someobjfile.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0), 0, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51">nullrotation</a>, RGB::red );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>(<span class="stringliteral">&quot;relative/path/to/someobjfile.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 0, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8657240a0b2926e8c73b083f0fdc339d"><div class="ttname"><a href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d">helios::Context::loadOBJ</a></div><div class="ttdeci">std::vector&lt; uint &gt; loadOBJ(const char *filename, bool silent=false)</div><div class="ttdoc">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03742">Context_fileIO.cpp:3742</a></div></div>
-<div class="ttc" id="aglobal_8h_html_adcd5a98ec7c45292736ec8e19ce9de51"><div class="ttname"><a href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a></div><div class="ttdeci">SphericalCoord nullrotation</div><div class="ttdoc">Default null SphericalCoord that applies no rotation.</div><div class="ttdef"><b>Definition</b> <a href="global_8cpp_source.html#l00057">global.cpp:57</a></div></div>
-<div class="ttc" id="ahelios__vector__types_8h_html_aa19986ef06f067d450534135735bc36b"><div class="ttname"><a href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a></div><div class="ttdeci">vec3 make_vec3(float x, float y, float z)</div><div class="ttdoc">Make a vec3 from three floats.</div><div class="ttdef"><b>Definition</b> <a href="helios__vector__types_8h_source.html#l00589">helios_vector_types.h:589</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="PLYwrite"></a>
 Writing PLY (Stanford Polygon) Files</h2>
 <p>The Context has analogous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the writePLY() command, as illustrated below.</p>
@@ -333,15 +352,13 @@ Writing PLY (Stanford Polygon) Files</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>();</div>
+<div class="line">    context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7">writePLY</a>( <span class="stringliteral">&quot;file.ply&quot;</span> );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7" title="Write geometry in the Context to a Stanford polygon file (.ply)">writePLY</a>( <span class="stringliteral">&quot;file.ply&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_aa47b8b6f8cefb3c9d55a3cda10d851d7"><div class="ttname"><a href="classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7">helios::Context::writePLY</a></div><div class="ttdeci">void writePLY(const char *filename) const</div><div class="ttdoc">Write geometry in the Context to a Stanford polygon file (.ply)</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l03678">Context_fileIO.cpp:3678</a></div></div>
-<div class="ttc" id="agroup__primitives_html_gaf4aec42f3f104b7c71150577ef129659"><div class="ttname"><a href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">helios::Context::addPatch</a></div><div class="ttdeci">uint addPatch()</div><div class="ttdoc">Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...</div><div class="ttdef"><b>Definition</b> <a href="_context_8cpp_source.html#l01212">Context.cpp:1212</a></div></div>
 </div><!-- fragment --><h2><a class="anchor" id="OBJwrite"></a>
 Writing OBJ (Wavefront) Files</h2>
 <p>Writing Wavefront OBJ files is similar to writing a PLY file, except that it will produce both a .obj file containing the geometry, and a .mtl file defining materials (colors, texture masks). For this reason, only the base file name with no extension is provided to the function.</p>
@@ -350,15 +367,14 @@ Writing OBJ (Wavefront) Files</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>();</div>
+<div class="line">    context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// This will produce two files: &quot;file.obj&quot; and &quot;file.mtl&quot;</span></div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a8249b03fa781c9382863b7cf2caf0dd8">writeOBJ</a>( <span class="stringliteral">&quot;file&quot;</span> );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa3a926087e572ac8298c01862f752d44" title="Write geometry in the Context to a Wavefront file (.obj)">writeOBJ</a>( <span class="stringliteral">&quot;file&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_a8249b03fa781c9382863b7cf2caf0dd8"><div class="ttname"><a href="classhelios_1_1_context.html#a8249b03fa781c9382863b7cf2caf0dd8">helios::Context::writeOBJ</a></div><div class="ttdeci">void writeOBJ(const std::string &amp;filename) const</div><div class="ttdoc">Write geometry in the Context to a Wavefront file (.obj)</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l04131">Context_fileIO.cpp:4131</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="Export"></a>
 Exporting Project to XML File Format</h1>
 <p>All geometry and global/primitive data loaded into the Context can be written to an XML file using the Context::writeXML() function, which can be later read back in using the Context::loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.</p>
@@ -368,27 +384,25 @@ Exporting Project to XML File Format</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>();</div>
+<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d">writeXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d" title="Write Context geometry and data to XML file for all UUIDs in the context.">writeXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_abfcac5a56c13e86298609ed3fccf354d"><div class="ttname"><a href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d">helios::Context::writeXML</a></div><div class="ttdeci">void writeXML(const char *filename, bool quiet=false) const</div><div class="ttdoc">Write Context geometry and data to XML file for all UUIDs in the context.</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l02658">Context_fileIO.cpp:2658</a></div></div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ac7677094a3bbcb62506ce461d982af1d"><div class="ttname"><a href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">helios::Context::setPrimitiveData</a></div><div class="ttdeci">void setPrimitiveData(const uint &amp;UUID, const char *label, const int &amp;data)</div><div class="ttdoc">Add data value (int) associated with a primitive element.</div><div class="ttdef"><b>Definition</b> <a href="_context__data_8cpp_source.html#l00655">Context_data.cpp:655</a></div></div>
 </div><!-- fragment --><p>and later read back into a new simulation:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// The context will now contain a default patch, with primitive data &quot;somedata&quot; equal to 10.2</span></div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">loadXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="ExportASCII"></a>
@@ -399,19 +413,18 @@ Exporting Primitive Data to Text File</h1>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
-<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html">Context</a> context;</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659">addPatch</a>();</div>
+<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ac7677094a3bbcb62506ce461d982af1d">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
 <div class="line"> </div>
 <div class="line">    std::string columns{<span class="stringliteral">&quot;somedata&quot;</span>,<span class="stringliteral">&quot;otherdata&quot;</span>};</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844" title="Write primitive data to an ASCII text file for all primitives in the Context.">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
 <div class="line"> </div>
 <div class="line">}</div>
-<div class="ttc" id="aclasshelios_1_1_context_html_ab643fc787ea7b1a215605c369f446844"><div class="ttname"><a href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData</a></div><div class="ttdeci">void writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const</div><div class="ttdoc">Write primitive data to an ASCII text file for all primitives in the Context.</div><div class="ttdef"><b>Definition</b> <a href="_context__file_i_o_8cpp_source.html#l04473">Context_fileIO.cpp:4473</a></div></div>
 </div><!-- fragment --><p>By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

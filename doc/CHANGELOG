@@ -2052,3 +2052,31 @@ The radiation model has been re-designed, with the following primary additions:
 - There was an error in the model that could cause incorrect assignment of radiative properties if runBand() is called with fewer bands than a previous call to runBand().
 - The previous version could cause unnecessary updating of radiative properties, resulting in a performance hit. This has been fixed.
 - Revised the radiation plug-in CMakeLists.txt to use a modern CMake approach for building CUDA source files. This update should also enable indexing of .cu source files in IDEs such as CLion.
+
+[1.3.28] 2025-02-25
+
++++++ NEW PLUG-IN ++++++
+- project builder plug-in added. GUI and XML interface for creating projects. This is still in beta testing. Credit to Sean Banks for this addition.
+
+++Substantial expansion of self-tests for boundarylayerconductance, energybalance, photosynthesis, solarposition, stomatalconductance, syntheticannotation, and visualizer plug-ins
+++New documentation theme
+
+*Context*
+- Many upgrades to substantially improve performance for CPU code.
+- Upgrades to OBJ file writing, including making Gazebo compatable and adding option to write normals to OBJ files. Credit to LeRoy Corentin for this addition.
+
+*Radiation*
+- Minor change in RadiationModel::runBand() to set all primitive data values in a single Context method call for efficiency.
+- Changed up logic for radiation property setting. If a spectrum is specified for reflectivity or transmissivity, this can be overridden for a single band by specifying the primitive data "reflectivity_[bandname]" or "transmissivity_[bandname]".
+
+*Plant Architecture*
+- cowpeaLeafPrototype_unifoliate_OBJ() asset function was incorrect in the last commit, and would cause an error if used.
+- The plugin now writes primitive data "object_label" for all organs it creates.
+- Some minor fixes to bean OBJ assets.
+- Removed erroneous organ labels in MaizeTassel.obj and TomatoFlower.obj assets.
+
+*Boundary-layer Conductance*
+- Corrected spelling of 'Pohlhausen'. This should still be backward compatible, as it also accepts the spelling "Polhausen".
+
+*Photosynthesis*
+- The way parameters are set for the FvCB model has been clarified to be more explicitly clear about how temperature response is being treated.

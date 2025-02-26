@@ -18,13 +18,13 @@
 <table>
  <tr>
   <th>Package</th>
-  <td>\image html apple-logo.jpg</td>
+  <td>\image html apple-logo.png</td>
   <td>\image html unix-logo.png</td>
-  <td>\image html windows-logo.jpg</td>
+  <td>\image html windows-logo.png</td>
  </tr>
  <tr>
   <td>NVIDIA CUDA 9.0+</td>
-  <td>Mac OSX:<br><div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2"><code>$ brew install Caskroom/cask/cuda</code></div></td>
+  <td>Mac OSX: Not available</td>
   <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
   <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
  </tr>
@@ -134,14 +134,14 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  In order for the model to calculate the absorbed all-wave radiation flux, it needs to know the names of all radiation bands that were added to the radiation model. This is done using the function \ref EnergyBalanceModel::addRadiationBand() "addRadiationBand()". In the following example, assume we have three radiative wavebands "PAR", "NIR", and "LW".
 
- ~~~~~~{.cpp}
+ ```
   // Initialize the Model
   EnergyBalanceModel energybalance(&context);
 
   energybalance.addRadiationBand("PAR");
   energybalance.addRadiationBand("NIR");
   energybalance.addRadiationBand("LW");
- ~~~~~~
+ ```
 
  \subsection EBblc Boundary-layer Conductance Model
 
@@ -218,9 +218,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsubsection EBRunUS Unsteady model with heat storage
 
- Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity \f$C_p\f$ is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The equation is discretized in time using a forward Euler scheme in order to solve for the surface temperature at time \f$t+\Delta t\f$
+ Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity \f$C_p\f$ is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The following equation is then solved for the surface temperature at time \f$t+\Delta t\f$
 
- \f[ T_s(t+\Delta t) = T_s(t)+\left( R-n_s\varepsilon\sigma T_s^4 - c_p g_H \left( T_s-T_a \right) - \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} \right)\frac{\Delta t}{C_p}.\f]
+ \f[ R-n_s\varepsilon\sigma T_s(t+\Delta t)^4 - c_p g_H \left( T_s(t+\Delta t)-T_a \right) - \lambda g_M \left(\frac{e_s(T_s(t+\Delta t))f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} + C_p\dfrac{T_s(t+\Delta t) - T_s(t)}{\Delta t}.\f]
 
  The timestep should be chosen such that it is significantly smaller than the characteristic time constant of heat storage.
 

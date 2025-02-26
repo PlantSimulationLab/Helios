@@ -58,7 +58,7 @@ int BLConductanceModel::selfTest(){
   BLConductanceModel blc_1(&context_1);
   blc_1.disableMessages();
 
-  blc_1.setBoundaryLayerModel( UUID_1.at(0), "Polhausen" );
+  blc_1.setBoundaryLayerModel( UUID_1.at(0), "Pohlhausen" );
   blc_1.setBoundaryLayerModel( UUID_1.at(1), "InclinedPlate" );
   blc_1.setBoundaryLayerModel( UUID_1.at(2), "Sphere" );
   blc_1.setBoundaryLayerModel( UUID_1.at(3), "Ground" );
@@ -105,7 +105,7 @@ void BLConductanceModel::setBoundaryLayerModel(const std::vector<uint> &UUIDs, c
 
   uint model = 0;
   
-  if( strcmp(gH_model,"Polhausen")==0 ){
+  if( strcmp(gH_model,"Pohlhausen")==0 || strcmp(gH_model,"Polhausen")==0 ){
     model = 0;
   }else if( strcmp(gH_model,"InclinedPlate")==0 ){
     model = 1;
@@ -200,8 +200,8 @@ float BLConductanceModel::calculateBoundaryLayerConductance( uint gH_model, floa
     return 0;
   }
 
-  if( gH_model==0 ){ //Polhausen equation
-    //This comes from the correlation by Polhausen - see Eq. XX of Campbell and Norman (1998). It assumes a flat plate parallel to the direction of the flow, which extends infinitely in the cross-stream direction and "L" in the streamwise direction. It also assumes that the air is at standard temperature and pressure, and flow is laminar, forced convection.
+  if( gH_model==0 ){ //Pohlhausen equation
+    //This comes from the correlation by Pohlhausen - see Eq. XX of Campbell and Norman (1998). It assumes a flat plate parallel to the direction of the flow, which extends infinitely in the cross-stream direction and "L" in the streamwise direction. It also assumes that the air is at standard temperature and pressure, and flow is laminar, forced convection.
 
     gH = 0.135f*sqrt(U/L)*float(Nsides);
 

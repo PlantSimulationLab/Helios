@@ -183,11 +183,13 @@ void Primitive::setPrimitiveData( const char* label, HeliosDataType type, uint s
 
 void Primitive::getPrimitiveData( const char* label, int& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT ){
     data = primitive_data_int.at(label).front();
@@ -199,11 +201,13 @@ void Primitive::getPrimitiveData( const char* label, int& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT ){
     data = primitive_data_int.at(label);
@@ -215,11 +219,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int>& data ) co
 
 void Primitive::getPrimitiveData( const char* label, uint& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_UINT ){
     data = primitive_data_uint.at(label).front();
@@ -231,11 +237,13 @@ void Primitive::getPrimitiveData( const char* label, uint& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_UINT ){
     data = primitive_data_uint.at(label);
@@ -247,11 +255,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<uint>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, float& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_FLOAT ){
     data = primitive_data_float.at(label).front();
@@ -263,11 +273,13 @@ void Primitive::getPrimitiveData( const char* label, float& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_FLOAT ){
     data = primitive_data_float.at(label);
@@ -279,11 +291,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<float>& data ) 
 
 void Primitive::getPrimitiveData( const char* label, double& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_DOUBLE ){
     data = primitive_data_double.at(label).front();
@@ -295,11 +309,13 @@ void Primitive::getPrimitiveData( const char* label, double& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<double>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_DOUBLE ){
     data = primitive_data_double.at(label);
@@ -311,11 +327,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<double>& data )
 
 void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC2 ){
     data = primitive_data_vec2.at(label).front();
@@ -327,11 +345,13 @@ void Primitive::getPrimitiveData( const char* label, vec2& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC2 ){
     data = primitive_data_vec2.at(label);
@@ -343,11 +363,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec2>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC3 ){
     data = primitive_data_vec3.at(label).front();
@@ -359,11 +381,13 @@ void Primitive::getPrimitiveData( const char* label, vec3& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC3 ){
     data = primitive_data_vec3.at(label);
@@ -375,11 +399,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec3>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC4 ){
     data = primitive_data_vec4.at(label).front();
@@ -391,11 +417,13 @@ void Primitive::getPrimitiveData( const char* label, vec4& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_VEC4 ){
     data = primitive_data_vec4.at(label);
@@ -407,11 +435,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<vec4>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT2 ){
     data = primitive_data_int2.at(label).front();
@@ -423,11 +453,13 @@ void Primitive::getPrimitiveData( const char* label, int2& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT2 ){
     data = primitive_data_int2.at(label);
@@ -439,11 +471,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int2>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT3 ){
     data = primitive_data_int3.at(label).front();
@@ -455,11 +489,13 @@ void Primitive::getPrimitiveData( const char* label, int3& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT3 ){
     data = primitive_data_int3.at(label);
@@ -471,11 +507,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int3>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT4 ){
     data = primitive_data_int4.at(label).front();
@@ -487,11 +525,13 @@ void Primitive::getPrimitiveData( const char* label, int4& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT4 ){
     data = primitive_data_int4.at(label);
@@ -503,11 +543,13 @@ void Primitive::getPrimitiveData( const char* label, std::vector<int4>& data ) c
 
 void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_STRING ){
     data = primitive_data_string.at(label).front();
@@ -519,11 +561,13 @@ void Primitive::getPrimitiveData( const char* label, std::string& data ) const{
 
 void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_STRING ){
     data = primitive_data_string.at(label);
@@ -535,9 +579,11 @@ void Primitive::getPrimitiveData( const char* label, std::vector<std::string>& d
 
 HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveDataType): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
   return primitive_data_types.at(label);
 
@@ -545,11 +591,13 @@ HeliosDataType Primitive::getPrimitiveDataType( const char* label ) const{
 
 uint Primitive::getPrimitiveDataSize( const char* label ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesPrimitiveDataExist( label ) ){
     helios_runtime_error( "ERROR (Primitive::getPrimitiveDataSize): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID) );
   }
+#endif
 
-  HeliosDataType type = primitive_data_types.at(label);
+  const HeliosDataType &type = primitive_data_types.at(label);
 
   if( type==HELIOS_TYPE_INT ){
     return primitive_data_int.at(label).size();
@@ -630,7 +678,7 @@ void Primitive::clearPrimitiveData( const char* label ){
 
 bool Primitive::doesPrimitiveDataExist( const char* label ) const{
 
-  if( primitive_data_types.find(label) == primitive_data_types.end() ){
+  if( primitive_data_types.find(std::string(label)) == primitive_data_types.end() ){
     return false;
   }else{
     return true;
@@ -652,317 +700,598 @@ std::vector<std::string> Primitive::listPrimitiveData() const{
 
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const int& data ){
+void Context::setPrimitiveData( uint UUID, const char* label, const int& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const uint& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<int> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const uint& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const float& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<uint> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const float& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const double& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<float> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const double& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec2& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<double> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::vec2& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec3& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<vec2> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::vec3& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::vec4& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<vec3> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::vec4& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int2& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<vec4> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::int2& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int3& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<int2> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::int3& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const helios::int4& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<int3> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const helios::int4& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, const std::string& data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<int4> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, const std::string& data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,data);
 }
 
-void Context::setPrimitiveData( const uint& UUID, const char* label, HeliosDataType type, uint size, void* data ){
+void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* label, const std::vector<std::string> &data ) {
+#ifdef HELIOS_DEBUG
+  if( UUIDs.size() != data.size() ){
+    helios_runtime_error( "ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+  }
+#endif
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+  for ( uint p=0; p<UUIDs.size(); p++ ){
+    primitives.at(UUIDs.at(p))->setPrimitiveData(label, data.at(p));
+  }
+}
+
+void Context::setPrimitiveData( uint UUID, const char* label, HeliosDataType type, uint size, void* data ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->setPrimitiveData(label,type,size,data);
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const int& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const uint& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const float& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const double& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::vec2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::vec3& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::vec4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::int2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::int3& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const helios::int4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<uint>& UUIDs, const char* label, const std::string& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for( uint UUID : UUIDs){
-    setPrimitiveData( UUID, label, data );
+    primitives.at(UUID)->setPrimitiveData(label,data);
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const int& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const uint& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const float& data ){
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const double& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::vec2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::vec3& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::vec4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::int2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::int3& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const helios::int4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<uint> >& UUIDs, const char* label, const std::string& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+      primitives.at(UUID)->setPrimitiveData(label,data);
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const int& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
-    for( const auto& UUID : j ){
-      setPrimitiveData( UUID, label, data );
+    for( const auto& i : j ) {
+      for (const auto &UUID: i) {
+        primitives.at(UUID)->setPrimitiveData(label,data);
+      }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const uint& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const float& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const double& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const helios::vec2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const helios::vec3& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const helios::vec4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const helios::int2& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
@@ -972,230 +1301,292 @@ void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> 
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const helios::int4& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::setPrimitiveData( const std::vector<std::vector<std::vector<uint> > >& UUIDs, const char* label, const std::string& data ){
+#ifdef USE_OPENMP
+  #pragma omp parallel for
+#endif
   for(const auto & j : UUIDs){
     for( const auto& i : j ) {
       for (const auto &UUID: i) {
-        setPrimitiveData(UUID, label, data);
+        primitives.at(UUID)->setPrimitiveData(label,data);
       }
     }
   }
 }
 
 void Context::getPrimitiveData(uint UUID, const char* label, int& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<int>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, uint& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, uint& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<uint>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<uint>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, float& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, float& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<float>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<float>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, double& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, double& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<double>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<double>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, vec2& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, vec2& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec2>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<vec2>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, vec3& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, vec3& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec3>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<vec3>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, vec4& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, vec4& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<vec4>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<vec4>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, int2& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, int2& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int2>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<int2>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, int3& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, int3& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int3>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<int3>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, int4& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, int4& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<int4>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<int4>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::string& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::string& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-void Context::getPrimitiveData( const uint UUID, const char* label, std::vector<std::string>& data ) const{
+void Context::getPrimitiveData( uint UUID, const char* label, std::vector<std::string>& data ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->getPrimitiveData(label,data);
 }
 
-HeliosDataType Context::getPrimitiveDataType( const uint UUID, const char* label )const{
+HeliosDataType Context::getPrimitiveDataType( uint UUID, const char* label )const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveDataType): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   return primitives.at(UUID)->getPrimitiveDataType(label);
 }
 
-uint Context::getPrimitiveDataSize( const uint UUID, const char* label )const{
+uint Context::getPrimitiveDataSize( uint UUID, const char* label )const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveDataSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   return primitives.at(UUID)->getPrimitiveDataSize(label);
 }
 
-bool Context::doesPrimitiveDataExist( const uint UUID, const char* label ) const{
+bool Context::doesPrimitiveDataExist( uint UUID, const char* label ) const{
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::doesPrimitiveDataExist): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   return primitives.at(UUID)->doesPrimitiveDataExist(label);
 }
 
-void Context::clearPrimitiveData( const uint UUID, const char* label ){
+void Context::clearPrimitiveData( uint UUID, const char* label ){
+#ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
   }
+#endif
   primitives.at(UUID)->clearPrimitiveData(label);
 }
 
 void Context::clearPrimitiveData( const std::vector<uint>& UUIDs, const char* label ){
   for( unsigned int UUID : UUIDs){
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
       helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
+#endif
     primitives.at(UUID)->clearPrimitiveData(label);
   }
 }
 
 void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID){
 
+#ifdef HELIOS_DEBUG
     if(primitives.find(sourceUUID) == primitives.end() ) {
         helios_runtime_error("ERROR (Context::copyPrimitiveData): Source UUID of " + std::to_string(sourceUUID) + " does not exist in the Context.");
     }else if(primitives.find(destinationUUID) == primitives.end() ) {
         helios_runtime_error("ERROR (Context::copyPrimitiveData): Destination UUID of " + std::to_string(destinationUUID) + " does not exist in the Context.");
     }
+#endif
 
     primitives.at(destinationUUID)->primitive_data_types = primitives.at(sourceUUID)->primitive_data_types;
 
@@ -1215,11 +1606,13 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID){
 
 void Context::renamePrimitiveData( uint UUID, const char* old_label, const char* new_label ){
 
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::renamePrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( !primitives.at(UUID)->doesPrimitiveDataExist(old_label) ){
         helios_runtime_error("ERROR (Context::renamePrimitiveData): Primitive data of " + std::string(old_label) + " does not exist for primitive " + std::to_string(UUID) + ".");
     }
+#endif
 
     duplicatePrimitiveData( UUID, old_label, new_label );
     clearPrimitiveData( UUID, old_label );
@@ -1228,11 +1621,13 @@ void Context::renamePrimitiveData( uint UUID, const char* old_label, const char*
 
 void Context::duplicatePrimitiveData( uint UUID, const char* old_label, const char* new_label ){
 
+#ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::duplicatePrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }else if( !primitives.at(UUID)->doesPrimitiveDataExist(old_label) ){
         helios_runtime_error("ERROR (Context::duplicatePrimitiveData): Primitive data of " + std::string(old_label) + " does not exist for primitive " + std::to_string(UUID) + ".");
     }
+#endif
 
     HeliosDataType type = getPrimitiveDataType( UUID, old_label );
 
@@ -2464,87 +2859,111 @@ std::vector<uint> Context::filterPrimitivesByData( const std::vector<uint> &UUID
 
 //------ Object Data ------- //
 
-void Context::setObjectData( const uint objID, const char* label, const int& data ){
+void Context::setObjectData( uint objID, const char* label, const int& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const uint& data ){
+void Context::setObjectData( uint objID, const char* label, const uint& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const float& data ){
+void Context::setObjectData( uint objID, const char* label, const float& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const double& data ){
+void Context::setObjectData( uint objID, const char* label, const double& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::vec2& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::vec2& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::vec3& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::vec3& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::vec4& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::vec4& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::int2& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::int2& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::int3& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::int3& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const helios::int4& data ){
+void Context::setObjectData( uint objID, const char* label, const helios::int4& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, const std::string& data ){
+void Context::setObjectData( uint objID, const char* label, const std::string& data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,data);
 }
 
-void Context::setObjectData( const uint objID, const char* label, HeliosDataType type, uint size, void* data ){
+void Context::setObjectData( uint objID, const char* label, HeliosDataType type, uint size, void* data ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::setObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->setObjectData(label,type,size,data);
 }
 
@@ -2812,188 +3231,240 @@ void Context::setObjectData( const std::vector<std::vector<std::vector<uint> > >
   }
 }
 
-void Context::getObjectData( const uint objID, const char* label, int& data ) const{
+void Context::getObjectData( uint objID, const char* label, int& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<int>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<int>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, uint& data ) const{
+void Context::getObjectData( uint objID, const char* label, uint& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<uint>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<uint>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, float& data ) const{
+void Context::getObjectData( uint objID, const char* label, float& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<float>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<float>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, double& data ) const{
+void Context::getObjectData( uint objID, const char* label, double& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<double>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<double>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, vec2& data ) const{
+void Context::getObjectData( uint objID, const char* label, vec2& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<vec2>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<vec2>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, vec3& data ) const{
+void Context::getObjectData( uint objID, const char* label, vec3& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<vec3>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<vec3>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, vec4& data ) const{
+void Context::getObjectData( uint objID, const char* label, vec4& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<vec4>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<vec4>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, int2& data ) const{
+void Context::getObjectData( uint objID, const char* label, int2& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<int2>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<int2>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, int3& data ) const{
+void Context::getObjectData( uint objID, const char* label, int3& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<int3>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<int3>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, int4& data ) const{
+void Context::getObjectData( uint objID, const char* label, int4& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<int4>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<int4>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::string& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::string& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-void Context::getObjectData( const uint objID, const char* label, std::vector<std::string>& data ) const{
+void Context::getObjectData( uint objID, const char* label, std::vector<std::string>& data ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->getObjectData(label,data);
 }
 
-HeliosDataType Context::getObjectDataType( const uint objID, const char* label )const{
+HeliosDataType Context::getObjectDataType( uint objID, const char* label )const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectDataType): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   return objects.at(objID)->getObjectDataType(label);
 }
 
-uint Context::getObjectDataSize( const uint objID, const char* label )const{
+uint Context::getObjectDataSize( uint objID, const char* label )const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::getObjectDataSize): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   return objects.at(objID)->getObjectDataSize(label);
 }
 
-bool Context::doesObjectDataExist( const uint objID, const char* label ) const{
+bool Context::doesObjectDataExist( uint objID, const char* label ) const{
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::doesObjectDataExist): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   return objects.at(objID)->doesObjectDataExist(label);
 }
 
 void Context::copyObjectData(uint source_objID, uint destination_objID){
 
+#ifdef HELIOS_DEBUG
     if( objects.find(source_objID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::copyObjectData): Source object ID of " + std::to_string(source_objID) + " does not exist in the Context.");
     }else if( objects.find(destination_objID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::copyObjectData): Destination object ID of " + std::to_string(destination_objID) + " does not exist in the Context.");
     }
+#endif
 
     objects.at(destination_objID)->object_data_types = objects.at(source_objID)->object_data_types;
 
@@ -3013,11 +3484,13 @@ void Context::copyObjectData(uint source_objID, uint destination_objID){
 
 void Context::duplicateObjectData( uint objID, const char* old_label, const char* new_label ){
 
+#ifdef HELIOS_DEBUG
     if( objects.find(objID) == objects.end() ){
         helios_runtime_error("ERROR (Context::duplicateObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
     }else if( !doesObjectDataExist(objID, old_label) ){
         helios_runtime_error("ERROR (Context::duplicateObjectData): Object ID of " + std::to_string(objID) + " does not have data with label " + std::string(old_label) + ".");
     }
+#endif
 
     HeliosDataType type = getObjectDataType( objID, old_label );
 
@@ -3053,29 +3526,35 @@ void Context::duplicateObjectData( uint objID, const char* old_label, const char
 
 void Context::renameObjectData( uint objID, const char* old_label, const char* new_label ){
 
+#ifdef HELIOS_DEBUG
     if( objects.find(objID) == objects.end() ){
         helios_runtime_error("ERROR (Context::renameObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
     }else if( !doesObjectDataExist(objID, old_label) ){
         helios_runtime_error("ERROR (Context::renameObjectData): Object ID of " + std::to_string(objID) + " does not have data with label " + std::string(old_label) + ".");
     }
+#endif
 
     duplicateObjectData( objID, old_label, new_label );
     clearObjectData( objID, old_label );
 
 }
 
-void Context::clearObjectData( const uint objID, const char* label ){
+void Context::clearObjectData( uint objID, const char* label ){
+#ifdef HELIOS_DEBUG
   if( objects.find(objID) == objects.end() ){
     helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
   }
+#endif
   objects.at(objID)->clearObjectData(label);
 }
 
 void Context::clearObjectData( const std::vector<uint>& objIDs, const char* label ){
   for( uint objID : objIDs ){
+#ifdef HELIOS_DEBUG
     if( objects.find(objID) == objects.end() ){
       helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
     }
+#endif
     objects.at(objID)->clearObjectData(label);
   }
 }
@@ -3248,9 +3727,11 @@ void CompoundObject::setObjectData( const char* label, HeliosDataType a_type, ui
 
 void CompoundObject::getObjectData( const char* label, int& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
     data = object_data_int.at(label).front();
@@ -3262,9 +3743,11 @@ void CompoundObject::getObjectData( const char* label, int& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT ){
     data = object_data_int.at(label);
@@ -3276,9 +3759,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) 
 
 void CompoundObject::getObjectData( const char* label, uint& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
     data = object_data_uint.at(label).front();
@@ -3290,9 +3775,11 @@ void CompoundObject::getObjectData( const char* label, uint& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<uint>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
     data = object_data_uint.at(label);
@@ -3304,9 +3791,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<uint>& data )
 
 void CompoundObject::getObjectData( const char* label, float& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
     data = object_data_float.at(label).front();
@@ -3318,9 +3807,11 @@ void CompoundObject::getObjectData( const char* label, float& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<float>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
     data = object_data_float.at(label);
@@ -3332,9 +3823,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<float>& data 
 
 void CompoundObject::getObjectData( const char* label, double& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
     data = object_data_double.at(label).front();
@@ -3346,9 +3839,11 @@ void CompoundObject::getObjectData( const char* label, double& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<double>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
     data = object_data_double.at(label);
@@ -3360,9 +3855,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<double>& data
 
 void CompoundObject::getObjectData( const char* label, vec2& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
     data = object_data_vec2.at(label).front();
@@ -3374,9 +3871,11 @@ void CompoundObject::getObjectData( const char* label, vec2& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
     data = object_data_vec2.at(label);
@@ -3388,9 +3887,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data )
 
 void CompoundObject::getObjectData( const char* label, vec3& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
     data = object_data_vec3.at(label).front();
@@ -3402,9 +3903,11 @@ void CompoundObject::getObjectData( const char* label, vec3& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
     data = object_data_vec3.at(label);
@@ -3416,9 +3919,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data )
 
 void CompoundObject::getObjectData( const char* label, vec4& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
     data = object_data_vec4.at(label).front();
@@ -3430,9 +3935,11 @@ void CompoundObject::getObjectData( const char* label, vec4& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
     data = object_data_vec4.at(label);
@@ -3444,9 +3951,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data )
 
 void CompoundObject::getObjectData( const char* label, int2& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
     data = object_data_int2.at(label).front();
@@ -3458,9 +3967,11 @@ void CompoundObject::getObjectData( const char* label, int2& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<int2>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
     data = object_data_int2.at(label);
@@ -3472,9 +3983,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<int2>& data )
 
 void CompoundObject::getObjectData( const char* label, int3& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
     data = object_data_int3.at(label).front();
@@ -3486,9 +3999,11 @@ void CompoundObject::getObjectData( const char* label, int3& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<int3>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID) );
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
     data = object_data_int3.at(label);
@@ -3500,9 +4015,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<int3>& data )
 
 void CompoundObject::getObjectData( const char* label, int4& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
     data = object_data_int4.at(label).front();
@@ -3514,9 +4031,11 @@ void CompoundObject::getObjectData( const char* label, int4& data ) const{
 
 void CompoundObject::getObjectData( const char* label, std::vector<int4>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
     data = object_data_int4.at(label);
@@ -3528,9 +4047,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<int4>& data )
 
 void CompoundObject::getObjectData( const char* label, std::string& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
     data = object_data_string.at(label).front();
@@ -3542,9 +4063,11 @@ void CompoundObject::getObjectData( const char* label, std::string& data ) const
 
 void CompoundObject::getObjectData( const char* label, std::vector<std::string>& data ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
     data = object_data_string.at(label);
@@ -3556,9 +4079,11 @@ void CompoundObject::getObjectData( const char* label, std::vector<std::string>&
 
 HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectDataType): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   return object_data_types.at(label);
 
@@ -3566,9 +4091,11 @@ HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
 
 uint CompoundObject::getObjectDataSize( const char* label ) const{
 
+#ifdef HELIOS_DEBUG
   if( !doesObjectDataExist( label ) ){
     helios_runtime_error("ERROR (CompoundObject::getObjectDataSize): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
   }
+#endif
 
   HeliosDataType qtype = object_data_types.at(label);
 
@@ -3608,7 +4135,7 @@ void CompoundObject::clearObjectData( const char* label ){
     return;
   }
 
-  HeliosDataType qtype = object_data_types.at(label);
+  const HeliosDataType &qtype = object_data_types.at(label);
 
   if( qtype==HELIOS_TYPE_INT ){
     object_data_int.erase(label);
@@ -3651,7 +4178,7 @@ void CompoundObject::clearObjectData( const char* label ){
 
 bool CompoundObject::doesObjectDataExist( const char* label ) const{
 
-  if( object_data_types.find(label) == object_data_types.end() ){
+  if( object_data_types.find(std::string(label)) == object_data_types.end() ){
     return false;
   }else{
     return true;
@@ -4532,7 +5059,7 @@ std::vector<std::string> Context::listGlobalData() const{
 
 bool Context::doesGlobalDataExist( const char* label ) const{
 
-  if( globaldata.find(label) == globaldata.end() ){
+  if( globaldata.find(std::string(label)) == globaldata.end() ){
     return false;
   }else{
     return true;

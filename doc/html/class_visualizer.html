@@ -1,47 +1,94 @@
+<!-- HTML header for doxygen 1.12.0-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
-<meta name="generator" content="Doxygen 1.9.6"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>.: Helios Documentation</title>
+<title>Helios: Visualizer Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
-<link href="doxygen.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-93BB4673PE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3F0Y5Z6543');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
-<table cellspacing="0" cellpadding="0">
+<table cellspacing="0" cellpadding="5">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"/></td>
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
-   <div id="projectname"><span id="projectnumber">&#160;v1.3.27</span>
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.27</span>
    </div>
   </td>
  </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -57,19 +104,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
 $(function() { codefold.init(0); });
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
-<script type="text/javascript">
-/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search',true);
-  $(function() { init_search(); });
-});
-/* @license-end */
-</script>
-<div id="main-nav"></div>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -149,18 +184,18 @@ Public Types</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a9277e99596d46d77d31a2249a1406983" id="r_a9277e99596d46d77d31a2249a1406983"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9277e99596d46d77d31a2249a1406983">Visualizer</a> (uint Wdisplay)</td></tr>
-<tr class="memdesc:a9277e99596d46d77d31a2249a1406983"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor.  <br /></td></tr>
+<tr class="memdesc:a9277e99596d46d77d31a2249a1406983"><td class="mdescLeft">&#160;</td><td class="mdescRight">Visualizer constructor.  <br /></td></tr>
 <tr class="separator:a9277e99596d46d77d31a2249a1406983"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac39e631c7d248c0e0f4f9ebba58a6dc4" id="r_ac39e631c7d248c0e0f4f9ebba58a6dc4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac39e631c7d248c0e0f4f9ebba58a6dc4">Visualizer</a> (uint Wdisplay, uint Hdisplay)</td></tr>
-<tr class="memdesc:ac39e631c7d248c0e0f4f9ebba58a6dc4"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor.  <br /></td></tr>
+<tr class="memdesc:ac39e631c7d248c0e0f4f9ebba58a6dc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Visualizer constructor.  <br /></td></tr>
 <tr class="separator:ac39e631c7d248c0e0f4f9ebba58a6dc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa1b2dc8221d4d254ba54880afb6fce98" id="r_aa1b2dc8221d4d254ba54880afb6fce98"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1b2dc8221d4d254ba54880afb6fce98">Visualizer</a> (uint Wdisplay, uint Hdisplay, int aliasing_samples)</td></tr>
 <tr class="separator:aa1b2dc8221d4d254ba54880afb6fce98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c6edf93389fa78548f2024aec944b82" id="r_a9c6edf93389fa78548f2024aec944b82"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9c6edf93389fa78548f2024aec944b82">Visualizer</a> (uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations)</td></tr>
-<tr class="memdesc:a9c6edf93389fa78548f2024aec944b82"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed.  <br /></td></tr>
+<tr class="memdesc:a9c6edf93389fa78548f2024aec944b82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed.  <br /></td></tr>
 <tr class="separator:a9c6edf93389fa78548f2024aec944b82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1dc0a74852187800f44d2eaba4154650" id="r_a1dc0a74852187800f44d2eaba4154650"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1dc0a74852187800f44d2eaba4154650">selfTest</a> ()</td></tr>
-<tr class="memdesc:a1dc0a74852187800f44d2eaba4154650"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> self-test routine.  <br /></td></tr>
+<tr class="memdesc:a1dc0a74852187800f44d2eaba4154650"><td class="mdescLeft">&#160;</td><td class="mdescRight">Visualizer self-test routine.  <br /></td></tr>
 <tr class="separator:a1dc0a74852187800f44d2eaba4154650"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaf6a79caee464bfe52cb4fd34d3882d2" id="r_aaf6a79caee464bfe52cb4fd34d3882d2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf6a79caee464bfe52cb4fd34d3882d2">enableMessages</a> ()</td></tr>
 <tr class="memdesc:aaf6a79caee464bfe52cb4fd34d3882d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable standard output from this plug-in (default)  <br /></td></tr>
@@ -372,6 +407,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab4858ed12fa78fe451569f4bbc27cd7c" id="r_ab4858ed12fa78fe451569f4bbc27cd7c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab4858ed12fa78fe451569f4bbc27cd7c">plotInteractive</a> ()</td></tr>
 <tr class="memdesc:ab4858ed12fa78fe451569f4bbc27cd7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plot current geometry into an interactive graphics window.  <br /></td></tr>
 <tr class="separator:ab4858ed12fa78fe451569f4bbc27cd7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7be1572cd8696b4209712e1362c0a74c" id="r_a7be1572cd8696b4209712e1362c0a74c"><td class="memItemLeft" align="right" valign="top">glm::mat4&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7be1572cd8696b4209712e1362c0a74c">plotInit</a> ()</td></tr>
+<tr class="memdesc:a7be1572cd8696b4209712e1362c0a74c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plot interactive setup.  <br /></td></tr>
+<tr class="separator:a7be1572cd8696b4209712e1362c0a74c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9df3d9d3b6d110abbe0a0b67937208b" id="r_ae9df3d9d3b6d110abbe0a0b67937208b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9df3d9d3b6d110abbe0a0b67937208b">plotOnce</a> (glm::mat4 depthMVP, bool getKeystrokes)</td></tr>
+<tr class="memdesc:ae9df3d9d3b6d110abbe0a0b67937208b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run one rendering loop from plotInteractive()  <br /></td></tr>
+<tr class="separator:ae9df3d9d3b6d110abbe0a0b67937208b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a133187767033ad1f89c312a2d6f4a533" id="r_a133187767033ad1f89c312a2d6f4a533"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a133187767033ad1f89c312a2d6f4a533">plotDepthMap</a> ()</td></tr>
 <tr class="memdesc:a133187767033ad1f89c312a2d6f4a533"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plot the depth map (distance from camera to nearest object)  <br /></td></tr>
 <tr class="separator:a133187767033ad1f89c312a2d6f4a533"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -405,6 +446,26 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6b7be76387563b2981bba995a7578d78" id="r_a6b7be76387563b2981bba995a7578d78"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b7be76387563b2981bba995a7578d78">closeWindow</a> ()</td></tr>
 <tr class="memdesc:a6b7be76387563b2981bba995a7578d78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the graphics window.  <br /></td></tr>
 <tr class="separator:a6b7be76387563b2981bba995a7578d78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d14f4ca6f439762685cf83c4115bc3a" id="r_a0d14f4ca6f439762685cf83c4115bc3a"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d14f4ca6f439762685cf83c4115bc3a">getWindow</a> ()</td></tr>
+<tr class="separator:a0d14f4ca6f439762685cf83c4115bc3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cda33e7b41dc6ed0a4b3da80ebbf019" id="r_a5cda33e7b41dc6ed0a4b3da80ebbf019"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5cda33e7b41dc6ed0a4b3da80ebbf019">getFrameBufferSize</a> ()</td></tr>
+<tr class="separator:a5cda33e7b41dc6ed0a4b3da80ebbf019"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a018efd32ed807b4d8d008e59f787ee20" id="r_a018efd32ed807b4d8d008e59f787ee20"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a018efd32ed807b4d8d008e59f787ee20">setFrameBufferSize</a> (int width, int height)</td></tr>
+<tr class="separator:a018efd32ed807b4d8d008e59f787ee20"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12a3c6d4bd3b7561a5fb525ed88745d1" id="r_a12a3c6d4bd3b7561a5fb525ed88745d1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12a3c6d4bd3b7561a5fb525ed88745d1">getBackgroundColor</a> ()</td></tr>
+<tr class="separator:a12a3c6d4bd3b7561a5fb525ed88745d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad530b6b68ea0196ad5d9895d88ae7f4f" id="r_ad530b6b68ea0196ad5d9895d88ae7f4f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_shader.html">Shader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad530b6b68ea0196ad5d9895d88ae7f4f">getPrimaryShader</a> ()</td></tr>
+<tr class="separator:ad530b6b68ea0196ad5d9895d88ae7f4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af87964069b0f24421bbc4f3131f23998" id="r_af87964069b0f24421bbc4f3131f23998"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af87964069b0f24421bbc4f3131f23998">getCameraPosition</a> ()</td></tr>
+<tr class="separator:af87964069b0f24421bbc4f3131f23998"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a644d51d1ae8045668512ea552e7a7d16" id="r_a644d51d1ae8045668512ea552e7a7d16"><td class="memItemLeft" align="right" valign="top">glm::mat4&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a644d51d1ae8045668512ea552e7a7d16">getPerspectiveTransformationMatrix</a> ()</td></tr>
+<tr class="separator:a644d51d1ae8045668512ea552e7a7d16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad904316ba05bea150b06f654deb99a24" id="r_ad904316ba05bea150b06f654deb99a24"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="#a580a78fe3e25c423e2d13aebc1b54573">LightingModel</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad904316ba05bea150b06f654deb99a24">getPrimaryLightingModel</a> ()</td></tr>
+<tr class="separator:ad904316ba05bea150b06f654deb99a24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3cb5215d16af857643fa658b66872f5b" id="r_a3cb5215d16af857643fa658b66872f5b"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cb5215d16af857643fa658b66872f5b">getDepthTexture</a> ()</td></tr>
+<tr class="separator:a3cb5215d16af857643fa658b66872f5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18bbe29dbe06e3a8fe4622270618e69f" id="r_a18bbe29dbe06e3a8fe4622270618e69f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18bbe29dbe06e3a8fe4622270618e69f">clearColor</a> ()</td></tr>
+<tr class="separator:a18bbe29dbe06e3a8fe4622270618e69f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Class for visualization of simulation results. </p>
@@ -519,7 +580,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor. </p>
+<p>Visualizer constructor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">Wdisplay</td><td>Width of the display window in pixels, and assumes default window aspect ratio of 1.25 </td></tr>
@@ -550,7 +611,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor. </p>
+<p>Visualizer constructor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">Wdisplay</td><td>Width of the display window in pixels </td></tr>
@@ -620,7 +681,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed. </p>
+<p>Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed. </p>
 
 <p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00370">370</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
@@ -663,7 +724,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Add a coordinate axis with at the origin with unit length. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02517">2517</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02566">2566</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -701,7 +762,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02521">2521</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02570">2570</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -904,7 +965,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02559">2559</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02608">2608</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1474,7 +1535,7 @@ Public Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">vertices</td><td>(x,y,z) coordinates of four vertices </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>R-G-B-A color of the glyph </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td><a class="el" href="class_glyph.html" title="Glyph object - 2D matrix shape.">Glyph</a> object used to render rectangle </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td>Glyph object used to render rectangle </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">coordFlag</td><td>Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN". </td></tr>
   </table>
   </dd>
@@ -1650,7 +1711,7 @@ Public Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">vertices</td><td>(x,y,z) coordinates of four vertices </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>R-G-B color of the glyph </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td><a class="el" href="class_glyph.html" title="Glyph object - 2D matrix shape.">Glyph</a> object used to render rectangle </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">glyph</td><td>Glyph object used to render rectangle </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">coordFlag</td><td>Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN". </td></tr>
   </table>
   </dd>
@@ -2266,7 +2327,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02706">2706</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02755">2755</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2298,7 +2359,26 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02711">2711</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02760">2760</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a18bbe29dbe06e3a8fe4622270618e69f" name="a18bbe29dbe06e3a8fe4622270618e69f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18bbe29dbe06e3a8fe4622270618e69f">&#9670;&#160;</a></span>clearColor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::clearColor </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04724">4724</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2362,7 +2442,7 @@ Public Member Functions</h2></td></tr>
 <p>Color objects from Context with a random color. </p>
 <dl class="section note"><dt>Note</dt><dd>Useful for visualizing individual objects </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03277">3277</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03326">3326</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2384,7 +2464,7 @@ Public Member Functions</h2></td></tr>
 <p>Color objects from Context with a random color. </p>
 <dl class="section note"><dt>Note</dt><dd>Useful for visualizing individual objects </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03261">3261</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03310">3310</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2412,7 +2492,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03174">3174</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03223">3223</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2445,7 +2525,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03185">3185</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03234">3234</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2473,7 +2553,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03196">3196</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03245">3245</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2506,7 +2586,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If the data value does not exist for a certain primitive, a value of 0 is assumed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03207">3207</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03256">3256</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2528,7 +2608,7 @@ Public Member Functions</h2></td></tr>
 <p>Color primitives from Context with a random color. </p>
 <dl class="section note"><dt>Note</dt><dd>Useful for visualizing individual primitives that are part of compound objects </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03239">3239</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03288">3288</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2556,7 +2636,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Useful for visualizing individual primitives that are part of compound objects </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03218">3218</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03267">3267</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2597,7 +2677,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable the colorbar. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02599">2599</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02648">2648</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2639,7 +2719,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable the colorbar. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02595">2595</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02644">2644</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2664,6 +2744,44 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a12a3c6d4bd3b7561a5fb525ed88745d1" name="a12a3c6d4bd3b7561a5fb525ed88745d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12a3c6d4bd3b7561a5fb525ed88745d1">&#9670;&#160;</a></span>getBackgroundColor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> Visualizer::getBackgroundColor </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04699">4699</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af87964069b0f24421bbc4f3131f23998" name="af87964069b0f24421bbc4f3131f23998"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af87964069b0f24421bbc4f3131f23998">&#9670;&#160;</a></span>getCameraPosition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; Visualizer::getCameraPosition </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04707">4707</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
 <a id="ae2bba6102a283a31ec4f5780817a15da" name="ae2bba6102a283a31ec4f5780817a15da"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae2bba6102a283a31ec4f5780817a15da">&#9670;&#160;</a></span>getCurrentColormap()</h2>
 
@@ -2681,7 +2799,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current colormap used in Colorbar/visualization. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02702">2702</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02751">2751</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2707,9 +2825,28 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>The function <a class="el" href="#a133187767033ad1f89c312a2d6f4a533" title="Plot the depth map (distance from camera to nearest object)">plotDepthMap()</a> must be called prior to <a class="el" href="#a7c6362d7dc0f0bd4bba53195ce92b84e" title="Get depth buffer data for the current display window.">getDepthMap()</a>. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>The function plotDepthMap() must be called prior to getDepthMap(). </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00934">934</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3cb5215d16af857643fa658b66872f5b" name="a3cb5215d16af857643fa658b66872f5b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cb5215d16af857643fa658b66872f5b">&#9670;&#160;</a></span>getDepthTexture()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint Visualizer::getDepthTexture </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04720">4720</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2764,6 +2901,25 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a5cda33e7b41dc6ed0a4b3da80ebbf019" name="a5cda33e7b41dc6ed0a4b3da80ebbf019"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cda33e7b41dc6ed0a4b3da80ebbf019">&#9670;&#160;</a></span>getFrameBufferSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; Visualizer::getFrameBufferSize </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04689">4689</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
 <a id="ab3b0261a21e7f552d55e4d2fda55f94f" name="ab3b0261a21e7f552d55e4d2fda55f94f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab3b0261a21e7f552d55e4d2fda55f94f">&#9670;&#160;</a></span>getFramebufferSize()</h2>
 
@@ -2793,6 +2949,82 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00954">954</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a644d51d1ae8045668512ea552e7a7d16" name="a644d51d1ae8045668512ea552e7a7d16"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a644d51d1ae8045668512ea552e7a7d16">&#9670;&#160;</a></span>getPerspectiveTransformationMatrix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">glm::mat4 Visualizer::getPerspectiveTransformationMatrix </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04712">4712</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad904316ba05bea150b06f654deb99a24" name="ad904316ba05bea150b06f654deb99a24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad904316ba05bea150b06f654deb99a24">&#9670;&#160;</a></span>getPrimaryLightingModel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="#a580a78fe3e25c423e2d13aebc1b54573">Visualizer::LightingModel</a> &gt; Visualizer::getPrimaryLightingModel </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04716">4716</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad530b6b68ea0196ad5d9895d88ae7f4f" name="ad530b6b68ea0196ad5d9895d88ae7f4f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad530b6b68ea0196ad5d9895d88ae7f4f">&#9670;&#160;</a></span>getPrimaryShader()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_shader.html">Shader</a> Visualizer::getPrimaryShader </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04703">4703</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0d14f4ca6f439762685cf83c4115bc3a" name="a0d14f4ca6f439762685cf83c4115bc3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d14f4ca6f439762685cf83c4115bc3a">&#9670;&#160;</a></span>getWindow()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void * Visualizer::getWindow </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04685">4685</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2893,7 +3125,28 @@ Public Member Functions</h2></td></tr>
 
 <p>Plot the depth map (distance from camera to nearest object) </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03734">3734</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03934">3934</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7be1572cd8696b4209712e1362c0a74c" name="a7be1572cd8696b4209712e1362c0a74c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7be1572cd8696b4209712e1362c0a74c">&#9670;&#160;</a></span>plotInit()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">glm::mat4 Visualizer::plotInit </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Plot interactive setup. </p>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03514">3514</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2914,7 +3167,39 @@ Public Member Functions</h2></td></tr>
 
 <p>Plot current geometry into an interactive graphics window. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03307">3307</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03356">3356</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae9df3d9d3b6d110abbe0a0b67937208b" name="ae9df3d9d3b6d110abbe0a0b67937208b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9df3d9d3b6d110abbe0a0b67937208b">&#9670;&#160;</a></span>plotOnce()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::plotOnce </td>
+          <td>(</td>
+          <td class="paramtype">glm::mat4</td>          <td class="paramname"><span class="paramname"><em>depthMVP</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>getKeystrokes</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run one rendering loop from plotInteractive() </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">depthMVP</td><td>Depth MVP matrix. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">getKeystrokes</td><td>If false, do not update visualization with input keystrokes. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03609">3609</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2935,7 +3220,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Update the graphics window based on current geometry, then continue the program. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03590">3590</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03790">3790</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -2962,7 +3247,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03594">3594</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03794">3794</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3030,9 +3315,9 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p><a class="el" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> self-test routine. </p>
+<p>Visualizer self-test routine. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00694">694</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2visualizer_2src_2self_test_8cpp_source.html#l00005">5</a> of file <a class="el" href="plugins_2visualizer_2src_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -3178,7 +3463,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02666">2666</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02715">2715</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3205,7 +3490,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02659">2659</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02708">2708</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3232,7 +3517,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02603">2603</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02652">2652</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3264,7 +3549,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02617">2617</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02666">2666</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3291,7 +3576,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02610">2610</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02659">2659</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3319,7 +3604,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If tick values are outside of the colorbar range (see setColorBarRange()), the colorbar will be automatically expanded to fit the tick values. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02626">2626</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02675">2675</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3346,7 +3631,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02655">2655</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02704">2704</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3378,7 +3663,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02690">2690</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02739">2739</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3406,7 +3691,30 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY". </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02670">2670</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02719">2719</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a018efd32ed807b4d8d008e59f787ee20" name="a018efd32ed807b4d8d008e59f787ee20"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a018efd32ed807b4d8d008e59f787ee20">&#9670;&#160;</a></span>setFrameBufferSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Visualizer::setFrameBufferSize </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>height</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04694">4694</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -3459,7 +3767,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a580a78fe3e25c423e2d13aebc1b54573" title="Lighting model to use for shading primitives.">LightingModel</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd>LightingModel </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00865">865</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
@@ -3515,6 +3823,7 @@ Public Member Functions</h2></td></tr>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/visualizer/include/<a class="el" href="_visualizer_8h_source.html">Visualizer.h</a></li>
+<li>plugins/visualizer/src/<a class="el" href="plugins_2visualizer_2src_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 <li>plugins/visualizer/src/<a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a></li>
 </ul>
 </div><!-- contents -->
