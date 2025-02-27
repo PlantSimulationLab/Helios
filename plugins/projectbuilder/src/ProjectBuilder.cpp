@@ -556,10 +556,27 @@ void ProjectBuilder::buildFromXML(){
     // bandlabels = {"red", "green", "blue"};
 
     if (enable_plantarchitecture){
-        context->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        // context->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        // context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+        for (std::string primitive_name : primitive_names){
+            if (primitive_name != "All" && primitive_name != "all"){
+                std::string primitive_name_lower = primitive_name;
+                primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
+                std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
+                if ( context->doesGlobalDataExist( primitive_UUIDs_name.c_str() ) ){
+                    context->getGlobalData( primitive_UUIDs_name.c_str(), *primitive_types[primitive_name] );
+                    std::vector<uint> primitive_UUIDs = *primitive_types[primitive_name];
+                    if (! primitive_UUIDs.empty()){
+                        context->setPrimitiveData(*primitive_types[primitive_name], "object_label", primitive_name_lower);
+                    }
+                }
+            }
+        }
         assert( !ground_UUIDs.empty() );
-        context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
         assert( !leaf_UUIDs.empty() );
+        context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
+        context->setPrimitiveData(leaf_UUIDs, "object_label", "leaf");
+
     }
 
     // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
@@ -1377,11 +1394,12 @@ void ProjectBuilder::visualize(){
             ImGuiWindowFlags window_flags2 = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
 
             // ImGui::SetNextWindowSize(ImVec2(500, 400));
-            ImVec2 windowSize = ImGui::GetWindowSize();
-            // int windowSize_x = 0;
-            // int windowSize_y = 0;
-            // glfwGetWindowSize((GLFWwindow*)window, &windowSize_x, &windowSize_y );
-            // ImVec2 windowSize(windowSize_x, windowSize_y);
+            // ImVec2 windowSize = ImGui::GetWindowSize();
+            int windowSize_x = 0;
+            int windowSize_y = 0;
+            // visualizer->getWindowSize(windowSize_x, windowSize_y);
+            glfwGetWindowSize((GLFWwindow*)window, &windowSize_x, &windowSize_y );
+            int2 windowSize(windowSize_x, windowSize_y);
             // TEST
             glm::mat4 perspectiveTransformationMatrix = visualizer->getPerspectiveTransformationMatrix();
             glm::vec4 origin_position;
@@ -1390,10 +1408,12 @@ void ProjectBuilder::visualize(){
             for (int n = 0; n < labels.size(); n++){
                 current_label = labels[n];
                 vec3 canopy_origin_ = canopy_origins[canopy_labels[current_label]];
-                origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z + 0.5, 1.0);
+                origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
-                                                windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+                ImGui::SetNextWindowPos(ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
+                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y), ImGuiCond_Always);
+                // ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
+                //                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
                 ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
                 // double check above
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
@@ -1402,10 +1422,12 @@ void ProjectBuilder::visualize(){
             for (int n = 0; n < rig_labels.size(); n++){
                 current_label = rig_labels[n];
                 vec3 camera_position_ = camera_positions[rig_dict[current_label]];
-                origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z + 0.5, 1.0);
+                origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
-                                                windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
+                ImGui::SetNextWindowPos(ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
+                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y), ImGuiCond_Always);
+                // ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
+                //                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
                 ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
@@ -1420,7 +1442,7 @@ void ProjectBuilder::visualize(){
             // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
             ImGui::Begin("Editor", &my_tool_active, window_flags2);  // Begin a new window
             // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
-            ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always);
+            // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always);
             current_position = ImGui::GetWindowPos();
             currently_collapsed = ImGui::IsWindowCollapsed();
 
