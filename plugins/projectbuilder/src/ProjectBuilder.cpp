@@ -333,6 +333,7 @@ void ProjectBuilder::updatePrimitiveTypes(){
 
 void ProjectBuilder::updateSpectra(){
     for (std::pair<std::string, std::vector<uint>*> primitive_pair : primitive_addresses){
+        if (primitive_continuous[primitive_pair.first].empty()) continue;
         if (!primitive_continuous[primitive_pair.first][0]){
             for (std::string band : bandlabels){
                 float reflectivity = primitive_values[band][primitive_pair.first][0];
@@ -417,26 +418,32 @@ void ProjectBuilder::record(){
         int rig_index = rig_dict[rig_label];
         std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
         std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
+        // ADD RIG LIGHTS
+        for (std::string light : rig_light_labels[rig_dict[rig_label]]){
+            int light_idx = light_dict[light];
+            uint new_light_UUID;
+            if (light_types[light_idx] == "sphere"){
+                new_light_UUID = radiation->addSphereRadiationSource(interpolated_camera_positions[0], light_radius_vec[light_idx]);
+                temp_lights.push_back(new_light_UUID);
+            }else if (light_types[light_dict[light]] == "rectangle"){
+                new_light_UUID = radiation->addRectangleRadiationSource(interpolated_camera_positions[0],
+                    light_size_vec[light_idx], light_rotation_vec[light_idx]);
+                temp_lights.push_back(new_light_UUID);
+            }else if (light_types[light_dict[light]] == "disk"){
+                new_light_UUID = radiation->addDiskRadiationSource(interpolated_camera_positions[0],
+                    light_radius_vec[light_idx], light_rotation_vec[light_idx]);
+                temp_lights.push_back(new_light_UUID);
+            }
+            for (auto &band : bandlabels){
+                radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
+            }
+        }
+        // radiation->setSourceFlux(light_UUID, band, flux_value)
+        //
         for (int i = 0; i < interpolated_camera_positions.size(); i++){
-            // ADD RIG LIGHTS
-            for (std::string light : rig_light_labels[rig_dict[rig_label]]){
-                int light_idx = light_dict[light];
-                uint new_light_UUID;
-                if (light_types[light_idx] == "sphere"){
-                    new_light_UUID = radiation->addSphereRadiationSource(interpolated_camera_positions[i], light_radius_vec[light_idx]);
-                    temp_lights.push_back(new_light_UUID);
-                }else if (light_types[light_dict[light]] == "rectangle"){
-                    new_light_UUID = radiation->addRectangleRadiationSource(interpolated_camera_positions[i],
-                        light_size_vec[light_idx], light_rotation_vec[light_idx]);
-                    temp_lights.push_back(new_light_UUID);
-                }else if (light_types[light_dict[light]] == "disk"){
-                    new_light_UUID = radiation->addDiskRadiationSource(interpolated_camera_positions[i],
-                        light_radius_vec[light_idx], light_rotation_vec[light_idx]);
-                    temp_lights.push_back(new_light_UUID);
-                }
-                for (auto &band : bandlabels){
-                    radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
-                }
+            // SET LIGHT POSITIONS
+            for (uint light_ID : temp_lights){
+                radiation->setSourcePosition(light_ID, interpolated_camera_positions[i]);
             }
             // radiation->setSourceFlux(light_UUID, band, flux_value)
             //
@@ -446,6 +453,7 @@ void ProjectBuilder::record(){
                 radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                 radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
             }
+            radiation->updateGeometry();
             radiation->runBand({"red", "green", "blue"});
             for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                 std::string cameralabel = rig_label + "_" + rig_camera_label;
@@ -464,13 +472,13 @@ void ProjectBuilder::record(){
                 }
                 //
             }
-            // REMOVE RIG LIGHTS
-            for (uint temp_light : temp_lights){
-                radiation->deleteRadiationSource(temp_light);
-            }
-            temp_lights.clear();
-            //
         }
+        // REMOVE RIG LIGHTS
+        for (uint temp_light : temp_lights){
+            radiation->deleteRadiationSource(temp_light);
+        }
+        temp_lights.clear();
+        //
     }
     // updateArrows();
     visualizer->plotUpdate();
@@ -1575,9 +1583,14 @@ void ProjectBuilder::visualize(){
             ImGui::SameLine();
             if (ImGui::Button("Record")){
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+                const char* font_name = "LCD";
+                visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                    RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                visualizer->plotUpdate();
                 updateSpectra();
                 // updateCameras(); //TODO: figure out why this causes an error
                 record();
+                visualizer->plotUpdate();
             }
             #endif //RADIATION_MODEL
             // ####### RESULTS ####### //
