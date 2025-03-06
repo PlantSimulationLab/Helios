@@ -1542,6 +1542,30 @@ void ProjectBuilder::visualize(){
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
             }
+            for (int n = 0; n < obj_names.size(); n++){
+                current_label = obj_names[n];
+                vec3 obj_position_ = obj_positions[obj_names_dict[current_label]];
+                origin_position = glm::vec4(obj_position_.x, obj_position_.y, obj_position_.z, 1.0);
+                origin_position = perspectiveTransformationMatrix * origin_position;
+                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
+                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                    currently_dragging = current_label;
+                    currently_dragging_type = "object";
+                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                }
+                if (!disable_dragging && currently_dragging == current_label){
+                    ImGui::SetNextWindowPos(mouse_pos);
+                } else{
+                    ImGui::SetNextWindowPos(next_window_pos);
+                }
+                ImGui::Begin(current_label.c_str(), &my_tool_active);
+                ImGui::End();
+            }
             //
 
             // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
