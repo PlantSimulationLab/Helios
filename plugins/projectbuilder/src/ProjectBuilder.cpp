@@ -680,6 +680,24 @@ void ProjectBuilder::buildFromXML(){
             helios_runtime_error(xml_error_string);
         }
         xmlGetValues();
+        // OBJ BLOCK
+        for (int i = 0; i < obj_files.size(); i++){
+            std::vector<uint> new_UUIDs;
+            std::string new_obj_file = obj_files[i];
+            if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
+                new_UUIDs = context->loadOBJ(new_obj_file.c_str());
+            } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
+                new_UUIDs = context->loadPLY(new_obj_file.c_str());
+            } else {
+                std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
+            }
+            SphericalCoord orientation_sph = cart2sphere(obj_orientations[i]);
+            context->scalePrimitive(new_UUIDs, obj_scales[i]);
+            context->rotatePrimitive(new_UUIDs, orientation_sph.elevation, "x");
+            context->rotatePrimitive(new_UUIDs, -orientation_sph.azimuth, "z");
+            context->translatePrimitive(new_UUIDs, obj_positions[i]);
+            obj_UUIDs.push_back(new_UUIDs);
+        }
         // RIG BLOCK
         // *** Loading any XML files needed for cameras *** //
         for (auto &xml_file : camera_xml_library_files) {
@@ -1426,17 +1444,77 @@ void ProjectBuilder::visualize(){
             glm::vec4 origin_position;
             std::string current_label;
             //glm::mat4 depthMVP = visualizer->getDepthMVP();
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+                !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)){
+                currently_dragging = "";
+                disable_dragging = true;
+            }
+            if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)){
+                if (!currently_dragging.empty()){
+                    // ImVec2 mouse_pos = ImGui::GetMousePos();
+                    // float ndcX = (2.0f * mouse_pos.x / windowSize.x) - 1.0f;
+                    // float ndcY = 1.0f - (2.0f * mouse_pos.y / windowSize.y);
+                    // std::vector<vec3> camera_lookat_pos = visualizer->getCameraPosition();
+                    // vec3 camera_pos = camera_lookat_pos[0];
+                    // vec3 lookat_pos = camera_lookat_pos[1];
+                    // float depth = (camera_pos - lookat_pos).magnitude();
+                    // glm::vec4 clip_pos(ndcX, ndcY, depth, 1.0f);
+                    // glm::vec4 view_pos = glm::inverse(perspectiveTransformationMatrix) * clip_pos;
+                    // view_pos /= view_pos.w;
+                    // glm::mat4 viewMatrix = visualizer->getViewMatrix();
+                    // glm::vec4 world_pos = glm::inverse(viewMatrix) * view_pos;
+                    // glm::vec3 final_pos = glm::vec3(world_pos.x, world_pos.y, world_pos.z);
+                    ImVec2 mouse_pos = ImGui::GetMousePos();
+                    std::vector<vec3> camera_lookat_pos = visualizer->getCameraPosition();
+                    vec3 camera_pos = camera_lookat_pos[0];
+                    vec3 lookat_pos = camera_lookat_pos[1];
+                    float drag_distance = std::sqrt(std::pow(mouse_pos.x - dragging_start_position.x, 2) +
+                                          std::pow(mouse_pos.y - dragging_start_position.y, 2));;
+                    float depth = (camera_pos - lookat_pos).magnitude();
+                    vec3 view_dir =  (camera_pos - lookat_pos).normalize();
+
+                    vec3 world_up = vec3(0, 1, 0);
+
+                    vec3 right_dir = cross(world_up, view_dir);
+                    right_dir = right_dir.normalize();
+
+                    vec3 up_dir = cross(view_dir, right_dir).normalize();
+
+                    right_dir = cross(view_dir, world_up).normalize();
+                    float base_offset = 0.001f;
+                    float offset = base_offset * depth;
+
+                    if (currently_dragging_type == "canopy"){
+                        canopy_origins[canopy_labels[currently_dragging]] += drag_distance * offset * (up_dir + right_dir);
+                    } else if (currently_dragging_type == "rig"){
+                        camera_positions[rig_dict[currently_dragging]] += drag_distance * offset * (up_dir + right_dir);
+                    }
+                }
+                currently_dragging = "";
+                disable_dragging = false;
+                dragging_start_position = int2(0, 0);
+            }
             for (int n = 0; n < labels.size(); n++){
                 current_label = labels[n];
                 vec3 canopy_origin_ = canopy_origins[canopy_labels[current_label]];
                 origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowPos(ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
-                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y), ImGuiCond_Always);
-                // ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
-                //                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
                 ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
-                // double check above
+                ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
+                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                    currently_dragging = current_label;
+                    currently_dragging_type = "canopy";
+                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                }
+                if (!disable_dragging && currently_dragging == current_label){
+                    ImGui::SetNextWindowPos(mouse_pos);
+                } else{
+                    ImGui::SetNextWindowPos(next_window_pos);
+                }
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
             }
@@ -1445,18 +1523,24 @@ void ProjectBuilder::visualize(){
                 vec3 camera_position_ = camera_positions[rig_dict[current_label]];
                 origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowPos(ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
-                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y), ImGuiCond_Always);
-                // ImGui::SetNextWindowPos(ImVec2(windowSize.x + (origin_position.x / origin_position.w) * windowSize.x,
-                //                                 windowSize.y - (origin_position.y / origin_position.w) * windowSize.y), ImGuiCond_Always);
                 ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
+                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                    currently_dragging = current_label;
+                    currently_dragging_type = "rig";
+                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                }
+                if (!disable_dragging && currently_dragging == current_label){
+                    ImGui::SetNextWindowPos(mouse_pos);
+                } else{
+                    ImGui::SetNextWindowPos(next_window_pos);
+                }
                 ImGui::Begin(current_label.c_str(), &my_tool_active);
                 ImGui::End();
-                // vec3 scale(1,1,1);
-                // SphericalCoord rotation(0,0,0);
-                // RGBcolor color(1,0,0);
-                // context.loadOBJ("../../../plugins/radiation/camera_light_models/Camera.obj", camera_position_, scale, rotation, color, "ZUP", true);
-                // visualizer.buildContextGeometry(&context);
             }
             //
 
@@ -1590,6 +1674,8 @@ void ProjectBuilder::visualize(){
                 updateSpectra();
                 // updateCameras(); //TODO: figure out why this causes an error
                 record();
+                visualizer->clearGeometry();
+                visualizer->buildContextGeometry(context);
                 visualizer->plotUpdate();
             }
             #endif //RADIATION_MODEL
@@ -1695,7 +1781,8 @@ void ProjectBuilder::visualize(){
                                     new_UUIDs = context->loadPLY(new_obj_file.c_str());
                                 }
                                 visualizer->buildContextGeometry(context);
-                                visualizer->plotUpdate();std::string default_object_label = "object";
+                                visualizer->plotUpdate();
+                                std::string default_object_label = "object";
                                 std::string new_obj_label = "object_0";
                                 int count = 0;
                                 while (obj_names_dict.find(new_obj_label) != obj_names_dict.end()){
@@ -1706,6 +1793,34 @@ void ProjectBuilder::visualize(){
                                 obj_names.push_back(new_obj_label);
                                 obj_files.push_back(new_obj_file);
                                 obj_UUIDs.push_back(new_UUIDs);
+                                if (!current_obj.empty()){
+                                    obj_positions.push_back(obj_positions[obj_names_dict[current_obj]]);
+                                    obj_orientations.push_back(obj_orientations[obj_names_dict[current_obj]]);
+                                    obj_scales.push_back(obj_scales[obj_names_dict[current_obj]]);
+                                    obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
+                                    obj_data_groups.push_back(obj_data_groups[obj_names_dict[current_obj]]);
+                                    std::string parent = "object";
+                                    pugi::xml_node obj_block = helios.child(parent.c_str());
+                                    pugi::xml_node new_obj_node = helios.append_copy(obj_block);
+                                    std::string name = "label";
+                                    pugi::xml_attribute node_label = new_obj_node.attribute(name.c_str());
+                                    node_label.set_value(new_obj_label.c_str());
+                                } else{
+                                    obj_positions.push_back(vec3(0, 0, 0));
+                                    obj_orientations.push_back(vec3(0, 0, 0));
+                                    obj_scales.push_back(vec3(0, 0, 0));
+                                    obj_colors.push_back(RGBcolor(0, 0, 1));
+                                    obj_data_groups.push_back("default");
+                                    std::string parent = "object";
+                                    pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
+                                    std::string name = "label";
+                                    new_obj_node.append_attribute(name.c_str()).set_value(new_obj_label.c_str());
+                                    new_obj_node.append_child("file").text().set(new_obj_file.c_str());
+                                    new_obj_node.append_child("position").text().set(vec_to_string(obj_positions[0]).c_str());
+                                    new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
+                                    new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
+                                    new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
+                                }
                             }
                         }
                     }
@@ -1732,6 +1847,56 @@ void ProjectBuilder::visualize(){
                             }
                             obj_names_dict[current_obj] = idx;
                         }
+                        ImGui::SameLine();
+                        ImGui::Text("Object Name");
+                        // ####### OBJECT DATA GROUP ####### //
+                        ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
+                        ImGui::SameLine();
+                        ImGui::Text("Data Group");
+                        // ####### OBJECT SCALE ####### //
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_scale_y", &obj_scales[obj_names_dict[current_obj]].y);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_scale_z", &obj_scales[obj_names_dict[current_obj]].z);
+                        ImGui::SameLine();
+                        ImGui::Text("Object Scale");
+                        // ####### OBJECT POSITION ####### //
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_position_x", &obj_positions[obj_names_dict[current_obj]].x);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_position_y", &obj_positions[obj_names_dict[current_obj]].y);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_position_z", &obj_positions[obj_names_dict[current_obj]].z);
+                        ImGui::SameLine();
+                        ImGui::Text("Object Position");
+                        // ####### OBJECT ORIENTATION ####### //
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_orientation_x", &obj_orientations[obj_names_dict[current_obj]].x);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_orientation_y", &obj_orientations[obj_names_dict[current_obj]].y);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##obj_orientation_z", &obj_orientations[obj_names_dict[current_obj]].z);
+                        ImGui::SameLine();
+                        ImGui::Text("Object Orientation");
+                        // ####### OBJECT COLOR ####### //
+                        // ImGui::SetNextItemWidth(60);
+                        // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
+                        // ImGui::SameLine();
+                        // ImGui::SetNextItemWidth(60);
+                        // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
+                        // ImGui::SameLine();
+                        // ImGui::SetNextItemWidth(60);
+                        // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
+                        // ImGui::SameLine();
+                        // ImGui::Text("Object Color");
                     }
 
                     ImGui::EndTabItem();
@@ -2596,6 +2761,14 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValue("ground_texture_file", "helios", ground_texture_file);
     xmlSetValues("camera_xml_library_file", "helios", camera_xml_library_files);
     xmlSetValues("light_xml_library_file", "helios", light_xml_library_files);
+    // OBJECT BLOCK
+    obj_names_dict = setNodeLabels("label", "object", obj_names);
+    xmlSetValues("file", "object", obj_files);
+    xmlSetValues("position", "object", obj_positions);
+    xmlSetValues("orientation", "object", obj_orientations);
+    xmlSetValues("scale", "object", obj_scales);
+    // xmlSetValues("color", "object", obj_colors);
+    xmlSetValues("data_group", "object", obj_data_groups);
     // CANOPY BLOCK
     canopy_labels = setNodeLabels("label", "canopy_block", labels);
     xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
@@ -2637,6 +2810,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
     xmlSetValues("HFOV", "camera", HFOVs);
     // LIGHT BLOCK
+    light_dict = setNodeLabels("label", "light", light_names);
     xmlSetValues("light_type", "light", light_types);
     xmlSetValues("light_spectra", "light", light_spectra);
     xmlSetValues("light_direction", "light", light_direction_vec);
@@ -2644,7 +2818,6 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("light_size", "light", light_size_vec);
     xmlSetValues("light_source_flux", "light", light_flux_vec);
     xmlSetValues("light_radius", "light", light_radius_vec);
-    light_dict = setNodeLabels("label", "light", light_names);
     xmlSetValues("light_label", "rig", rig_light_labels);
     // RADIATION BLOCK
     xmlSetValue("direct_ray_count", "radiation", direct_ray_count);
@@ -2699,10 +2872,20 @@ void ProjectBuilder::xmlGetValues(){
         std::vector<std::string> current_light_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
         possible_light_spectra.insert(possible_light_spectra.end(), current_light_file.begin(), current_light_file.end());
     }
+    // OBJECT BLOCK
+    obj_names_dict.clear();
+    obj_names_dict = getNodeLabels("label", "object", obj_names);
+    if (!obj_names.empty()) current_obj = obj_names[0];
+    xmlGetValues("file", "object", obj_files);
+    xmlGetValues("position", "object", obj_positions);
+    xmlGetValues("orientation", "object", obj_orientations);
+    xmlGetValues("scale", "object", obj_scales);
+    // xmlGetValues("color", "object", obj_colors);
+    xmlGetValues("data_group", "object", obj_data_groups);
     // CANOPY BLOCK
     labels.clear();
     canopy_labels = getNodeLabels("label", "canopy_block", labels);
-    current_canopy = labels[0];
+    if (!labels.empty()) current_canopy = labels[0];
     xmlGetValue("canopy_origin", "canopy_block", canopy_origin);
     xmlGetValue("plant_count", "canopy_block", plant_count);
     xmlGetValue("plant_spacing", "canopy_block", plant_spacing);

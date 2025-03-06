@@ -456,6 +456,21 @@ class ProjectBuilder {
     //! Object names map keyed by object name returning object index (e.g. in obj_UUIDs)
     std::map<std::string, int> obj_names_dict;
 
+    //! Object positions
+    std::vector<helios::vec3> obj_positions;
+
+    //! Object orientations
+    std::vector<helios::vec3> obj_orientations;
+
+    //! Object data groups
+    std::vector<std::string> obj_data_groups;
+
+    //! Object scales
+    std::vector<helios::vec3> obj_scales;
+
+    //! Object colors
+    std::vector<helios::RGBcolor> obj_colors;
+
     //! XML spectral library files
     std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml",
                                                "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
@@ -705,6 +720,18 @@ class ProjectBuilder {
 
     //! Function to update primitive types
     void updatePrimitiveTypes();
+
+    //! Dragging start position
+    helios::int2 dragging_start_position = helios::int2{0, 0};
+
+    //! Current tab being dragged
+    std::string currently_dragging = "";
+
+    //! Current type being dragged
+    std::string currently_dragging_type = "";
+
+    //! Bool to disable dragging in ImGUI
+    bool disable_dragging = false;
 
   public:
     //! Context

@@ -951,6 +951,8 @@ public:
 
  glm::mat4 getPerspectiveTransformationMatrix();
 
+ glm::mat4 getViewMatrix();
+
  std::vector<LightingModel> getPrimaryLightingModel();
 
  uint getDepthTexture();
