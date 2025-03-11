@@ -506,7 +506,7 @@ class ProjectBuilder {
     float transmissivity = 0.0;
 
     //! Emissivity (apply to all)
-    float emissivity = 0.0;
+    float emissivity = 1.0;
 
     //! Leaf reflectivity
     float leaf_reflectivity = 0.0;
@@ -732,6 +732,43 @@ class ProjectBuilder {
 
     //! Bool to disable dragging in ImGUI
     bool disable_dragging = false;
+
+    //! Distribution names
+    std::vector<std::string> distribution_names;
+
+    //! Distribution types
+    std::vector<std::string> distribution_types;
+
+    // //! Distribution data types (e.g. "float" or "int")
+    // std::vector<std::string> distribution_data_types;
+    //
+    // //! Distribution parameter union
+    // union dist_param{
+    //    std::vector<float> dist_float_vec;
+    //    std::vector<int> dist_int_vec;
+    // };
+
+    //! Distribution parameters
+    std::vector<std::vector<float>> distribution_params;
+
+    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the XML
+    std::map<std::string, int> distribution_dict;
+
+    //! Current distribution
+    std::string current_distribution = "";
+
+    //! Calculate multivariate gaussian
+
+
+    //! Canopy tab
+    void canopyTab(std::string curr_canopy_name, int id);
+
+    //! Rig tab
+    void rigTab(std::string curr_rig_name, int id);
+
+    //! Object tab
+    void objectTab(std::string curr_obj_name, int id);
+
 
   public:
     //! Context

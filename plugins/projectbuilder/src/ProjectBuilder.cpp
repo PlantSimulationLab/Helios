@@ -438,6 +438,7 @@ void ProjectBuilder::record(){
                 radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
             }
         }
+        radiation->updateGeometry();
         // radiation->setSourceFlux(light_UUID, band, flux_value)
         //
         for (int i = 0; i < interpolated_camera_positions.size(); i++){
@@ -453,7 +454,6 @@ void ProjectBuilder::record(){
                 radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                 radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
             }
-            radiation->updateGeometry();
             radiation->runBand({"red", "green", "blue"});
             for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                 std::string cameralabel = rig_label + "_" + rig_camera_label;
@@ -1494,77 +1494,93 @@ void ProjectBuilder::visualize(){
                 disable_dragging = false;
                 dragging_start_position = int2(0, 0);
             }
+            int object_window_count = 0;
             for (int n = 0; n < labels.size(); n++){
                 current_label = labels[n];
                 vec3 canopy_origin_ = canopy_origins[canopy_labels[current_label]];
                 origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10));
                 ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
-                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
-                ImVec2 mouse_pos = ImGui::GetMousePos();
-                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
-                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
-                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
-                    currently_dragging = current_label;
-                    currently_dragging_type = "canopy";
-                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
-                }
-                if (!disable_dragging && currently_dragging == current_label){
-                    ImGui::SetNextWindowPos(mouse_pos);
-                } else{
-                    ImGui::SetNextWindowPos(next_window_pos);
-                }
-                ImGui::Begin(current_label.c_str(), &my_tool_active);
+                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                // WINDOW MOUSE CLICK AND DRAG
+                // TODO: re-enable this feature when it is improved
+                // ImVec2 mouse_pos = ImGui::GetMousePos();
+                // bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                //                     mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                // if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                //     currently_dragging = current_label;
+                //     currently_dragging_type = "canopy";
+                //     dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                // }
+                // if (!disable_dragging && currently_dragging == current_label){
+                //     ImGui::SetNextWindowPos(mouse_pos);
+                // } else{
+                ImGui::SetNextWindowPos(next_window_pos);
+                // }
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                canopyTab(current_label, object_window_count);
                 ImGui::End();
+                object_window_count++;
             }
             for (int n = 0; n < rig_labels.size(); n++){
                 current_label = rig_labels[n];
                 vec3 camera_position_ = camera_positions[rig_dict[current_label]];
                 origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10));
                 ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
-                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
-                ImVec2 mouse_pos = ImGui::GetMousePos();
-                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
-                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
-                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
-                    currently_dragging = current_label;
-                    currently_dragging_type = "rig";
-                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
-                }
-                if (!disable_dragging && currently_dragging == current_label){
-                    ImGui::SetNextWindowPos(mouse_pos);
-                } else{
-                    ImGui::SetNextWindowPos(next_window_pos);
-                }
-                ImGui::Begin(current_label.c_str(), &my_tool_active);
+                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                // WINDOW MOUSE CLICK AND DRAG
+                // TODO: re-enable this feature when it is improved
+                // ImVec2 mouse_pos = ImGui::GetMousePos();
+                // bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                //                     mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                // if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                //     currently_dragging = current_label;
+                //     currently_dragging_type = "rig";
+                //     dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                // }
+                // if (!disable_dragging && currently_dragging == current_label){
+                //     ImGui::SetNextWindowPos(mouse_pos);
+                // } else{
+                ImGui::SetNextWindowPos(next_window_pos);
+                // }
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                rigTab(current_label, object_window_count);
                 ImGui::End();
+                object_window_count++;
             }
             for (int n = 0; n < obj_names.size(); n++){
                 current_label = obj_names[n];
                 vec3 obj_position_ = obj_positions[obj_names_dict[current_label]];
                 origin_position = glm::vec4(obj_position_.x, obj_position_.y, obj_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
-                ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
+                // ImGui::SetNextWindowSize(ImVec2(150, 10));
                 ImVec2 next_window_pos = ImVec2(((origin_position.x / origin_position.w) * 0.5f + 0.5f) * windowSize.x,
-                                                    (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
-                ImVec2 mouse_pos = ImGui::GetMousePos();
-                bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
-                                    mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
-                if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
-                    currently_dragging = current_label;
-                    currently_dragging_type = "object";
-                    dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
-                }
-                if (!disable_dragging && currently_dragging == current_label){
-                    ImGui::SetNextWindowPos(mouse_pos);
-                } else{
-                    ImGui::SetNextWindowPos(next_window_pos);
-                }
-                ImGui::Begin(current_label.c_str(), &my_tool_active);
+                                                (1.0f - ((origin_position.y / origin_position.w) * 0.5f + 0.5f)) * windowSize.y);
+                // WINDOW MOUSE CLICK AND DRAG
+                // TODO: re-enable this feature when it is improved
+                // ImVec2 mouse_pos = ImGui::GetMousePos();
+                // bool drag_window = (mouse_pos.x >= next_window_pos.x && mouse_pos.x <= next_window_pos.x + 150 &&
+                //                     mouse_pos.y >= next_window_pos.y && mouse_pos.y <= next_window_pos.y + 10);
+                // if (drag_window && ImGui::IsMouseDown(ImGuiMouseButton_Left) && currently_dragging.empty() && !disable_dragging){
+                //     currently_dragging = current_label;
+                //     currently_dragging_type = "object";
+                //     dragging_start_position = int2(mouse_pos.x, mouse_pos.y);
+                // }
+                // if (!disable_dragging && currently_dragging == current_label){
+                //     ImGui::SetNextWindowPos(mouse_pos);
+                // } else{
+                ImGui::SetNextWindowPos(next_window_pos);
+                // }
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                objectTab(current_label, object_window_count);
                 ImGui::End();
+                object_window_count++;
             }
             //
 
@@ -1821,7 +1837,7 @@ void ProjectBuilder::visualize(){
                                     obj_positions.push_back(obj_positions[obj_names_dict[current_obj]]);
                                     obj_orientations.push_back(obj_orientations[obj_names_dict[current_obj]]);
                                     obj_scales.push_back(obj_scales[obj_names_dict[current_obj]]);
-                                    obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
+                                    // obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
                                     obj_data_groups.push_back(obj_data_groups[obj_names_dict[current_obj]]);
                                     std::string parent = "object";
                                     pugi::xml_node obj_block = helios.child(parent.c_str());
@@ -2724,6 +2740,79 @@ void ProjectBuilder::visualize(){
                     ImGui::EndTabItem();
                 }
             }
+                // if (ImGui::BeginTabItem("Distribution")){
+                //     current_tab = "Distribution";
+                //     if (ImGui::Button("New Distribution")){
+                //         std::string default_dist_label = "distribution";
+                //         std::string new_dist_label = "distribution_0";
+                //         int count = 0;
+                //         while (distribution_dict.find(new_dist_label) != distribution_dict.end()){
+                //             count++;
+                //             new_dist_label = default_dist_label + "_" + std::to_string(count);
+                //         }
+                //         distribution_dict.insert({new_dist_label, distribution_names.size()});
+                //         distribution_names.push_back(new_dist_label);
+                //         if (!current_distribution.empty()){
+                //             // distribution_data_types.push_back(distribution_data_types[distribution_dict[current_distribution]]);
+                //             distribution_types.push_back(distribution_types[distribution_dict[current_distribution]]);
+                //             distribution_params.push_back(distribution_params[distribution_dict[current_distribution]]);
+                //             std::string parent = "distribution";
+                //             pugi::xml_node dist_block = helios.child(parent.c_str());
+                //             pugi::xml_node new_dist_node = helios.append_copy(dist_block);
+                //             std::string name = "label";
+                //             pugi::xml_attribute node_label = new_dist_node.attribute(name.c_str());
+                //             node_label.set_value(new_dist_label.c_str());
+                //         } else{
+                //             distribution_types.push_back("Gaussian");
+                //             distribution_params.push_back(std::vector<float>{0, 0, 0});
+                //             std::string parent = "object";
+                //             pugi::xml_node new_dist_node = helios.append_child(parent.c_str());
+                //             std::string name = "label";
+                //             new_dist_node.append_attribute(name.c_str()).set_value(new_dist_label.c_str());
+                //             new_dist_node.append_child("distribution_type").text().set(distribution_types[0].c_str());
+                //             new_dist_node.append_child("distribution_parameters").text().set(std::string{distribution_params[0].begin(), distribution_params[0].end()}.c_str());
+                //         }
+                //     }
+                //     if (ImGui::BeginCombo("##dist_combo", current_distribution.c_str())){
+                //         for (int n = 0; n < distribution_names.size(); n++){
+                //             bool is_dist_selected = (current_distribution == distribution_names[n]);
+                //             if (ImGui::Selectable(distribution_names[n].c_str(), is_dist_selected))
+                //                 current_distribution = distribution_names[n];
+                //             if (is_dist_selected)
+                //                 ImGui::SetItemDefaultFocus();
+                //         }
+                //         ImGui::EndCombo();
+                //     }
+                //     if ( !current_distribution.empty() ){
+                //         ImGui::SetNextItemWidth(100);
+                //         std::string prev_dist_name = distribution_names[distribution_dict[current_distribution]];
+                //         ImGui::InputText("##dist_name", &distribution_names[distribution_dict[current_distribution]]);
+                //         if (distribution_names[distribution_dict[current_distribution]] != prev_dist_name){
+                //             int idx = distribution_dict[current_distribution];
+                //             current_distribution = distribution_names[distribution_dict[current_distribution]];
+                //             std::map<std::string, int>::iterator current_dist_iter = distribution_dict.find(prev_dist_name);
+                //             if (current_dist_iter != distribution_dict.end()){
+                //                 distribution_dict.erase(current_dist_iter);
+                //             }
+                //             distribution_dict[current_distribution] = idx;
+                //         }
+                //         ImGui::SameLine();
+                //         ImGui::Text("Distribution Name");
+                //         // ####### DISTRIBUTION TYPE ####### //
+                //         ImGui::InputText("##dist_type", &distribution_types[distribution_dict[current_distribution]]);
+                //         ImGui::SameLine();
+                //         ImGui::Text("Distribution Type");
+                //         // ####### DISTRIBUTION PARAMETERS ####### //
+                //         for (int i = 0; i < distribution_params[distribution_dict[current_distribution]].size(); i++){
+                //             ImGui::SetNextItemWidth(60);
+                //             ImGui::InputFloat(("##dist_param_" + std::to_string(i)).c_str(), &distribution_params[distribution_dict[current_distribution]][i]);
+                //             ImGui::SameLine();
+                //             ImGui::Text(("Distribution Parameter " + std::to_string(i)).c_str());
+                //         }
+                //     }
+                //
+                //     ImGui::EndTabItem();
+                // }
                 ImGui::EndTabBar();
             }
             // ImGui::Text("Hello, world %d", 123);
@@ -3050,4 +3139,158 @@ void ProjectBuilder::xmlGetValues(std::string xml_path){
     xmlGetValues();
 }
 
+void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
+    if (ImGui::Button("Update")){
+        std::vector<uint> current_obj = obj_UUIDs[obj_names_dict[curr_obj_name]];
+        // context->rotatePrimitive(current_obj, arrow_direction_sph.elevation, "x");
+        // context->rotatePrimitive(current_obj, -arrow_direction_sph.azimuth, "z");
+        context->translatePrimitive(current_obj, obj_positions[obj_names_dict[curr_obj_name]]);
+        visualizer->clearGeometry();
+        visualizer->buildContextGeometry(context);
+        visualizer->plotUpdate();
+    }
+    ImGui::SetNextItemWidth(100);
+    std::string prev_obj_name = obj_names[obj_names_dict[curr_obj_name]];
+    ImGui::InputText(("##obj_name_" + std::to_string(id)).c_str(), &obj_names[obj_names_dict[curr_obj_name]]);
+    if (obj_names[obj_names_dict[curr_obj_name]] != prev_obj_name){
+        int idx = obj_names_dict[curr_obj_name];
+        curr_obj_name = obj_names[obj_names_dict[curr_obj_name]];
+        std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
+        if (current_obj_iter != obj_names_dict.end()){
+            obj_names_dict.erase(current_obj_iter);
+        }
+        obj_names_dict[curr_obj_name] = idx;
+    }
+    ImGui::SameLine();
+    ImGui::Text("Object Name");
+    // ####### OBJECT DATA GROUP ####### //
+    ImGui::InputText(("##obj_data_group_" + std::to_string(id)).c_str(), &obj_data_groups[obj_names_dict[curr_obj_name]]);
+    ImGui::SameLine();
+    ImGui::Text("Data Group");
+    // ####### OBJECT SCALE ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_scale_y_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_scale_z_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].z);
+    ImGui::SameLine();
+    ImGui::Text("Object Scale");
+    // ####### OBJECT POSITION ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_position_x_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_position_y_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_position_z_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].z);
+    ImGui::SameLine();
+    ImGui::Text("Object Position");
+    // ####### OBJECT ORIENTATION ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_orientation_x_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_orientation_y_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat(("##obj_orientation_z_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].z);
+    ImGui::SameLine();
+    ImGui::Text("Object Orientation");
+}
+
+void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
+    ImGui::SetNextItemWidth(100);
+    std::string prev_rig_name = rig_labels[rig_dict[curr_rig_name]];
+    ImGui::InputText("##rig_name", &rig_labels[rig_dict[curr_rig_name]]);
+    if (rig_labels[rig_dict[curr_rig_name]] != prev_rig_name){
+        int temp = rig_dict[curr_rig_name];
+        curr_rig_name = rig_labels[rig_dict[curr_rig_name]];
+        std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
+        if (current_rig_iter != rig_dict.end()){
+            rig_dict.erase(current_rig_iter);
+        }
+        rig_dict[curr_rig_name] = temp;
+    }
+    ImGui::SameLine();
+    ImGui::Text("Rig Name");
+    int current_cam_position_ = 0; // TODO: make this dynamic
+    // ####### CAMERA POSITION ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[curr_rig_name]][current_cam_position_].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[curr_rig_name]][current_cam_position_].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[curr_rig_name]][current_cam_position_].z);
+    ImGui::SameLine();
+    ImGui::Text("Rig Position");
+    // ####### CAMERA LOOKAT ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[curr_rig_name]][current_cam_position_].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[curr_rig_name]][current_cam_position_].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[curr_rig_name]][current_cam_position_].z);
+    ImGui::SameLine();
+    ImGui::Text("Rig Lookat");
+}
+
+void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
+    #ifdef ENABLE_PLANT_ARCHITECTURE
+    ImGui::SetNextItemWidth(100);
+    std::string prev_canopy_name = labels[canopy_labels[curr_canopy_name]];
+    ImGui::InputText("##canopy_name", &labels[canopy_labels[curr_canopy_name]]);
+    if (labels[canopy_labels[curr_canopy_name]] != prev_canopy_name){
+        int temp = canopy_labels[curr_canopy_name];
+        curr_canopy_name = labels[canopy_labels[curr_canopy_name]];
+        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels.find(prev_canopy_name);
+        if (current_canopy_iter != canopy_labels.end()){
+            canopy_labels.erase(current_canopy_iter);
+        }
+        canopy_labels[curr_canopy_name] = temp;
+    }
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels[curr_canopy_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels[curr_canopy_name]].y);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels[curr_canopy_name]].z);
+    ImGui::SameLine();
+    ImGui::Text("Canopy Origin");
+    // ####### PLANT COUNT ####### //
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels[curr_canopy_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels[curr_canopy_name]].y);
+    ImGui::SameLine();
+    ImGui::Text("Plant Count");
+    // ####### PLANT SPACING ####### //
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels[curr_canopy_name]].x);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels[curr_canopy_name]].y);
+    ImGui::SameLine();
+    ImGui::Text("Plant Spacing");
+    // ####### PLANT LIBRARY NAME ####### //
+    ImGui::SetNextItemWidth(80);
+    ImGui::InputText("Plant Library", &plant_library_names[canopy_labels[curr_canopy_name]]);
+    // ####### PLANT AGE ####### //
+    ImGui::SetNextItemWidth(80);
+    ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels[curr_canopy_name]]);
+    // ####### GROUND CLIPPING HEIGHT ####### //
+    ImGui::SetNextItemWidth(80);
+    ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[curr_canopy_name]]);
+    #endif //PLANT_ARCHITECTURE
+}
 
