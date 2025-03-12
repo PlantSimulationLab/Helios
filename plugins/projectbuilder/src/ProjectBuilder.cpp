@@ -438,7 +438,7 @@ void ProjectBuilder::record(){
                 radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
             }
         }
-        radiation->updateGeometry();
+        // radiation->updateGeometry(); // TODO: figure out why we can't move updateGeometry here
         // radiation->setSourceFlux(light_UUID, band, flux_value)
         //
         for (int i = 0; i < interpolated_camera_positions.size(); i++){
@@ -454,6 +454,7 @@ void ProjectBuilder::record(){
                 radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
                 radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
             }
+            radiation->updateGeometry();
             radiation->runBand({"red", "green", "blue"});
             for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                 std::string cameralabel = rig_label + "_" + rig_camera_label;
