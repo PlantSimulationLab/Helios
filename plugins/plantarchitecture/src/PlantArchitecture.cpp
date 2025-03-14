@@ -244,6 +244,29 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     return plantIDs;
 }
 
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, std::vector<helios::vec3> &individual_plant_loc, float germination_rate) {
+
+    if( plant_count_xy.x<=0 || plant_count_xy.y<=0 ){
+        helios_runtime_error("ERROR (PlantArchitecture::buildPlantCanopyFromLibrary): Plant count must be greater than zero.");
+    }
+
+    vec2 canopy_extent(plant_spacing_xy.x*float(plant_count_xy.x-1), plant_spacing_xy.y*float(plant_count_xy.y-1));
+
+    std::vector<uint> plantIDs;
+    plantIDs.reserve(plant_count_xy.x*plant_count_xy.y);
+    for( int j=0; j<plant_count_xy.y; j++ ){
+        for( int i=0; i<plant_count_xy.x; i++ ){
+            if( context_ptr->randu()<germination_rate ) {
+                vec3 plant_spacing_vec = make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0);
+                plantIDs.push_back( buildPlantInstanceFromLibrary(canopy_center_position + plant_spacing_vec, age) );
+                individual_plant_loc.push_back(plant_spacing_vec);
+            }
+        }
+    }
+
+    return plantIDs;
+}
+
 void PlantArchitecture::defineShootType(const std::string &shoot_type_label, const ShootParameters &shoot_params) {
     if (this->shoot_types.find(shoot_type_label) != this->shoot_types.end()) { //shoot type already exists
         this->shoot_types.at(shoot_type_label) = shoot_params;

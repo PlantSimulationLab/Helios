@@ -124,6 +124,9 @@ void toggle_button(const char* str_id, bool* v);
 //! Function to open file dialog
 std::string file_dialog();
 
+//! Function to open save as file dialog
+std::string save_as_file_dialog();
+
 //! Function to get node labels for a given set of nodes
 /**
  * \param[in] xml_file Path to the XML file
@@ -408,6 +411,9 @@ class ProjectBuilder {
     //! Vector of plant spacings for every canopy
     std::vector<helios::vec2> plant_spacings;
 
+    //! Vector of plant locations relative to the canopy origin for every canopy
+    std::vector<std::vector<helios::vec3>> individual_plant_locations;
+
     //! Plant library name
     std::string plant_library_name = "cowpea";
 
@@ -429,6 +435,9 @@ class ProjectBuilder {
     //! Map of canopy name to canopy index
     std::map<std::string, int> canopy_labels;
 
+    //! Vector of canopy UUIDs for each canopy
+    std::vector<std::vector<uint>> canopy_UUIDs;
+
     //! Direct ray count
     int direct_ray_count = 100;
 
@@ -449,6 +458,9 @@ class ProjectBuilder {
 
     //! Object names
     std::vector<std::string> obj_names;
+
+    //! Object names set
+    std::set<std::string> obj_names_set;
 
     //! Currently selected object
     std::string current_obj = "";
@@ -768,6 +780,18 @@ class ProjectBuilder {
 
     //! Object tab
     void objectTab(std::string curr_obj_name, int id);
+
+    //! Save object file
+    void saveObject(std::string file_name, std::vector<uint> obj_UUID_vec, std::string file_extension);
+
+    //! Save canopy to object file
+    void saveCanopy(std::string file_name, std::vector<uint> canopy_UUID_vec, helios::vec3 position, std::string file_extension);
+
+    //! Save plants in canopy individually to object file
+    void saveCanopy(std::string file_name_base, std::vector<uint> canopy_UUID_vec, helios::vec3 origin, std::vector<helios::vec3> positions, std::string file_extension);
+
+    //! Determines whether plants are saved together (false) or individually to their own object file (true) when saving a canopy to file.
+    bool save_plants_individually = false;
 
 
   public:

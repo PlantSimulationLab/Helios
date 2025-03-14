@@ -224,6 +224,78 @@ std::string file_dialog(){
 }
 
 
+std::string save_as_file_dialog(){
+    std::string file_name;
+    #ifdef _WIN32
+        // save CWD
+        char CWD[MAX_PATH];
+        GetCurrentDirectory(MAX_PATH, CWD);
+
+        OPENFILENAME ofn;
+        char szFile[260] = {0};
+
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = NULL;
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = sizeof(szFile);
+        ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.txt\0";
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrInitialDir = NULL;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+        if (GetSaveFileName(&ofn)) {
+            std::cout << "Selected file: " << ofn.lpstrFile << std::endl;
+        } else {
+            std::cout << "No file selected." << std::endl;
+            return "";
+        }
+
+        // correct CWD
+        SetCurrentDirectory(CWD);
+
+        file_name = (std::string)ofn.lpstrFile;
+    #elif defined(__APPLE__)
+        nfdchar_t *outPath = NULL;
+        nfdresult_t result = NFD_OpenDialog( NULL, NULL, &outPath );
+
+        if ( result == NFD_OKAY ) {
+            puts("Success!");
+            puts(outPath);
+            free(outPath);
+        }
+        else if ( result == NFD_CANCEL ) {
+            puts("User pressed cancel.");
+        }
+        else {
+            // printf("Error: %s\n", NFD_GetError() );
+            std::cout << "Error: " << NFD_GetError() << std::endl;
+        }
+    #elif defined(__linux__)
+        nfdchar_t *outPath = NULL;
+        nfdresult_t result = NFD_OpenDialog( NULL, NULL, &outPath );
+
+        if ( result == NFD_OKAY ) {
+            puts("Success!");
+            puts(outPath);
+            free(outPath);
+        }
+        else if ( result == NFD_CANCEL ) {
+            puts("User pressed cancel.");
+        }
+        else {
+            // printf("Error: %s\n", NFD_GetError() );
+            std::cout << "Error: " << NFD_GetError() << std::endl;
+        }
+    #endif
+    // TODO: make sure file dialog works on macOS and Linux
+
+    return file_name;
+}
+
+
 std::vector<std::string> get_xml_node_values(std::string xml_input, const std::string& name,
                                             const std::string& parent){
     int counter = 0;
@@ -503,7 +575,7 @@ void ProjectBuilder::buildFromXML(){
 
     // if (enable_plantarchitecture){
     #ifdef ENABLE_PLANT_ARCHITECTURE
-        BuildGeometry(xml_input_file, plantarchitecture, context);
+        BuildGeometry(xml_input_file, plantarchitecture, context, canopy_UUIDs, individual_plant_locations);
     // } //PLANT_ARCHITECTURE
     #endif //PLANT_ARCHITECTURE
 
@@ -1555,6 +1627,9 @@ void ProjectBuilder::visualize(){
                 object_window_count++;
             }
             for (int n = 0; n < obj_names.size(); n++){
+                if (obj_names_set.find(obj_names[n]) == obj_names_set.end()){
+                    continue;
+                }
                 current_label = obj_names[n];
                 vec3 obj_position_ = obj_positions[obj_names_dict[current_label]];
                 origin_position = glm::vec4(obj_position_.x, obj_position_.y, obj_position_.z, 1.0);
@@ -1821,6 +1896,10 @@ void ProjectBuilder::visualize(){
                                 } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
                                     new_UUIDs = context->loadPLY(new_obj_file.c_str());
                                 }
+                                // const char* font_name = "LCD";
+                                // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                                //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                                // visualizer->clearColor();
                                 visualizer->buildContextGeometry(context);
                                 visualizer->plotUpdate();
                                 std::string default_object_label = "object";
@@ -1831,45 +1910,45 @@ void ProjectBuilder::visualize(){
                                     new_obj_label = default_object_label + "_" + std::to_string(count);
                                 }
                                 obj_names_dict.insert({new_obj_label, obj_files.size()});
+                                obj_names_set.insert(new_obj_label);
                                 obj_names.push_back(new_obj_label);
                                 obj_files.push_back(new_obj_file);
                                 obj_UUIDs.push_back(new_UUIDs);
-                                if (!current_obj.empty()){
-                                    obj_positions.push_back(obj_positions[obj_names_dict[current_obj]]);
-                                    obj_orientations.push_back(obj_orientations[obj_names_dict[current_obj]]);
-                                    obj_scales.push_back(obj_scales[obj_names_dict[current_obj]]);
-                                    // obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
-                                    obj_data_groups.push_back(obj_data_groups[obj_names_dict[current_obj]]);
-                                    std::string parent = "object";
-                                    pugi::xml_node obj_block = helios.child(parent.c_str());
-                                    pugi::xml_node new_obj_node = helios.append_copy(obj_block);
-                                    std::string name = "label";
-                                    pugi::xml_attribute node_label = new_obj_node.attribute(name.c_str());
-                                    node_label.set_value(new_obj_label.c_str());
-                                } else{
-                                    obj_positions.push_back(vec3(0, 0, 0));
-                                    obj_orientations.push_back(vec3(0, 0, 0));
-                                    obj_scales.push_back(vec3(0, 0, 0));
-                                    obj_colors.push_back(RGBcolor(0, 0, 1));
-                                    obj_data_groups.push_back("default");
-                                    std::string parent = "object";
-                                    pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
-                                    std::string name = "label";
-                                    new_obj_node.append_attribute(name.c_str()).set_value(new_obj_label.c_str());
-                                    new_obj_node.append_child("file").text().set(new_obj_file.c_str());
-                                    new_obj_node.append_child("position").text().set(vec_to_string(obj_positions[0]).c_str());
-                                    new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
-                                    new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
-                                    new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
-                                }
+                                // if (!current_obj.empty()){
+                                //     obj_positions.push_back(obj_positions[obj_names_dict[current_obj]]);
+                                //     obj_orientations.push_back(obj_orientations[obj_names_dict[current_obj]]);
+                                //     obj_scales.push_back(obj_scales[obj_names_dict[current_obj]]);
+                                //     // obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
+                                //     obj_data_groups.push_back(obj_data_groups[obj_names_dict[current_obj]]);
+                                //     std::string parent = "object";
+                                //     pugi::xml_node obj_block = helios.child(parent.c_str());
+                                //     pugi::xml_node new_obj_node = helios.append_copy(obj_block);
+                                //     std::string name = "label";
+                                //     pugi::xml_attribute node_label = new_obj_node.attribute(name.c_str());
+                                //     node_label.set_value(new_obj_label.c_str());
+                                // }
+                                obj_positions.push_back(vec3(0, 0, 0));
+                                obj_orientations.push_back(vec3(0, 0, 0));
+                                obj_scales.push_back(vec3(0, 0, 0));
+                                obj_colors.push_back(RGBcolor(0, 0, 1));
+                                obj_data_groups.push_back("default");
+                                std::string parent = "object";
+                                pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
+                                std::string name = "label";
+                                new_obj_node.append_attribute(name.c_str()).set_value(new_obj_label.c_str());
+                                new_obj_node.append_child("file").text().set(new_obj_file.c_str());
+                                new_obj_node.append_child("position").text().set(vec_to_string(obj_positions[0]).c_str());
+                                new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
+                                new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
+                                new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
                             }
                         }
                     }
                     if (ImGui::BeginCombo("##obj_combo", current_obj.c_str())){
-                        for (int n = 0; n < obj_names.size(); n++){
-                            bool is_obj_selected = (current_obj == obj_names[n]);
-                            if (ImGui::Selectable(obj_names[n].c_str(), is_obj_selected))
-                                current_obj = obj_names[n];
+                        for (std::string obj_name : obj_names_set){
+                            bool is_obj_selected = (current_obj == obj_name);
+                            if (ImGui::Selectable(obj_name.c_str(), is_obj_selected))
+                                current_obj = obj_name;
                             if (is_obj_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -1879,7 +1958,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SetNextItemWidth(100);
                         std::string prev_obj_name = obj_names[obj_names_dict[current_obj]];
                         ImGui::InputText("##obj_name", &obj_names[obj_names_dict[current_obj]]);
-                        if (obj_names[obj_names_dict[current_obj]] != prev_obj_name){
+                        if (obj_names[obj_names_dict[current_obj]] != prev_obj_name && !obj_names[obj_names_dict[current_obj]].empty()){
                             int idx = obj_names_dict[current_obj];
                             current_obj = obj_names[obj_names_dict[current_obj]];
                             std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
@@ -1887,63 +1966,84 @@ void ProjectBuilder::visualize(){
                                 obj_names_dict.erase(current_obj_iter);
                             }
                             obj_names_dict[current_obj] = idx;
+                            obj_names_set.erase(prev_obj_name);
+                            obj_names_set.insert(current_obj);
+                        } else if (obj_names[obj_names_dict[current_obj]].empty()){
+                            obj_names[obj_names_dict[current_obj]] = prev_obj_name;
                         }
                         ImGui::SameLine();
                         ImGui::Text("Object Name");
-                        // ####### OBJECT DATA GROUP ####### //
-                        ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
                         ImGui::SameLine();
-                        ImGui::Text("Data Group");
-                        // ####### OBJECT SCALE ####### //
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_scale_y", &obj_scales[obj_names_dict[current_obj]].y);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_scale_z", &obj_scales[obj_names_dict[current_obj]].z);
-                        ImGui::SameLine();
-                        ImGui::Text("Object Scale");
-                        // ####### OBJECT POSITION ####### //
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_position_x", &obj_positions[obj_names_dict[current_obj]].x);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_position_y", &obj_positions[obj_names_dict[current_obj]].y);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_position_z", &obj_positions[obj_names_dict[current_obj]].z);
-                        ImGui::SameLine();
-                        ImGui::Text("Object Position");
-                        // ####### OBJECT ORIENTATION ####### //
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_orientation_x", &obj_orientations[obj_names_dict[current_obj]].x);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_orientation_y", &obj_orientations[obj_names_dict[current_obj]].y);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##obj_orientation_z", &obj_orientations[obj_names_dict[current_obj]].z);
-                        ImGui::SameLine();
-                        ImGui::Text("Object Orientation");
-                        // ####### OBJECT COLOR ####### //
-                        // ImGui::SetNextItemWidth(60);
-                        // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
-                        // ImGui::SameLine();
-                        // ImGui::SetNextItemWidth(60);
-                        // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
-                        // ImGui::SameLine();
-                        // ImGui::SetNextItemWidth(60);
-                        // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
-                        // ImGui::SameLine();
-                        // ImGui::Text("Object Color");
+                        if (ImGui::Button("Delete Object")){
+                            int delete_idx = obj_names_dict[current_obj];
+                            context->deletePrimitive(obj_UUIDs[delete_idx]);
+                            visualizer->clearGeometry();
+                            visualizer->buildContextGeometry(context);
+                            visualizer->plotUpdate();
+                            obj_names_dict.erase(current_obj);
+                            obj_names_set.erase(current_obj);
+                            if (!obj_names_set.empty()){
+                                current_obj = *obj_names_set.begin();
+                            } else{
+                                current_obj = "";
+                            }
+                        }
+                        if (!current_obj.empty()){
+                            // ####### OBJECT DATA GROUP ####### //
+                            ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
+                            ImGui::SameLine();
+                            ImGui::Text("Data Group");
+                            // ####### OBJECT SCALE ####### //
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_scale_y", &obj_scales[obj_names_dict[current_obj]].y);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_scale_z", &obj_scales[obj_names_dict[current_obj]].z);
+                            ImGui::SameLine();
+                            ImGui::Text("Object Scale");
+                            // ####### OBJECT POSITION ####### //
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_position_x", &obj_positions[obj_names_dict[current_obj]].x);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_position_y", &obj_positions[obj_names_dict[current_obj]].y);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_position_z", &obj_positions[obj_names_dict[current_obj]].z);
+                            ImGui::SameLine();
+                            ImGui::Text("Object Position");
+                            // ####### OBJECT ORIENTATION ####### //
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_orientation_x", &obj_orientations[obj_names_dict[current_obj]].x);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_orientation_y", &obj_orientations[obj_names_dict[current_obj]].y);
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            ImGui::InputFloat("##obj_orientation_z", &obj_orientations[obj_names_dict[current_obj]].z);
+                            ImGui::SameLine();
+                            ImGui::Text("Object Orientation");
+                            // ####### OBJECT COLOR ####### //
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
+                            // ImGui::SameLine();
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
+                            // ImGui::SameLine();
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
+                            // ImGui::SameLine();
+                            // ImGui::Text("Object Color");
+                        }
                     }
-
                     ImGui::EndTabItem();
                 }
             // if (enable_plantarchitecture){
             #ifdef ENABLE_PLANT_ARCHITECTURE
+                // CANOPY TAB
                 if (ImGui::BeginTabItem("Canopy")){
                     current_tab = "Canopy";
                     // ####### CANOPY ORIGIN ####### //
@@ -1957,18 +2057,6 @@ void ProjectBuilder::visualize(){
                                 ImGui::SetItemDefaultFocus();
                         }
                         ImGui::EndCombo();
-                    }
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_canopy_name = labels[canopy_labels[current_canopy]];
-                    ImGui::InputText("##canopy_name", &labels[canopy_labels[current_canopy]]);
-                    if (labels[canopy_labels[current_canopy]] != prev_canopy_name){
-                        int temp = canopy_labels[current_canopy];
-                        current_canopy = labels[canopy_labels[current_canopy]];
-                        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels.find(prev_canopy_name);
-                        if (current_canopy_iter != canopy_labels.end()){
-                            canopy_labels.erase(current_canopy_iter);
-                        }
-                        canopy_labels[current_canopy] = temp;
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Add Canopy")){
@@ -2015,6 +2103,18 @@ void ProjectBuilder::visualize(){
                         pugi::xml_attribute node_label = new_canopy_node.attribute(name.c_str());
                         node_label.set_value(new_canopy_label.c_str());
                     }
+                    ImGui::SetNextItemWidth(100);
+                    std::string prev_canopy_name = labels[canopy_labels[current_canopy]];
+                    ImGui::InputText("##canopy_name", &labels[canopy_labels[current_canopy]]);
+                    if (labels[canopy_labels[current_canopy]] != prev_canopy_name){
+                        int temp = canopy_labels[current_canopy];
+                        current_canopy = labels[canopy_labels[current_canopy]];
+                        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels.find(prev_canopy_name);
+                        if (current_canopy_iter != canopy_labels.end()){
+                            canopy_labels.erase(current_canopy_iter);
+                        }
+                        canopy_labels[current_canopy] = temp;
+                    }
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels[current_canopy]].x);
                     ImGui::SameLine();
@@ -2050,7 +2150,38 @@ void ProjectBuilder::visualize(){
                     // ####### GROUND CLIPPING HEIGHT ####### //
                     ImGui::SetNextItemWidth(80);
                     ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels[current_canopy]]);
-
+                    if (ImGui::Button("Save Canopy to OBJ/PLY File")){
+                        std::string new_obj_file = save_as_file_dialog();
+                        if (!new_obj_file.empty()){
+                            std::string file_extension = new_obj_file;
+                            size_t last_obj_file = file_extension.rfind('.');
+                            if (last_obj_file != std::string::npos){
+                                file_extension = file_extension.substr(last_obj_file + 1);
+                            }
+                            if (file_extension == "obj" || file_extension == "ply"){
+                                if (!std::filesystem::exists(new_obj_file)){
+                                    // Create file
+                                    std::ofstream outFile(new_obj_file);
+                                }
+                                if (!save_plants_individually){
+                                    saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels[current_canopy]],
+                                                canopy_origins[canopy_labels[current_canopy]], file_extension);
+                                } else{
+                                    saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels[current_canopy]],
+                                                canopy_origins[canopy_labels[current_canopy]],
+                                                individual_plant_locations[canopy_labels[current_canopy]], file_extension);
+                                }
+                            } else{
+                                // Needs to be a obj or ply file
+                                std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
+                            }
+                        } else{
+                            // Not a valid file
+                            std::cout << "Not a valid file." << std::endl;
+                        }
+                    }
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Save plants individually", &save_plants_individually);
                     ImGui::EndTabItem();
                 }
             // } //PLANT_ARCHITECTURE
@@ -2989,6 +3120,7 @@ void ProjectBuilder::xmlGetValues(){
     // OBJECT BLOCK
     obj_names_dict.clear();
     obj_names_dict = getNodeLabels("label", "object", obj_names);
+    obj_names_set = std::set<std::string>{obj_names.begin(), obj_names.end()};
     if (!obj_names.empty()) current_obj = obj_names[0];
     xmlGetValues("file", "object", obj_files);
     xmlGetValues("position", "object", obj_positions);
@@ -3245,6 +3377,18 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
 
 void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
     #ifdef ENABLE_PLANT_ARCHITECTURE
+    if (ImGui::Button("Update")){
+        std::vector<uint> current_canopy_vec = canopy_UUIDs[canopy_labels[curr_canopy_name]];
+        std::vector<uint> primitive_UUID_vec;
+        for (int i = 0; i < current_canopy_vec.size(); i++){
+            std::vector<uint> obj_prim_UUIDs =  plantarchitecture->getAllPlantUUIDs(current_canopy_vec[i]);
+            primitive_UUID_vec.insert(primitive_UUID_vec.end(), obj_prim_UUIDs.begin(), obj_prim_UUIDs.end());
+        }
+        context->translatePrimitive(primitive_UUID_vec, canopy_origins[canopy_labels[curr_canopy_name]]);
+        visualizer->clearGeometry();
+        visualizer->buildContextGeometry(context);
+        visualizer->plotUpdate();
+    }
     ImGui::SetNextItemWidth(100);
     std::string prev_canopy_name = labels[canopy_labels[curr_canopy_name]];
     ImGui::InputText("##canopy_name", &labels[canopy_labels[curr_canopy_name]]);
@@ -3295,3 +3439,56 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
     #endif //PLANT_ARCHITECTURE
 }
 
+void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_UUID_vec, vec3 position, std::string file_extension){
+    std::vector<std::string> primitive_data_vec = {"object_label"};
+    std::vector<uint> canopy_primID_vec;
+    std::vector<uint> canopy_objID_vec;
+    // plantarchitecture->getAllPlantObjectIDs(plantID)
+    for (int i = 0; i < canopy_UUID_vec.size(); i++){
+        std::vector<uint> canopy_prim_UUIDs =  plantarchitecture->getAllPlantUUIDs(canopy_UUID_vec[i]);
+        std::vector<uint> canopy_obj_UUIDs = plantarchitecture->getAllPlantObjectIDs(canopy_UUID_vec[i]);
+        canopy_primID_vec.insert(canopy_primID_vec.end(), canopy_prim_UUIDs.begin(), canopy_prim_UUIDs.end());
+        canopy_objID_vec.insert(canopy_objID_vec.end(), canopy_obj_UUIDs.begin(), canopy_obj_UUIDs.end());
+    }
+    for (uint objID : canopy_objID_vec){
+        context->translateObject(objID, -position);
+    }
+    if (file_extension == "obj"){
+        context->writeOBJ(file_name, canopy_primID_vec, primitive_data_vec, true);
+    } else if (file_extension == "ply"){
+        // context->writePLY(file_name, obj_UUID_vec, primitive_data_vec);
+    }
+    for (uint objID : canopy_objID_vec){
+        context->translateObject(objID, position);
+    }
+}
+
+void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> canopy_UUID_vec, helios::vec3 origin, std::vector<helios::vec3> positions, std::string file_extension){
+    std::vector<std::string> primitive_data_vec = {"object_label"};
+    std::vector<std::vector<uint>> canopy_primID_vec;
+    std::vector<std::vector<uint>> canopy_objID_vec;
+    // plantarchitecture->getAllPlantObjectIDs(plantID)
+    for (int i = 0; i < canopy_UUID_vec.size(); i++){
+        std::vector<uint> canopy_prim_UUIDs =  plantarchitecture->getAllPlantUUIDs(canopy_UUID_vec[i]);
+        std::vector<uint> canopy_obj_UUIDs = plantarchitecture->getAllPlantObjectIDs(canopy_UUID_vec[i]);
+        canopy_primID_vec.push_back(canopy_prim_UUIDs);
+        canopy_objID_vec.push_back(canopy_obj_UUIDs);
+    }
+    for (int i = 0; i < canopy_objID_vec.size(); i++){
+        for (uint objID : canopy_objID_vec[i]){
+            context->translateObject(objID, -(origin + positions[i]));
+        }
+    }
+    if (file_extension == "obj"){
+        for (int i = 0; i < canopy_primID_vec.size(); i++){
+            context->writeOBJ(file_name_base + "_" + std::to_string(i), canopy_primID_vec[i], primitive_data_vec, true);
+        }
+    } else if (file_extension == "ply"){
+        // context->writePLY(file_name, obj_UUID_vec, primitive_data_vec);
+    }
+    for (int i = 0; i < canopy_objID_vec.size(); i++){
+        for (uint objID : canopy_objID_vec[i]){
+            context->translateObject(objID, (origin + positions[i]));
+        }
+    }
+}

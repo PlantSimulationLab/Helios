@@ -1161,6 +1161,18 @@ public:
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f);
 
+    //! Build a canopy of regularly spaced plants based on the model currently loaded from the library
+    /**
+     * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy.
+     * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
+     * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
+     * \param[in] age Age of the plants in the canopy.
+     * \param[in] germination_rate [OPTIONAL] Probability that a plant in the canopy germinates and a plant is created.
+     * \param[in] individual_plant_loc Saves the location of each plant relative to the canopy center position.
+     * \return Vector of plant instance IDs.
+     */
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, std::vector<helios::vec3> &individual_plant_loc, float germination_rate = 1.f);
+
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type.
