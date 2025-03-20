@@ -168,6 +168,33 @@ class ProjectBuilder {
     //! Band Labels
     std::vector<std::string> bandlabels;
 
+    //! Band Labels set
+    std::set<std::string> bandlabels_set;
+
+    //! Set of band labels with emissivity enabled
+    std::set<std::string> bandlabels_set_emissivity;
+
+    //! Direct ray count map keyed by band label that returns the direct ray count for the specified band.
+    std::map<std::string, int> direct_ray_count_dict;
+
+    //! Diffuse ray count map keyed by band label that returns the diffuse ray count for the specified band.
+    std::map<std::string, int> diffuse_ray_count_dict;
+
+    //! Scattering depth map keyed by band label that returns the scattering depth for the specified band.
+    std::map<std::string, int> scattering_depth_dict;
+
+    //! New band label
+    std::string new_band_label;
+
+    //! New band wavelength min
+    float wavelength_min = 400.0f;
+
+    //! New band wavelength max
+    float wavelength_max = 700.0f;
+
+    //! New band enable emission
+    bool enable_emission;
+
     //! Ground UUIDs
     std::vector<uint> ground_UUIDs;
 
@@ -715,6 +742,9 @@ class ProjectBuilder {
     //! Currently selected primitive in the GUI
     std::string current_primitive = "All";
 
+    //! Currently selected band in the GUI
+    std::string current_band = "red";
+
     //! Currently selected radiation band for reflectivity in the GUI
     std::string current_band_reflectivity = "red";
 
@@ -793,6 +823,8 @@ class ProjectBuilder {
     //! Determines whether plants are saved together (false) or individually to their own object file (true) when saving a canopy to file.
     bool save_plants_individually = false;
 
+    //! Add radiation band
+    void addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission);
 
   public:
     //! Context
@@ -1012,6 +1044,13 @@ class ProjectBuilder {
     */
     void xmlGetValues(const std::string& name, const std::string& parent, std::set<std::string>& default_set);
 
+    //! Function to remove XML field in the XML file
+    /**
+     * \param[in] name Name of the XML field to be removed
+     * \param[in] parent Name of the parent XML node
+    */
+    void ProjectBuilder::xmlRemoveField(const std::string& name, const std::string& parent);
+
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
@@ -1149,21 +1188,27 @@ class ProjectBuilder {
                          {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
                          {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};
       primitive_continuous = {{"All", {false, false, false}}, {"ground", {false, false, false}}, {"leaf", {false, false, false}},
-                              {"petiolule", {false, false, false}}, {"petiole", {false, false, false}},
-                              {"internode", {false, false, false}}, {"peduncle", {false, false, false}},
-                              {"petal", {false, false, false}}, {"pedicel", {false, false, false}},
-                              {"fruit", {false, false, false}}};
-      bandlabels = {"red", "green", "blue"};
+                                {"petiolule", {false, false, false}}, {"petiole", {false, false, false}}, {"internode", {false, false, false}},
+                                {"peduncle", {false, false, false}}, {"petal", {false, false, false}},
+                                {"pedicel", {false, false, false}}, {"fruit", {false, false, false}}};
+      bandlabels = {"red", "green", "blue", "PAR", "NIR", "LW"};
+      bandlabels_set = {"All", "red", "green", "blue", "PAR", "NIR", "LW"};
+      bandlabels_set_emissivity = {"red", "green", "blue", "PAR", "NIR", "LW"};
+      // bandlabels = {"red", "green", "blue"};
+      // bandlabels_set = {"All", "red", "green", "blue"};
       for (std::string band : bandlabels){
-       primitive_values[band] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
-                                 {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
-                                 {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
-                                 {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
-                                 {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
-                                 {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
-                                 {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
-                                 {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
-                                 {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+           primitive_values[band] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                       {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                       {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                       {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                       {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                       {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                       {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                       {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                       {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+           direct_ray_count_dict[band] = direct_ray_count; // direct ray counts per band
+           diffuse_ray_count_dict[band] = diffuse_ray_count; // diffuse ray counts per band
+           scattering_depth_dict[band] = scattering_depth; // scattering depth per band
       }
       primitive_spectra = {{"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}},
                              {"ground", {ground_reflectivity_spectrum, ground_transmissivity_spectrum, ground_emissivity_spectrum}},

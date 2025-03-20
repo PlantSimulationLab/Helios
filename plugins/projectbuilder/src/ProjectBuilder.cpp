@@ -436,6 +436,7 @@ void ProjectBuilder::updateSpectra(){
         }
         if (!primitive_continuous[primitive_pair.first][2]){
             for (std::string band : bandlabels){
+                if (bandlabels_set_emissivity.find(band) != bandlabels_set_emissivity.end()) continue;
                 float emissivity = primitive_values[band][primitive_pair.first][2];
                 std::string emissivity_band = "emissivity_" + band;
                 context->setPrimitiveData(*primitive_pair.second, emissivity_band.c_str(), emissivity);
@@ -674,6 +675,10 @@ void ProjectBuilder::buildFromXML(){
     }
 
     // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+        helios_runtime_error(xml_error_string);
+    }
+    xmlGetValues();
     updateSpectra();
 
     ground_area = context->sumPrimitiveSurfaceArea( ground_UUIDs );
@@ -743,16 +748,12 @@ void ProjectBuilder::buildFromXML(){
             NIR_absorbed /= ground_area;
 
             context->calculatePrimitiveDataAreaWeightedSum( leaf_UUIDs, "radiation_flux_LW", LW_absorbed );
-            PAR_absorbed /= ground_area;
+            LW_absorbed /= ground_area;
 
             std::cout << "Absorbed PAR: " << PAR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
-        if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
-            helios_runtime_error(xml_error_string);
-        }
-        xmlGetValues();
         // OBJ BLOCK
         for (int i = 0; i < obj_files.size(); i++){
             std::vector<uint> new_UUIDs;
@@ -1214,6 +1215,9 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(std::to_string(default_value).c_str());
 }
 
@@ -1225,6 +1229,9 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(std::to_string(default_value).c_str());
 }
 
@@ -1236,7 +1243,23 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(default_value.c_str());
+}
+
+void ProjectBuilder::xmlRemoveField(const std::string& name, const std::string& parent) {
+    helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    if (parent != "helios") {
+        p = helios.child(parent.c_str());
+    }
+    pugi::xml_node node;
+    node = p.child(name.c_str());
+    if (node){
+        p.remove_child(name.c_str());
+    }
 }
 
 void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& parent, int2 &default_value) {
@@ -1247,6 +1270,9 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(vec_to_string(default_value).c_str());
 }
 
@@ -1258,6 +1284,9 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(vec_to_string(default_value).c_str());
 }
 
@@ -1269,6 +1298,9 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     }
     pugi::xml_node node;
     node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
     node.text().set(vec_to_string(default_value).c_str());
 }
 
@@ -1684,6 +1716,42 @@ void ProjectBuilder::visualize(){
                     if (ImGui::MenuItem("Save XML", "Ctrl+S")){
                         xmlSetValues();
                     }
+                    if (ImGui::MenuItem("Save As", "Ctrl+S")){
+                        std::string new_xml_file = save_as_file_dialog();
+                        if (!new_xml_file.empty()){
+                            std::string file_extension = new_xml_file;
+                            size_t last_obj_file = file_extension.rfind('.');
+                            if (last_obj_file != std::string::npos){
+                                file_extension = file_extension.substr(last_obj_file + 1);
+                            }
+                            if (file_extension == "xml"){
+                                if (!std::filesystem::exists(new_xml_file)){
+                                    // Create file
+                                    std::ofstream outFile(new_xml_file);
+                                }
+                                // Change XML input file
+                                std::string xml_input_file_ = xml_input_file;
+                                pugi::xml_node helios_ = helios;
+                                xml_input_file = new_xml_file;
+                                if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+                                    helios_runtime_error(xml_error_string);
+                                }
+                                xmlSetValues();
+                                // Change XML input file back to original
+                                // xml_input_file = xml_input_file_;
+                                // helios = helios_;
+                                // if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+                                //     helios_runtime_error(xml_error_string);
+                                // }
+                            } else{
+                                // Needs to be a obj or ply file
+                                std::cout << "Not a valid file type. Project must be saved to a XML file." << std::endl;
+                            }
+                        } else{
+                            // Not a valid file
+                            std::cout << "Not a valid file." << std::endl;
+                        }
+                    }
                     if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
                     ImGui::EndMenu();
                 }
@@ -1990,6 +2058,7 @@ void ProjectBuilder::visualize(){
                         }
                         if (!current_obj.empty()){
                             // ####### OBJECT DATA GROUP ####### //
+                            ImGui::SetNextItemWidth(100);
                             ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
@@ -2203,18 +2272,13 @@ void ProjectBuilder::visualize(){
                             context->loadXML( new_xml_library_file.c_str() );
                         }
                     }
-                    // ####### DIRECT RAY COUNT ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Direct Ray Count", &direct_ray_count);
-                    // ####### DIFFUSE RAY COUNT ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
+                    // ####### GLOBAL PROPERTIES ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Global Properties:");
+                    ImGui::SetWindowFontScale(1.0f);
                     // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("Diffuse Extinction Coefficient", &diffuse_extinction_coeff);
-                    // ####### SCATTERING DEPTH ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Scattering Depth", &scattering_depth);
                     // ####### AIR TURBIDITY ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("Air Turbidity", &air_turbidity);
@@ -2233,8 +2297,113 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     ImGui::Text("Solar Direct Spectrum");
+                    // ####### BAND PROPERTIES ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Band Properties:");
+                    ImGui::SetWindowFontScale(1.0f);
+                    // ####### ADD BAND ####### //
+                    if (ImGui::Button("Add Band")){
+                        addBand(new_band_label, wavelength_min, wavelength_max, enable_emission);
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Label:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputText("##new_band_label", &new_band_label);
+                    ImGui::SameLine();
+                    ImGui::Text("Wavelength Min:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##wavelength_min", &wavelength_min);
+                    ImGui::SameLine();
+                    ImGui::Text("Max:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##wavelength_max", &wavelength_max);
+                    ImGui::SameLine();
+                    ImGui::Text("Emission:");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("##enable_emission", &enable_emission);
+                    // ####### SELECT BAND ####### //
+                    if (ImGui::BeginCombo("##combo_current_band", current_band.c_str())){
+                        for (std::string band : bandlabels_set){
+                            bool is_current_band_selected = (current_band == band);
+                            if (ImGui::Selectable(band.c_str(), is_current_band_selected))
+                                current_band = band;
+                            if (is_current_band_selected)
+                                ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Select Band");
+                    // ####### DIRECT RAY COUNT ####### //
+                    int prev_direct_ray_count;
+                    ImGui::SetNextItemWidth(100);
+                    if (current_band == "All"){
+                        prev_direct_ray_count = direct_ray_count;
+                        ImGui::InputInt("Direct Ray Count", &direct_ray_count);
+                        if (direct_ray_count != prev_direct_ray_count){
+                            for (std::string band : bandlabels){
+                                radiation->setDirectRayCount(band, direct_ray_count);
+                                direct_ray_count_dict[band] = direct_ray_count;
+                            }
+                        }
+                    } else{
+                        prev_direct_ray_count = direct_ray_count_dict[current_band];
+                        ImGui::InputInt("Direct Ray Count", &direct_ray_count_dict[current_band]);
+                        if (direct_ray_count_dict[current_band] != prev_direct_ray_count){
+                            radiation->setDirectRayCount(current_band, direct_ray_count_dict[current_band]);
+                        }
+                    }
+                    // ####### DIFFUSE RAY COUNT ####### //
+                    ImGui::SetNextItemWidth(100);
+                    int prev_diffuse_ray_count;
+                    if (current_band == "All"){
+                        prev_diffuse_ray_count = diffuse_ray_count;
+                        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
+                        if (diffuse_ray_count != prev_diffuse_ray_count){
+                            for (std::string band : bandlabels){
+                                radiation->setDiffuseRayCount(band, diffuse_ray_count);
+                                diffuse_ray_count_dict[band] = diffuse_ray_count;
+                            }
+                        }
+                    } else{
+                        prev_diffuse_ray_count = diffuse_ray_count_dict[current_band];
+                        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count_dict[current_band]);
+                        if (diffuse_ray_count_dict[current_band] != prev_diffuse_ray_count){
+                            radiation->setDiffuseRayCount(current_band, diffuse_ray_count_dict[current_band]);
+                        }
+                    }
+                    // ####### SCATTERING DEPTH ####### //
+                    ImGui::SetNextItemWidth(100);
+                    int prev_scattering_depth;
+                    if (current_band == "All"){
+                        prev_scattering_depth = scattering_depth;
+                        ImGui::InputInt("Scattering Depth", &scattering_depth);
+                        if (scattering_depth <= 0){
+                            scattering_depth = prev_scattering_depth;
+                        }
+                        if (prev_scattering_depth != scattering_depth){
+                            for (std::string band : bandlabels){
+                                radiation->setScatteringDepth(band, scattering_depth);
+                                scattering_depth_dict[band] = scattering_depth;
+                            }
+                        }
+                    } else{
+                        prev_scattering_depth = scattering_depth_dict[current_band];
+                        ImGui::InputInt("Scattering Depth", &scattering_depth_dict[current_band]);
+                        if (scattering_depth_dict[current_band] <= 0){ // scattering depth must be >0
+                            scattering_depth_dict[current_band] = prev_scattering_depth;
+                        }
+                        if (prev_scattering_depth != scattering_depth_dict[current_band]){
+                            radiation->setScatteringDepth(current_band, scattering_depth_dict[current_band]);
+                        }
+                    }
                     // ####### RADIATIVE PROPERTIES ####### //
+                    ImGui::SetWindowFontScale(1.25f);
                     ImGui::Text("Radiative Properties:");
+                    ImGui::SetWindowFontScale(1.0f);
                     ImGui::SetNextItemWidth(100);
                     if (ImGui::Button("Refresh")){
                         updatePrimitiveTypes();
@@ -2399,10 +2568,10 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(60);
                     if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())){
-                        for (int n = 0; n < bandlabels.size(); n++){
-                            bool is_band_selected = (current_band_emissivity == bandlabels[n]);
-                            if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                current_band_emissivity = bandlabels[n];
+                        for (std::string band : bandlabels_set_emissivity){
+                            bool is_band_selected = (current_band_emissivity == band);
+                            if (ImGui::Selectable(band.c_str(), is_band_selected))
+                                current_band_emissivity = band;
                             if (is_band_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -3076,6 +3245,27 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValue("leaf_transmissivity_spectrum", "radiation", leaf_transmissivity_spectrum);
     xmlSetValue("leaf_emissivity", "radiation", leaf_emissivity);
     xmlSetValue("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
+    for (std::string prim : primitive_names){
+        if (prim == "All") continue;
+        // Reflectivity
+        if (primitive_continuous[prim][0]){
+            xmlSetValue(prim + "_reflectivity_spectrum", "radiation", primitive_spectra[prim][0]);
+        } else{
+            xmlRemoveField(prim + "_reflectivity_spectrum", "radiation");
+        }
+        // Transmissivity
+        if (primitive_continuous[prim][1]){
+            xmlSetValue(prim + "_transmissivity_spectrum", "radiation", primitive_spectra[prim][1]);
+        } else{
+            xmlRemoveField(prim + "_transmissivity_spectrum", "radiation");
+        }
+        for (std::string band : bandlabels){
+            if (band == "All") continue;
+            xmlSetValue(prim + "_reflectivity", "radiation", primitive_values[band][prim][0]);
+            xmlSetValue(prim + "_transmissivity", "radiation", primitive_values[band][prim][1]);
+            xmlSetValue(prim + "_emissivity", "radiation", primitive_values[band][prim][2]);
+        }
+    }
     xmldoc.save_file(xml_input_file.c_str());
 }
 
@@ -3241,15 +3431,10 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValue("ground_reflectivity_spectrum", "radiation", ground_reflectivity_spectrum);
     primitive_values.clear();
     for (std::string band : bandlabels){
-        primitive_values[band] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
-                                  {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
-                                  {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
-                                  {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
-                                  {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
-                                  {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
-                                  {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
-                                  {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
-                                  {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+        primitive_values[band];
+        for (std::string prim : primitive_names){
+            primitive_values[band][prim] = {ground_reflectivity, ground_transmissivity, ground_emissivity};
+        }
     }
     primitive_spectra.clear();
     primitive_spectra = {{"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}},
@@ -3262,6 +3447,33 @@ void ProjectBuilder::xmlGetValues(){
                            {"petal", {petal_reflectivity_spectrum, petal_transmissivity_spectrum, petal_emissivity_spectrum}},
                            {"pedicel", {pedicel_reflectivity_spectrum, pedicel_transmissivity_spectrum, pedicel_emissivity_spectrum}},
                            {"fruit", {fruit_reflectivity_spectrum, fruit_transmissivity_spectrum, fruit_emissivity_spectrum}}};
+    for (std::string prim : primitive_names){
+        if (prim == "All") continue;
+        std::string default_spectrum = "";
+        // Reflectivity
+        xmlGetValue(prim + "_reflectivity_spectrum", "radiation", default_spectrum);
+        if (!default_spectrum.empty()){
+            primitive_spectra[prim][0] = default_spectrum;
+            primitive_continuous[prim][0] = true;
+        } else{
+            primitive_continuous[prim][0] = false;
+        }
+        // Transmissivity
+        default_spectrum = "";
+        xmlGetValue(prim + "_transmissivity_spectrum", "radiation", default_spectrum);
+        if (!default_spectrum.empty()){
+            primitive_spectra[prim][1] = default_spectrum;
+            primitive_continuous[prim][1] = true;
+        } else{
+            primitive_continuous[prim][1] = false;
+        }
+        for (std::string band : bandlabels){
+            if (band == "All") continue;
+            xmlGetValue(prim + "_reflectivity", "radiation", primitive_values[band][prim][0]);
+            xmlGetValue(prim + "_transmissivity", "radiation", primitive_values[band][prim][1]);
+            xmlGetValue(prim + "_emissivity", "radiation", primitive_values[band][prim][2]);
+        }
+    }
 }
 
 void ProjectBuilder::xmlGetValues(std::string xml_path){
@@ -3297,6 +3509,7 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     ImGui::SameLine();
     ImGui::Text("Object Name");
     // ####### OBJECT DATA GROUP ####### //
+    ImGui::SetNextItemWidth(100);
     ImGui::InputText(("##obj_data_group_" + std::to_string(id)).c_str(), &obj_data_groups[obj_names_dict[curr_obj_name]]);
     ImGui::SameLine();
     ImGui::Text("Data Group");
@@ -3492,3 +3705,39 @@ void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> ca
         }
     }
 }
+
+void ProjectBuilder::addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission){
+    if (label.empty()){
+        std::cout << "Failed to add band. Please specify a band label." << std::endl;
+        return;
+    }
+    if (bandlabels_set.find(label) != bandlabels_set.end()){
+        std::cout << "Failed to add band. Band with the specified name already exists." << std::endl;
+        return;
+    }
+    // TODO: error checking for wavelengths
+    bandlabels.push_back(label);
+    bandlabels_set.insert(label);
+    primitive_values[label] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                 {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                 {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                 {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                 {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                 {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                 {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                 {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                 {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+    radiation->addRadiationBand(label,wavelength_min,wavelength_max);
+    if (!enable_emission){
+        radiation->disableEmission(label);
+    } else{
+        bandlabels_set_emissivity.insert(label);
+    }
+    radiation->setDirectRayCount(label, direct_ray_count);
+    direct_ray_count_dict.insert({label, direct_ray_count});
+    radiation->setDiffuseRayCount(label, diffuse_ray_count);
+    diffuse_ray_count_dict.insert({label, diffuse_ray_count});
+    radiation->setScatteringDepth(label, scattering_depth);
+    scattering_depth_dict.insert({label, scattering_depth});
+}
+
