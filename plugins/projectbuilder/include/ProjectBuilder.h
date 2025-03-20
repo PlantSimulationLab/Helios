@@ -418,7 +418,10 @@ class ProjectBuilder {
     std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
 
     //! Vector of canopy labels
-    std::vector<std::string> labels;
+    std::vector<std::string> canopy_labels;
+
+    //! Vector of data labels for each canopy
+    std::vector<std::string> canopy_data_labels;
 
     //! Canopy origin
     helios::vec3 canopy_origin = {0,0,0};
@@ -460,7 +463,7 @@ class ProjectBuilder {
     std::vector<float> ground_clipping_heights;
 
     //! Map of canopy name to canopy index
-    std::map<std::string, int> canopy_labels;
+    std::map<std::string, int> canopy_labels_dict;
 
     //! Vector of canopy UUIDs for each canopy
     std::vector<std::vector<uint>> canopy_UUIDs;
@@ -741,6 +744,9 @@ class ProjectBuilder {
 
     //! Currently selected primitive in the GUI
     std::string current_primitive = "All";
+
+    //! Currently selected data group in the GUI
+    std::string current_data_group = "All";
 
     //! Currently selected band in the GUI
     std::string current_band = "red";
@@ -1181,9 +1187,6 @@ class ProjectBuilder {
 
     //! Constructor
     ProjectBuilder(){
-      primitive_addresses = {{"ground", &ground_UUIDs}, {"leaf", &leaf_UUIDs}, {"petiolule", &petiolule_UUIDs},
-                             {"petiole", &petiole_UUIDs}, {"internode", &internode_UUIDs}, {"peduncle", &peduncle_UUIDs},
-                             {"petal", &petal_UUIDs}, {"pedicel", &pedicel_UUIDs}, {"fruit", &fruit_UUIDs}};
       primitive_UUIDs = {{"ground", ground_UUIDs}, {"leaf", leaf_UUIDs}, {"petiolule", petiolule_UUIDs},
                          {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
                          {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};
