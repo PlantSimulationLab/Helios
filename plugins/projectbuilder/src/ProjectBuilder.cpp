@@ -437,6 +437,64 @@ void ProjectBuilder::updateSpectra(){
             }
         }
     }
+    std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    for (uint UUID : all_UUIDs){
+        if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
+        // Get data group of UUID
+        std::string curr_data_group;
+        context->getPrimitiveData(UUID, "data_group", curr_data_group);
+        // Get primitive type of UUID
+        std::string curr_prim_type;
+        if ( context->doesPrimitiveDataExist(UUID, "object_label") ){
+            context->getPrimitiveData(UUID, "object_label", curr_prim_type);
+        } else{
+            curr_prim_type = "All";
+        }
+        if (primitive_continuous_dict[curr_data_group][curr_prim_type].empty()) continue;
+        if (!primitive_continuous_dict[curr_data_group][curr_prim_type][0]){
+            for (std::string band : bandlabels){
+                float reflectivity = primitive_values_dict[curr_data_group][band][curr_prim_type][0];
+                std::string reflectivity_band = "reflectivity_" + band;
+                context->setPrimitiveData(UUID, reflectivity_band.c_str(), reflectivity);
+            }
+        }else{
+            std::string reflectivity_spectrum = primitive_spectra_dict[curr_data_group][curr_prim_type][0];
+            if( !reflectivity_spectrum.empty() ){
+                context->setPrimitiveData( UUID, "reflectivity_spectrum", reflectivity_spectrum );
+            }else{
+                std::cout << "WARNING: No value given for '" << curr_prim_type << "_reflectivity_spectrum'. Assuming " << curr_prim_type << " primitives are black across all shortwave bands." << std::endl;
+            }
+        }
+        if (!primitive_continuous_dict[curr_data_group][curr_prim_type][1]){
+            for (std::string band : bandlabels){
+                float transmissivity = primitive_values_dict[curr_data_group][band][curr_prim_type][1];
+                std::string transmissivity_band = "transmissivity_" + band;
+                context->setPrimitiveData(UUID, transmissivity_band.c_str(), transmissivity);
+            }
+        }else{
+            std::string transmissivity_spectrum = primitive_spectra_dict[curr_data_group][curr_prim_type][1];
+            if( !transmissivity_spectrum.empty() ){
+                context->setPrimitiveData( UUID, "transmissivity_spectrum", transmissivity_spectrum );
+            }else{
+                std::cout << "WARNING: No value given for '" << curr_prim_type << "_transmissivity_spectrum'. Assuming " << curr_prim_type << " primitives are black across all shortwave bands." << std::endl;
+            }
+        }
+        if (!primitive_continuous_dict[curr_data_group][curr_prim_type][2]){
+            for (std::string band : bandlabels){
+                if (bandlabels_set_emissivity.find(band) != bandlabels_set_emissivity.end()) continue;
+                float emissivity = primitive_values_dict[curr_data_group][band][curr_prim_type][2];
+                std::string emissivity_band = "emissivity_" + band;
+                context->setPrimitiveData(UUID, emissivity_band.c_str(), emissivity);
+            }
+        }else{
+            std::string emissivity_spectrum = primitive_spectra_dict[curr_data_group][curr_prim_type][2];
+            if( !emissivity_spectrum.empty() ){
+                context->setPrimitiveData( UUID, "emissivity_spectrum", emissivity_spectrum );
+            }else{
+                std::cout << "WARNING: No value given for '" << curr_prim_type << "_emissivity_spectrum'. Assuming " << curr_prim_type << " primitives are black across all shortwave bands." << std::endl;
+            }
+        }
+    }
 }
 
 void ProjectBuilder::updateCameras(){
@@ -1988,7 +2046,7 @@ void ProjectBuilder::visualize(){
                                 obj_orientations.push_back(vec3(0, 0, 0));
                                 obj_scales.push_back(vec3(0, 0, 0));
                                 obj_colors.push_back(RGBcolor(0, 0, 1));
-                                obj_data_groups.push_back("default");
+                                obj_data_groups.push_back("");
                                 std::string parent = "object";
                                 pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
                                 std::string name = "label";
@@ -2048,7 +2106,15 @@ void ProjectBuilder::visualize(){
                         if (!current_obj.empty()){
                             // ####### OBJECT DATA GROUP ####### //
                             ImGui::SetNextItemWidth(100);
+                            std::string prev_obj_data_group = obj_data_groups[obj_names_dict[current_obj]];
                             ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
+                            if (obj_data_groups[obj_names_dict[current_obj]] == "All" || obj_data_groups[obj_names_dict[current_obj]].empty()){
+                                obj_data_groups[obj_names_dict[current_obj]] = prev_obj_data_group;
+                            }
+                            if (!obj_data_groups[obj_names_dict[current_obj]].empty() && prev_obj_data_group != obj_data_groups[obj_names_dict[current_obj]]){
+                                std::string new_data_group = obj_data_groups[obj_names_dict[current_obj]];
+                                context->setPrimitiveData(obj_UUIDs[obj_names_dict[current_obj]], "data_group", new_data_group);
+                            }
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
                             // ####### OBJECT SCALE ####### //
@@ -2175,18 +2241,21 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     ImGui::Text("Canopy Name");
-                    // Data Group
+                    // ######### CANOPY DATA GROUP ####### //
                     ImGui::SetNextItemWidth(100);
-                    std::string prev_data_group = canopy_labels[canopy_labels_dict[current_canopy]];
-                    ImGui::InputText("##canopy_data_group", &canopy_labels[canopy_labels_dict[current_canopy]]);
-                    if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name){
-                        int temp = canopy_labels_dict[current_canopy];
-                        current_canopy = canopy_labels[canopy_labels_dict[current_canopy]];
-                        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
-                        if (current_canopy_iter != canopy_labels_dict.end()){
-                            canopy_labels_dict.erase(current_canopy_iter);
+                    std::string prev_canopy_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
+                    ImGui::InputText("##canopy_data_group", &canopy_data_groups[canopy_labels_dict[current_canopy]]);
+                    if (canopy_data_groups[canopy_labels_dict[current_canopy]] == "All" || canopy_data_groups[canopy_labels_dict[current_canopy]].empty()){
+                        canopy_data_groups[canopy_labels_dict[current_canopy]] = prev_canopy_data_group;
+                    }
+                    if (!canopy_data_groups[canopy_labels_dict[current_canopy]].empty() && prev_canopy_data_group != canopy_data_groups[canopy_labels_dict[current_canopy]]){
+                        std::string new_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
+                        std::vector<uint> canopy_primID_vec;
+                        for (int i = 0; i < canopy_UUIDs[canopy_labels_dict[current_canopy]].size(); i++){
+                            std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_UUIDs[canopy_labels_dict[current_canopy]][i]);
+                            canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
                         }
-                        canopy_labels_dict[current_canopy] = temp;
+                        context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
                     }
                     ImGui::SameLine();
                     ImGui::Text("Data Group");
@@ -2412,24 +2481,45 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     ImGui::SetNextItemWidth(100);
                     // ######### SELECT DATA GROUP ############//
-                    // if (ImGui::Button("Refresh")){
-                    //     // update data groups
-                    // }
-                    // ImGui::SameLine();
-                    // ImGui::SetNextItemWidth(150);
-                    // if (ImGui::BeginCombo("##data_group_primitive", current_data_group.c_str())){
-                    //     for (int m = 0; m < primitive_names.size(); m++){
-                    //         bool is_primitive_selected = (current_primitive == primitive_names[m]);
-                    //         if (ImGui::Selectable(primitive_names[m].c_str(), is_primitive_selected))
-                    //             current_primitive = primitive_names[m];
-                    //         if (is_primitive_selected)
-                    //             ImGui::SetItemDefaultFocus();
-                    //     }
-                    //     ImGui::EndCombo();
-                    // }
-                    // ImGui::SameLine();
-                    // ImGui::SetNextItemWidth(100);
-                    // ImGui::Text("Select Data Group");
+                    if (ImGui::Button("Refresh###data_groups_refresh")){
+                        data_groups_set.clear();
+                        data_groups_set.insert("All");
+                        std::vector<uint> all_UUIDs = context->getAllUUIDs();
+                        for (uint UUID : all_UUIDs){
+                            std::string curr_data_group = "";
+                            if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
+                            context->getPrimitiveData(UUID, "data_group", curr_data_group);
+                            if (!curr_data_group.empty()){
+                                data_groups_set.insert(curr_data_group);
+                            }
+                        }
+                        for (std::string data_group : data_groups_set){ //initialize new data_groups if necessary
+                            if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()){
+                                primitive_continuous_dict[data_group] = primitive_continuous;
+                            }
+                            if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()){
+                                primitive_spectra_dict[data_group] = primitive_spectra;
+                            }
+                            if (primitive_values_dict.find(data_group) == primitive_values_dict.end()){
+                                primitive_values_dict[data_group] = primitive_values;
+                            }
+                        }
+                    }
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(150);
+                    if (ImGui::BeginCombo("##data_group_primitive", current_data_group.c_str())){
+                        for (std::string data_group : data_groups_set){
+                            bool is_data_group_selected = (current_data_group == data_group);
+                            if (ImGui::Selectable(data_group.c_str(), is_data_group_selected))
+                                current_data_group = data_group;
+                            if (is_data_group_selected)
+                                ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::Text("Select Data Group");
                     // default primitive data group
                     // ######### SELECT PRIMITIVE ############//
                     if (ImGui::Button("Refresh")){
@@ -2450,33 +2540,155 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
                     ImGui::Text("Select Primitive Type");
-                    // REFLECTIVITY
-                    ImGui::Text("Reflectivity:");
-                    std::string toggle_display_reflectivity = "Manual Entry";
-                    bool reflectivity_continuous = primitive_continuous[current_primitive][0];
-                    toggle_button("##reflectivity_toggle", &reflectivity_continuous);
-                    if (reflectivity_continuous != primitive_continuous[current_primitive][0]){
-                        if (current_primitive == "All"){
-                            for (auto &prim_values : primitive_continuous){
-                                primitive_continuous[prim_values.first][0] = reflectivity_continuous;
+                    if (current_data_group == "All"){
+                        // REFLECTIVITY
+                        ImGui::Text("Reflectivity:");
+                        std::string toggle_display_reflectivity = "Manual Entry";
+                        bool reflectivity_continuous = primitive_continuous[current_primitive][0];
+                        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
+                        if (reflectivity_continuous != primitive_continuous[current_primitive][0]){
+                            if (current_primitive == "All"){
+                                for (auto &prim_values : primitive_continuous){
+                                    primitive_continuous[prim_values.first][0] = reflectivity_continuous;
+                                }
+                            }
+                            primitive_continuous[current_primitive][0] = reflectivity_continuous;
+                        }
+                        if (primitive_continuous[current_primitive][0]){
+                            toggle_display_reflectivity = "File Entry";
+                        }
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(250);
+                        if (!primitive_continuous[current_primitive][0]){
+                            ImGui::Text("Select band:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())){
+                                for (int n = 0; n < bandlabels.size(); n++){
+                                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
+                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                                        current_band_reflectivity = bandlabels[n];
+                                    if (is_band_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            ImGui::SameLine();
+                            ImGui::Text("Enter value:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(80);
+                            if (current_primitive == "All"){
+                                float prev_reflectivity = reflectivity;
+                                ImGui::InputFloat("##reflectivity_all", &reflectivity);
+                                if (reflectivity != prev_reflectivity){
+                                    for (auto &prim_values : primitive_values[current_band_reflectivity]){
+                                        primitive_values[current_band_reflectivity][prim_values.first][0] = reflectivity;
+                                    }
+                                }
+                            }else{
+                                ImGui::InputFloat("##reflectivity", &primitive_values[current_band_reflectivity][current_primitive][0]);
+                            }
+                        }else{
+                            std::string reflectivity_prev = primitive_spectra[current_primitive][0];
+                            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
+                                for (int n = 0; n < possible_spectra.size(); n++){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == possible_spectra[n]);
+                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][0] = possible_spectra[n];
+                                    if (is_spectra_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            if (current_primitive == "All" && reflectivity_prev != primitive_spectra[current_primitive][0]){
+                                for (auto &prim_spectrum : primitive_spectra){
+                                    primitive_spectra[prim_spectrum.first][0] = primitive_spectra[current_primitive][0];
+                                }
                             }
                         }
-                        primitive_continuous[current_primitive][0] = reflectivity_continuous;
-                    }
-                    if (primitive_continuous[current_primitive][0]){
-                        toggle_display_reflectivity = "File Entry";
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(250);
-                    if (!primitive_continuous[current_primitive][0]){
+                        ImGui::SameLine();
+                        ImGui::Text(toggle_display_reflectivity.c_str());
+                        // TRANSMISSIVITY
+                        ImGui::Text("Transmissivity:");
+                        std::string toggle_display_transmissivity = "Manual Entry";
+                        bool transmissivity_continuous = primitive_continuous[current_primitive][1];
+                        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
+                        if (transmissivity_continuous != primitive_continuous[current_primitive][1]){
+                            if (current_primitive == "All"){
+                                for (auto &prim_values : primitive_continuous){
+                                    primitive_continuous[prim_values.first][1] = transmissivity_continuous;
+                                }
+                            }
+                            primitive_continuous[current_primitive][1] = transmissivity_continuous;
+                        }
+                        if (primitive_continuous[current_primitive][1]){
+                            toggle_display_transmissivity = "File Entry";
+                        }
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(250);
+                        if (!primitive_continuous[current_primitive][1]){
+                            ImGui::Text("Select band:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())){
+                                for (int n = 0; n < bandlabels.size(); n++){
+                                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
+                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                                        current_band_transmissivity = bandlabels[n];
+                                    if (is_band_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            ImGui::SameLine();
+                            ImGui::Text("Enter value:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(80);
+                            if (current_primitive == "All"){
+                                float prev_transmissivity = transmissivity;
+                                ImGui::InputFloat("##transmissivity_all", &transmissivity);
+                                if (transmissivity != prev_transmissivity){
+                                    for (auto &prim_values : primitive_values[current_band_transmissivity]){
+                                        primitive_values[current_band_transmissivity][prim_values.first][1] = transmissivity;
+                                    }
+                                }
+                            }else{
+                                ImGui::InputFloat("##transmissivity", &primitive_values[current_band_transmissivity][current_primitive][1]);
+                            }
+                        }else{
+                            std::string transmissivity_prev = primitive_spectra[current_primitive][1];
+                            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
+                                for (int n = 0; n < possible_spectra.size(); n++){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == possible_spectra[n]);
+                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][1] = possible_spectra[n];
+                                    if (is_spectra_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            if (current_primitive == "All" && transmissivity_prev != primitive_spectra[current_primitive][1]){
+                                for (auto &prim_spectrum : primitive_spectra){
+                                    primitive_spectra[prim_spectrum.first][1] = primitive_spectra[current_primitive][1];
+                                }
+                            }
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text(toggle_display_transmissivity.c_str());
+                        // EMISSIVITY
+                        ImGui::Text("Emissivity:");
+                        // ImGui::SetNextItemWidth(250);
+                        // ImGui::Text("");
+                        ImGui::Dummy(ImVec2(35.f, 0.f));
+                        ImGui::SameLine();
                         ImGui::Text("Select band:");
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
-                        if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())){
-                            for (int n = 0; n < bandlabels.size(); n++){
-                                bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
-                                if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                    current_band_reflectivity = bandlabels[n];
+                        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())){
+                            for (std::string band : bandlabels_set_emissivity){
+                                bool is_band_selected = (current_band_emissivity == band);
+                                if (ImGui::Selectable(band.c_str(), is_band_selected))
+                                    current_band_emissivity = band;
                                 if (is_band_selected)
                                     ImGui::SetItemDefaultFocus();
                             }
@@ -2487,63 +2699,167 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(80);
                         if (current_primitive == "All"){
-                            float prev_reflectivity = reflectivity;
-                            ImGui::InputFloat("##reflectivity_all", &reflectivity);
-                            if (reflectivity != prev_reflectivity){
-                                for (auto &prim_values : primitive_values[current_band_reflectivity]){
-                                    primitive_values[current_band_reflectivity][prim_values.first][0] = reflectivity;
+                            float prev_emissivity = emissivity;
+                            ImGui::InputFloat("##emissivity_all", &emissivity);
+                            if (emissivity != prev_emissivity){
+                                for (auto &prim_values : primitive_values[current_band_emissivity]){
+                                    primitive_values[current_band_emissivity][prim_values.first][2] = emissivity;
                                 }
                             }
                         }else{
-                            ImGui::InputFloat("##reflectivity", &primitive_values[current_band_reflectivity][current_primitive][0]);
+                            ImGui::InputFloat("##emissivity", &primitive_values[current_band_emissivity][current_primitive][2]);
                         }
-                    }else{
-                        std::string reflectivity_prev = primitive_spectra[current_primitive][0];
-                        if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
-                            for (int n = 0; n < possible_spectra.size(); n++){
-                                bool is_spectra_selected = (primitive_spectra[current_primitive][0] == possible_spectra[n]);
-                                if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                    primitive_spectra[current_primitive][0] = possible_spectra[n];
-                                if (is_spectra_selected)
-                                    ImGui::SetItemDefaultFocus();
+                        ImGui::SameLine();
+                        ImGui::Text("Manual Entry");
+                    } else{ // specific data group
+                        // REFLECTIVITY
+                        ImGui::Text("Reflectivity:");
+                        std::string toggle_display_reflectivity = "Manual Entry";
+                        bool reflectivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][0];
+                        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
+                        if (reflectivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][0]){
+                            if (current_primitive == "All"){
+                                for (auto &prim_values : primitive_continuous_dict[current_data_group]){
+                                    primitive_continuous_dict[current_data_group][prim_values.first][0] = reflectivity_continuous;
+                                }
                             }
-                            ImGui::EndCombo();
+                            primitive_continuous_dict[current_data_group][current_primitive][0] = reflectivity_continuous;
                         }
-                        if (current_primitive == "All" && reflectivity_prev != primitive_spectra[current_primitive][0]){
-                            for (auto &prim_spectrum : primitive_spectra){
-                                primitive_spectra[prim_spectrum.first][0] = primitive_spectra[current_primitive][0];
+                        if (primitive_continuous_dict[current_data_group][current_primitive][0]){
+                            toggle_display_reflectivity = "File Entry";
+                        }
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(250);
+                        if (!primitive_continuous_dict[current_data_group][current_primitive][0]){
+                            ImGui::Text("Select band:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())){
+                                for (int n = 0; n < bandlabels.size(); n++){
+                                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
+                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                                        current_band_reflectivity = bandlabels[n];
+                                    if (is_band_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            ImGui::SameLine();
+                            ImGui::Text("Enter value:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(80);
+                            if (current_primitive == "All"){
+                                float prev_reflectivity = reflectivity;
+                                ImGui::InputFloat("##reflectivity_all", &reflectivity);
+                                if (reflectivity != prev_reflectivity){
+                                    for (auto &prim_values : primitive_values_dict[current_data_group][current_band_reflectivity]){
+                                        primitive_values_dict[current_data_group][current_band_reflectivity][prim_values.first][0] = reflectivity;
+                                    }
+                                }
+                            }else{
+                                ImGui::InputFloat("##reflectivity", &primitive_values_dict[current_data_group][current_band_reflectivity][current_primitive][0]);
+                            }
+                        }else{
+                            std::string reflectivity_prev = primitive_spectra_dict[current_data_group][current_primitive][0];
+                            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
+                                for (int n = 0; n < possible_spectra.size(); n++){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == possible_spectra[n]);
+                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][0] = possible_spectra[n];
+                                    if (is_spectra_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            if (current_primitive == "All" && reflectivity_prev != primitive_spectra_dict[current_data_group][current_primitive][0]){
+                                for (auto &prim_spectrum : primitive_spectra_dict[current_data_group]){
+                                    primitive_spectra_dict[current_data_group][prim_spectrum.first][0] = primitive_spectra_dict[current_data_group][current_primitive][0];
+                                }
                             }
                         }
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text(toggle_display_reflectivity.c_str());
-                    // TRANSMISSIVITY
-                    ImGui::Text("Transmissivity:");
-                    std::string toggle_display_transmissivity = "Manual Entry";
-                    bool transmissivity_continuous = primitive_continuous[current_primitive][1];
-                    toggle_button("##transmissivity_toggle", &transmissivity_continuous);
-                    if (transmissivity_continuous != primitive_continuous[current_primitive][1]){
-                        if (current_primitive == "All"){
-                            for (auto &prim_values : primitive_continuous){
-                                primitive_continuous[prim_values.first][1] = transmissivity_continuous;
+                        ImGui::SameLine();
+                        ImGui::Text(toggle_display_reflectivity.c_str());
+                        // TRANSMISSIVITY
+                        ImGui::Text("Transmissivity:");
+                        std::string toggle_display_transmissivity = "Manual Entry";
+                        bool transmissivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][1];
+                        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
+                        if (transmissivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][1]){
+                            if (current_primitive == "All"){
+                                for (auto &prim_values : primitive_continuous_dict[current_data_group]){
+                                    primitive_continuous_dict[current_data_group][prim_values.first][1] = transmissivity_continuous;
+                                }
+                            }
+                            primitive_continuous_dict[current_data_group][current_primitive][1] = transmissivity_continuous;
+                        }
+                        if (primitive_continuous_dict[current_data_group][current_primitive][1]){
+                            toggle_display_transmissivity = "File Entry";
+                        }
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(250);
+                        if (!primitive_continuous_dict[current_data_group][current_primitive][1]){
+                            ImGui::Text("Select band:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(60);
+                            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())){
+                                for (int n = 0; n < bandlabels.size(); n++){
+                                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
+                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                                        current_band_transmissivity = bandlabels[n];
+                                    if (is_band_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            ImGui::SameLine();
+                            ImGui::Text("Enter value:");
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(80);
+                            if (current_primitive == "All"){
+                                float prev_transmissivity = transmissivity;
+                                ImGui::InputFloat("##transmissivity_all", &transmissivity);
+                                if (transmissivity != prev_transmissivity){
+                                    for (auto &prim_values : primitive_values_dict[current_data_group][current_band_transmissivity]){
+                                        primitive_values_dict[current_data_group][current_band_transmissivity][prim_values.first][1] = transmissivity;
+                                    }
+                                }
+                            }else{
+                                ImGui::InputFloat("##transmissivity", &primitive_values_dict[current_data_group][current_band_transmissivity][current_primitive][1]);
+                            }
+                        }else{
+                            std::string transmissivity_prev = primitive_spectra_dict[current_data_group][current_primitive][1];
+                            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
+                                for (int n = 0; n < possible_spectra.size(); n++){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == possible_spectra[n]);
+                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][1] = possible_spectra[n];
+                                    if (is_spectra_selected)
+                                        ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                            if (current_primitive == "All" && transmissivity_prev != primitive_spectra_dict[current_data_group][current_primitive][1]){
+                                for (auto &prim_spectrum : primitive_spectra_dict[current_data_group]){
+                                    primitive_spectra_dict[current_data_group][prim_spectrum.first][1] = primitive_spectra_dict[current_data_group][current_primitive][1];
+                                }
                             }
                         }
-                        primitive_continuous[current_primitive][1] = transmissivity_continuous;
-                    }
-                    if (primitive_continuous[current_primitive][1]){
-                        toggle_display_transmissivity = "File Entry";
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(250);
-                    if (!primitive_continuous[current_primitive][1]){
+                        ImGui::SameLine();
+                        ImGui::Text(toggle_display_transmissivity.c_str());
+                        // EMISSIVITY
+                        ImGui::Text("Emissivity:");
+                        // ImGui::SetNextItemWidth(250);
+                        // ImGui::Text("");
+                        ImGui::Dummy(ImVec2(35.f, 0.f));
+                        ImGui::SameLine();
                         ImGui::Text("Select band:");
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
-                        if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())){
-                            for (int n = 0; n < bandlabels.size(); n++){
-                                bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
-                                if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                    current_band_transmissivity = bandlabels[n];
+                        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())){
+                            for (std::string band : bandlabels_set_emissivity){
+                                bool is_band_selected = (current_band_emissivity == band);
+                                if (ImGui::Selectable(band.c_str(), is_band_selected))
+                                    current_band_emissivity = band;
                                 if (is_band_selected)
                                     ImGui::SetItemDefaultFocus();
                             }
@@ -2554,72 +2870,19 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(80);
                         if (current_primitive == "All"){
-                            float prev_transmissivity = transmissivity;
-                            ImGui::InputFloat("##transmissivity_all", &transmissivity);
-                            if (transmissivity != prev_transmissivity){
-                                for (auto &prim_values : primitive_values[current_band_transmissivity]){
-                                    primitive_values[current_band_transmissivity][prim_values.first][1] = transmissivity;
+                            float prev_emissivity = emissivity;
+                            ImGui::InputFloat("##emissivity_all", &emissivity);
+                            if (emissivity != prev_emissivity){
+                                for (auto &prim_values : primitive_values_dict[current_data_group][current_band_emissivity]){
+                                    primitive_values_dict[current_data_group][current_band_emissivity][prim_values.first][2] = emissivity;
                                 }
                             }
                         }else{
-                            ImGui::InputFloat("##transmissivity", &primitive_values[current_band_transmissivity][current_primitive][1]);
+                            ImGui::InputFloat("##emissivity", &primitive_values_dict[current_data_group][current_band_emissivity][current_primitive][2]);
                         }
-                    }else{
-                        std::string transmissivity_prev = primitive_spectra[current_primitive][1];
-                        if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
-                            for (int n = 0; n < possible_spectra.size(); n++){
-                                bool is_spectra_selected = (primitive_spectra[current_primitive][1] == possible_spectra[n]);
-                                if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                    primitive_spectra[current_primitive][1] = possible_spectra[n];
-                                if (is_spectra_selected)
-                                    ImGui::SetItemDefaultFocus();
-                            }
-                            ImGui::EndCombo();
-                        }
-                        if (current_primitive == "All" && transmissivity_prev != primitive_spectra[current_primitive][1]){
-                            for (auto &prim_spectrum : primitive_spectra){
-                                primitive_spectra[prim_spectrum.first][1] = primitive_spectra[current_primitive][1];
-                            }
-                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Manual Entry");
                     }
-                    ImGui::SameLine();
-                    ImGui::Text(toggle_display_transmissivity.c_str());
-                    // EMISSIVITY
-                    ImGui::Text("Emissivity:");
-                    // ImGui::SetNextItemWidth(250);
-                    // ImGui::Text("");
-                    ImGui::Dummy(ImVec2(35.f, 0.f));
-                    ImGui::SameLine();
-                    ImGui::Text("Select band:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())){
-                        for (std::string band : bandlabels_set_emissivity){
-                            bool is_band_selected = (current_band_emissivity == band);
-                            if (ImGui::Selectable(band.c_str(), is_band_selected))
-                                current_band_emissivity = band;
-                            if (is_band_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Enter value:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(80);
-                    if (current_primitive == "All"){
-                        float prev_emissivity = emissivity;
-                        ImGui::InputFloat("##emissivity_all", &emissivity);
-                        if (emissivity != prev_emissivity){
-                            for (auto &prim_values : primitive_values[current_band_emissivity]){
-                                primitive_values[current_band_emissivity][prim_values.first][2] = emissivity;
-                            }
-                        }
-                    }else{
-                        ImGui::InputFloat("##emissivity", &primitive_values[current_band_emissivity][current_primitive][2]);
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Manual Entry");
 
                     ImGui::EndTabItem();
                 }
@@ -3223,6 +3486,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("plant_library_name", "canopy_block", plant_library_names);
     xmlSetValues("plant_age", "canopy_block", plant_ages);
     xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    xmlSetValues("data_group", "canopy", canopy_data_groups);
     // RIG BLOCK
     rig_dict = setNodeLabels("label", "rig", rig_labels);
     // xmlSetValue("camera_position", "rig", camera_position);
@@ -3343,6 +3607,7 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("orientation", "object", obj_orientations);
     xmlGetValues("scale", "object", obj_scales);
     // xmlGetValues("color", "object", obj_colors);
+    obj_data_groups.clear();
     xmlGetValues("data_group", "object", obj_data_groups);
     // CANOPY BLOCK
     canopy_labels.clear();
@@ -3366,6 +3631,8 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("plant_age", "canopy_block", plant_ages);
     ground_clipping_heights.clear();
     xmlGetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
+    canopy_data_groups.clear();
+    xmlGetValues("data_group", "canopy_block", canopy_data_groups);
     // RIG BLOCK
     rig_labels.clear();
     rig_dict = getNodeLabels("label", "rig", rig_labels);
@@ -3534,11 +3801,6 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     }
     ImGui::SameLine();
     ImGui::Text("Object Name");
-    // ####### OBJECT DATA GROUP ####### //
-    ImGui::SetNextItemWidth(100);
-    ImGui::InputText(("##obj_data_group_" + std::to_string(id)).c_str(), &obj_data_groups[obj_names_dict[curr_obj_name]]);
-    ImGui::SameLine();
-    ImGui::Text("Data Group");
     // ####### OBJECT SCALE ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].x);
@@ -3744,7 +4006,8 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
     // TODO: error checking for wavelengths
     bandlabels.push_back(label);
     bandlabels_set.insert(label);
-    primitive_values[label] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+    primitive_values[label] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                 {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
                                  {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
                                  {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
                                  {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
@@ -3753,6 +4016,18 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
                                  {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
                                  {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
                                  {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+    for (auto &primitive_values_pair : primitive_values_dict){
+        primitive_values_dict[primitive_values_pair.first][label] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                 {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                 {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                 {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                 {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                 {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                 {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                 {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                 {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                 {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+    }
     radiation->addRadiationBand(label,wavelength_min,wavelength_max);
     if (!enable_emission){
         radiation->disableEmission(label);

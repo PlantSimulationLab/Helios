@@ -17,6 +17,7 @@
 		<plant_library_name>cowpea</plant_library_name>
 		<plant_age>13.000000</plant_age>
 		<ground_clipping_height>0.000000</ground_clipping_height>
+		<data_group></data_group>
 	</canopy_block>
 	<canopy_block label="canopy_1">
 		<canopy_origin>0 0 0</canopy_origin>
@@ -25,6 +26,7 @@
 		<plant_library_name>cowpea</plant_library_name>
 		<plant_age>15.000000</plant_age>
 		<ground_clipping_height>0.000000</ground_clipping_height>
+		<data_group></data_group>
 	</canopy_block>
 	<radiation>
 		<direct_ray_count>100</direct_ray_count>

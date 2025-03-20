@@ -236,14 +236,29 @@ class ProjectBuilder {
     //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
     std::map<std::string, std::vector<uint>> primitive_UUIDs;
 
+    //! Map keyed by data group name that returns a map of primitive UUIDs for each primitive name in the data group
+    std::map<std::string, std::map<std::string, std::vector<uint>>> primitive_UUIDs_dict;
+
     //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
     std::map<std::string, std::vector<bool>> primitive_continuous;
 
+    //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
+    std::map<std::string, std::map<std::string, std::vector<bool>>> primitive_continuous_dict;
+
     //! Map keyed by primitive names that returns spectra (reflectivity, transmissivity, emissivity)
-    std::map<std::string,  std::vector<std::string>> primitive_spectra;
+    std::map<std::string, std::vector<std::string>> primitive_spectra;
+
+    //! Map keyed by data group that returns a map of primitive spectra information for that data group
+    std::map<std::string, std::map<std::string, std::vector<std::string>>> primitive_spectra_dict;
 
     //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
     std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
+
+    //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
+    std::map<std::string, std::map<std::string, std::map<std::string, std::vector<float>>>> primitive_values_dict;
+
+    //! Set of data group names
+    std::set<std::string> data_groups_set = {"All"};
 
     //! Ground area
     float ground_area;
@@ -421,7 +436,7 @@ class ProjectBuilder {
     std::vector<std::string> canopy_labels;
 
     //! Vector of data labels for each canopy
-    std::vector<std::string> canopy_data_labels;
+    std::vector<std::string> canopy_data_groups;
 
     //! Canopy origin
     helios::vec3 canopy_origin = {0,0,0};
@@ -1188,8 +1203,8 @@ class ProjectBuilder {
     //! Constructor
     ProjectBuilder(){
       primitive_UUIDs = {{"ground", ground_UUIDs}, {"leaf", leaf_UUIDs}, {"petiolule", petiolule_UUIDs},
-                         {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
-                         {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};
+                          {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
+                          {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};
       primitive_continuous = {{"All", {false, false, false}}, {"ground", {false, false, false}}, {"leaf", {false, false, false}},
                                 {"petiolule", {false, false, false}}, {"petiole", {false, false, false}}, {"internode", {false, false, false}},
                                 {"peduncle", {false, false, false}}, {"petal", {false, false, false}},
@@ -1200,7 +1215,8 @@ class ProjectBuilder {
       // bandlabels = {"red", "green", "blue"};
       // bandlabels_set = {"All", "red", "green", "blue"};
       for (std::string band : bandlabels){
-           primitive_values[band] = {{"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+           primitive_values[band] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                       {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
                                        {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
                                        {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
                                        {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
