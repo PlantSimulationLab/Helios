@@ -2247,7 +2247,7 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     auto &segment = shoot->shoot_internode_radii.at(node_number);
     for( float &radius : segment  ) {
         if( phytomer_radius > radius ) { //radius should only increase
-            radius = phytomer_radius;
+            radius = radius + 0.5*(phytomer_radius - radius);
         }
     }
 
@@ -2966,6 +2966,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
+    //std::cout << "carbon enabled: " << carbon_model_enabled ;
     PlantInstance &plant_instance = plant_instances.at(plantID);
 
     auto shoot_tree = &plant_instance.shoot_tree;
@@ -2993,7 +2994,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
             dt_max = remainder_time;
         }
-
+        std::cout << "timestep: " << timestep << std::endl;
         // **** accumulate photosynthate **** //
         if( carbon_model_enabled ){
             accumulateShootPhotosynthesis();
@@ -3004,7 +3005,6 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         } else if (plant_instance.current_age >= plant_instance.max_age) {
             //update Context geometry
             shoot_tree->front()->updateShootNodes(true);
-            return;
         }
 
         plant_instance.current_age += dt_max;
@@ -3170,6 +3170,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
                 // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
                 uint parent_petiole_index = 0;
+
                 for (auto &petiole: phytomer->axillary_vegetative_buds) {
                     for (auto &vbud: petiole) {
 
@@ -3313,12 +3314,14 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         }
 
         // **** subtract maintenance carbon costs **** //
+        std::cout << "is carbon enabled: " << carbon_model_enabled << std::endl;
         if( carbon_model_enabled ){
             subtractShootMaintenanceCarbon(time_step_days);
             subtractShootGrowthCarbon();
             checkCarbonPool_adjustPhyllochron();
-            checkCarbonPool_abortBuds();
+            checkCarbonPool_abortOrgans();
             checkCarbonPool_transferCarbon();
+            std::cout << "ENABLED " <<std::endl;
         }
     }
 

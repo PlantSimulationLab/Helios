@@ -1031,7 +1031,7 @@ struct Shoot {
     const uint parent_petiole_index;
 
     float carbohydrate_pool_molC = 0;  // mol C
-    float old_shoot_volume;
+    float old_shoot_volume = 0;
 
     float phyllochron_increase = 2;
     float phyllochron_recovery = phyllochron_increase * 1.5;
@@ -1661,7 +1661,7 @@ protected:
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortBuds();
+    void checkCarbonPool_abortOrgans();
     void checkCarbonPool_adjustPhyllochron();
     void checkCarbonPool_transferCarbon();
 
