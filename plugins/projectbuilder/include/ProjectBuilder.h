@@ -174,6 +174,9 @@ class ProjectBuilder {
     //! Set of band labels with emissivity enabled
     std::set<std::string> bandlabels_set_emissivity;
 
+    //! Set of band labels with wavelength range set
+    std::set<std::string> bandlabels_set_wavelength;
+
     //! Direct ray count map keyed by band label that returns the direct ray count for the specified band.
     std::map<std::string, int> direct_ray_count_dict;
 
@@ -191,6 +194,9 @@ class ProjectBuilder {
 
     //! New band wavelength max
     float wavelength_max = 700.0f;
+
+    //! New band enable wavelength
+    bool enable_wavelength;
 
     //! New band enable emission
     bool enable_emission;
@@ -407,6 +413,9 @@ class ProjectBuilder {
 
     //! Helios XML node
     pugi::xml_node helios;
+
+    //! Enable coordinate axes
+    bool enable_coordinate_axes = true;
 
     //! Latitude
     float latitude = 38.55;
@@ -846,6 +855,9 @@ class ProjectBuilder {
 
     //! Add radiation band
     void addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission);
+
+    //! Add radiation band with no specified wavelength
+    void addBand(std::string label, bool enable_emission);
 
   public:
     //! Context

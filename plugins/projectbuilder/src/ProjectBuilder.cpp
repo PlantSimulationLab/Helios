@@ -1917,6 +1917,29 @@ void ProjectBuilder::visualize(){
             if (ImGui::BeginTabBar("Settings#left_tabs_bar")){
                 if (ImGui::BeginTabItem("General")){
                     current_tab = "General";
+                    // ####### COORDINATE AXES ####### //
+                    bool enable_coords_ = enable_coordinate_axes;
+                    toggle_button("##coordinate_axes", &enable_coordinate_axes);
+                    if (enable_coords_ != enable_coordinate_axes){
+                        if (enable_coordinate_axes){
+                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
+                            visualizer->plotUpdate();
+                        } else{
+                            const char* font_name = "LCD";
+                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                            visualizer->plotUpdate();
+                            visualizer->clearGeometry();
+                            visualizer->buildContextGeometry(context);
+                            visualizer->plotUpdate();
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (enable_coordinate_axes){
+                        ImGui::Text("Coordinate Axes Enabled");
+                    } else{
+                        ImGui::Text("Coordinate Axes Disabled");
+                    }
                     // ####### LATITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
@@ -2374,31 +2397,46 @@ void ProjectBuilder::visualize(){
                     ImGui::Text("Solar Direct Spectrum");
                     // ####### BAND PROPERTIES ####### //
                     ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Band Properties:");
+                    ImGui::Text("Add Band:");
                     ImGui::SetWindowFontScale(1.0f);
                     // ####### ADD BAND ####### //
-                    if (ImGui::Button("Add Band")){
-                        addBand(new_band_label, wavelength_min, wavelength_max, enable_emission);
-                    }
+                    toggle_button("##enable_wavelength", &enable_wavelength);
                     ImGui::SameLine();
+                    if (enable_wavelength){
+                        ImGui::Text("Wavelength Min:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##wavelength_min", &wavelength_min);
+                        ImGui::SameLine();
+                        ImGui::Text("Wavelength Max:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##wavelength_max", &wavelength_max);
+                    } else{
+                        ImGui::Text("No Wavelength");
+                    }
+                    //
                     ImGui::Text("Label:");
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputText("##new_band_label", &new_band_label);
                     ImGui::SameLine();
-                    ImGui::Text("Wavelength Min:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##wavelength_min", &wavelength_min);
-                    ImGui::SameLine();
-                    ImGui::Text("Max:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##wavelength_max", &wavelength_max);
-                    ImGui::SameLine();
                     ImGui::Text("Emission:");
                     ImGui::SameLine();
                     ImGui::Checkbox("##enable_emission", &enable_emission);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Add Band")){
+                        if (enable_wavelength) {
+                            addBand(new_band_label, wavelength_min, wavelength_max, enable_emission);
+                        } else{
+                            addBand(new_band_label, enable_emission);
+                            bandlabels_set_wavelength.insert(new_band_label);
+                        }
+                    }
+                    // ####### BAND PROPERTIES ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Band Properties:");
+                    ImGui::SetWindowFontScale(1.0f);
                     // ####### SELECT BAND ####### //
                     if (ImGui::BeginCombo("##combo_current_band", current_band.c_str())){
                         for (std::string band : bandlabels_set){
@@ -4003,7 +4041,10 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
         std::cout << "Failed to add band. Band with the specified name already exists." << std::endl;
         return;
     }
-    // TODO: error checking for wavelengths
+    if (wavelength_min > wavelength_max){
+        std::cout << "Failed to add band. Invalid wavelength minimum and maximum." << std::endl;
+        return;
+    }
     bandlabels.push_back(label);
     bandlabels_set.insert(label);
     primitive_values[label] = {{"All", {reflectivity, transmissivity, emissivity}},
@@ -4029,6 +4070,7 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
                                  {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
     }
     radiation->addRadiationBand(label,wavelength_min,wavelength_max);
+    // radiation->addRadiationBand(label);
     if (!enable_emission){
         radiation->disableEmission(label);
     } else{
@@ -4042,3 +4084,50 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
     scattering_depth_dict.insert({label, scattering_depth});
 }
 
+void ProjectBuilder::addBand(std::string label, bool enable_emission){
+    if (label.empty()){
+        std::cout << "Failed to add band. Please specify a band label." << std::endl;
+        return;
+    }
+    if (bandlabels_set.find(label) != bandlabels_set.end()){
+        std::cout << "Failed to add band. Band with the specified name already exists." << std::endl;
+        return;
+    }
+    bandlabels.push_back(label);
+    bandlabels_set.insert(label);
+    primitive_values[label] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                 {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                 {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                 {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                 {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                 {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                 {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                 {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                 {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                 {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+    for (auto &primitive_values_pair : primitive_values_dict){
+        primitive_values_dict[primitive_values_pair.first][label] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                 {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                 {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                 {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                 {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                 {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                 {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                 {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                 {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                 {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+    }
+    radiation->addRadiationBand(label);
+    // radiation->addRadiationBand(label);
+    if (!enable_emission){
+        radiation->disableEmission(label);
+    } else{
+        bandlabels_set_emissivity.insert(label);
+    }
+    radiation->setDirectRayCount(label, direct_ray_count);
+    direct_ray_count_dict.insert({label, direct_ray_count});
+    radiation->setDiffuseRayCount(label, diffuse_ray_count);
+    diffuse_ray_count_dict.insert({label, diffuse_ray_count});
+    radiation->setScatteringDepth(label, scattering_depth);
+    scattering_depth_dict.insert({label, scattering_depth});
+}
