@@ -22,6 +22,7 @@ Copyright (C) 2016-2025 Brian Bailey
 #include <set>
 #include <thread>
 #include <iostream>
+#include <random>
 
 #include "Context.h"
 #include <pugixml.hpp>
@@ -805,33 +806,6 @@ class ProjectBuilder {
     //! Bool to disable dragging in ImGUI
     bool disable_dragging = false;
 
-    //! Distribution names
-    std::vector<std::string> distribution_names;
-
-    //! Distribution types
-    std::vector<std::string> distribution_types;
-
-    // //! Distribution data types (e.g. "float" or "int")
-    // std::vector<std::string> distribution_data_types;
-    //
-    // //! Distribution parameter union
-    // union dist_param{
-    //    std::vector<float> dist_float_vec;
-    //    std::vector<int> dist_int_vec;
-    // };
-
-    //! Distribution parameters
-    std::vector<std::vector<float>> distribution_params;
-
-    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the XML
-    std::map<std::string, int> distribution_dict;
-
-    //! Current distribution
-    std::string current_distribution = "";
-
-    //! Calculate multivariate gaussian
-
-
     //! Canopy tab
     void canopyTab(std::string curr_canopy_name, int id);
 
@@ -858,6 +832,36 @@ class ProjectBuilder {
 
     //! Add radiation band with no specified wavelength
     void addBand(std::string label, bool enable_emission);
+
+    //! Distribution types
+    std::map<std::string, std::string> distribution_types;
+
+    //! Distribution parameters
+    std::map<std::string, std::vector<float>> distribution_params;
+
+    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the XML
+    std::map<std::string, int> distribution_dict;
+
+    //! Random generator
+    std::default_random_engine generator;
+
+    //! Random distributions
+    std::string current_distribution = "Normal (Gaussian)";
+
+    //! Random distributions
+    std::vector<std::string> distributions = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
+
+    //! Vector of weibull distributions
+    std::vector<std::weibull_distribution<float>> weibull_distributions;
+
+    //! Vector of normal distributions
+    std::vector<std::normal_distribution<float>> normal_distributions;
+
+    //! Vector of uniform distributions
+    std::vector<std::uniform_real_distribution<float>> uniform_distributions;
+
+    //! Distribution parameters
+    std::vector<float> curr_distribution_params = {0.0, 0.0};
 
   public:
     //! Context
@@ -1178,7 +1182,7 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>&);
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
 
     //! Function to set values to an XML field
     /**
@@ -1211,6 +1215,12 @@ class ProjectBuilder {
      * \param[out] labels_vec Vector of labels of XML "parent" nodes to set
     */
     std::map<std::string, int> setNodeLabels(const std::string&, const std::string&, std::vector<std::string>&);
+
+    //! Function to set node labels for a given set of nodes
+    /**
+     * \param[in] popup_name Name of the parameter being randomized
+    */
+    void randomizePopup(std::string popup_name);
 
     //! Constructor
     ProjectBuilder(){

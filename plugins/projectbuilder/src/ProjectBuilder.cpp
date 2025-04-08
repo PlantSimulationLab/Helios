@@ -1510,7 +1510,7 @@ void ProjectBuilder::visualize(){
         // Uncomment below for interactive
         // visualizer.plotInteractive();
 
-        visualizer->addCoordinateAxes();
+        visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
         visualizer->plotUpdate();
 
         // Setup Dear ImGui context
@@ -1671,7 +1671,11 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                                ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
+                if (ImGui::IsWindowCollapsed()){
+                    ImGui::SetWindowSize(ImVec2(150, 10));
+                }
                 canopyTab(current_label, object_window_count);
                 ImGui::End();
                 object_window_count++;
@@ -1700,7 +1704,11 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                                ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
+                if (ImGui::IsWindowCollapsed()){
+                    ImGui::SetWindowSize(ImVec2(150, 10));
+                }
                 rigTab(current_label, object_window_count);
                 ImGui::End();
                 object_window_count++;
@@ -1732,7 +1740,11 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active);
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                                ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
+                if (ImGui::IsWindowCollapsed()){
+                    ImGui::SetWindowSize(ImVec2(150, 10));
+                }
                 objectTab(current_label, object_window_count);
                 ImGui::End();
                 object_window_count++;
@@ -1750,10 +1762,8 @@ void ProjectBuilder::visualize(){
                 user_input = true;
                 previous_tab = current_tab;
             }
-            if (ImGui::BeginMenuBar())
-            {
-                if (ImGui::BeginMenu("File"))
-                {
+            if (ImGui::BeginMenuBar()){
+                if (ImGui::BeginMenu("File")){
                     if (ImGui::MenuItem("Open..", "Ctrl+O")){
                         std::string file_name = file_dialog();
                         if (!file_name.empty()){
@@ -1836,11 +1846,11 @@ void ProjectBuilder::visualize(){
                         if (visualization_type != "RGB") {
                             visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             visualizer->enableColorbar();
-                            visualizer->addCoordinateAxes();
+                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }else{
                             visualizer->clearColor();
                             visualizer->disableColorbar();
-                            visualizer->addCoordinateAxes();
+                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }
                         visualizer->buildContextGeometry(context);
                         visualizer->plotUpdate();
@@ -1883,7 +1893,7 @@ void ProjectBuilder::visualize(){
                 #ifdef ENABLE_PLANT_ARCHITECTURE
                 visualizer->buildContextGeometry(context);
                 #endif //PLANT_ARCHITECTURE
-                visualizer->addCoordinateAxes();
+                visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                 visualizer->plotUpdate();
             }
             std::string image_dir = "./saved/";
@@ -1943,12 +1953,19 @@ void ProjectBuilder::visualize(){
                     // ####### LATITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
+                    randomizePopup("latitude");
+                    ImGui::OpenPopupOnItemClick("randomize_latitude", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
                     // ####### LONGITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Longitude", &longitude);
+                    randomizePopup("longitude");
+                    ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
                     // ####### UTC OFFSET ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("UTC Offset", &UTC_offset);
+                    randomizePopup("UTC_offset");
+                    ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
                     // ####### CSV Weather File ####### //
                     ImGui::SetNextItemWidth(60);
                     if (ImGui::Button("CSV Weather File")){
@@ -2408,12 +2425,12 @@ void ProjectBuilder::visualize(){
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##wavelength_min", &wavelength_min);
                         ImGui::SameLine();
-                        ImGui::Text("Wavelength Max:");
+                        ImGui::Text("Max:");
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##wavelength_max", &wavelength_max);
                     } else{
-                        ImGui::Text("No Wavelength");
+                        ImGui::Text("No Specified Wavelength");
                     }
                     //
                     ImGui::Text("Label:");
@@ -3368,79 +3385,6 @@ void ProjectBuilder::visualize(){
                     ImGui::EndTabItem();
                 }
             }
-                // if (ImGui::BeginTabItem("Distribution")){
-                //     current_tab = "Distribution";
-                //     if (ImGui::Button("New Distribution")){
-                //         std::string default_dist_label = "distribution";
-                //         std::string new_dist_label = "distribution_0";
-                //         int count = 0;
-                //         while (distribution_dict.find(new_dist_label) != distribution_dict.end()){
-                //             count++;
-                //             new_dist_label = default_dist_label + "_" + std::to_string(count);
-                //         }
-                //         distribution_dict.insert({new_dist_label, distribution_names.size()});
-                //         distribution_names.push_back(new_dist_label);
-                //         if (!current_distribution.empty()){
-                //             // distribution_data_types.push_back(distribution_data_types[distribution_dict[current_distribution]]);
-                //             distribution_types.push_back(distribution_types[distribution_dict[current_distribution]]);
-                //             distribution_params.push_back(distribution_params[distribution_dict[current_distribution]]);
-                //             std::string parent = "distribution";
-                //             pugi::xml_node dist_block = helios.child(parent.c_str());
-                //             pugi::xml_node new_dist_node = helios.append_copy(dist_block);
-                //             std::string name = "label";
-                //             pugi::xml_attribute node_label = new_dist_node.attribute(name.c_str());
-                //             node_label.set_value(new_dist_label.c_str());
-                //         } else{
-                //             distribution_types.push_back("Gaussian");
-                //             distribution_params.push_back(std::vector<float>{0, 0, 0});
-                //             std::string parent = "object";
-                //             pugi::xml_node new_dist_node = helios.append_child(parent.c_str());
-                //             std::string name = "label";
-                //             new_dist_node.append_attribute(name.c_str()).set_value(new_dist_label.c_str());
-                //             new_dist_node.append_child("distribution_type").text().set(distribution_types[0].c_str());
-                //             new_dist_node.append_child("distribution_parameters").text().set(std::string{distribution_params[0].begin(), distribution_params[0].end()}.c_str());
-                //         }
-                //     }
-                //     if (ImGui::BeginCombo("##dist_combo", current_distribution.c_str())){
-                //         for (int n = 0; n < distribution_names.size(); n++){
-                //             bool is_dist_selected = (current_distribution == distribution_names[n]);
-                //             if (ImGui::Selectable(distribution_names[n].c_str(), is_dist_selected))
-                //                 current_distribution = distribution_names[n];
-                //             if (is_dist_selected)
-                //                 ImGui::SetItemDefaultFocus();
-                //         }
-                //         ImGui::EndCombo();
-                //     }
-                //     if ( !current_distribution.empty() ){
-                //         ImGui::SetNextItemWidth(100);
-                //         std::string prev_dist_name = distribution_names[distribution_dict[current_distribution]];
-                //         ImGui::InputText("##dist_name", &distribution_names[distribution_dict[current_distribution]]);
-                //         if (distribution_names[distribution_dict[current_distribution]] != prev_dist_name){
-                //             int idx = distribution_dict[current_distribution];
-                //             current_distribution = distribution_names[distribution_dict[current_distribution]];
-                //             std::map<std::string, int>::iterator current_dist_iter = distribution_dict.find(prev_dist_name);
-                //             if (current_dist_iter != distribution_dict.end()){
-                //                 distribution_dict.erase(current_dist_iter);
-                //             }
-                //             distribution_dict[current_distribution] = idx;
-                //         }
-                //         ImGui::SameLine();
-                //         ImGui::Text("Distribution Name");
-                //         // ####### DISTRIBUTION TYPE ####### //
-                //         ImGui::InputText("##dist_type", &distribution_types[distribution_dict[current_distribution]]);
-                //         ImGui::SameLine();
-                //         ImGui::Text("Distribution Type");
-                //         // ####### DISTRIBUTION PARAMETERS ####### //
-                //         for (int i = 0; i < distribution_params[distribution_dict[current_distribution]].size(); i++){
-                //             ImGui::SetNextItemWidth(60);
-                //             ImGui::InputFloat(("##dist_param_" + std::to_string(i)).c_str(), &distribution_params[distribution_dict[current_distribution]][i]);
-                //             ImGui::SameLine();
-                //             ImGui::Text(("Distribution Parameter " + std::to_string(i)).c_str());
-                //         }
-                //     }
-                //
-                //     ImGui::EndTabItem();
-                // }
                 ImGui::EndTabBar();
             }
             // ImGui::Text("Hello, world %d", 123);
@@ -4130,4 +4074,65 @@ void ProjectBuilder::addBand(std::string label, bool enable_emission){
     diffuse_ray_count_dict.insert({label, diffuse_ray_count});
     radiation->setScatteringDepth(label, scattering_depth);
     scattering_depth_dict.insert({label, scattering_depth});
+}
+
+void ProjectBuilder::randomizePopup(std::string popup_name){
+    std::string popup = "randomize_" + popup_name;
+    if (ImGui::BeginPopup(popup.c_str())){
+        ImGui::SetNextItemWidth(150);
+        if (ImGui::BeginCombo("##combo_distribution", current_distribution.c_str())){
+            for (int n = 0; n < distributions.size(); n++){
+                bool is_dist_selected = (current_distribution == distributions[n]);
+                if (ImGui::Selectable(distributions[n].c_str(), is_dist_selected))
+                    current_distribution = distributions[n];
+                if (is_dist_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if (current_distribution == "Normal (Gaussian)"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Mean", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Variance", &curr_distribution_params[1]);
+        }
+        if (current_distribution == "Uniform"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Lower Bound", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Upper Bound", &curr_distribution_params[1]);
+        }
+        if (current_distribution == "Weibull"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Shape Parameter (k)", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Scale Parameter (λ)", &curr_distribution_params[1]);
+        }
+        if (ImGui::Button("Accept")){
+            if (current_distribution == "N/A"){
+                distribution_types[popup_name] = "N/A";
+            }
+            if (current_distribution == "Normal (Gaussian)"){
+                std::normal_distribution<float> curr_dist_normal(curr_distribution_params[0],curr_distribution_params[1]);
+                distribution_dict[popup_name] = normal_distributions.size();
+                normal_distributions.push_back(curr_dist_normal);
+                distribution_types[popup_name] = "Normal (Gaussian)";
+            }
+            if (current_distribution == "Uniform"){
+                std::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0],curr_distribution_params[1]);
+                distribution_dict[popup_name] = uniform_distributions.size();
+                uniform_distributions.push_back(curr_dist_uniform);
+                distribution_types[popup_name] = "Uniform";
+            }
+            if (current_distribution == "Weibull"){
+                std::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0],curr_distribution_params[1]);
+                distribution_dict[popup_name] = weibull_distributions.size();
+                weibull_distributions.push_back(curr_dist_weibull);
+                distribution_types[popup_name] = "Weibull";
+            }
+            distribution_params[popup_name] = curr_distribution_params;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
