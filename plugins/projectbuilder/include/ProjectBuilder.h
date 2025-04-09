@@ -136,6 +136,61 @@ std::string save_as_file_dialog();
 */
 std::vector<std::string> get_xml_node_values(std::string xml_file, const std::string& label_name, const std::string& node_name);
 
+//! Digit pointer object; union of int* and float*
+union digitPtr{
+  int* i;
+  float* f;
+};
+
+//! Struct to combine int* and float* objects
+struct taggedPtr{
+  digitPtr ptr;
+  bool isInt;
+};
+
+//! Function to create a tagged pointer object from an int pointer
+/**
+ ** \param[in] ptr Int pointer
+*/
+taggedPtr createTaggedPtr(int* ptr);
+
+//! Function to create a tagged pointer object from a float pointer
+/**
+ ** \param[in] ptr Float pointer
+*/
+taggedPtr createTaggedPtr(float* ptr);
+
+//! Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution
+union distUnion{
+ std::normal_distribution<float> *normal;
+ std::uniform_real_distribution<float> *uniform;
+ std::weibull_distribution<float> *weibull;
+};
+
+//! Struct to combine distribution objects (flag: 0 = normal, 1 = uniform, 2 = weibull)
+struct distribution{
+ distUnion dist;
+ int flag;
+};
+
+//! Function to create a distribution struct from a normal distribution
+/**
+ ** \param[in] dist Distribution
+*/
+distribution createDistribution(std::normal_distribution<float> dist);
+
+//! Function to create a distribution struct from a uniform real distribution
+/**
+ ** \param[in] dist Distribution
+*/
+distribution createDistribution(std::uniform_real_distribution<float> dist);
+
+//! Function to create a distribution struct from a weibull distribution
+/**
+ ** \param[in] dist Distribution
+*/
+distribution createDistribution(std::weibull_distribution<float> dist);
+
 
 class ProjectBuilder {
   private:
@@ -842,6 +897,9 @@ class ProjectBuilder {
     //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the XML
     std::map<std::string, int> distribution_dict;
 
+    //! Dictionary keyed by variable name with a value of the variable address
+    std::map<std::string, taggedPtr> randomized_variable_lookup;
+
     //! Random generator
     std::default_random_engine generator;
 
@@ -849,16 +907,10 @@ class ProjectBuilder {
     std::string current_distribution = "Normal (Gaussian)";
 
     //! Random distributions
-    std::vector<std::string> distributions = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
+    std::vector<std::string> distribution_names = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
 
-    //! Vector of weibull distributions
-    std::vector<std::weibull_distribution<float>> weibull_distributions;
-
-    //! Vector of normal distributions
-    std::vector<std::normal_distribution<float>> normal_distributions;
-
-    //! Vector of uniform distributions
-    std::vector<std::uniform_real_distribution<float>> uniform_distributions;
+    //! Distributions
+    std::vector<distribution> distributions;
 
     //! Distribution parameters
     std::vector<float> curr_distribution_params = {0.0, 0.0};
@@ -1216,11 +1268,27 @@ class ProjectBuilder {
     */
     std::map<std::string, int> setNodeLabels(const std::string&, const std::string&, std::vector<std::string>&);
 
-    //! Function to set node labels for a given set of nodes
+    //! Function to create an ImGui Popup for randomizing a variable
     /**
      * \param[in] popup_name Name of the parameter being randomized
+     * \param[in] ptr Pointer to the variable to be randomized
     */
-    void randomizePopup(std::string popup_name);
+    void randomizePopup(std::string popup_name, taggedPtr ptr);
+
+    //! Get current randomization parameters for the given variable
+    /**
+     * \param[in] var_name Name of the variable being randomized
+    */
+    void randomizerParams(std::string var_name);
+
+    //! Set value of variable with random sample from respective distribution
+    /**
+     * \param[in] var_name Variable to generate a random variable for
+    */
+    void sample(std::string var_name);
+
+    //! Set value of all variables using random samples from their respective distributions
+    void sampleAll();
 
     //! Constructor
     ProjectBuilder(){
