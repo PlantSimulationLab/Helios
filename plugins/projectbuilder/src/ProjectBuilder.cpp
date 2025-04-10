@@ -320,8 +320,10 @@ std::vector<std::string> get_xml_node_values(std::string xml_input, const std::s
 
 
 void ProjectBuilder::deleteArrows(){
-    for (auto& arrow : arrow_dict){
-        context->deletePrimitive(arrow_dict.at(arrow.first));
+    for (auto& arrow_vec : arrow_dict){
+        for (std::vector<uint> arrow : arrow_vec.second){
+            context->deletePrimitive(arrow);
+        }
     }
     arrow_dict.clear();
 }
@@ -329,22 +331,29 @@ void ProjectBuilder::deleteArrows(){
 
 void ProjectBuilder::updateArrows(){
     #ifdef ENABLE_RADIATION_MODEL
-    arrow_count = 0;
     for (int n = 0; n < rig_labels.size(); n++){
+        arrow_count = 0;
         std::string current_rig = rig_labels[n];
+        arrow_dict[current_rig] = std::vector<std::vector<uint>>{};
         for (int i = 1; i < camera_position_vec[rig_dict[current_rig]].size(); i++){
             vec3 arrow_pos = camera_position_vec[rig_dict[current_rig]][i - 1];
             vec3 arrow_direction_vec = arrow_pos - camera_position_vec[rig_dict[current_rig]][i];
             SphericalCoord arrow_direction_sph = cart2sphere(arrow_direction_vec);
             vec3 arrow_scale(0.35, 0.35, 0.35);
-            arrow_dict[arrow_count] = context->loadOBJ("plugins/radiation/camera_light_models/Arrow.obj",
-                                                    nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true);
-            context->rotatePrimitive(arrow_dict.at(arrow_count), arrow_direction_sph.elevation, "x");
-            context->rotatePrimitive(arrow_dict.at(arrow_count), -arrow_direction_sph.azimuth, "z");
-            context->translatePrimitive(arrow_dict.at(arrow_count), arrow_pos);
-            context->setPrimitiveData(arrow_dict.at(arrow_count), "twosided_flag", uint(3));
+            arrow_dict[current_rig].push_back(context->loadOBJ("plugins/radiation/camera_light_models/Arrow.obj",
+                                            nullorigin, arrow_scale, nullrotation, RGB::blue, "YUP", true));
+            context->rotatePrimitive(arrow_dict.at(current_rig)[arrow_count], arrow_direction_sph.elevation, "x");
+            context->rotatePrimitive(arrow_dict.at(current_rig)[arrow_count], -arrow_direction_sph.azimuth, "z");
+            context->translatePrimitive(arrow_dict.at(current_rig)[arrow_count], arrow_pos);
+            context->setPrimitiveData(arrow_dict.at(current_rig)[arrow_count], "twosided_flag", uint(3));
             arrow_count++;
         }
+        float col[3];
+        RGBcolor rig_color = rig_colors[rig_dict[current_rig]];
+        col[0] = rig_color.r;
+        col[1] = rig_color.g;
+        col[2] = rig_color.b;
+        updateColor(current_rig, "rig", col);
     }
     #endif
 }
@@ -813,6 +822,7 @@ void ProjectBuilder::buildFromXML(){
                 std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
             }
             SphericalCoord orientation_sph = cart2sphere(obj_orientations[i]);
+            context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
             context->scalePrimitive(new_UUIDs, obj_scales[i]);
             context->rotatePrimitive(new_UUIDs, orientation_sph.elevation, "x");
             context->rotatePrimitive(new_UUIDs, -orientation_sph.azimuth, "z");
@@ -1168,6 +1178,26 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 }
 
 
+void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_vec){
+    helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        node = p.child(name.c_str());
+        if( node.empty() ){
+            std::cout << "WARNING: No value given for '" << name << "'.";
+        } else {
+            const char *node_str = node.child_value();
+            helios::RGBcolor default_value;
+            if (!parse_RGBcolor(node_str, default_value)) {
+                helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+            }else{
+                default_vec.push_back(default_value);
+            }
+        }
+    }
+}
+
+
 void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
     helios = xmldoc.child("helios");
     pugi::xml_node p_;
@@ -1370,6 +1400,22 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
     for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
         pugi::xml_node node = p.child(name.c_str());
         node.text().set(vec_to_string(default_values[i]).c_str());
+        i++;
+    }
+}
+
+
+void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_values){
+    helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    int i = 0;
+    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+        pugi::xml_node node = p.child(name.c_str());
+        helios::vec3 default_values_vec;
+        default_values_vec.x = default_values[i].r;
+        default_values_vec.y = default_values[i].g;
+        default_values_vec.z = default_values[i].b;
+        node.text().set(vec_to_string(default_values_vec).c_str());
         i++;
     }
 }
@@ -1921,9 +1967,11 @@ void ProjectBuilder::visualize(){
             }
             #endif //RADIATION_MODEL
             // ####### RESULTS ####### //
-            ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
-            ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
-            ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
+            // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
+            // ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
+            // ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
+            ImGui::Text("Console:");
+            outputConsole();
             if (ImGui::BeginTabBar("Settings#left_tabs_bar")){
                 if (ImGui::BeginTabItem("General")){
                     current_tab = "General";
@@ -2133,7 +2181,27 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::EndCombo();
                     }
+                    ImGui::SameLine();
+                    ImGui::Text("Select Object");
                     if ( !current_obj.empty() ){
+                        if (ImGui::Button("Update")){
+                            updateObject(current_obj);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete Object")){
+                            int delete_idx = obj_names_dict[current_obj];
+                            context->deletePrimitive(obj_UUIDs[delete_idx]);
+                            visualizer->clearGeometry();
+                            visualizer->buildContextGeometry(context);
+                            visualizer->plotUpdate();
+                            obj_names_dict.erase(current_obj);
+                            obj_names_set.erase(current_obj);
+                            if (!obj_names_set.empty()){
+                                current_obj = *obj_names_set.begin();
+                            } else{
+                                current_obj = "";
+                            }
+                        }
                         ImGui::SetNextItemWidth(100);
                         std::string prev_obj_name = obj_names[obj_names_dict[current_obj]];
                         ImGui::InputText("##obj_name", &obj_names[obj_names_dict[current_obj]]);
@@ -2152,21 +2220,6 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::SameLine();
                         ImGui::Text("Object Name");
-                        ImGui::SameLine();
-                        if (ImGui::Button("Delete Object")){
-                            int delete_idx = obj_names_dict[current_obj];
-                            context->deletePrimitive(obj_UUIDs[delete_idx]);
-                            visualizer->clearGeometry();
-                            visualizer->buildContextGeometry(context);
-                            visualizer->plotUpdate();
-                            obj_names_dict.erase(current_obj);
-                            obj_names_set.erase(current_obj);
-                            if (!obj_names_set.empty()){
-                                current_obj = *obj_names_set.begin();
-                            } else{
-                                current_obj = "";
-                            }
-                        }
                         if (!current_obj.empty()){
                             // ####### OBJECT DATA GROUP ####### //
                             ImGui::SetNextItemWidth(100);
@@ -2181,6 +2234,39 @@ void ProjectBuilder::visualize(){
                             }
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
+                            // ####### OBJECT COLOR ####### //
+                            // helios::RGBcolor obj_prev_color = obj_colors[obj_names_dict[current_obj]];
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
+                            // randomizePopup("obj_color_r_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].r));
+                            // randomizerParams("obj_color_r_" + std::to_string(obj_names_dict[current_obj]));
+                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_r_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            // ImGui::SameLine();
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
+                            // randomizePopup("obj_color_g_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].g));
+                            // randomizerParams("obj_color_g_" + std::to_string(obj_names_dict[current_obj]));
+                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_g_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            // ImGui::SameLine();
+                            // ImGui::SetNextItemWidth(60);
+                            // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
+                            // randomizePopup("obj_color_b_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].b));
+                            // randomizerParams("obj_color_b_" + std::to_string(obj_names_dict[current_obj]));
+                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_b_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            // ImGui::SameLine();
+                            float col[3];
+                            col[0] = obj_colors[obj_names_dict[current_obj]].r;
+                            col[1] = obj_colors[obj_names_dict[current_obj]].g;
+                            col[2] = obj_colors[obj_names_dict[current_obj]].b;
+                            ImGui::ColorEdit3("##obj_color_edit", col);
+                            updateColor(current_obj, "obj", col);
+                            // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
+                            //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
+                            //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
+                            //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
+                            // }
+                            ImGui::SameLine();
+                            ImGui::Text("Object Color");
                             // ####### OBJECT SCALE ####### //
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
@@ -2332,7 +2418,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Canopy Name");
                     // ####### PLANT LIBRARY NAME ####### //
-                    ImGui::SetNextItemWidth(80);
+                    ImGui::SetNextItemWidth(100);
                     ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
                     // ######### CANOPY DATA GROUP ####### //
                     ImGui::SetNextItemWidth(100);
@@ -3093,6 +3179,11 @@ void ProjectBuilder::visualize(){
                         pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
                         node_label.set_value(new_rig_label.c_str());
                     }
+                    // ##### UPDATE RIG ######//
+                    if (ImGui::Button("Update")){
+                        updateRig(current_rig);
+                    }
+                    // ##### RIG NAME ######//
                     ImGui::SetNextItemWidth(100);
                     std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
                     ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
@@ -3107,6 +3198,20 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     ImGui::Text("Rig Name");
+                    // ####### RIG COLOR ####### //
+                    float col[3];
+                    col[0] = rig_colors[rig_dict[current_rig]].r;
+                    col[1] = rig_colors[rig_dict[current_rig]].g;
+                    col[2] = rig_colors[rig_dict[current_rig]].b;
+                    ImGui::ColorEdit3("##rig_color_edit", col);
+                    updateColor(current_rig, "rig", col);
+                    // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
+                    //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
+                    //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
+                    //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
+                    // }
+                    ImGui::SameLine();
+                    ImGui::Text("Object Color");
                     // ####### CAMERA LABEL ####### //
                     /* SINGLE CAMERA VERSION
                     ImGui::SetNextItemWidth(60);
@@ -3620,7 +3725,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("position", "object", obj_positions);
     xmlSetValues("orientation", "object", obj_orientations);
     xmlSetValues("scale", "object", obj_scales);
-    // xmlSetValues("color", "object", obj_colors);
+    xmlSetValues("color", "object", obj_colors);
     xmlSetValues("data_group", "object", obj_data_groups);
     // CANOPY BLOCK
     canopy_labels_dict = setNodeLabels("label", "canopy_block", canopy_labels);
@@ -3639,6 +3744,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("data_group", "canopy", canopy_data_groups);
     // RIG BLOCK
     rig_dict = setNodeLabels("label", "rig", rig_labels);
+    xmlSetValues("color", "rig", rig_colors);
     // xmlSetValue("camera_position", "rig", camera_position);
     // xmlSetValue("camera_lookat", "rig", camera_lookat);
     xmlSetValue("camera_label", "rig", camera_label);
@@ -3756,9 +3862,14 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("position", "object", obj_positions);
     xmlGetValues("orientation", "object", obj_orientations);
     xmlGetValues("scale", "object", obj_scales);
+    prev_obj_positions = obj_positions;
+    prev_obj_orientations = obj_orientations;
+    prev_obj_scales = obj_scales;
     // xmlGetValues("color", "object", obj_colors);
     obj_data_groups.clear();
     xmlGetValues("data_group", "object", obj_data_groups);
+    obj_colors.clear();
+    xmlGetValues("color", "object", obj_colors);
     // CANOPY BLOCK
     canopy_labels.clear();
     canopy_labels_dict = getNodeLabels("label", "canopy_block", canopy_labels);
@@ -3787,6 +3898,7 @@ void ProjectBuilder::xmlGetValues(){
     rig_labels.clear();
     rig_dict = getNodeLabels("label", "rig", rig_labels);
     current_rig = rig_labels[0];
+    xmlGetValues("color", "rig", rig_colors);
     xmlGetValue("camera_position", "rig", camera_position);
     xmlGetValue("camera_lookat", "rig", camera_lookat);
     xmlGetValue("camera_label", "rig", camera_label);
@@ -3929,13 +4041,22 @@ void ProjectBuilder::xmlGetValues(std::string xml_path){
 
 void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     if (ImGui::Button("Update")){
-        std::vector<uint> current_obj = obj_UUIDs[obj_names_dict[curr_obj_name]];
-        // context->rotatePrimitive(current_obj, arrow_direction_sph.elevation, "x");
-        // context->rotatePrimitive(current_obj, -arrow_direction_sph.azimuth, "z");
-        context->translatePrimitive(current_obj, obj_positions[obj_names_dict[curr_obj_name]]);
+        updateObject(curr_obj_name);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete Object")){
+        int delete_idx = obj_names_dict[current_obj];
+        context->deletePrimitive(obj_UUIDs[delete_idx]);
         visualizer->clearGeometry();
         visualizer->buildContextGeometry(context);
         visualizer->plotUpdate();
+        obj_names_dict.erase(current_obj);
+        obj_names_set.erase(current_obj);
+        if (!obj_names_set.empty()){
+            current_obj = *obj_names_set.begin();
+        } else{
+            current_obj = "";
+        }
     }
     ImGui::SetNextItemWidth(100);
     std::string prev_obj_name = obj_names[obj_names_dict[curr_obj_name]];
@@ -3951,37 +4072,86 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     }
     ImGui::SameLine();
     ImGui::Text("Object Name");
+    // ####### OBJECT DATA GROUP ####### //
+    // ImGui::SetNextItemWidth(100);
+    // std::string prev_obj_data_group = obj_data_groups[obj_names_dict[curr_obj_name]];
+    // ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[curr_obj_name]]);
+    // if (obj_data_groups[obj_names_dict[curr_obj_name]] == "All" || obj_data_groups[obj_names_dict[curr_obj_name]].empty()){
+    //     obj_data_groups[obj_names_dict[curr_obj_name]] = prev_obj_data_group;
+    // }
+    // if (!obj_data_groups[obj_names_dict[curr_obj_name]].empty() && prev_obj_data_group != obj_data_groups[obj_names_dict[curr_obj_name]]){
+    //     std::string new_data_group = obj_data_groups[obj_names_dict[curr_obj_name]];
+    //     context->setPrimitiveData(obj_UUIDs[obj_names_dict[curr_obj_name]], "data_group", new_data_group);
+    // }
+    // ImGui::SameLine();
+    // ImGui::Text("Data Group");
+    // ####### OBJECT COLOR ####### //
+    // float col[3];
+    // col[0] = obj_colors[obj_names_dict[current_obj]].r;
+    // col[1] = obj_colors[obj_names_dict[current_obj]].g;
+    // col[2] = obj_colors[obj_names_dict[current_obj]].b;
+    // ImGui::ColorEdit3("##obj_color_edit", col);
+    // updateColor(current_obj, "obj", col);
+    // ImGui::SameLine();
+    // ImGui::Text("Object Color");
     // ####### OBJECT SCALE ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].x);
+    randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].x));
+    randomizerParams("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_y_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].y);
+    randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].y));
+    randomizerParams("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_z_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].z);
+    randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].z));
+    randomizerParams("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Scale");
     // ####### OBJECT POSITION ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_x_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].x);
+    randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].x));
+    randomizerParams("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_y_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].y);
+    randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].y));
+    randomizerParams("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_z_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].z);
+    randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].z));
+    randomizerParams("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Position");
     // ####### OBJECT ORIENTATION ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_x_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].x);
+    randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].x));
+    randomizerParams("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_y_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].y);
+    randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].y));
+    randomizerParams("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_z_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].z);
+    randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].z));
+    randomizerParams("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Orientation");
 }
@@ -4399,5 +4569,92 @@ void ProjectBuilder::sampleAll(){
     for (std::pair<std::string, std::string> var_pair : distribution_types){
         sample(var_pair.first);
     }
+}
+
+void ProjectBuilder::outputConsole(){
+    old_cout_stream_buf = std::cout.rdbuf();
+    std::string buffer = captured_cout.str();
+    ImGui::InputTextMultiline("##console", &buffer[0], buffer.size() + 1, ImVec2(-FLT_MIN,
+                                ImGui::GetTextLineHeight() * 5), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AllowTabInput);
+    std::cout.rdbuf(old_cout_stream_buf);
+}
+
+void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, float* new_color){
+    helios::RGBcolor *curr_color = nullptr;
+    if (obj_type == "obj"){
+        curr_color = &obj_colors[obj_names_dict[curr_obj]];
+    }
+    if (obj_type == "rig"){
+        curr_color = &rig_colors[rig_dict[curr_obj]];
+    }
+    // if (curr_color->r == new_color[0] && curr_color->g == new_color[1] && curr_color->b == new_color[2]){
+    //     return;
+    // }
+    curr_color->r = new_color[0];
+    curr_color->g = new_color[1];
+    curr_color->b = new_color[2];
+    if (obj_type == "obj"){
+        context->setPrimitiveColor(obj_UUIDs[obj_names_dict[curr_obj]], *curr_color);
+    }
+    if (obj_type == "rig"){
+        for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
+            context->setPrimitiveColor(arrow, *curr_color);
+        }
+    }
+}
+
+
+void ProjectBuilder::updateObject(std::string curr_obj){
+    // Scale, rotate, and translate object
+    int obj_idx = obj_names_dict[curr_obj];
+    if (obj_scales[obj_idx] != prev_obj_scales[obj_idx]){
+        SphericalCoord orientation_sph_ = cart2sphere(prev_obj_orientations[obj_idx]);
+        vec3 obj_scale_;
+        obj_scale_.x = obj_scales[obj_idx].x / prev_obj_scales[obj_idx].x;
+        obj_scale_.y = obj_scales[obj_idx].y / prev_obj_scales[obj_idx].y;
+        obj_scale_.z = obj_scales[obj_idx].z / prev_obj_scales[obj_idx].z;
+        context->translatePrimitive(obj_UUIDs[obj_idx], -prev_obj_positions[obj_idx]); // translate back to origin
+        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph_.elevation, "x");
+        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph_.azimuth, "z");
+        context->scalePrimitive(obj_UUIDs[obj_idx], obj_scale_);
+        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph_.elevation, "x");
+        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph_.azimuth, "z");
+        context->translatePrimitive(obj_UUIDs[obj_idx], prev_obj_positions[obj_idx]); // restore translation
+        prev_obj_scales = obj_scales;
+    }
+    if (obj_orientations[obj_idx] != prev_obj_orientations[obj_idx]){
+        SphericalCoord orientation_sph = cart2sphere(obj_orientations[obj_idx] - prev_obj_orientations[obj_idx]);
+        context->translatePrimitive(obj_UUIDs[obj_idx], -prev_obj_positions[obj_idx]); // translate back to origin
+        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph.elevation, "x");
+        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph.azimuth, "z");
+        context->translatePrimitive(obj_UUIDs[obj_idx], prev_obj_positions[obj_idx]); // restore translation
+        prev_obj_orientations = obj_orientations;
+    }
+    if (obj_positions[obj_idx] != prev_obj_positions[obj_idx]){
+        context->translatePrimitive(obj_UUIDs[obj_idx], obj_positions[obj_idx] - prev_obj_positions[obj_idx]);
+        prev_obj_positions = obj_positions;
+    }
+    // Update visualizer
+    const char* font_name = "LCD";
+    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+    visualizer->plotUpdate();
+    visualizer->clearGeometry();
+    visualizer->buildContextGeometry(context);
+    visualizer->plotUpdate();
+}
+
+void ProjectBuilder::updateRig(std::string curr_rig){
+    deleteArrows();
+    arrow_dict.clear();
+    updateArrows();
+    // Update visualizer
+    const char* font_name = "LCD";
+    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+    visualizer->plotUpdate();
+    visualizer->clearGeometry();
+    visualizer->buildContextGeometry(context);
+    visualizer->plotUpdate();
 }
 

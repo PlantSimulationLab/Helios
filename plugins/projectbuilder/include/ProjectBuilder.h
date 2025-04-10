@@ -352,6 +352,9 @@ class ProjectBuilder {
     //! Rig labels
     std::vector<std::string> rig_labels;
 
+    //! Rig colors
+    std::vector<helios::RGBcolor> rig_colors;
+
     //! Camera positions
     std::vector<helios::vec3> camera_positions;
 
@@ -462,7 +465,7 @@ class ProjectBuilder {
     std::vector<std::set<std::string>> rig_light_labels;
 
     //! Dictionary containing arrow UUIDs for every arrow
-    std::map<int, std::vector<uint>> arrow_dict;
+    std::map<std::string, std::vector<std::vector<uint>>> arrow_dict;
 
     //! Arrow count
     int arrow_count = 0;
@@ -581,11 +584,20 @@ class ProjectBuilder {
     //! Object positions
     std::vector<helios::vec3> obj_positions;
 
+    //! Previous object positions
+    std::vector<helios::vec3> prev_obj_positions;
+
     //! Object orientations
     std::vector<helios::vec3> obj_orientations;
 
+    //! Previous object orientations
+    std::vector<helios::vec3> prev_obj_orientations;
+
     //! Object data groups
     std::vector<std::string> obj_data_groups;
+
+    //! Previous object scales
+    std::vector<helios::vec3> prev_obj_scales;
 
     //! Object scales
     std::vector<helios::vec3> obj_scales;
@@ -915,6 +927,12 @@ class ProjectBuilder {
     //! Distribution parameters
     std::vector<float> curr_distribution_params = {0.0, 0.0};
 
+    //!
+    std::streambuf* old_cout_stream_buf = std::cout.rdbuf();
+
+    //! Stdout
+    std::stringstream captured_cout;
+
   public:
     //! Context
     helios::Context *context = nullptr;
@@ -1115,6 +1133,14 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
     */
+    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_vec);
+
+    //! Function to get values of an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes
+    */
     void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<helios::vec3>>& default_vec);
 
     //! Function to get values of an XML field
@@ -1242,6 +1268,14 @@ class ProjectBuilder {
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes to set
     */
+    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_vec);
+
+    //! Function to set values to an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes to set
+    */
     void xmlSetValues(const std::string&, const std::string&, std::vector<std::vector<helios::vec3>>&);
 
     //! Function to set values to an XML field
@@ -1290,8 +1324,21 @@ class ProjectBuilder {
     //! Set value of all variables using random samples from their respective distributions
     void sampleAll();
 
+    //! Output console as ImGui multiline text
+    void outputConsole();
+
+    //! Update color of object, rig, etc.
+    void updateColor(std::string curr_obj, std::string obj_type, float* new_color);
+
+    //! Update object in visualizer (e.g. position, orientation, scale, color, etc.)
+    void updateObject(std::string curr_obj);
+
+    //! Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.)
+    void updateRig(std::string curr_rig);
+
     //! Constructor
     ProjectBuilder(){
+      std::cout.rdbuf(captured_cout.rdbuf());
       primitive_UUIDs = {{"ground", ground_UUIDs}, {"leaf", leaf_UUIDs}, {"petiolule", petiolule_UUIDs},
                           {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
                           {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};

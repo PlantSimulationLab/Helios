@@ -66,12 +66,14 @@
 		<camera_label>RGB</camera_label>
 		<camera_label>RGB2</camera_label>
 		<light_label>sphere_0</light_label>
+		<color>1 0 0</color>
 	</rig>
 	<rig label="rig_1">
 		<camera_position>1 1 1</camera_position>
 		<camera_lookat>0 0 0</camera_lookat>
 		<images>20</images>
 		<camera_label>RGB2</camera_label>
+		<color>0 1 0</color>
 	</rig>
 	<camera label="RGB2">
 		<camera_calibration>calibrated_sun_NikonB500_spectral_response</camera_calibration>
