@@ -73,7 +73,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.29</span>
    </div>
   </td>
  </tr>
@@ -162,62 +162,63 @@ Overview</h1>
 <h1><a class="anchor" id="AddPatch"></a>
 Adding a Patch to the Context</h1>
 <p>Let's write a program that adds a Patch to the Context. We will begin with a blank program that includes the Context.h header (provides context definitions), and declares the Context. We then want to write the code to add a Patch.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  include "Context.h"
-
-  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
-  int main(void){
-
-     Context context; //Declare the "Context" class
-
-Write code here to add a Patch to the Context
-
-  }</code></pre></div><p>We will then call the addPatch( vec3 position, vec2 size ) function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the addPatch function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a <a class="el" href="structhelios_1_1vec3.html">vec3</a>, and the size argument is a <a class="el" href="structhelios_1_1vec2.html">vec2</a>. We will create variables "position" and "size" with types of vec3 and vec2, respectively. We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  include "Context.h"
-  include "Visualizer.h"
-
-  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
-  int main(void){
-
-     Context context;  //Declare the "Context" class
-
-     vec3 position(0,0,0); //(x,y,z) position of patch center
-     vec2 size(1,1); //length and width of patch
-
-     context.addPatch( position, size );
-
-Visualizer code
-     Visualizer vis(800); //our Visualizer window will be 800 pixels wide
-     vis.buildContextGeometry(&amp;context);
-     vis.plotInteractive();
-
-  }</code></pre></div><h1><a class="anchor" id="AddPatch_UUIDs"></a>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Declare the &quot;Context&quot; class</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Write code here to add a Patch to the Context</span></div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><p>We will then call the addPatch( vec3 position, vec2 size ) function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the addPatch function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a <a class="el" href="structhelios_1_1vec3.html">vec3</a>, and the size argument is a <a class="el" href="structhelios_1_1vec2.html">vec2</a>. We will create variables "position" and "size" with types of vec3 and vec2, respectively. We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span> <span class="comment">//don&#39;t need to include Context.h because it&#39;s included in Visualizer.h</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;  <span class="comment">//Declare the &quot;Context&quot; class</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position(0,0,0); <span class="comment">//(x,y,z) position of patch center</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size(1,1); <span class="comment">//length and width of patch</span></div>
+<div class="line"> </div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( position, size );</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Visualizer code</span></div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800); <span class="comment">//our Visualizer window will be 800 pixels wide</span></div>
+<div class="line">   vis.buildContextGeometry(&amp;context);</div>
+<div class="line">   vis.plotInteractive();</div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><h1><a class="anchor" id="AddPatch_UUIDs"></a>
 Unique Universal Identifiers (UUIDs)</h1>
 <p>The addPatch function and other functions to add primitives return a "Unique Universal Identifier" or UUID for that particular primitive. In the example above, we ignored the returned UUID, but in this example we will assign the UUID to a variable and use it to modify attributes of the primitive.</p>
 <p>UUIDs are of type "unsigned int" or "uint" for short, which is the return type for addPatch, addTriangle, etc. Functions that add multiple primitives at once return a vector of UUIDs (uints). The code below does the same thing as the previous example, except that it stores the UUID for the Patch.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code>  include "Context.h"
-  include "Visualizer.h"
-
-  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
-  int main(void){
-
-     Context context;  //Declare the "Context" class
-
-     vec3 position(0,0,0); //(x,y,z) position of patch center
-     vec2 size(1,1); //length and width of patch
-
-     uint UUID; //declare the UUID variable
-
-     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
-
-Visualizer code
-     Visualizer vis(800); //our Visualizer window will be 800 pixels wide
-     vis.buildContextGeometry(&amp;context);
-     vis.plotInteractive();
-
-  }</code></pre></div> </div></div><!-- contents -->
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;  <span class="comment">//Declare the &quot;Context&quot; class</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position(0,0,0); <span class="comment">//(x,y,z) position of patch center</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size(1,1); <span class="comment">//length and width of patch</span></div>
+<div class="line"> </div>
+<div class="line">   uint UUID; <span class="comment">//declare the UUID variable</span></div>
+<div class="line">   </div>
+<div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( position, size ); <span class="comment">//this will assign the UUID for this patch to the UUID variable</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">//Visualizer code</span></div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800); <span class="comment">//our Visualizer window will be 800 pixels wide</span></div>
+<div class="line">   vis.buildContextGeometry(&amp;context);</div>
+<div class="line">   vis.plotInteractive();</div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
 <!-- start footer part -->

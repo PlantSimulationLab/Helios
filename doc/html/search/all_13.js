@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['known_20issues_0',['Known Issues',['../_aerial_li_d_a_r_doc.html#AerialLiDARissues',1,'Known Issues'],['../_b_l_conductance_doc.html#BLCissues',1,'Known Issues'],['../_energy_balance_doc.html#EBissues',1,'Known Issues'],['../_li_d_a_r_doc.html#LiDARissues',1,'Known Issues'],['../_visualizer_doc.html#VisIssues',1,'Known Issues'],['../_voxel_intersection_doc.html#VoxelIssues',1,'Known Issues'],['../_weber_penn_doc.html#WPTissues',1,'Known Issues']]]
+  ['jpg_5ferror_5fmgr_0',['jpg_error_mgr',['../structjpg__error__mgr.html',1,'']]],
+  ['julian2calendar_1',['Julian2Calendar',['../group__vectors.html#gad744b2f0b25c66570a13cba4ace0455b',1,'helios']]],
+  ['julianday_2',['JulianDay',['../structhelios_1_1_date.html#abf3a401379adb23851174683a9191efc',1,'helios::Date::JulianDay()'],['../global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc',1,'helios::JulianDay(int day, int month, int year)'],['../group__functions.html#ga4e5ae2905291ff8a5ed97bc93e7fe71d',1,'helios::JulianDay(const Date &amp;date)']]]
 ];

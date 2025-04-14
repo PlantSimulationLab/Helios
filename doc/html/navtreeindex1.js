@@ -1,5 +1,6 @@
 var NAVTREEINDEX1 =
 {
+"helios__vector__types_8h.html":[4,0,0,0,2],
 "helios__vector__types_8h_source.html":[4,0,0,0,2],
 "index.html":[],
 "index.html":[0],

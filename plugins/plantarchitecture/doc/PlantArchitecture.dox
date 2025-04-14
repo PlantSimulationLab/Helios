@@ -569,6 +569,8 @@ Building a plant from the library with modified parameters is similar to above, 
 
 Parameters are queried based on shoot type (the names of which are given in the table above). The user can either query the \ref ShootParameters structure for a single shoot type based on its label, or for all shoot types in the particular model.
 
+The default parameters for each shoot type and species from the library are not listed exhaustively in this documentation, but can be found in the file \ref PlantLibrary.cpp.
+
 Below is an example of modifying the parameters of a single shoot type:
 
 ~~~~~~

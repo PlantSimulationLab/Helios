@@ -73,7 +73,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.29</span>
    </div>
   </td>
  </tr>
@@ -158,38 +158,38 @@ $(function(){initNavTree('visualizer_basics_tutorial.html',''); initResizable(tr
 Step 1. Declare and initialize the Visualizer class</h1>
 <p>To begin using the Visualizer, we must first declare the <a class="el" href="class_visualizer.html">Visualizer</a> class. Note that the "Visualizer.h" header file must be included in our program, and the "PLUGINS" variable in our project's CMakeLists.txt file must include "visualizer".</p>
 <p>The Visualizer constructor takes one or two arguments that specifies the size of the graphics window in pixels. If only one argument is provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay )</a>), the argument is an integer that specifies the width of the diplay window in pixels, with the hight of the window specified according to the default aspect ratio. If two arguments are provided (see <a class="el" href="class_visualizer.html">Visualizer( uint Wdisplay, uint Hdisplay )</a>), the two arguments correspond respectively to the width and height of the display window in pixels. Example code is given below.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> include "Context.h"
- include "Visualizer.h"
-
- using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
- int main(void){
-
-    Visualizer vis(800); //creates a display window 800 pixels wide
-
- }</code></pre></div><h1><a class="anchor" id="vis_step2"></a>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">   </div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800); <span class="comment">//creates a display window 800 pixels wide</span></div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><h1><a class="anchor" id="vis_step2"></a>
 Step 2. Add geometry to the Visualizer</h1>
 <p>There are a variety of ways to add geometry to the Visualizer. Primitives can be manually added to the Visualizer in a similar manner as primitives are added to the Context, with several notable differences. First, there are additional primitive types available in the Visualizer such as lines and points. Second, there are additional arguments that must be specified when adding primitives to the Visualizer, namely the graphics layer associated with the primitive (see Layer) and the coordinate system to be used (see <a class="el" href="_visualizer_doc.html#coord">Coordinate Systems</a>).</p>
 <p>Most commonly, we do not wish to manually add geometry to the Visualizer, but rather we simply want to visualize geometry in the Context. There is a simple command that will automatically add all geometry in the Context to the Visualizer: <a class="el" href="class_visualizer.html#a4834cddbcc01696bf0b1ef1b0a2cde0c">Visualizer::buildContextGeometry()</a>. This function takes a pointer to the Context, which is used to import all geometry. There are other variations on the buildContextGeometry() command that allow for the placement of Context geometry on any layer or to add only a subset of the geometry in the Context (see <a class="el" href="_visualizer_doc.html#ContextGeom">Automatically importing Context geometry</a>). In the example below, we add all geometry in the Context to the default layer (layer 0).</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> include "Context.h"
- include "Visualizer.h"
-
- using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
- int main(void){
-
-    Context context;  //Declare the "Context" class
-
-    vec3 position(0,0,0); //(x,y,z) position of patch center
-    vec2 size(1,1); //length and width of patch
-
-    context.addPatch( position, size ); //add the patch to Context
-
-    Visualizer vis(800); //creates a display window 800 pixels wide
-
-    vis.buildContextGeometry( &amp;context ); //add all geometry in the context to the visualizer
-
- }</code></pre></div><p>Note that in the above example, we've given our Visualizer class the name of "vis", which is the name that should be used to reference it.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;  <span class="comment">//Declare the &quot;Context&quot; class</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position(0,0,0); <span class="comment">//(x,y,z) position of patch center</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size(1,1); <span class="comment">//length and width of patch</span></div>
+<div class="line"> </div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( position, size ); <span class="comment">//add the patch to Context</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800); <span class="comment">//creates a display window 800 pixels wide</span></div>
+<div class="line"> </div>
+<div class="line">   vis.buildContextGeometry( &amp;context ); <span class="comment">//add all geometry in the context to the visualizer</span></div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Note that in the above example, we've given our Visualizer class the name of "vis", which is the name that should be used to reference it.</p>
 <h1><a class="anchor" id="vis_step3"></a>
 Step 3. Modify Visualizer options</h1>
 <p>Additional options for the Visualizer are set by calling the appropriate member functions in the Visualizer class. Various options may be changing the lighting model, changing the default camera view configuration, changing data used to color primitives, etc. Consult the <a class="el" href="_visualizer_doc.html">Visualizer Plugin Documentation</a> for more details on available options. In this tutorial, we'll just use the default options (by not setting any options explicitly).</p>
@@ -198,30 +198,30 @@ Step 4. Plot the result</h1>
 <p>Finally, we'll want to actually plot the result to the graphics window. There are two primary functions to do so. One is <a class="el" href="class_visualizer.html#ab4858ed12fa78fe451569f4bbc27cd7c">Visualizer::plotInteractive()</a>, which generates an interactive plot in which the user can interactively modify the camera configuation via keystrokes. In this case, the graphics window will stay open until the user closes it, and the program will pause until the window is closed.</p>
 <p>Another method is to simply update the graphics window and move on with the program using the function <a class="el" href="class_visualizer.html#aa87c684dd84db8d1ae0d12872b1dda22">Visualizer::plotUpdate()</a>. This is typically used when the graphics window is to be printed to file using the Visualizer::printWindow() function.</p>
 <p>In the example below, we'll first update the window, move on in the program where we'll print the graphics window to an image file, then we'll open an interactive plot window. Note that all file paths in Helios should either be absolute paths, or relative to the build directory where the executable file is being run. So in the example below, the image file will be located in the build directory.</p>
-<div style="padding:0.5px;background-color:#D0D0D0 ;line-height:1.2;"> <pre><code> include "Context.h"
- include "Visualizer.h"
-
- using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
-
- int main(void){
-
-    Context context;  //Declare the "Context" class
-
-    vec3 position(0,0,0); //(x,y,z) position of patch center
-    vec2 size(1,1); //length and width of patch
-
-    context.addPatch( position, size ); //add the patch to Context
-
-    Visualizer vis(800); //creates a display window 800 pixels wide
-
-    vis.buildContextGeometry( &amp;context ); //add all geometry in the context to the visualizer
-
-    vis.plotUpdate(); //update the graphics window and move on
-    vis.printWindow( "patch.jpeg" ); //print window to JPEG file
-
-    vis.plotInteractive(); //open an interactive graphics window
-
- }</code></pre></div> </div></div><!-- contents -->
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
+<div class="line">   </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;  <span class="comment">//Declare the &quot;Context&quot; class</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position(0,0,0); <span class="comment">//(x,y,z) position of patch center</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size(1,1); <span class="comment">//length and width of patch</span></div>
+<div class="line"> </div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( position, size ); <span class="comment">//add the patch to Context</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800); <span class="comment">//creates a display window 800 pixels wide</span></div>
+<div class="line"> </div>
+<div class="line">   vis.buildContextGeometry( &amp;context ); <span class="comment">//add all geometry in the context to the visualizer</span></div>
+<div class="line"> </div>
+<div class="line">   vis.plotUpdate(); <span class="comment">//update the graphics window and move on</span></div>
+<div class="line">   vis.printWindow( <span class="stringliteral">&quot;patch.jpeg&quot;</span> ); <span class="comment">//print window to JPEG file</span></div>
+<div class="line">   </div>
+<div class="line">   vis.plotInteractive(); <span class="comment">//open an interactive graphics window</span></div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
 <!-- start footer part -->

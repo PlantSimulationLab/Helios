@@ -347,6 +347,7 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
         context_ptr->cleanDeletedUUIDs(petal_UUIDs);
         context_ptr->cleanDeletedUUIDs(sepal_UUIDs);
         context_ptr->cleanDeletedUUIDs(fruit_UUIDs);
+        context_ptr->cleanDeletedUUIDs(ground_UUIDs);
 
     }
 

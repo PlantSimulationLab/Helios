@@ -173,6 +173,8 @@ void RadiationModel::setDiffuseSpectrumIntegral( const std::string &band_label, 
         wavelength.y *= spectrum_integral/current_integral;
     }
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 void RadiationModel::setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength1, float wavelength2){
@@ -188,6 +190,8 @@ void RadiationModel::setDiffuseSpectrumIntegral( const std::string &band_label, 
     for( vec2 &wavelength : radiation_bands.at(band_label).diffuse_spectrum ){
         wavelength.y *= spectrum_integral/current_integral;
     }
+
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -266,6 +270,8 @@ void RadiationModel::copyRadiationBand(const std::string &old_label, const std::
         source.source_fluxes[new_label] = source.source_fluxes.at(old_label);
     }
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 bool RadiationModel::doesBandExist( const std::string &label ) const{
@@ -336,6 +342,8 @@ uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction ){
 
     radiation_sources.emplace_back(collimated_source);
 
+    radiativepropertiesneedupdate = true;
+
     return Nsources-1;
 
 }
@@ -365,6 +373,8 @@ uint RadiationModel::addSphereRadiationSource( const vec3 &position, float radiu
     if( islightvisualizationenabled ){
         buildLightModelGeometry(sourceID);
     }
+
+    radiativepropertiesneedupdate = true;
 
     return sourceID;
 
@@ -404,6 +414,8 @@ uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction ){
 
     radiation_sources.emplace_back( sphere_source );
 
+    radiativepropertiesneedupdate = true;
+
     return Nsources-1;
 
 }
@@ -433,6 +445,8 @@ uint RadiationModel::addRectangleRadiationSource( const vec3 &position, const ve
     if( islightvisualizationenabled ){
         buildLightModelGeometry(sourceID);
     }
+
+    radiativepropertiesneedupdate = true;
 
     return sourceID;
 
@@ -464,6 +478,8 @@ uint RadiationModel::addDiskRadiationSource( const vec3 &position, float radius,
         buildLightModelGeometry(sourceID);
     }
 
+    radiativepropertiesneedupdate = true;
+
     return sourceID;
 
 
@@ -476,6 +492,8 @@ void RadiationModel::deleteRadiationSource(uint sourceID){
     }
 
     radiation_sources.erase(radiation_sources.begin()+sourceID);
+
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -588,6 +606,8 @@ void RadiationModel::setSourceSpectrum( uint source_ID, const std::vector<helios
 
     radiation_sources.at(source_ID).source_spectrum = spectrum;
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 void RadiationModel::setSourceSpectrum(const std::vector<uint> &source_ID, const std::vector<helios::vec2> &spectrum ) {
@@ -606,6 +626,8 @@ void RadiationModel::setSourceSpectrum(uint source_ID, const std::string &spectr
 
     radiation_sources.at(source_ID).source_spectrum = spectrum;
     radiation_sources.at(source_ID).source_spectrum_label = spectrum_label;
+
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -630,6 +652,8 @@ void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
         band.second.diffuse_spectrum = spectrum;
     }
 
+    radiativepropertiesneedupdate = true;
+
 }
 
 void RadiationModel::setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label ){
@@ -648,6 +672,8 @@ void RadiationModel::setDiffuseSpectrum( const std::string &band_label, const st
     }
 
     radiation_bands.at(band_label).diffuse_spectrum = spectrum;
+
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -1217,6 +1243,8 @@ void RadiationModel::setCameraSpectralResponse( const std::string &camera_label,
     }
 
     cameras.at(camera_label).band_spectral_response[band_label] = global_data;
+
+    radiativepropertiesneedupdate = true;
 
 }
 
@@ -2033,23 +2061,33 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
 
     //primitive UUID buffers - total size of all combined is Nobjects
     std::vector<uint> patch_UUID;
+    patch_UUID.reserve(Nprimitives);
     std::vector<uint> triangle_UUID;
+    triangle_UUID.reserve(Nprimitives);
     std::vector<uint> disk_UUID;
+    disk_UUID.reserve(Nprimitives);
     std::vector<uint> tile_UUID;
+    tile_UUID.reserve(Nprimitives);
     std::vector<uint> voxel_UUID;
 
     //twosided flag buffer - size=Nobjects
     std::vector<char> twosided_flag_global;
+    twosided_flag_global.reserve(Nprimitives);
 
     //primitive geometry specification buffers
     std::vector<std::vector<optix::float3> > patch_vertices;
+    patch_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > triangle_vertices;
+    triangle_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > disk_vertices;
+    disk_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > tile_vertices;
+    tile_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > voxel_vertices;
 
     //number of patch subdivisions for each tile - size is same as tile_vertices
     std::vector<optix::int2> object_subdivisions;
+    object_subdivisions.reserve(Nprimitives);
 
     std::vector<uint> objID_all = context->getAllObjectIDs();
 
@@ -2066,6 +2104,7 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     area_global.resize(Nprimitives);
 
     primitiveID.resize(0);
+    primitiveID.reserve(Nprimitives);
 
     //Create a vector of primitive pointers 'primitives' (note: only add one pointer for compound objects)
     uint objID = 0;

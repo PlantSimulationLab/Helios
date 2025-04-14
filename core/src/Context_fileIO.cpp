@@ -4058,9 +4058,11 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
 
       while( line!="newmtl" && inputMTL.good() ){
 
-        if( line=="map_a" ){
-          getline(inputMTL, line);
-        }else if( line=="map_Ka" ){
+        inputMTL>>line;
+
+        if( line=="newmtl" ) {
+            break;
+        }else if( line=="map_a" || line=="map_Ka" || line=="Ks"  || line=="Ka" || line=="map_Ks" ){
           getline(inputMTL, line);
         }else if( line=="map_Kd" || line=="map_d" ){
           std::string maptype = line;
@@ -4098,23 +4100,18 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
               }
             }
           }
-
-        }else if( line=="map_Ks" ){
-          getline(inputMTL, line);
-
         }else if( line=="Kd" ){
           getline(inputMTL, line);
           std::string color_str = trim_whitespace(line );
           RGBAcolor color = string2RGBcolor(color_str.c_str());
           materials.at(material_name).color = make_RGBcolor(color.r,color.g,color.b);
         }else{
-          getline(inputMTL, line);
-        }
+           getline(inputMTL, line);
+         }
 
-        inputMTL>>line;
       }
 
-      if( map_Kd.empty() && !map_d.empty() ){
+       if( map_Kd.empty() && !map_d.empty() ){
         materials.at(material_name).textureColorIsOverridden=true;
       }
 

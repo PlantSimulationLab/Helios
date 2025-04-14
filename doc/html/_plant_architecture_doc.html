@@ -73,7 +73,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.29</span>
    </div>
   </td>
  </tr>
@@ -905,6 +905,7 @@ girth_area_factor</h3>
 Modifying Parameters of a Plant from the Library</h3>
 <p>Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the <a class="el" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba">PlantArchitecture::buildPlantInstanceFromLibrary()</a> method. After calling <a class="el" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a">PlantArchitecture::loadPlantModelFromLibrary()</a>, the parameters can be queried (at the shoot level), modified, and then set.</p>
 <p>Parameters are queried based on shoot type (the names of which are given in the table above). The user can either query the <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> structure for a single shoot type based on its label, or for all shoot types in the particular model.</p>
+<p>The default parameters for each shoot type and species from the library are not listed exhaustively in this documentation, but can be found in the file <a class="el" href="_plant_library_8cpp.html">PlantLibrary.cpp</a>.</p>
 <p>Below is an example of modifying the parameters of a single shoot type:</p>
 <div class="fragment"><div class="line">plantarchitecture.loadPlantModelFromLibrary( <span class="stringliteral">&quot;almond&quot;</span> );</div>
 <div class="line"> </div>

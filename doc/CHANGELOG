@@ -2080,3 +2080,15 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Photosynthesis*
 - The way parameters are set for the FvCB model has been clarified to be more explicitly clear about how temperature response is being treated.
+
+[1.3.29] 2025-04-14
+
+*Tutorial #12 added for canopy water-use efficiency example. (credit to Ethan Frehner for this addition)
+
+*Context*
+- Added a check to Context::getUniquePrimitiveParentObjectIDs() to return an empty output objID vector if given an empty input UUID vector.
+- Error corrected with OBJ file loading that could cause incorrect material depending on the ordering of values in the material file.
+- The latest Xcode version on MacOS caused an error in libpng, which was fixed.
+
+*Radiation*
+- There were many instances where calling setter methods after calling updateGeometry() would cause issues. This has been fixed by making sure the setters force recalculation of the radiative properties.
