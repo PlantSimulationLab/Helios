@@ -527,12 +527,14 @@ void ProjectBuilder::updateCameras(){
             vec3 camera_lookat_ = camera_lookats[rig_index];
             radiation->addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, *cameraproperties, 100);
             for (auto &band : bandlabels){
-                radiation->setCameraSpectralResponse(camera_label_, band, camera_calibrations[camera_index] + "_" + band);
+                radiation->setCameraSpectralResponse(camera_label_, band, camera_calibrations[camera_index][band] + "_" + band);
             }
             radiation->updateGeometry();
         }
     }
-    radiation->runBand(bandlabels);
+    for (std::string band_group_name : band_group_names){
+        radiation->runBand(band_group_lookup[band_group_name]);
+    }
     #endif //RADIATION_MODEL
 }
 
@@ -582,12 +584,16 @@ void ProjectBuilder::record(){
                 radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
             }
             radiation->updateGeometry();
-            radiation->runBand({"red", "green", "blue"});
+            for (std::string band_group_name : band_group_names){
+                radiation->runBand(band_group_lookup[band_group_name]);
+            }
             for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                 std::string cameralabel = rig_label + "_" + rig_camera_label;
                 // Write Images
-                radiation->writeCameraImage( cameralabel, bandlabels, "RGB" + std::to_string(i), image_dir + rig_label + '/');
-                radiation->writeNormCameraImage( cameralabel, bandlabels, "norm" + std::to_string(i), image_dir + rig_label + '/');
+                for (std::string band_group_name : band_group_names){
+                    radiation->writeCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + std::to_string(i), image_dir + rig_label + '/');
+                    radiation->writeNormCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                }
                 radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
                 radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
                 //
@@ -1959,7 +1965,7 @@ void ProjectBuilder::visualize(){
                     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
                 visualizer->plotUpdate();
                 updateSpectra();
-                // updateCameras(); //TODO: figure out why this causes an error
+                updateCameras(); //TODO: figure out why this causes an error
                 record();
                 visualizer->clearGeometry();
                 visualizer->buildContextGeometry(context);
@@ -1998,6 +2004,17 @@ void ProjectBuilder::visualize(){
                     } else{
                         ImGui::Text("Coordinate Axes Disabled");
                     }
+                    // ####### LOCATION ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Location:");
+                    ImGui::SetWindowFontScale(1.0f);
+                    if (ImGui::Button("Update Location")){
+                        Location location;
+                        location.latitude_deg = latitude;
+                        location.longitude_deg = longitude;
+                        location.UTC_offset = static_cast<float>(UTC_offset);
+                        context->setLocation(location);
+                    }
                     // ####### LATITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
@@ -2017,26 +2034,6 @@ void ProjectBuilder::visualize(){
                     randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
                     randomizerParams("UTC_offset");
                     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
-                    // ####### CSV Weather File ####### //
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("CSV Weather File")){
-                        std::string csv_weather_file_ = file_dialog();
-                        if (!csv_weather_file_.empty()){
-                            csv_weather_file = csv_weather_file_;
-                        }
-                    }
-                    ImGui::SameLine();
-                    std::string shorten_weather_file = csv_weather_file;
-                    for (char &c : shorten_weather_file){
-                        if (c == '\\'){
-                            c = '/';
-                        }
-                    }
-                    size_t last_weather_file = shorten_weather_file.rfind('/');
-                    if (last_weather_file != std::string::npos){
-                        shorten_weather_file = shorten_weather_file.substr(last_weather_file + 1);
-                    }
-                    ImGui::Text("%s", shorten_weather_file.c_str());
                     // ####### DOMAIN ORIGIN ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
@@ -2071,20 +2068,71 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Domain Extent");
-                    // ####### GROUND RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
-                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
-                    randomizerParams("ground_resolution_x");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
+                    // ####### WEATHER & GROUND ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Weather & Ground:");
+                    ImGui::SetWindowFontScale(1.0f);
+                    if (ImGui::Button("Update Weather / Ground")){
+                        context->deletePrimitive(primitive_UUIDs["ground"]);
+                        uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+                        ground_UUIDs.clear();
+                        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+                        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+                        primitive_UUIDs["ground"] = ground_UUIDs;
+                        const char* font_name = "LCD";
+                        visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                            RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                        visualizer->plotUpdate();
+                        visualizer->clearGeometry();
+                        visualizer->buildContextGeometry(context);
+                        visualizer->plotUpdate();
+                    }
+                    // ####### CSV Weather File ####### //
+                    ImGui::SetNextItemWidth(60);
+                    toggle_button("##is_weather_file_csv", &is_weather_file_csv);
+                    std::string prev_weather_file;
+                    std::string *weather_file;
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
-                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
-                    randomizerParams("ground_resolution_y");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
+                    if (is_weather_file_csv){
+                        ImGui::Text("CSV");
+                        weather_file = &csv_weather_file;
+                        prev_weather_file = csv_weather_file;
+                    } else{
+                        ImGui::Text("CIMIS");
+                        weather_file = &cimis_weather_file;
+                        prev_weather_file = cimis_weather_file;
+                    }
                     ImGui::SameLine();
-                    ImGui::Text("Ground Resolution");
+                    if (ImGui::Button("Weather File")){
+                        std::string weather_file_ = file_dialog();
+                        if (!weather_file_.empty()){
+                            *weather_file = weather_file_;
+                            try{
+                                if (is_weather_file_csv){
+                                    context->loadTabularTimeseriesData(*weather_file, {}, ",", "YYYYMMDD", 1 );
+                                } else{
+                                    context->loadTabularTimeseriesData(*weather_file, {"CIMIS"}, ",");
+                                }
+                            } catch(...) {
+                                std::cout << "Failed to load weather file: " << *weather_file << std::endl;
+                                *weather_file = prev_weather_file;
+                            }
+                        } else{
+                            *weather_file = prev_weather_file;
+                        }
+                    }
+                    ImGui::SameLine();
+                    std::string shorten_weather_file = *weather_file;
+                    for (char &c : shorten_weather_file){
+                        if (c == '\\'){
+                            c = '/';
+                        }
+                    }
+                    size_t last_weather_file = shorten_weather_file.rfind('/');
+                    if (last_weather_file != std::string::npos){
+                        shorten_weather_file = shorten_weather_file.substr(last_weather_file + 1);
+                    }
+                    ImGui::Text("%s", shorten_weather_file.c_str());
                     // ####### GROUND TEXTURE File ####### //
                     ImGui::SetNextItemWidth(60);
                     if (ImGui::Button("Ground Texture File")){
@@ -2105,6 +2153,20 @@ void ProjectBuilder::visualize(){
                         shorten = shorten.substr(last + 1);
                     }
                     ImGui::Text("%s", shorten.c_str());
+                    // ####### GROUND RESOLUTION ####### //
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
+                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
+                    randomizerParams("ground_resolution_x");
+                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
+                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
+                    randomizerParams("ground_resolution_y");
+                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Ground Resolution");
 
                     ImGui::EndTabItem();
                 }
@@ -2184,15 +2246,22 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Select Object");
                     if ( !current_obj.empty() ){
-                        if (ImGui::Button("Update")){
+                        if (ImGui::Button("Update Object")){
                             updateObject(current_obj);
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Object")){
                             int delete_idx = obj_names_dict[current_obj];
                             context->deletePrimitive(obj_UUIDs[delete_idx]);
+                            const char* font_name = "LCD";
+                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                            visualizer->plotUpdate();
                             visualizer->clearGeometry();
                             visualizer->buildContextGeometry(context);
+                            if (enable_coordinate_axes){
+                                visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
+                            }
                             visualizer->plotUpdate();
                             obj_names_dict.erase(current_obj);
                             obj_names_set.erase(current_obj);
@@ -3370,6 +3439,76 @@ void ProjectBuilder::visualize(){
                             context->loadXML( new_xml_library_file.c_str() );
                         }
                     }
+
+                    // ####### ADD BAND GROUP ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Band Groups:");
+                    ImGui::SetWindowFontScale(1.0f);
+                    dropDown("##band_group_combo", current_band_group, band_group_names);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Add Band Group")){
+                        std::string default_band_group_label = "band_group";
+                        std::string new_band_group_label = "band_group_0";
+                        int count = 0;
+                        while (band_group_lookup.find(new_band_group_label) != band_group_lookup.end()){
+                            count++;
+                            new_band_group_label = default_band_group_label + "_" + std::to_string(count);
+                        }
+                        std::vector<std::string> new_band_group;
+                        new_band_group.push_back("red");
+                        if (!is_grayscale){
+                            new_band_group.push_back("green");
+                            new_band_group.push_back("blue");
+                        }
+                        band_group_lookup[new_band_group_label] = new_band_group;
+                        band_group_names.insert(new_band_group_label);
+                    }
+                    if (!current_band_group.empty()){
+                        ImGui::SetNextItemWidth(100);
+                        std::string prev_group_name = current_band_group;
+                        ImGui::InputText("Group Name", &current_band_group);
+                        if (current_band_group.empty() || band_group_lookup.find(current_band_group) != band_group_lookup.end()){
+                            current_band_group = prev_group_name;
+                        }
+                        if (current_band_group != prev_group_name){
+                            std::vector<std::string> temp = band_group_lookup[prev_group_name];
+                            std::map<std::string, std::vector<std::string>>::iterator current_band_group_iter = band_group_lookup.find(prev_group_name);
+                            if (current_band_group_iter != band_group_lookup.end()){
+                                band_group_lookup.erase(current_band_group_iter);
+                            }
+                            band_group_lookup[current_band_group] = temp;
+                            band_group_names.erase(prev_group_name);
+                            band_group_names.insert(current_band_group);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete Group")){
+                            band_group_names.erase(current_band_group);
+                            band_group_lookup.erase(current_band_group);
+                            current_band_group = "";
+                        }
+                        ImGui::Checkbox("Grayscale", &is_grayscale);
+                        // Band 1
+                        ImGui::SetNextItemWidth(100);
+                        dropDown("##band_1_combo", band_group_lookup[current_band_group][0], bandlabels);
+                        if (!is_grayscale){
+                            // Band 2
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(100);
+                            dropDown("##band_2_combo", band_group_lookup[current_band_group][1], bandlabels);
+                            // Band 3
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(100);
+                            dropDown("##band_3_combo", band_group_lookup[current_band_group][2], bandlabels);
+                            ImGui::SameLine();
+                            ImGui::Text("Select Bands");
+                        } else{
+                            ImGui::SameLine();
+                            ImGui::Text("Select Band");
+                        }
+                    }
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Edit Camera:");
+                    ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::BeginCombo("##camera_combo", current_cam.c_str())){
                         for (int n = 0; n < camera_names.size(); n++){
                             bool is_cam_selected = (current_cam == camera_names[n]);
@@ -3381,7 +3520,7 @@ void ProjectBuilder::visualize(){
                         ImGui::EndCombo();
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("Add Camera")){
+                    if (ImGui::Button("Add New Camera")){
                         std::string default_cam_name = "camera";
                         std::string new_cam_name = "camera_0";
                         int count = 0;
@@ -3419,19 +3558,29 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Camera Label");
                     // ####### CAMERA CALIBRATION ####### //
-                    std::string prev_cam_calibration = camera_calibrations[camera_dict[current_cam]];
-                    if (ImGui::BeginCombo("##camera_calibration_combo", camera_calibrations[camera_dict[current_cam]].c_str())){
-                        for (int n = 0; n < possible_camera_calibrations.size(); n++){
-                            bool is_cam_calibration_selected = (camera_calibrations[camera_dict[current_cam]] == possible_camera_calibrations[n]);
-                            if (ImGui::Selectable(possible_camera_calibrations[n].c_str(), is_cam_calibration_selected))
-                                camera_calibrations[camera_dict[current_cam]] = possible_camera_calibrations[n];
-                            if (is_cam_calibration_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
+                    ImGui::SetNextItemWidth(100);
+                    dropDown("##camera_calibration_band", current_calibration_band, bandlabels);
                     ImGui::SameLine();
-                    ImGui::Text("Camera Calibration");
+                    ImGui::Text("Band");
+                    ImGui::SetNextItemWidth(250);
+                    ImGui::SameLine();
+                    dropDown("##camera_band_group_combo", camera_calibrations[camera_dict[current_cam]][current_calibration_band], possible_camera_calibrations);
+                    ImGui::SameLine();
+                    ImGui::Text("Calibration");
+                    // ####### CAMERA CALIBRATION ####### //
+                    // std::string prev_cam_calibration = camera_calibrations[camera_dict[current_cam]];
+                    // if (ImGui::BeginCombo("##camera_calibration_combo", camera_calibrations[camera_dict[current_cam]].c_str())){
+                    //     for (int n = 0; n < possible_camera_calibrations.size(); n++){
+                    //         bool is_cam_calibration_selected = (camera_calibrations[camera_dict[current_cam]] == possible_camera_calibrations[n]);
+                    //         if (ImGui::Selectable(possible_camera_calibrations[n].c_str(), is_cam_calibration_selected))
+                    //             camera_calibrations[camera_dict[current_cam]] = possible_camera_calibrations[n];
+                    //         if (is_cam_calibration_selected)
+                    //             ImGui::SetItemDefaultFocus();
+                    //     }
+                    //     ImGui::EndCombo();
+                    // }
+                    // ImGui::SameLine();
+                    // ImGui::Text("Camera Calibration");
                     // ####### CAMERA RESOLUTION ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
@@ -3764,7 +3913,11 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValue("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
     xmlSetValue("HFOV", "camera", HFOV);
     xmlSetValues("camera_resolution", "camera", camera_resolutions);
-    xmlSetValues("camera_calibration", "camera", camera_calibrations);
+    for (std::string& band : bandlabels){
+        for (std::string& camera : camera_names){
+            xmlSetValue("camera_calibration_" + band, "camera", camera_calibrations[camera_dict[camera]][band]);
+        }
+    }
     xmlSetValues("focal_plane_distance", "camera", focal_plane_distances);
     xmlSetValues("lens_diameter", "camera", lens_diameters);
     xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
@@ -3931,7 +4084,12 @@ void ProjectBuilder::xmlGetValues(){
     camera_resolutions.clear();
     xmlGetValues("camera_resolution", "camera", camera_resolutions);
     camera_calibrations.clear();
-    xmlGetValues("camera_calibration", "camera", camera_calibrations);
+    for (std::string& camera : camera_names){
+        camera_calibrations.push_back(std::map<std::string, std::string>{});
+        for (std::string& band : bandlabels){
+            xmlGetValue("camera_calibration_" + band, "camera", camera_calibrations[camera_dict[camera]][band]);
+        }
+    }
     focal_plane_distances.clear();
     xmlGetValues("focal_plane_distance", "camera", focal_plane_distances);
     lens_diameters.clear();
@@ -4447,6 +4605,9 @@ void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr){
             ImGui::SetNextItemWidth(150);
             ImGui::InputFloat(u8"Scale (\u03bb)", &curr_distribution_params[1]);
         }
+        if (current_distribution != "N/A"){
+            ImGui::Checkbox("Randomize for Every Image", &randomize_repeatedly);
+        }
         if (ImGui::Button("Apply")){
             if (current_distribution == "N/A"){
                 distribution_types[popup_name] = "N/A";
@@ -4454,19 +4615,19 @@ void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr){
             if (current_distribution == "Normal (Gaussian)"){
                 std::normal_distribution<float> curr_dist_normal(curr_distribution_params[0],curr_distribution_params[1]);
                 distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_normal));
+                distributions.push_back(createDistribution(curr_dist_normal, randomize_repeatedly));
                 distribution_types[popup_name] = "Normal (Gaussian)";
             }
             if (current_distribution == "Uniform"){
                 std::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0],curr_distribution_params[1]);
                 distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_uniform));
+                distributions.push_back(createDistribution(curr_dist_uniform, randomize_repeatedly));
                 distribution_types[popup_name] = "Uniform";
             }
             if (current_distribution == "Weibull"){
                 std::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0],curr_distribution_params[1]);
                 distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_weibull));
+                distributions.push_back(createDistribution(curr_dist_weibull, randomize_repeatedly));
                 distribution_types[popup_name] = "Weibull";
             }
             distribution_params[popup_name] = curr_distribution_params;
@@ -4492,27 +4653,27 @@ taggedPtr createTaggedPtr(int* ptr){
     return t;
 }
 
-distribution createDistribution(std::normal_distribution<float> dist){
+distribution createDistribution(std::normal_distribution<float> dist, bool randomize_repeat){
     distUnion u;
     u.normal = new std::normal_distribution<float>;
     *u.normal = dist;
-    distribution d{u, 0};
+    distribution d{u, 0, randomize_repeat};
     return d;
 }
 
-distribution createDistribution(std::uniform_real_distribution<float> dist){
+distribution createDistribution(std::uniform_real_distribution<float> dist, bool randomize_repeat){
     distUnion u;
     u.uniform = new std::uniform_real_distribution<float>;
     *u.uniform = dist;
-    distribution d{u, 1};
+    distribution d{u, 1, randomize_repeat};
     return d;
 }
 
-distribution createDistribution(std::weibull_distribution<float> dist){
+distribution createDistribution(std::weibull_distribution<float> dist, bool randomize_repeat){
     distUnion u;
     u.weibull = new std::weibull_distribution<float>;
     *u.weibull = dist;
-    distribution d{u, 2};
+    distribution d{u, 2, randomize_repeat};
     return d;
 }
 
@@ -4656,5 +4817,33 @@ void ProjectBuilder::updateRig(std::string curr_rig){
     visualizer->clearGeometry();
     visualizer->buildContextGeometry(context);
     visualizer->plotUpdate();
+}
+
+
+void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices){
+    if (ImGui::BeginCombo(widget_name.c_str(), selected.c_str())){
+        for (int n = 0; n < choices.size(); n++){
+            bool is_selected = (selected == choices[n]);
+            if (ImGui::Selectable(choices[n].c_str(), is_selected))
+                selected = choices[n];
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+}
+
+
+void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, std::set<std::string> choices){
+    if (ImGui::BeginCombo(widget_name.c_str(), selected.c_str())){
+        for (std::string choice : choices){
+            bool is_selected = (selected == choice);
+            if (ImGui::Selectable(choice.c_str(), is_selected))
+                selected = choice;
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
 }
 

@@ -167,29 +167,33 @@ union distUnion{
  std::weibull_distribution<float> *weibull;
 };
 
-//! Struct to combine distribution objects (flag: 0 = normal, 1 = uniform, 2 = weibull)
+//! Struct to combine distribution objects (flag: 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)
 struct distribution{
  distUnion dist;
  int flag;
+ bool repeat;
 };
 
 //! Function to create a distribution struct from a normal distribution
 /**
  ** \param[in] dist Distribution
+ ** \param[in] randomize_repeat If true, randomize for every image.
 */
-distribution createDistribution(std::normal_distribution<float> dist);
+distribution createDistribution(std::normal_distribution<float> dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a uniform real distribution
 /**
  ** \param[in] dist Distribution
+ ** \param[in] randomize_repeat If true, randomize for every image.
 */
-distribution createDistribution(std::uniform_real_distribution<float> dist);
+distribution createDistribution(std::uniform_real_distribution<float> dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a weibull distribution
 /**
  ** \param[in] dist Distribution
+ ** \param[in] randomize_repeat If true, randomize for every image.
 */
-distribution createDistribution(std::weibull_distribution<float> dist);
+distribution createDistribution(std::weibull_distribution<float> dist, bool randomize_repeat);
 
 
 class ProjectBuilder {
@@ -223,6 +227,18 @@ class ProjectBuilder {
 
     //! Band Labels
     std::vector<std::string> bandlabels;
+
+    //! Band group names
+    std::set<std::string> band_group_names;
+
+    //! Band groups lookup map
+    std::map<std::string, std::vector<std::string>> band_group_lookup;
+
+    //! Current band group
+    std::string current_band_group = "";
+
+    //! Is band group grayscale (true = 1 band; false = 3 bands)
+    bool is_grayscale = false;
 
     //! Band Labels set
     std::set<std::string> bandlabels_set;
@@ -488,6 +504,12 @@ class ProjectBuilder {
     //! CSV weather file path
     std::string csv_weather_file = "plugins/projectbuilder/inputs/weather_data.csv";
 
+    //! CIMIS weather file path
+    std::string cimis_weather_file = "";
+
+    //! If true, weather file is CSV file. Else, weather file is CIMIS file.
+    bool is_weather_file_csv = true;
+
     //! Domain origin
     helios::vec3 domain_origin = {0,0,0};
 
@@ -618,8 +640,11 @@ class ProjectBuilder {
     //! Possible camera calibrations vector from camera library files
     std::vector<std::string> possible_camera_calibrations;
 
-    //! Camera calibration selection for each camera
-    std::vector<std::string> camera_calibrations;
+    //! Camera calibration selection for each camera. Each entry is a map keyed by band name that returns the camera calibration for that band.
+    std::vector<std::map<std::string, std::string>> camera_calibrations;
+
+    //! Currently selected band for editing camera calibration
+    std::string current_calibration_band;
 
     //! Light XML library files
     std::set<std::string> light_xml_library_files = {"plugins/radiation/spectral_data/light_spectral_library.xml"};
@@ -926,6 +951,9 @@ class ProjectBuilder {
 
     //! Distribution parameters
     std::vector<float> curr_distribution_params = {0.0, 0.0};
+
+    //! Randomize repeatedly
+    bool randomize_repeatedly = false;
 
     //!
     std::streambuf* old_cout_stream_buf = std::cout.rdbuf();
@@ -1335,6 +1363,12 @@ class ProjectBuilder {
 
     //! Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.)
     void updateRig(std::string curr_rig);
+
+    //! Create dropdown widget
+    void dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices);
+
+    //! Create dropdown widget
+    void dropDown(std::string widget_name, std::string& selected, std::set<std::string> choices);
 
     //! Constructor
     ProjectBuilder(){
