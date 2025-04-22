@@ -2441,6 +2441,7 @@ void ProjectBuilder::visualize(){
                         plant_counts.push_back(plant_count);
                         plant_spacings.push_back(plant_spacing);
                         plant_library_names.push_back(plant_library_name);
+                        plant_library_names_verbose.push_back(plant_library_name_verbose);
                         plant_ages.push_back(plant_age);
                         ground_clipping_heights.push_back(ground_clipping_height);
                         canopy_labels.push_back(new_canopy_label);
@@ -2472,6 +2473,53 @@ void ProjectBuilder::visualize(){
                         pugi::xml_attribute node_label = new_canopy_node.attribute(name.c_str());
                         node_label.set_value(new_canopy_label.c_str());
                     }
+                    if (ImGui::Button("Update Canopy")){
+                        int update_idx = canopy_labels_dict[current_canopy];
+                        for (auto plant_instance : canopy_UUIDs[update_idx]){
+                            // context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(plant_instance));
+                            plantarchitecture->deletePlantInstance(plant_instance);
+                        }
+                        plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
+                        plantarchitecture->enableGroundClipping( ground_clipping_height );
+                        std::vector<helios::vec3> curr_plant_locations;
+                        std::vector<uint> new_canopy_UUIDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
+                                                                                                            plant_counts[update_idx], plant_ages[update_idx], curr_plant_locations);
+                        individual_plant_locations.push_back(curr_plant_locations);
+
+                        leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
+                        primitive_UUIDs["leaf"] = leaf_UUIDs;
+                        internode_UUIDs = plantarchitecture->getAllInternodeUUIDs();
+                        primitive_UUIDs["internode"] = internode_UUIDs;
+                        petiole_UUIDs = plantarchitecture->getAllPetioleUUIDs();
+                        primitive_UUIDs["petiole"] = petiole_UUIDs;
+                        peduncle_UUIDs = plantarchitecture->getAllPeduncleUUIDs();
+                        primitive_UUIDs["peduncle"] = peduncle_UUIDs;
+                        std::vector<uint> flower_UUIDs = plantarchitecture->getAllFlowerUUIDs();
+                        petal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "petal");
+                        sepal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "sepal");
+                        if( petal_UUIDs.empty() && sepal_UUIDs.empty() ){
+                            petal_UUIDs = flower_UUIDs;
+                            sepal_UUIDs.clear();
+                        }
+                        fruit_UUIDs = plantarchitecture->getAllFruitUUIDs();
+                        primitive_UUIDs["petal"] = petal_UUIDs;
+                        primitive_UUIDs["sepal"] = sepal_UUIDs;
+                        primitive_UUIDs["flower"] = flower_UUIDs;
+
+                        canopy_UUIDs[canopy_labels_dict[current_canopy]] = new_canopy_UUIDs;
+
+                        const char* font_name = "LCD";
+                        visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                            RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                        visualizer->plotUpdate();
+                        visualizer->clearGeometry();
+                        visualizer->buildContextGeometry(context);
+                        visualizer->plotUpdate();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Delete Canopy")){
+                        deleteCanopy();
+                    }
                     ImGui::SetNextItemWidth(100);
                     std::string prev_canopy_name = canopy_labels[canopy_labels_dict[current_canopy]];
                     ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[current_canopy]]);
@@ -2487,8 +2535,10 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Canopy Name");
                     // ####### PLANT LIBRARY NAME ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+                    ImGui::SetNextItemWidth(250);
+                    // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+                    dropDown("Plant Library###dropdown", plant_library_names_verbose[canopy_labels_dict[current_canopy]], plant_types_verbose);
+                    plant_library_names[canopy_labels_dict[current_canopy]] = plant_type_lookup[plant_library_names_verbose[canopy_labels_dict[current_canopy]]];
                     // ######### CANOPY DATA GROUP ####### //
                     ImGui::SetNextItemWidth(100);
                     std::string prev_canopy_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
@@ -4041,6 +4091,9 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("plant_spacing", "canopy_block", plant_spacings);
     plant_library_names.clear();
     xmlGetValues("plant_library_name", "canopy_block", plant_library_names);
+    for (int i = 0; i < plant_library_names.size(); i++){
+        plant_library_names_verbose.push_back(plant_type_verbose_lookup[plant_library_names[i]]);
+    }
     plant_ages.clear();
     xmlGetValues("plant_age", "canopy_block", plant_ages);
     ground_clipping_heights.clear();
@@ -4844,6 +4897,22 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, st
                 ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
+    }
+}
+
+void ProjectBuilder::deleteCanopy(){
+    int delete_idx = canopy_labels_dict[current_canopy];
+    for (auto canopy_vec : canopy_UUIDs[delete_idx]){
+        context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(canopy_vec));
+    }
+    visualizer->clearGeometry();
+    visualizer->buildContextGeometry(context);
+    visualizer->plotUpdate();
+    canopy_labels_dict.erase(current_canopy);
+    if (!canopy_labels.empty()){
+        current_canopy = canopy_labels[0];
+    } else{
+        current_obj = "";
     }
 }
 

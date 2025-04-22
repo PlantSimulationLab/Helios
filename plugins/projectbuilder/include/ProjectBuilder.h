@@ -294,6 +294,12 @@ class ProjectBuilder {
     //! Petal UUIDs
     std::vector<uint> petal_UUIDs;
 
+    //! Flower UUIDs
+    std::vector<uint> flower_UUIDs;
+
+    //! Sepal UUIDs
+    std::vector<uint> sepal_UUIDs;
+
     //! Pedicel UUIDs
     std::vector<uint> pedicel_UUIDs;
 
@@ -552,8 +558,75 @@ class ProjectBuilder {
     //! Plant library name
     std::string plant_library_name = "cowpea";
 
+    //! Long plant library name
+    std::string plant_library_name_verbose = "Cowpea (Vigna unguiculata)";
+
     //! Vector of plant library names for every canopy
     std::vector<std::string> plant_library_names;
+
+    //! Vector of long plant library names for every canopy
+    std::vector<std::string> plant_library_names_verbose;
+
+    //! All available plant types
+    std::set<std::string> plant_types = {"almond", "apple", "bindweed", "butterlettuce", "cheeseweed", "bean",
+                                           "cowpea", "easternredbud", "grapevine_VSP", "maize", "olive", "pistachio",
+                                          "puncturevine", "rice", "sorghum", "soybean", "sugarbeet", "tomato",
+                                          "walnut", "wheat"};
+
+    //! Long names for each plant type
+    std::set<std::string> plant_types_verbose = {"Almond Tree (Prunus dulcis)", "Apple Tree (Malus pumila)",
+                                                 "Bindweed (Convolvulus arvensis)", "Butter Lettuce (Lactuca sativa)",
+                                                  "Cheeseweed (Malva neglecta)", "Common Bean (Phaseolus vulgaris)",
+                                                  "Cowpea (Vigna unguiculata)", "Eastern Redbud (Cercis canadensis)",
+                                                "Grapevine (Vitis vinifera)", "Maize (Zea mays)",
+                                                "Olive Tree (Olea europaea)", "Pistachio Tree (Pistachia vera)",
+                                                "Puncturevine (Tribulus terrestris)", "Rice (Oryza sativa)",
+                                                 "Sorghum (Sorghum bicolor)", "Soybean (Glycine max)", "Sugar Beet (Beta vulgaris)",
+                                                 "Tomato (Solanum lycopersicum)", "Walnut Tree (Juglans regia)", "Wheat (Triticum aestivum)"};
+
+    //! Map keyed by long plant type names that returns the plant type string argument for the plant architecture library
+    std::map<std::string, std:: string> plant_type_lookup = {{"Almond Tree (Prunus dulcis)", "almond"},
+                                                           {"Apple Tree (Malus pumila)", "apple"},
+                                                           {"Bindweed (Convolvulus arvensis)", "bindweed"},
+                                                           {"Butter Lettuce (Lactuca sativa)", "butterlettuce"},
+                                                           {"Cheeseweed (Malva neglecta)", "cheeseweed"},
+                                                           {"Common Bean (Phaseolus vulgaris)", "bean"},
+                                                           {"Cowpea (Vigna unguiculata)", "cowpea"},
+                                                           {"Eastern Redbud (Cercis canadensis)", "easternredbud"},
+                                                           {"Grapevine (Vitis vinifera)", "grapevine_VSP"},
+                                                           {"Maize (Zea mays)", "maize"},
+                                                           {"Olive Tree (Olea europaea)", "olive"},
+                                                           {"Pistachio Tree (Pistachia vera)", "pistachio"},
+                                                           {"Puncturevine (Tribulus terrestris)", "puncturevine"},
+                                                           {"Rice (Oryza sativa)", "rice"},
+                                                           {"Sorghum (Sorghum bicolor)", "sorghum"},
+                                                           {"Soybean (Glycine max)", "soybean"},
+                                                           {"Sugar Beet (Beta vulgaris)", "sugarbeet"},
+                                                           {"Tomato (Solanum lycopersicum)", "tomato"},
+                                                           {"Walnut Tree (Juglans regia)", "walnut"},
+                                                           {"Wheat (Triticum aestivum)", "wheat"}};
+
+    //! Map keyed by plant type string argument that returns the corresponding long plant name
+ std::map<std::string, std:: string> plant_type_verbose_lookup = {{"almond", "Almond Tree (Prunus dulcis)"},
+                                                                    {"apple", "Apple Tree (Malus pumila)"},
+                                                                    {"bindweed", "Bindweed (Convolvulus arvensis)"},
+                                                                    {"butterlettuce", "Butter Lettuce (Lactuca sativa)"},
+                                                                    {"cheeseweed", "Cheeseweed (Malva neglecta)"},
+                                                                    {"bean", "Common Bean (Phaseolus vulgaris)"},
+                                                                    {"cowpea", "Cowpea (Vigna unguiculata)"},
+                                                                    {"easternredbud", "Eastern Redbud (Cercis canadensis)"},
+                                                                    {"grapevine_VSP", "Grapevine (Vitis vinifera)"},
+                                                                    {"maize", "Maize (Zea mays)"},
+                                                                    {"olive", "Olive Tree (Olea europaea)"},
+                                                                    {"pistachio", "Pistachio Tree (Pistachia vera)"},
+                                                                    {"puncturevine", "Puncturevine (Tribulus terrestris)"},
+                                                                    {"rice", "Rice (Oryza sativa)"},
+                                                                    {"sorghum", "Sorghum (Sorghum bicolor)"},
+                                                                    {"soybean", "Soybean (Glycine max)"},
+                                                                    {"sugarbeet", "Sugar Beet (Beta vulgaris)"},
+                                                                    {"tomato", "Tomato (Solanum lycopersicum)"},
+                                                                    {"walnut", "Walnut Tree (Juglans regia)"},
+                                                                    {"wheat", "Wheat (Triticum aestivum)"}};
 
     //! Plant age
     float plant_age = 0;
@@ -879,6 +952,9 @@ class ProjectBuilder {
 
     //! Function to delete arrows denoting rig movement
     void deleteArrows();
+
+    //! Function to delete a canopy
+    void deleteCanopy();
 
     //! Function to update arrows for rig movement
     void updateArrows();
