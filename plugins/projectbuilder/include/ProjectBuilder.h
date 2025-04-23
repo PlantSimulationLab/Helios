@@ -142,23 +142,32 @@ union digitPtr{
   float* f;
 };
 
+//! Struct to represent an object or canopy
+struct obj{
+  int idx;
+  bool isCanopy;
+};
+
 //! Struct to combine int* and float* objects
 struct taggedPtr{
   digitPtr ptr;
   bool isInt;
+  obj object;
 };
 
 //! Function to create a tagged pointer object from an int pointer
 /**
  ** \param[in] ptr Int pointer
+ ** \param[in] object Object of the associated pointer
 */
-taggedPtr createTaggedPtr(int* ptr);
+taggedPtr createTaggedPtr(int* ptr, obj object);
 
 //! Function to create a tagged pointer object from a float pointer
 /**
  ** \param[in] ptr Float pointer
+ ** \param[in] object Object associated with the pointer
 */
-taggedPtr createTaggedPtr(float* ptr);
+taggedPtr createTaggedPtr(float* ptr, obj object);
 
 //! Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution
 union distUnion{
@@ -206,6 +215,9 @@ class ProjectBuilder {
 
     //! User input
     bool user_input;
+
+    //! Dummy object used if a tagged pointer is not associated with an object or canopy
+    obj dummy_obj = obj{-1, false};
 
     //! Absorbed PAR value
     float PAR_absorbed;
@@ -404,6 +416,9 @@ class ProjectBuilder {
     //! Map keyed by rig name that returns rig index
     std::map<std::string, int> rig_dict;
 
+    //! Rig labels
+    std::set<std::string> rig_labels_set;
+
     //! Rig position
     helios::vec3 camera_position = {0,0,0};
 
@@ -530,6 +545,9 @@ class ProjectBuilder {
 
     //! Vector of canopy labels
     std::vector<std::string> canopy_labels;
+
+    //! Set of canopy labels
+    std::set<std::string> canopy_labels_set;
 
     //! Vector of data labels for each canopy
     std::vector<std::string> canopy_data_groups;
@@ -950,14 +968,26 @@ class ProjectBuilder {
     //! Currently selected radiation band for emissivity in the GUI
     std::string current_band_emissivity = "red";
 
+    //! Dictionary containing UUIDs for every camera model
+    std::map<std::string, std::vector<uint>> camera_models_dict;
+
     //! Function to delete arrows denoting rig movement
     void deleteArrows();
 
     //! Function to delete a canopy
     void deleteCanopy();
 
+    //! Function to add a new canopy
+    void addCanopy();
+
     //! Function to update arrows for rig movement
     void updateArrows();
+
+    //! Function to update camera models in visualization
+    void updateCameraModels();
+
+    //! Function to delete camera models in visualization
+    void deleteCameraModels();
 
     //! Function to update primitive types
     void updatePrimitiveTypes();
@@ -1007,7 +1037,7 @@ class ProjectBuilder {
     //! Distribution parameters
     std::map<std::string, std::vector<float>> distribution_params;
 
-    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the XML
+    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the distributions vector
     std::map<std::string, int> distribution_dict;
 
     //! Dictionary keyed by variable name with a value of the variable address
@@ -1036,6 +1066,15 @@ class ProjectBuilder {
 
     //! Stdout
     std::stringstream captured_cout;
+
+    //! Number of recordings
+    int num_recordings;
+
+    //! Indices of objects that need to be updated
+    std::set<int> dirty_objects = {};
+
+    //! Indices of canopies that need to be updated
+    std::set<int> dirty_canopies = {};
 
   public:
     //! Context
@@ -1413,6 +1452,12 @@ class ProjectBuilder {
     */
     void randomizePopup(std::string popup_name, taggedPtr ptr);
 
+    //! Function to randomize variables that have assigned distributions
+    /**
+     * \param[in] randomize_all If true, randomize all variables. Else, only randomize those with selection "randomize for every image".
+    */
+    void randomize(bool randomize_all);
+
     //! Get current randomization parameters for the given variable
     /**
      * \param[in] var_name Name of the variable being randomized
@@ -1438,13 +1483,31 @@ class ProjectBuilder {
     void updateObject(std::string curr_obj);
 
     //! Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.)
-    void updateRig(std::string curr_rig);
+    void updateRigs();
+
+    //! Delete rig
+    void deleteRig(std::string curr_rig);
 
     //! Create dropdown widget
     void dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices);
 
     //! Create dropdown widget
     void dropDown(std::string widget_name, std::string& selected, std::set<std::string> choices);
+
+    //! Refresh visualizer context and display loading text
+    void refreshVisualization();
+
+    //! Popup that appears when right-clicking the "Record" button
+    void recordPopup();
+
+    //! Update location
+    void updateLocation();
+
+    //! Update weather & ground
+    void updateWeatherAndGround();
+
+    //! Update context
+    void updateContext();
 
     //! Constructor
     ProjectBuilder(){

@@ -331,9 +331,9 @@ void ProjectBuilder::deleteArrows(){
 
 void ProjectBuilder::updateArrows(){
     #ifdef ENABLE_RADIATION_MODEL
-    for (int n = 0; n < rig_labels.size(); n++){
+    for (auto rig_label_ : rig_labels_set){
         arrow_count = 0;
-        std::string current_rig = rig_labels[n];
+        std::string current_rig = rig_label_;
         arrow_dict[current_rig] = std::vector<std::vector<uint>>{};
         for (int i = 1; i < camera_position_vec[rig_dict[current_rig]].size(); i++){
             vec3 arrow_pos = camera_position_vec[rig_dict[current_rig]][i - 1];
@@ -353,10 +353,45 @@ void ProjectBuilder::updateArrows(){
         col[0] = rig_color.r;
         col[1] = rig_color.g;
         col[2] = rig_color.b;
-        updateColor(current_rig, "rig", col);
+        updateColor(current_rig, "arrow", col);
     }
     #endif
 }
+
+
+void ProjectBuilder::deleteCameraModels(){
+    for (auto& camera_model : camera_models_dict){
+        context->deletePrimitive(camera_model.second);
+    }
+    camera_models_dict.clear();
+}
+
+
+void ProjectBuilder::updateCameraModels(){
+#ifdef ENABLE_RADIATION_MODEL
+    for (auto rig_label_ : rig_labels_set){
+        int camera_idx = rig_dict[rig_label_];
+        camera_models_dict[rig_label_] = std::vector<uint>{};
+        vec3 camera_pos = camera_position_vec[camera_idx][0];
+        vec3 camera_direction_vec = camera_lookat_vec[camera_idx][0] - camera_pos;
+        SphericalCoord camera_direction_sph = cart2sphere(camera_direction_vec);
+        vec3 camera_scale(1.0, 1.0, 1.0);
+        camera_models_dict[rig_label_] = context->loadOBJ("plugins/radiation/camera_light_models/Camera.obj",
+                                        nullorigin, camera_scale, nullrotation, RGB::blue, "ZUP", true);
+        context->rotatePrimitive(camera_models_dict.at(rig_label_), camera_direction_sph.elevation, "x");
+        context->rotatePrimitive(camera_models_dict.at(rig_label_), -camera_direction_sph.azimuth, "z");
+        context->translatePrimitive(camera_models_dict.at(rig_label_), camera_pos);
+        context->setPrimitiveData(camera_models_dict.at(rig_label_), "twosided_flag", uint(3));
+        float col[3];
+        RGBcolor rig_color = rig_colors[camera_idx];
+        col[0] = rig_color.r;
+        col[1] = rig_color.g;
+        col[2] = rig_color.b;
+        updateColor(rig_label_, "camera", col);
+    }
+#endif
+}
+
 
 void ProjectBuilder::updatePrimitiveTypes(){
     std::vector<uint> allUUIDs = context->getAllUUIDs();
@@ -508,7 +543,7 @@ void ProjectBuilder::updateSpectra(){
 
 void ProjectBuilder::updateCameras(){
     #ifdef ENABLE_RADIATION_MODEL
-    for (std::string rig_label : rig_labels){
+    for (std::string rig_label : rig_labels_set){
         int rig_index = rig_dict[rig_label];
         for (std::string rig_camera_label : rig_camera_labels[rig_index]){
             int camera_index = camera_dict[rig_camera_label];
@@ -543,7 +578,7 @@ void ProjectBuilder::record(){
     std::string image_dir = "./saved/";
     // deleteArrows();
     std::vector<uint> temp_lights{};
-    for (std::string rig_label : rig_labels){
+    for (std::string rig_label : rig_labels_set){
         int rig_index = rig_dict[rig_label];
         std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
         std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
@@ -874,6 +909,7 @@ void ProjectBuilder::buildFromXML(){
     num_images = 5;
     updateArrows();
     updateCameras();
+    updateCameraModels();
 
     helios = xmldoc.child("helios");
 }
@@ -1554,9 +1590,9 @@ void ProjectBuilder::visualize(){
     // if (enable_visualizer){
     #ifdef ENABLE_HELIOS_VISUALIZER
         visualizer = new Visualizer(800);
-        #ifdef ENABLE_RADIATION_MODEL
-        radiation->enableCameraModelVisualization();
-        #endif //RADIATION_MODEL
+        // #ifdef ENABLE_RADIATION_MODEL
+        // radiation->enableCameraModelVisualization();
+        // #endif //RADIATION_MODEL
         visualizer->buildContextGeometry(context);
 
         // Uncomment below for interactive
@@ -1699,8 +1735,7 @@ void ProjectBuilder::visualize(){
                 dragging_start_position = int2(0, 0);
             }
             int object_window_count = 0;
-            for (int n = 0; n < canopy_labels.size(); n++){
-                current_label = canopy_labels[n];
+            for (auto current_label : canopy_labels_set){
                 vec3 canopy_origin_ = canopy_origins[canopy_labels_dict[current_label]];
                 origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
@@ -1732,8 +1767,7 @@ void ProjectBuilder::visualize(){
                 ImGui::End();
                 object_window_count++;
             }
-            for (int n = 0; n < rig_labels.size(); n++){
-                current_label = rig_labels[n];
+            for (auto current_label : rig_labels_set){
                 vec3 camera_position_ = camera_positions[rig_dict[current_label]];
                 origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
@@ -1939,9 +1973,9 @@ void ProjectBuilder::visualize(){
                 delete cameraproperties;
                 #endif //RADIATION_MODEL
                 buildFromXML();
-                #ifdef ENABLE_RADIATION_MODEL
-                radiation->enableCameraModelVisualization();
-                #endif //RADIATION_MODEL
+                // #ifdef ENABLE_RADIATION_MODEL
+                // radiation->enableCameraModelVisualization();
+                // #endif //RADIATION_MODEL
                 #ifdef ENABLE_PLANT_ARCHITECTURE
                 visualizer->buildContextGeometry(context);
                 #endif //PLANT_ARCHITECTURE
@@ -1989,13 +2023,7 @@ void ProjectBuilder::visualize(){
                             visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                             visualizer->plotUpdate();
                         } else{
-                            const char* font_name = "LCD";
-                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                            visualizer->plotUpdate();
-                            visualizer->clearGeometry();
-                            visualizer->buildContextGeometry(context);
-                            visualizer->plotUpdate();
+                            refreshVisualization();
                         }
                     }
                     ImGui::SameLine();
@@ -2009,47 +2037,43 @@ void ProjectBuilder::visualize(){
                     ImGui::Text("Location:");
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Location")){
-                        Location location;
-                        location.latitude_deg = latitude;
-                        location.longitude_deg = longitude;
-                        location.UTC_offset = static_cast<float>(UTC_offset);
-                        context->setLocation(location);
+                        updateLocation();
                     }
                     // ####### LATITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
-                    randomizePopup("latitude", createTaggedPtr(&latitude));
+                    randomizePopup("latitude", createTaggedPtr(&latitude, dummy_obj));
                     randomizerParams("latitude");
                     ImGui::OpenPopupOnItemClick("randomize_latitude", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     // ####### LONGITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Longitude", &longitude);
-                    randomizePopup("longitude", createTaggedPtr(&longitude));
+                    randomizePopup("longitude", createTaggedPtr(&longitude, dummy_obj));
                     randomizerParams("longitude");
                     ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
                     // ####### UTC OFFSET ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("UTC Offset", &UTC_offset);
-                    randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
+                    randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset, dummy_obj));
                     randomizerParams("UTC_offset");
                     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
                     // ####### DOMAIN ORIGIN ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
+                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x, dummy_obj));
                     randomizerParams("domain_origin_x");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
+                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y, dummy_obj));
                     randomizerParams("domain_origin_y");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
+                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z, dummy_obj));
                     randomizerParams("domain_origin_z");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -2057,13 +2081,13 @@ void ProjectBuilder::visualize(){
                     // ####### DOMAIN EXTENT ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x, dummy_obj));
                     randomizerParams("domain_extent_x");
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y, dummy_obj));
                     randomizerParams("domain_extent_y");
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -2073,19 +2097,8 @@ void ProjectBuilder::visualize(){
                     ImGui::Text("Weather & Ground:");
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Weather / Ground")){
-                        context->deletePrimitive(primitive_UUIDs["ground"]);
-                        uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
-                        ground_UUIDs.clear();
-                        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-                        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
-                        primitive_UUIDs["ground"] = ground_UUIDs;
-                        const char* font_name = "LCD";
-                        visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                            RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                        visualizer->plotUpdate();
-                        visualizer->clearGeometry();
-                        visualizer->buildContextGeometry(context);
-                        visualizer->plotUpdate();
+                        updateWeatherAndGround();
+                        refreshVisualization();
                     }
                     // ####### CSV Weather File ####### //
                     ImGui::SetNextItemWidth(60);
@@ -2156,13 +2169,13 @@ void ProjectBuilder::visualize(){
                     // ####### GROUND RESOLUTION ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
-                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
+                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x, dummy_obj));
                     randomizerParams("ground_resolution_x");
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
-                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
+                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y, dummy_obj));
                     randomizerParams("ground_resolution_y");
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -2248,21 +2261,13 @@ void ProjectBuilder::visualize(){
                     if ( !current_obj.empty() ){
                         if (ImGui::Button("Update Object")){
                             updateObject(current_obj);
+                            refreshVisualization();
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Object")){
                             int delete_idx = obj_names_dict[current_obj];
                             context->deletePrimitive(obj_UUIDs[delete_idx]);
-                            const char* font_name = "LCD";
-                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                            visualizer->plotUpdate();
-                            visualizer->clearGeometry();
-                            visualizer->buildContextGeometry(context);
-                            if (enable_coordinate_axes){
-                                visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
-                            }
-                            visualizer->plotUpdate();
+                            refreshVisualization();
                             obj_names_dict.erase(current_obj);
                             obj_names_set.erase(current_obj);
                             if (!obj_names_set.empty()){
@@ -2337,21 +2342,22 @@ void ProjectBuilder::visualize(){
                             ImGui::SameLine();
                             ImGui::Text("Object Color");
                             // ####### OBJECT SCALE ####### //
+                            obj curr_obj = obj{obj_names_dict[current_obj], false};
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].x));
+                            randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].x, curr_obj));
                             randomizerParams("obj_scale_x_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_scale_y", &obj_scales[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].y));
+                            randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].y, curr_obj));
                             randomizerParams("obj_scale_y_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_scale_z", &obj_scales[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].z));
+                            randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].z, curr_obj));
                             randomizerParams("obj_scale_z_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
@@ -2359,19 +2365,19 @@ void ProjectBuilder::visualize(){
                             // ####### OBJECT POSITION ####### //
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_position_x", &obj_positions[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].x));
+                            randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].x, curr_obj));
                             randomizerParams("obj_position_x_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_position_y", &obj_positions[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].y));
+                            randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].y, curr_obj));
                             randomizerParams("obj_position_y_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_position_z", &obj_positions[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].z));
+                            randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].z, curr_obj));
                             randomizerParams("obj_position_z_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
@@ -2379,19 +2385,19 @@ void ProjectBuilder::visualize(){
                             // ####### OBJECT ORIENTATION ####### //
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_orientation_x", &obj_orientations[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].x));
+                            randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].x, curr_obj));
                             randomizerParams("obj_orientation_x_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_orientation_y", &obj_orientations[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].y));
+                            randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].y, curr_obj));
                             randomizerParams("obj_orientation_y_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
                             ImGui::InputFloat("##obj_orientation_z", &obj_orientations[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].z));
+                            randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].z, curr_obj));
                             randomizerParams("obj_orientation_z_" + std::to_string(obj_names_dict[current_obj]));
                             ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
@@ -2418,10 +2424,10 @@ void ProjectBuilder::visualize(){
                     current_tab = "Canopy";
                     if (ImGui::BeginCombo("##combo", current_canopy.c_str()))
                     {
-                        for (int n = 0; n < canopy_labels.size(); n++){
-                            bool is_selected = (current_canopy == canopy_labels[n]);
-                            if (ImGui::Selectable(canopy_labels[n].c_str(), is_selected))
-                                current_canopy = canopy_labels[n];
+                        for (auto canopy_label_ : canopy_labels_set){
+                            bool is_selected = (current_canopy == canopy_label_);
+                            if (ImGui::Selectable(canopy_label_.c_str(), is_selected))
+                                current_canopy = canopy_label_;
                             if (is_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -2429,226 +2435,192 @@ void ProjectBuilder::visualize(){
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Add Canopy")){
-                        std::string default_canopy_label = "canopy";
-                        std::string new_canopy_label = "canopy_0";
-                        int count = 0;
-                        while (canopy_labels_dict.find(new_canopy_label) != canopy_labels_dict.end()){
-                            count++;
-                            new_canopy_label = default_canopy_label + "_" + std::to_string(count);
-                        }
-                        canopy_labels_dict.insert({new_canopy_label, canopy_labels.size()});
-                        canopy_origins.push_back(canopy_origin);
-                        plant_counts.push_back(plant_count);
-                        plant_spacings.push_back(plant_spacing);
-                        plant_library_names.push_back(plant_library_name);
-                        plant_library_names_verbose.push_back(plant_library_name_verbose);
-                        plant_ages.push_back(plant_age);
-                        ground_clipping_heights.push_back(ground_clipping_height);
-                        canopy_labels.push_back(new_canopy_label);
-                        // current_canopy = new_canopy_label;
-                        std::string parent = "canopy_block";
-                        pugi::xml_node canopy_block = helios.child(parent.c_str());
-                        pugi::xml_node new_canopy_node = helios.append_copy(canopy_block);
-                        // pugi::xml_node new_canopy_node = helios.append_child(pugi::node_pcdata);
-                        // pugi::xml_node node;
-                        std::string name = "canopy_origin";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(vec_to_string(canopy_origin).c_str());
-                        // name = "plant_count";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(vec_to_string(plant_count).c_str());
-                        // name = "plant_spacing";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(vec_to_string(plant_spacing).c_str());
-                        // name = "plant_library_name";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(plant_library_name.c_str());
-                        // name = "plant_age";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(std::to_string(plant_age).c_str());
-                        // name = "ground_clipping_height";
-                        // node = new_canopy_node.child(name.c_str());
-                        // node.text().set(std::to_string(ground_clipping_height).c_str());
-                        name = "label";
-                        pugi::xml_attribute node_label = new_canopy_node.attribute(name.c_str());
-                        node_label.set_value(new_canopy_label.c_str());
+                        addCanopy();
                     }
-                    if (ImGui::Button("Update Canopy")){
-                        int update_idx = canopy_labels_dict[current_canopy];
-                        for (auto plant_instance : canopy_UUIDs[update_idx]){
-                            // context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(plant_instance));
-                            plantarchitecture->deletePlantInstance(plant_instance);
-                        }
-                        plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
-                        plantarchitecture->enableGroundClipping( ground_clipping_height );
-                        std::vector<helios::vec3> curr_plant_locations;
-                        std::vector<uint> new_canopy_UUIDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
-                                                                                                            plant_counts[update_idx], plant_ages[update_idx], curr_plant_locations);
-                        individual_plant_locations.push_back(curr_plant_locations);
-
-                        leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
-                        primitive_UUIDs["leaf"] = leaf_UUIDs;
-                        internode_UUIDs = plantarchitecture->getAllInternodeUUIDs();
-                        primitive_UUIDs["internode"] = internode_UUIDs;
-                        petiole_UUIDs = plantarchitecture->getAllPetioleUUIDs();
-                        primitive_UUIDs["petiole"] = petiole_UUIDs;
-                        peduncle_UUIDs = plantarchitecture->getAllPeduncleUUIDs();
-                        primitive_UUIDs["peduncle"] = peduncle_UUIDs;
-                        std::vector<uint> flower_UUIDs = plantarchitecture->getAllFlowerUUIDs();
-                        petal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "petal");
-                        sepal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "sepal");
-                        if( petal_UUIDs.empty() && sepal_UUIDs.empty() ){
-                            petal_UUIDs = flower_UUIDs;
-                            sepal_UUIDs.clear();
-                        }
-                        fruit_UUIDs = plantarchitecture->getAllFruitUUIDs();
-                        primitive_UUIDs["petal"] = petal_UUIDs;
-                        primitive_UUIDs["sepal"] = sepal_UUIDs;
-                        primitive_UUIDs["flower"] = flower_UUIDs;
-
-                        canopy_UUIDs[canopy_labels_dict[current_canopy]] = new_canopy_UUIDs;
-
-                        const char* font_name = "LCD";
-                        visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                            RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                        visualizer->plotUpdate();
-                        visualizer->clearGeometry();
-                        visualizer->buildContextGeometry(context);
-                        visualizer->plotUpdate();
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Delete Canopy")){
-                        deleteCanopy();
-                    }
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_canopy_name = canopy_labels[canopy_labels_dict[current_canopy]];
-                    ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[current_canopy]]);
-                    if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name){
-                        int temp = canopy_labels_dict[current_canopy];
-                        current_canopy = canopy_labels[canopy_labels_dict[current_canopy]];
-                        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
-                        if (current_canopy_iter != canopy_labels_dict.end()){
-                            canopy_labels_dict.erase(current_canopy_iter);
-                        }
-                        canopy_labels_dict[current_canopy] = temp;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Canopy Name");
-                    // ####### PLANT LIBRARY NAME ####### //
-                    ImGui::SetNextItemWidth(250);
-                    // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
-                    dropDown("Plant Library###dropdown", plant_library_names_verbose[canopy_labels_dict[current_canopy]], plant_types_verbose);
-                    plant_library_names[canopy_labels_dict[current_canopy]] = plant_type_lookup[plant_library_names_verbose[canopy_labels_dict[current_canopy]]];
-                    // ######### CANOPY DATA GROUP ####### //
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_canopy_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
-                    ImGui::InputText("##canopy_data_group", &canopy_data_groups[canopy_labels_dict[current_canopy]]);
-                    if (canopy_data_groups[canopy_labels_dict[current_canopy]] == "All" || canopy_data_groups[canopy_labels_dict[current_canopy]].empty()){
-                        canopy_data_groups[canopy_labels_dict[current_canopy]] = prev_canopy_data_group;
-                    }
-                    if (!canopy_data_groups[canopy_labels_dict[current_canopy]].empty() && prev_canopy_data_group != canopy_data_groups[canopy_labels_dict[current_canopy]]){
-                        std::string new_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
-                        std::vector<uint> canopy_primID_vec;
-                        for (int i = 0; i < canopy_UUIDs[canopy_labels_dict[current_canopy]].size(); i++){
-                            std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_UUIDs[canopy_labels_dict[current_canopy]][i]);
-                            canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
-                        }
-                        context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Data Group");
-                    // ####### CANOPY ORIGIN ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[current_canopy]].x);
-                    randomizePopup("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].x));
-                    randomizerParams("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels_dict[current_canopy]].y);
-                    randomizePopup("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].y));
-                    randomizerParams("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels_dict[current_canopy]].z);
-                    randomizePopup("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].z));
-                    randomizerParams("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Canopy Origin");
-                    // ####### PLANT COUNT ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels_dict[current_canopy]].x);
-                    randomizePopup("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].x));
-                    randomizerParams("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels_dict[current_canopy]].y);
-                    randomizePopup("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].y));
-                    randomizerParams("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Plant Count");
-                    // ####### PLANT SPACING ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels_dict[current_canopy]].x);
-                    randomizePopup("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].x));
-                    randomizerParams("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels_dict[current_canopy]].y);
-                    randomizePopup("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].y));
-                    randomizerParams("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Plant Spacing");
-                    // ####### PLANT AGE ####### //
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels_dict[current_canopy]]);
-                    randomizePopup("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_ages[canopy_labels_dict[current_canopy]]));
-                    randomizerParams("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    // ####### GROUND CLIPPING HEIGHT ####### //
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels_dict[current_canopy]]);
-                    randomizePopup("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&ground_clipping_heights[canopy_labels_dict[current_canopy]]));
-                    randomizerParams("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]));
-                    ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    if (ImGui::Button("Save Canopy to OBJ/PLY File")){
-                        std::string new_obj_file = save_as_file_dialog();
-                        if (!new_obj_file.empty()){
-                            std::string file_extension = new_obj_file;
-                            size_t last_obj_file = file_extension.rfind('.');
-                            if (last_obj_file != std::string::npos){
-                                file_extension = file_extension.substr(last_obj_file + 1);
+                    if (!current_canopy.empty()){
+                        if (ImGui::Button("Update Canopy")){
+                            int update_idx = canopy_labels_dict[current_canopy];
+                            for (auto plant_instance : canopy_UUIDs[update_idx]){
+                                // context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(plant_instance));
+                                plantarchitecture->deletePlantInstance(plant_instance);
                             }
-                            if (file_extension == "obj" || file_extension == "ply"){
-                                if (!std::filesystem::exists(new_obj_file)){
-                                    // Create file
-                                    std::ofstream outFile(new_obj_file);
+                            plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
+                            plantarchitecture->enableGroundClipping( ground_clipping_height );
+                            std::vector<helios::vec3> curr_plant_locations;
+                            std::vector<uint> new_canopy_UUIDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
+                                                                                                                plant_counts[update_idx], plant_ages[update_idx], curr_plant_locations);
+                            individual_plant_locations.push_back(curr_plant_locations);
+
+                            leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
+                            primitive_UUIDs["leaf"] = leaf_UUIDs;
+                            internode_UUIDs = plantarchitecture->getAllInternodeUUIDs();
+                            primitive_UUIDs["internode"] = internode_UUIDs;
+                            petiole_UUIDs = plantarchitecture->getAllPetioleUUIDs();
+                            primitive_UUIDs["petiole"] = petiole_UUIDs;
+                            peduncle_UUIDs = plantarchitecture->getAllPeduncleUUIDs();
+                            primitive_UUIDs["peduncle"] = peduncle_UUIDs;
+                            std::vector<uint> flower_UUIDs = plantarchitecture->getAllFlowerUUIDs();
+                            petal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "petal");
+                            sepal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "sepal");
+                            if( petal_UUIDs.empty() && sepal_UUIDs.empty() ){
+                                petal_UUIDs = flower_UUIDs;
+                                sepal_UUIDs.clear();
+                            }
+                            fruit_UUIDs = plantarchitecture->getAllFruitUUIDs();
+                            primitive_UUIDs["petal"] = petal_UUIDs;
+                            primitive_UUIDs["sepal"] = sepal_UUIDs;
+                            primitive_UUIDs["flower"] = flower_UUIDs;
+
+                            canopy_UUIDs[canopy_labels_dict[current_canopy]] = new_canopy_UUIDs;
+
+                            const char* font_name = "LCD";
+                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                            visualizer->plotUpdate();
+                            visualizer->clearGeometry();
+                            visualizer->buildContextGeometry(context);
+                            visualizer->plotUpdate();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete Canopy")){
+                            deleteCanopy();
+                        }
+                        ImGui::SetNextItemWidth(100);
+                        std::string prev_canopy_name = canopy_labels[canopy_labels_dict[current_canopy]];
+                        ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[current_canopy]]);
+                        if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name){
+                            int temp = canopy_labels_dict[current_canopy];
+                            current_canopy = canopy_labels[canopy_labels_dict[current_canopy]];
+                            std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
+                            if (current_canopy_iter != canopy_labels_dict.end()){
+                                canopy_labels_dict.erase(current_canopy_iter);
+                            }
+                            canopy_labels_dict[current_canopy] = temp;
+
+                            canopy_labels_set.erase(prev_canopy_name);
+                            canopy_labels_set.insert(current_canopy);
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Canopy Name");
+                        // ####### PLANT LIBRARY NAME ####### //
+                        ImGui::SetNextItemWidth(250);
+                        // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+                        dropDown("Plant Library###dropdown", plant_library_names_verbose[canopy_labels_dict[current_canopy]], plant_types_verbose);
+                        plant_library_names[canopy_labels_dict[current_canopy]] = plant_type_lookup[plant_library_names_verbose[canopy_labels_dict[current_canopy]]];
+                        // ######### CANOPY DATA GROUP ####### //
+                        ImGui::SetNextItemWidth(100);
+                        std::string prev_canopy_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
+                        ImGui::InputText("##canopy_data_group", &canopy_data_groups[canopy_labels_dict[current_canopy]]);
+                        if (canopy_data_groups[canopy_labels_dict[current_canopy]] == "All" || canopy_data_groups[canopy_labels_dict[current_canopy]].empty()){
+                            canopy_data_groups[canopy_labels_dict[current_canopy]] = prev_canopy_data_group;
+                        }
+                        if (!canopy_data_groups[canopy_labels_dict[current_canopy]].empty() && prev_canopy_data_group != canopy_data_groups[canopy_labels_dict[current_canopy]]){
+                            std::string new_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
+                            std::vector<uint> canopy_primID_vec;
+                            for (int i = 0; i < canopy_UUIDs[canopy_labels_dict[current_canopy]].size(); i++){
+                                std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_UUIDs[canopy_labels_dict[current_canopy]][i]);
+                                canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
+                            }
+                            context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Data Group");
+                        // ####### CANOPY ORIGIN ####### //
+                        obj curr_plant = obj{canopy_labels_dict[current_canopy], true};
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[current_canopy]].x);
+                        randomizePopup("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizerParams("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels_dict[current_canopy]].y);
+                        randomizePopup("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizerParams("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels_dict[current_canopy]].z);
+                        randomizePopup("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].z, curr_plant));
+                        randomizerParams("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Canopy Origin");
+                        // ####### PLANT COUNT ####### //
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels_dict[current_canopy]].x);
+                        plant_counts[canopy_labels_dict[current_canopy]].x = std::max(plant_counts[canopy_labels_dict[current_canopy]].x, 1);
+                        randomizePopup("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizerParams("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels_dict[current_canopy]].y);
+                        plant_counts[canopy_labels_dict[current_canopy]].y = std::max(plant_counts[canopy_labels_dict[current_canopy]].y, 1);
+                        randomizePopup("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizerParams("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Plant Count");
+                        // ####### PLANT SPACING ####### //
+                        ImGui::SetNextItemWidth(50);
+                        ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels_dict[current_canopy]].x);
+                        randomizePopup("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizerParams("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(50);
+                        ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels_dict[current_canopy]].y);
+                        randomizePopup("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizerParams("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Plant Spacing");
+                        // ####### PLANT AGE ####### //
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels_dict[current_canopy]]);
+                        randomizePopup("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_ages[canopy_labels_dict[current_canopy]], curr_plant));
+                        randomizerParams("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        // ####### GROUND CLIPPING HEIGHT ####### //
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels_dict[current_canopy]]);
+                        randomizePopup("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&ground_clipping_heights[canopy_labels_dict[current_canopy]], curr_plant));
+                        randomizerParams("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]));
+                        ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        if (ImGui::Button("Save Canopy to OBJ/PLY File")){
+                            std::string new_obj_file = save_as_file_dialog();
+                            if (!new_obj_file.empty()){
+                                std::string file_extension = new_obj_file;
+                                size_t last_obj_file = file_extension.rfind('.');
+                                if (last_obj_file != std::string::npos){
+                                    file_extension = file_extension.substr(last_obj_file + 1);
                                 }
-                                if (!save_plants_individually){
-                                    saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels_dict[current_canopy]],
-                                                canopy_origins[canopy_labels_dict[current_canopy]], file_extension);
+                                if (file_extension == "obj" || file_extension == "ply"){
+                                    if (!std::filesystem::exists(new_obj_file)){
+                                        // Create file
+                                        std::ofstream outFile(new_obj_file);
+                                    }
+                                    if (!save_plants_individually){
+                                        saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels_dict[current_canopy]],
+                                                    canopy_origins[canopy_labels_dict[current_canopy]], file_extension);
+                                    } else{
+                                        saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels_dict[current_canopy]],
+                                                    canopy_origins[canopy_labels_dict[current_canopy]],
+                                                    individual_plant_locations[canopy_labels_dict[current_canopy]], file_extension);
+                                    }
                                 } else{
-                                    saveCanopy(new_obj_file, canopy_UUIDs[canopy_labels_dict[current_canopy]],
-                                                canopy_origins[canopy_labels_dict[current_canopy]],
-                                                individual_plant_locations[canopy_labels_dict[current_canopy]], file_extension);
+                                    // Needs to be a obj or ply file
+                                    std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
                                 }
                             } else{
-                                // Needs to be a obj or ply file
-                                std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
+                                // Not a valid file
+                                std::cout << "Not a valid file." << std::endl;
                             }
-                        } else{
-                            // Not a valid file
-                            std::cout << "Not a valid file." << std::endl;
                         }
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Save plants individually", &save_plants_individually);
                     }
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Save plants individually", &save_plants_individually);
                     ImGui::EndTabItem();
                 }
             // } //PLANT_ARCHITECTURE
@@ -2676,14 +2648,31 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
                     ImGui::SetNextItemWidth(60);
+                    float prev_value = diffuse_extinction_coeff;
                     ImGui::InputFloat("Diffuse Extinction Coefficient", &diffuse_extinction_coeff);
-                    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff));
+                    if (prev_value != diffuse_extinction_coeff){
+                        context->setGlobalData( "diffuse_extinction_coeff", diffuse_extinction_coeff );
+                    }
+                    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff, dummy_obj));
                     randomizerParams("diffuse_extinction_coeff");
                     ImGui::OpenPopupOnItemClick("randomize_diffuse_extinction_coeff", ImGuiPopupFlags_MouseButtonRight);
                     // ####### AIR TURBIDITY ####### //
                     ImGui::SetNextItemWidth(60);
+                    prev_value = air_turbidity;
                     ImGui::InputFloat("Air Turbidity", &air_turbidity);
-                    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity));
+                    if (prev_value != air_turbidity){
+                        if( air_turbidity > 0 ){
+                            context->setGlobalData( "air_turbidity", air_turbidity );
+                        }else if( air_turbidity < 0 ){ //try calibration
+                            if( context->doesTimeseriesVariableExist( "net_radiation" ) ){
+                                air_turbidity = solarposition->calibrateTurbidityFromTimeseries( "net_radiation" );
+                                if( air_turbidity>0  && air_turbidity < 1 ){
+                                    context->setGlobalData( "air_turbidity", air_turbidity );
+                                }
+                            }
+                        }
+                    }
+                    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity, dummy_obj));
                     randomizerParams("air_turbidity");
                     ImGui::OpenPopupOnItemClick("randomize_air_turbidity", ImGuiPopupFlags_MouseButtonRight);
                     // ####### SOLAR DIRECT SPECTRUM ####### //
@@ -2762,7 +2751,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_direct_ray_count = direct_ray_count;
                         ImGui::InputInt("Direct Ray Count", &direct_ray_count);
-                        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count));
+                        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count, dummy_obj));
                         randomizerParams("direct_ray_count");
                         ImGui::OpenPopupOnItemClick("randomize_direct_ray_count", ImGuiPopupFlags_MouseButtonRight);
                         if (direct_ray_count != prev_direct_ray_count){
@@ -2774,7 +2763,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_direct_ray_count = direct_ray_count_dict[current_band];
                         ImGui::InputInt("Direct Ray Count", &direct_ray_count_dict[current_band]);
-                        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band]));
+                        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band], dummy_obj));
                         randomizerParams("direct_ray_count_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_direct_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (direct_ray_count_dict[current_band] != prev_direct_ray_count){
@@ -2787,7 +2776,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_diffuse_ray_count = diffuse_ray_count;
                         ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
-                        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count));
+                        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count, dummy_obj));
                         randomizerParams("diffuse_ray_count");
                         ImGui::OpenPopupOnItemClick("randomize_diffuse_ray_count", ImGuiPopupFlags_MouseButtonRight);
                         if (diffuse_ray_count != prev_diffuse_ray_count){
@@ -2799,7 +2788,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_diffuse_ray_count = diffuse_ray_count_dict[current_band];
                         ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count_dict[current_band]);
-                        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band]));
+                        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band], dummy_obj));
                         randomizerParams("diffuse_ray_count_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_diffuse_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (diffuse_ray_count_dict[current_band] != prev_diffuse_ray_count){
@@ -2812,7 +2801,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_scattering_depth = scattering_depth;
                         ImGui::InputInt("Scattering Depth", &scattering_depth);
-                        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth));
+                        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth, dummy_obj));
                         randomizerParams("scattering_depth");
                         ImGui::OpenPopupOnItemClick("randomize_scattering_depth", ImGuiPopupFlags_MouseButtonRight);
                         if (scattering_depth <= 0){
@@ -2827,7 +2816,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_scattering_depth = scattering_depth_dict[current_band];
                         ImGui::InputInt("Scattering Depth", &scattering_depth_dict[current_band]);
-                        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band]));
+                        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band], dummy_obj));
                         randomizerParams("scattering_depth_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_scattering_depth_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (scattering_depth_dict[current_band] <= 0){ // scattering depth must be >0
@@ -3255,10 +3244,10 @@ void ProjectBuilder::visualize(){
                 if (ImGui::BeginTabItem("Rig")){
                     current_tab = "Rig";
                     if (ImGui::BeginCombo("##rig_combo", current_rig.c_str())){
-                        for (int n = 0; n < rig_labels.size(); n++){
-                            bool is_rig_selected = (current_rig == rig_labels[n]);
-                            if (ImGui::Selectable(rig_labels[n].c_str(), is_rig_selected))
-                                current_rig = rig_labels[n];
+                        for (auto rig_label : rig_labels_set){
+                            bool is_rig_selected = (current_rig == rig_label);
+                            if (ImGui::Selectable(rig_label.c_str(), is_rig_selected))
+                                current_rig = rig_label;
                             current_cam_position = "0";
                             if (is_rig_selected)
                                 ImGui::SetItemDefaultFocus();
@@ -3286,6 +3275,7 @@ void ProjectBuilder::visualize(){
                         // FOV_aspect_ratios.push_back(FOV_aspect_ratio);
                         // HFOVs.push_back(HFOV);
                         rig_labels.push_back(new_rig_label);
+                        rig_labels_set.insert(new_rig_label);
                         rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
                         rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
                         keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
@@ -3298,179 +3288,185 @@ void ProjectBuilder::visualize(){
                         pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
                         node_label.set_value(new_rig_label.c_str());
                     }
-                    // ##### UPDATE RIG ######//
-                    if (ImGui::Button("Update")){
-                        updateRig(current_rig);
-                    }
-                    // ##### RIG NAME ######//
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
-                    ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
-                    if (rig_labels[rig_dict[current_rig]] != prev_rig_name){
-                        int temp = rig_dict[current_rig];
-                        current_rig = rig_labels[rig_dict[current_rig]];
-                        std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
-                        if (current_rig_iter != rig_dict.end()){
-                            rig_dict.erase(current_rig_iter);
+                    if (!current_rig.empty()){
+                        // ##### UPDATE RIG ######//
+                        if (ImGui::Button("Update Rig")){
+                            updateRigs();
                         }
-                        rig_dict[current_rig] = temp;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Rig Name");
-                    // ####### RIG COLOR ####### //
-                    float col[3];
-                    col[0] = rig_colors[rig_dict[current_rig]].r;
-                    col[1] = rig_colors[rig_dict[current_rig]].g;
-                    col[2] = rig_colors[rig_dict[current_rig]].b;
-                    ImGui::ColorEdit3("##rig_color_edit", col);
-                    updateColor(current_rig, "rig", col);
-                    // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
-                    //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
-                    //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
-                    //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
-                    // }
-                    ImGui::SameLine();
-                    ImGui::Text("Object Color");
-                    // ####### CAMERA LABEL ####### //
-                    /* SINGLE CAMERA VERSION
-                    ImGui::SetNextItemWidth(60);
-                    // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
-                    if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
-                        for (int n = 0; n < camera_names.size(); n++){
-                            bool is_cam_label_selected = (camera_labels[rig_dict[(std::string) current_rig]] == camera_names[n]); // You can store your selection however you want, outside or inside your objects
-                            if (ImGui::Selectable(camera_names[n].c_str(), is_cam_label_selected)){
-                                camera_labels[rig_dict[(std::string) current_rig]] = camera_names[n];
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete Rig")){
+                            deleteRig(current_rig);
+                        }
+                        // ##### RIG NAME ######//
+                        ImGui::SetNextItemWidth(100);
+                        std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
+                        ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
+                        if (rig_labels[rig_dict[current_rig]] != prev_rig_name){
+                            int temp = rig_dict[current_rig];
+                            current_rig = rig_labels[rig_dict[current_rig]];
+                            std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
+                            if (current_rig_iter != rig_dict.end()){
+                                rig_dict.erase(current_rig_iter);
                             }
-                            if (is_cam_label_selected)
-                                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                            rig_dict[current_rig] = temp;
                         }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Camera Label");
-                    ImGui::EndTabItem();
-                    */
-                    // ####### CAMERA CHECKBOX ####### //
-                    ImGui::Text("Cameras:");
-                    for (int i = 0; i < camera_names.size(); i++){
-                        std::string& camera_name = camera_names[i];
-
-                        ImGui::SetNextItemWidth(60);
-
-                        std::set curr_set = rig_camera_labels[rig_dict[current_rig]];
-                        // if (i % 3 != 0){
-                        //     ImGui::SameLine();
+                        ImGui::SameLine();
+                        ImGui::Text("Rig Name");
+                        // ####### RIG COLOR ####### //
+                        float col[3];
+                        col[0] = rig_colors[rig_dict[current_rig]].r;
+                        col[1] = rig_colors[rig_dict[current_rig]].g;
+                        col[2] = rig_colors[rig_dict[current_rig]].b;
+                        ImGui::ColorEdit3("##rig_color_edit", col);
+                        updateColor(current_rig, "rig", col);
+                        // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
+                        //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
+                        //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
+                        //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
                         // }
-                        bool isCameraSelected = curr_set.find(camera_name) != curr_set.end();
-                        ImGui::PushID(i);
-                        if(ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)){
-                            if (isCameraSelected){
-                                rig_camera_labels[rig_dict[current_rig]].insert(camera_name);
-                            }else{
-                                rig_camera_labels[rig_dict[current_rig]].erase(camera_name);
-                            }
-                        }
-                        ImGui::PopID();
-                    }
-                    // ####### LIGHT CHECKBOX ####### //
-                    ImGui::Text("Lights:");
-                    for (int i = 0; i < light_names.size(); i++){
-                        std::string& light_name = light_names[i];
-
+                        ImGui::SameLine();
+                        ImGui::Text("Object Color");
+                        // ####### CAMERA LABEL ####### //
+                        /* SINGLE CAMERA VERSION
                         ImGui::SetNextItemWidth(60);
+                        // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
+                        if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
+                            for (int n = 0; n < camera_names.size(); n++){
+                                bool is_cam_label_selected = (camera_labels[rig_dict[(std::string) current_rig]] == camera_names[n]); // You can store your selection however you want, outside or inside your objects
+                                if (ImGui::Selectable(camera_names[n].c_str(), is_cam_label_selected)){
+                                    camera_labels[rig_dict[(std::string) current_rig]] = camera_names[n];
+                                }
+                                if (is_cam_label_selected)
+                                    ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                            }
+                            ImGui::EndCombo();
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Camera Label");
+                        ImGui::EndTabItem();
+                        */
+                        // ####### CAMERA CHECKBOX ####### //
+                        ImGui::Text("Cameras:");
+                        for (int i = 0; i < camera_names.size(); i++){
+                            std::string& camera_name = camera_names[i];
 
-                        std::set curr_rig_light = rig_light_labels[rig_dict[current_rig]];
-                        bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
-                        ImGui::PushID(i);
-                        if(ImGui::Checkbox(light_name.c_str(), &isLightSelected)){
-                            if (isLightSelected){
-                                rig_light_labels[rig_dict[current_rig]].insert(light_name);
-                            }else{
-                                rig_light_labels[rig_dict[current_rig]].erase(light_name);
+                            ImGui::SetNextItemWidth(60);
+
+                            std::set curr_set = rig_camera_labels[rig_dict[current_rig]];
+                            // if (i % 3 != 0){
+                            //     ImGui::SameLine();
+                            // }
+                            bool isCameraSelected = curr_set.find(camera_name) != curr_set.end();
+                            ImGui::PushID(i);
+                            if(ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)){
+                                if (isCameraSelected){
+                                    rig_camera_labels[rig_dict[current_rig]].insert(camera_name);
+                                }else{
+                                    rig_camera_labels[rig_dict[current_rig]].erase(camera_name);
+                                }
                             }
+                            ImGui::PopID();
                         }
-                        ImGui::PopID();
-                    }
-                    // ####### ADD KEYPOINT ####### //
-                    std::stringstream cam_pos_value;
-                    cam_pos_value << current_cam_position.c_str();
-                    int current_cam_position_;
-                    cam_pos_value >> current_cam_position_;
-                    current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
-                    std::string modified_current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1); // 1-indexed value
-                    if (ImGui::BeginCombo("##cam_combo", modified_current_keypoint.c_str())){
-                        for (int n = 1; n <= camera_position_vec[rig_dict[current_rig]].size(); n++){
-                            std::string select_cam_position = std::to_string(n - 1);
-                            std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1]);
-                            bool is_pos_selected = (current_cam_position == select_cam_position);
-                            std::string modified_selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1] + 1); // 1-indexed value
-                            if (ImGui::Selectable(modified_selected_keypoint.c_str(), is_pos_selected)){
-                                current_cam_position = std::to_string(n - 1);
+                        // ####### LIGHT CHECKBOX ####### //
+                        ImGui::Text("Lights:");
+                        for (int i = 0; i < light_names.size(); i++){
+                            std::string& light_name = light_names[i];
+
+                            ImGui::SetNextItemWidth(60);
+
+                            std::set curr_rig_light = rig_light_labels[rig_dict[current_rig]];
+                            bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
+                            ImGui::PushID(i);
+                            if(ImGui::Checkbox(light_name.c_str(), &isLightSelected)){
+                                if (isLightSelected){
+                                    rig_light_labels[rig_dict[current_rig]].insert(light_name);
+                                }else{
+                                    rig_light_labels[rig_dict[current_rig]].erase(light_name);
+                                }
                             }
-                            if (is_pos_selected)
-                                ImGui::SetItemDefaultFocus();
+                            ImGui::PopID();
                         }
-                        ImGui::EndCombo();
+                        // ####### ADD KEYPOINT ####### //
+                        std::stringstream cam_pos_value;
+                        cam_pos_value << current_cam_position.c_str();
+                        int current_cam_position_;
+                        cam_pos_value >> current_cam_position_;
+                        current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
+                        std::string modified_current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1); // 1-indexed value
+                        if (ImGui::BeginCombo("##cam_combo", modified_current_keypoint.c_str())){
+                            for (int n = 1; n <= camera_position_vec[rig_dict[current_rig]].size(); n++){
+                                std::string select_cam_position = std::to_string(n - 1);
+                                std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1]);
+                                bool is_pos_selected = (current_cam_position == select_cam_position);
+                                std::string modified_selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1] + 1); // 1-indexed value
+                                if (ImGui::Selectable(modified_selected_keypoint.c_str(), is_pos_selected)){
+                                    current_cam_position = std::to_string(n - 1);
+                                }
+                                if (is_pos_selected)
+                                    ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+                        cam_pos_value << current_cam_position.c_str();
+                        cam_pos_value >> current_cam_position_;
+                        ImGui::SameLine();
+                        if (ImGui::Button("Add Keypoint")){
+                            camera_position_vec[rig_dict[current_rig]].push_back(camera_position_vec[rig_dict[current_rig]][current_cam_position_]);
+                            camera_lookat_vec[rig_dict[current_rig]].push_back(camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]);
+                            keypoint_frames[rig_dict[current_rig]].push_back(keypoint_frames[rig_dict[current_rig]].back() + 1);
+                        }
+                        // ####### KEYPOINT FRAME ####### //
+                        ImGui::SetNextItemWidth(80);
+                        int modified_keypoint_frame = keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1; // 1-indexed value
+                        ImGui::InputInt("Keypoint Frame", &modified_keypoint_frame);
+                        if (modified_keypoint_frame != keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1){
+                            keypoint_frames[rig_dict[current_rig]][current_cam_position_] = modified_keypoint_frame - 1;
+                        }
+                        // ####### CAMERA POSITION ####### //
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
+                        randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x, dummy_obj));
+                        randomizerParams("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
+                        randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y, dummy_obj));
+                        randomizerParams("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
+                        randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z, dummy_obj));
+                        randomizerParams("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Rig Position");
+                        // ####### CAMERA LOOKAT ####### //
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
+                        randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x, dummy_obj));
+                        randomizerParams("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
+                        randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y, dummy_obj));
+                        randomizerParams("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
+                        randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z, dummy_obj));
+                        randomizerParams("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Rig Lookat");
+                        // ####### NUMBER OF IMAGES ####### //
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
+                        num_images_vec[rig_dict[current_rig]] = std::max(num_images_vec[rig_dict[current_rig]], *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
                     }
-                    cam_pos_value << current_cam_position.c_str();
-                    cam_pos_value >> current_cam_position_;
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add Keypoint")){
-                        camera_position_vec[rig_dict[current_rig]].push_back(camera_position_vec[rig_dict[current_rig]][current_cam_position_]);
-                        camera_lookat_vec[rig_dict[current_rig]].push_back(camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]);
-                        keypoint_frames[rig_dict[current_rig]].push_back(keypoint_frames[rig_dict[current_rig]].back() + 1);
-                    }
-                    // ####### KEYPOINT FRAME ####### //
-                    ImGui::SetNextItemWidth(80);
-                    int modified_keypoint_frame = keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1; // 1-indexed value
-                    ImGui::InputInt("Keypoint Frame", &modified_keypoint_frame);
-                    if (modified_keypoint_frame != keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1){
-                        keypoint_frames[rig_dict[current_rig]][current_cam_position_] = modified_keypoint_frame - 1;
-                    }
-                    // ####### CAMERA POSITION ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
-                    randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x));
-                    randomizerParams("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
-                    randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y));
-                    randomizerParams("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
-                    randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z));
-                    randomizerParams("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Rig Position");
-                    // ####### CAMERA LOOKAT ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
-                    randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x));
-                    randomizerParams("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
-                    randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y));
-                    randomizerParams("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
-                    randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z));
-                    randomizerParams("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Rig Lookat");
-                    // ####### NUMBER OF IMAGES ####### //
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
-                    num_images_vec[rig_dict[current_rig]] = std::max(num_images_vec[rig_dict[current_rig]], *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
                     ImGui::EndTabItem();
                 }
                 // CAMERA TAB
@@ -3634,13 +3630,13 @@ void ProjectBuilder::visualize(){
                     // ####### CAMERA RESOLUTION ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
-                    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x));
+                    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x, dummy_obj));
                     randomizerParams("camera_resolution_x_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_x_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[current_cam]].y);
-                    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y));
+                    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y, dummy_obj));
                     randomizerParams("camera_resolution_y_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_y_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -3648,25 +3644,25 @@ void ProjectBuilder::visualize(){
                     // ####### FOCAL PLANE DISTANCE ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[current_cam]]);
-                    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]]));
+                    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]], dummy_obj));
                     randomizerParams("focal_plane_distance_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_focal_plane_distance_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### LENS DIAMETER ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[current_cam]]);
-                    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]]));
+                    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]], dummy_obj));
                     randomizerParams("lens_diameter_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_lens_diameter_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### FOV ASPECT RATIO ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[current_cam]]);
-                    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]]));
+                    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]], dummy_obj));
                     randomizerParams("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### HFOV ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("HFOV", &HFOVs[camera_dict[current_cam]]);
-                    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]]));
+                    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]], dummy_obj));
                     randomizerParams("HFOV_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("HFOV_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     //
@@ -3776,19 +3772,19 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[(std::string) current_light]] == "sunsphere"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[current_light]].x);
-                        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x));
+                        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x, dummy_obj));
                         randomizerParams("light_direction_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[current_light]].y);
-                        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y));
+                        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y, dummy_obj));
                         randomizerParams("light_direction_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[current_light]].z);
-                        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z));
+                        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z, dummy_obj));
                         randomizerParams("light_direction_z_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3797,7 +3793,7 @@ void ProjectBuilder::visualize(){
                     // ####### LIGHT SOURCE FLUX ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputFloat("##source_flux", &light_flux_vec[light_dict[current_light]]);
-                    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]]));
+                    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]], dummy_obj));
                     randomizerParams("source_flux_" + std::to_string(light_dict[current_light]));
                     ImGui::OpenPopupOnItemClick(("source_flux_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -3808,19 +3804,19 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[current_light]] == "rectangle"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[current_light]].x);
-                        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x));
+                        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x, dummy_obj));
                         randomizerParams("light_rotation_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[current_light]].y);
-                        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y));
+                        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y, dummy_obj));
                         randomizerParams("light_rotation_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[current_light]].z);
-                        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z));
+                        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z, dummy_obj));
                         randomizerParams("light_rotation_z_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3830,13 +3826,13 @@ void ProjectBuilder::visualize(){
                     if (light_types[light_dict[current_light]] == "rectangle"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[current_light]].x);
-                        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x));
+                        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x, dummy_obj));
                         randomizerParams("light_size_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_size_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[current_light]].y);
-                        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y));
+                        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y, dummy_obj));
                         randomizerParams("light_size_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_size_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3847,7 +3843,7 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[current_light]] == "sphere"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[current_light]]);
-                        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]]));
+                        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]], dummy_obj));
                         randomizerParams("light_radius_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_radius_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -4076,6 +4072,9 @@ void ProjectBuilder::xmlGetValues(){
     // CANOPY BLOCK
     canopy_labels.clear();
     canopy_labels_dict = getNodeLabels("label", "canopy_block", canopy_labels);
+    for (auto canopy_label_ : canopy_labels){
+        canopy_labels_set.insert(canopy_label_);
+    }
     if (!canopy_labels.empty()) current_canopy = canopy_labels[0];
     xmlGetValue("canopy_origin", "canopy_block", canopy_origin);
     xmlGetValue("plant_count", "canopy_block", plant_count);
@@ -4102,7 +4101,11 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("data_group", "canopy_block", canopy_data_groups);
     // RIG BLOCK
     rig_labels.clear();
+    rig_labels_set.clear();
     rig_dict = getNodeLabels("label", "rig", rig_labels);
+    for (auto rig : rig_labels){
+        rig_labels_set.insert(rig);
+    }
     current_rig = rig_labels[0];
     xmlGetValues("color", "rig", rig_colors);
     xmlGetValue("camera_position", "rig", camera_position);
@@ -4253,6 +4256,7 @@ void ProjectBuilder::xmlGetValues(std::string xml_path){
 void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     if (ImGui::Button("Update")){
         updateObject(curr_obj_name);
+        refreshVisualization();
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete Object")){
@@ -4306,21 +4310,22 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     // ImGui::SameLine();
     // ImGui::Text("Object Color");
     // ####### OBJECT SCALE ####### //
+    obj curr_obj = obj{obj_names_dict[current_obj], false};
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].x));
+    randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].x, curr_obj));
     randomizerParams("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_y_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].y));
+    randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].y, curr_obj));
     randomizerParams("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_scale_z_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].z));
+    randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].z, curr_obj));
     randomizerParams("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
@@ -4328,19 +4333,19 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     // ####### OBJECT POSITION ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_x_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].x));
+    randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].x, curr_obj));
     randomizerParams("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_y_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].y));
+    randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].y, curr_obj));
     randomizerParams("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_position_z_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].z));
+    randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].z, curr_obj));
     randomizerParams("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
@@ -4348,19 +4353,19 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     // ####### OBJECT ORIENTATION ####### //
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_x_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].x));
+    randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].x, curr_obj));
     randomizerParams("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_y_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].y));
+    randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].y, curr_obj));
     randomizerParams("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat(("##obj_orientation_z_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].z));
+    randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].z, curr_obj));
     randomizerParams("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]));
     ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
@@ -4371,8 +4376,10 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
     ImGui::SetNextItemWidth(100);
     std::string prev_rig_name = rig_labels[rig_dict[curr_rig_name]];
     ImGui::InputText("##rig_name", &rig_labels[rig_dict[curr_rig_name]]);
-    if (rig_labels[rig_dict[curr_rig_name]] != prev_rig_name){
+    if (rig_labels[rig_dict[curr_rig_name]] != prev_rig_name && rig_labels_set.find(rig_labels[rig_dict[curr_rig_name]]) == rig_labels_set.end()){
+        rig_labels_set.erase(prev_rig_name);
         int temp = rig_dict[curr_rig_name];
+        rig_labels_set.insert(rig_labels[temp]);
         curr_rig_name = rig_labels[rig_dict[curr_rig_name]];
         std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
         if (current_rig_iter != rig_dict.end()){
@@ -4692,17 +4699,29 @@ void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr){
     }
 }
 
-taggedPtr createTaggedPtr(float* ptr){
+
+void ProjectBuilder::randomize(bool randomize_all){
+    for (std::pair<std::string, int> dist_pair : distribution_dict){
+        std::string var_name = dist_pair.first;
+        distribution dist = distributions[dist_pair.second];
+        if (randomize_all || dist.repeat){
+            sample(var_name);
+        }
+    }
+}
+
+
+taggedPtr createTaggedPtr(float* ptr, obj object){
     digitPtr p;
     p.f = ptr;
-    taggedPtr t{p, false};
+    taggedPtr t{p, false, object};
     return t;
 }
 
-taggedPtr createTaggedPtr(int* ptr){
+taggedPtr createTaggedPtr(int* ptr, obj object){
     digitPtr p;
     p.i = ptr;
-    taggedPtr t{p, true};
+    taggedPtr t{p, true, object};
     return t;
 }
 
@@ -4777,7 +4796,27 @@ void ProjectBuilder::sample(std::string var_name){
             *t.ptr.f = sampled_value;
         }
     }
+    if (t.object.idx != -1){
+        if (t.object.isCanopy){
+            dirty_canopies.insert(t.object.idx);
+        } else{
+            dirty_objects.insert(t.object.idx);
+        }
+    }
 }
+
+
+void ProjectBuilder::updateContext(){
+    for (int canopy_idx : dirty_canopies){
+        // updateCanopy(canopy_idx);
+    }
+    for (int object_idx : dirty_objects){
+        updateObject(obj_names[object_idx]);
+    }
+    dirty_canopies.clear();
+    dirty_objects.clear();
+}
+
 
 void ProjectBuilder::sampleAll(){
     for (std::pair<std::string, std::string> var_pair : distribution_types){
@@ -4798,7 +4837,7 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
     if (obj_type == "obj"){
         curr_color = &obj_colors[obj_names_dict[curr_obj]];
     }
-    if (obj_type == "rig"){
+    if (obj_type == "rig" || obj_type == "arrow" || obj_type == "camera"){
         curr_color = &rig_colors[rig_dict[curr_obj]];
     }
     // if (curr_color->r == new_color[0] && curr_color->g == new_color[1] && curr_color->b == new_color[2]){
@@ -4814,6 +4853,15 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
         for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
             context->setPrimitiveColor(arrow, *curr_color);
         }
+        context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
+    }
+    if (obj_type == "arrow"){
+        for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
+            context->setPrimitiveColor(arrow, *curr_color);
+        }
+    }
+    if (obj_type == "camera"){
+        context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
     }
 }
 
@@ -4848,29 +4896,34 @@ void ProjectBuilder::updateObject(std::string curr_obj){
         context->translatePrimitive(obj_UUIDs[obj_idx], obj_positions[obj_idx] - prev_obj_positions[obj_idx]);
         prev_obj_positions = obj_positions;
     }
-    // Update visualizer
-    const char* font_name = "LCD";
-    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-    visualizer->plotUpdate();
-    visualizer->clearGeometry();
-    visualizer->buildContextGeometry(context);
-    visualizer->plotUpdate();
 }
 
-void ProjectBuilder::updateRig(std::string curr_rig){
+
+void ProjectBuilder::updateRigs(){
     deleteArrows();
     arrow_dict.clear();
     updateArrows();
+    deleteCameraModels();
+    camera_models_dict.clear();
+    updateCameraModels();
     // Update visualizer
-    const char* font_name = "LCD";
-    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-    visualizer->plotUpdate();
-    visualizer->clearGeometry();
-    visualizer->buildContextGeometry(context);
-    visualizer->plotUpdate();
+    refreshVisualization();
 }
+
+
+void ProjectBuilder::deleteRig(std::string curr_rig){
+    int delete_idx = rig_dict[curr_rig];
+    rig_dict.erase(rig_dict.find(curr_rig));
+    refreshVisualization();
+    canopy_labels_dict.erase(current_canopy);
+    canopy_labels_set.erase(current_canopy);
+    if (!canopy_labels_set.empty()){
+        current_canopy = *canopy_labels_set.begin();
+    } else{
+        current_canopy = "";
+    }
+}
+
 
 
 void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices){
@@ -4905,14 +4958,73 @@ void ProjectBuilder::deleteCanopy(){
     for (auto canopy_vec : canopy_UUIDs[delete_idx]){
         context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(canopy_vec));
     }
+    refreshVisualization();
+    canopy_labels_dict.erase(current_canopy);
+    canopy_labels_set.erase(current_canopy);
+    if (!canopy_labels_set.empty()){
+        current_canopy = *canopy_labels_set.begin();
+    } else{
+        current_canopy = "";
+    }
+}
+
+void ProjectBuilder::addCanopy(){
+    std::string default_canopy_label = "canopy";
+    std::string new_canopy_label = "canopy_0";
+    int count = 0;
+    while (canopy_labels_dict.find(new_canopy_label) != canopy_labels_dict.end()){
+        count++;
+        new_canopy_label = default_canopy_label + "_" + std::to_string(count);
+    }
+    canopy_labels_dict.insert({new_canopy_label, canopy_labels.size()});
+    canopy_labels_set.insert(new_canopy_label);
+    canopy_origins.push_back(canopy_origin);
+    canopy_data_groups.push_back("");
+    plant_counts.push_back(plant_count);
+    plant_spacings.push_back(plant_spacing);
+    plant_library_names.push_back(plant_library_name);
+    plant_library_names_verbose.push_back(plant_library_name_verbose);
+    plant_ages.push_back(plant_age);
+    ground_clipping_heights.push_back(ground_clipping_height);
+    canopy_labels.push_back(new_canopy_label);
+    canopy_UUIDs.push_back(std::vector<unsigned int>{});
+}
+
+
+void ProjectBuilder::refreshVisualization(){
+    const char* font_name = "LCD";
+    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+    visualizer->plotUpdate();
     visualizer->clearGeometry();
     visualizer->buildContextGeometry(context);
-    visualizer->plotUpdate();
-    canopy_labels_dict.erase(current_canopy);
-    if (!canopy_labels.empty()){
-        current_canopy = canopy_labels[0];
-    } else{
-        current_obj = "";
+    if (enable_coordinate_axes){
+        visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
     }
+    visualizer->plotUpdate();
+}
+
+
+void ProjectBuilder::recordPopup(){
+    ImGui::InputInt("Number of Recordings", &num_recordings);
+}
+
+
+void ProjectBuilder::updateLocation(){
+    Location location;
+    location.latitude_deg = latitude;
+    location.longitude_deg = longitude;
+    location.UTC_offset = static_cast<float>(UTC_offset);
+    context->setLocation(location);
+}
+
+
+void ProjectBuilder::updateWeatherAndGround(){
+    context->deletePrimitive(primitive_UUIDs["ground"]);
+    uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+    ground_UUIDs.clear();
+    ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    primitive_UUIDs["ground"] = ground_UUIDs;
 }
 
