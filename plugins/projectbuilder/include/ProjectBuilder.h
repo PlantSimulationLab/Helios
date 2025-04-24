@@ -176,12 +176,14 @@ union distUnion{
  std::weibull_distribution<float> *weibull;
 };
 
-//! Struct to combine distribution objects (flag: 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)
+//! Struct to combine distribution objects (flag: -1 = N/A, 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)
 struct distribution{
  distUnion dist;
  int flag;
  bool repeat;
 };
+
+bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
 
 //! Function to create a distribution struct from a normal distribution
 /**
@@ -386,6 +388,12 @@ class ProjectBuilder {
     //! Rig labels
     std::vector<std::string> rig_labels;
 
+    //! Rig position noise
+    std::vector<std::vector<distribution>> rig_position_noise;
+
+    //! Rig lookat noise
+    std::vector<std::vector<distribution>> rig_lookat_noise;
+
     //! Rig colors
     std::vector<helios::RGBcolor> rig_colors;
 
@@ -446,6 +454,9 @@ class ProjectBuilder {
     //! Vector of camera names
     std::vector<std::string> camera_names;
 
+    //! Set of camera names
+    std::set<std::string> camera_names_set;
+
     //! Camera resolution
     helios::int2 camera_resolution = {1024, 1024};
 
@@ -469,6 +480,9 @@ class ProjectBuilder {
 
      //! Vector of light names.
     std::vector<std::string> light_names;
+
+     //! Set of light names.
+    std::set<std::string> light_names_set;
 
     //! Vector of light types (e.g. sphere, rectangle, etc.).
     std::vector<std::string> light_types;
@@ -542,6 +556,15 @@ class ProjectBuilder {
 
     //! Ground texture file
     std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
+
+    //! Use ground texture file
+    bool use_ground_texture_file = true;
+
+    //! Ground color
+    float ground_color[3] = { 0.0, 0.0, 0.0 };
+
+    //! Ground model file
+    std::string ground_model_file = "";
 
     //! Vector of canopy labels
     std::vector<std::string> canopy_labels;
@@ -974,8 +997,17 @@ class ProjectBuilder {
     //! Function to delete arrows denoting rig movement
     void deleteArrows();
 
-    //! Function to delete a canopy
-    void deleteCanopy();
+    //! Function to delete the selected canopy
+    /**
+     * \param[in] canopy Canopy to delete
+    */
+    void deleteCanopy(std::string canopy);
+
+    //! Function to update the selected canopy
+    /**
+     * \param[in] canopy Canopy to update
+    */
+    void updateCanopy(std::string canopy);
 
     //! Function to add a new canopy
     void addCanopy();
@@ -1049,6 +1081,12 @@ class ProjectBuilder {
     //! Random distributions
     std::string current_distribution = "Normal (Gaussian)";
 
+    //! Current axis
+    std::string current_axis = "X";
+
+    //! Possible axes
+    std::set<std::string> possible_axes = {"X", "Y", "Z"};
+
     //! Random distributions
     std::vector<std::string> distribution_names = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
 
@@ -1068,7 +1106,7 @@ class ProjectBuilder {
     std::stringstream captured_cout;
 
     //! Number of recordings
-    int num_recordings;
+    int num_recordings = 1;
 
     //! Indices of objects that need to be updated
     std::set<int> dirty_objects = {};
@@ -1117,7 +1155,7 @@ class ProjectBuilder {
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void buildFromXML(std::string xml_path);
+    void buildFromXML(std::string xml_input_file);
 
     //! Function to visualize XML plot
     void visualize();
@@ -1129,7 +1167,7 @@ class ProjectBuilder {
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void buildAndVisualize(std::string xml_path);
+    void buildAndVisualize(std::string xml_input_file);
 
     //! Function to set all values in GUI from XML
     void xmlSetValues();
@@ -1147,7 +1185,7 @@ class ProjectBuilder {
     /**
      * \param[in] xml_input_file Name of XML input file
     */
-    void xmlGetValues(std::string xml_path);
+    void xmlGetValues(std::string xml_input_file);
 
     //! Function to get node labels for a given set of nodes
     /**
@@ -1161,7 +1199,7 @@ class ProjectBuilder {
     //! Function to get keypoints for every rig
     /**
      * \param[in] name Name of the label (e.g. name="keypoint")
-     * \param[in] parent Name of the XML fields to get labels from (e.g. field="camera_position")
+     * \param[in] field Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
     */
     void getKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
@@ -1169,7 +1207,7 @@ class ProjectBuilder {
     //! Function to set keypoints for every rig
     /**
      * \param[in] name Name of the label (e.g. name="keypoint")
-     * \param[in] parent Name of the XML fields to get labels from (e.g. field="camera_position")
+     * \param[in] field Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
     */
     void setKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
@@ -1221,6 +1259,22 @@ class ProjectBuilder {
      * \param[out] default_value Field value if one exists
     */
     void xmlGetValue(const std::string& name, const std::string& parent, helios::int2& default_value);
+
+    //! Function to get distribution from an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML node
+     * \param[out] distribution Distribution if one is provided for name in the XML file
+    */
+    void xmlGetDistribution(const std::string& name, const std::string& parent, distribution& distribution);
+
+    //! Function to set distribution from an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML node
+     * \param[out] distribution Distribution if one is provided for name in the XML file
+    */
+    void xmlSetDistribution(const std::string& name, const std::string& parent, distribution& distribution);
 
     //! Function to get values of an XML field
     /**
@@ -1359,91 +1413,100 @@ class ProjectBuilder {
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::vec2>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::vec3>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::int2>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::string>&);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::string>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<int>&);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<int>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<float>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_vec);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::RGBcolor>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string&, const std::string&, std::vector<std::vector<helios::vec3>>&);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::vector<helios::vec3>>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_vec Vector of field values for all parent nodes to set
+     * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
     */
-    void xmlSetValues(const std::string&, const std::string&, std::vector<std::set<std::string>>&);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::set<std::string>>& values_vec, std::map<std::string, int>& node_map);
 
     //! Function to set values to an XML field
     /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes to set
+     * \param[in] field_name Name of the XML field
+     * \param[in] node_name Name of the parent XML nodes
+     * \param[in] values_set Vector of field values for all parent nodes to set
     */
-    void xmlSetValues(const std::string&, const std::string&, std::set<std::string>&);
+    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::set<std::string>& values_set);
 
     //! Function to set node labels for a given set of nodes
     /**
      * \param[in] label_name Name of the label
      * \param[in] node_name Name of the XML nodes to get labels from
-     * \param[out] labels_vec Vector of labels of XML "parent" nodes to set
+     * \param[out] labels_set Set of labels of XML "parent" nodes to set
     */
-    std::map<std::string, int> setNodeLabels(const std::string&, const std::string&, std::vector<std::string>&);
+    void setNodeLabels(const std::string& label_name, const std::string& node_name, std::set<std::string>& labels_set);
 
     //! Function to create an ImGui Popup for randomizing a variable
     /**
@@ -1451,6 +1514,28 @@ class ProjectBuilder {
      * \param[in] ptr Pointer to the variable to be randomized
     */
     void randomizePopup(std::string popup_name, taggedPtr ptr);
+
+    //! Function to create an ImGui Popup for adding random noise to a variable
+    /**
+     * \param[in] popup_name Name of the parameter being randomized
+     * \param[in] dist_vec Vector of noise distributions to be applied
+    */
+    void noisePopup(std::string popup_name,std::vector<distribution>& dist_vec);
+
+    //! Function to apply random distribution to a variable
+    /**
+     * \param[in] var_name Name of the variable being randomized
+     * \param[in] ptr Pointer to the variable to be randomized
+    */
+    void applyDistribution(std::string var_name, taggedPtr ptr);
+
+    //! Function to apply random distribution to a variable
+    /**
+     * \param[in] var_name Name of the variable being randomized
+     * \param[in] dist Distribution to be applied
+     * \param[in] ptr Pointer to the variable to be randomized
+    */
+    void applyDistribution(std::string var_name, distribution dist, taggedPtr ptr);
 
     //! Function to randomize variables that have assigned distributions
     /**
@@ -1477,6 +1562,11 @@ class ProjectBuilder {
     void outputConsole();
 
     //! Update color of object, rig, etc.
+    /**
+     * \param[in] curr_obj Object to update the color of
+     * \param[in] obj_type Object type (options: object, rig, arrow, or camera)
+     * \param[in] new_color New color represented by float[3]
+    */
     void updateColor(std::string curr_obj, std::string obj_type, float* new_color);
 
     //! Update object in visualizer (e.g. position, orientation, scale, color, etc.)
@@ -1503,8 +1593,8 @@ class ProjectBuilder {
     //! Update location
     void updateLocation();
 
-    //! Update weather & ground
-    void updateWeatherAndGround();
+    //! Update ground
+    void updateGround();
 
     //! Update context
     void updateContext();

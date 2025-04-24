@@ -562,7 +562,7 @@ void ProjectBuilder::updateCameras(){
             vec3 camera_lookat_ = camera_lookats[rig_index];
             radiation->addRadiationCamera(camera_label_, bandlabels, camera_position_, camera_lookat_, *cameraproperties, 100);
             for (auto &band : bandlabels){
-                radiation->setCameraSpectralResponse(camera_label_, band, camera_calibrations[camera_index][band] + "_" + band);
+                radiation->setCameraSpectralResponse(camera_label_, band, camera_calibrations[camera_index][band]);
             }
             radiation->updateGeometry();
         }
@@ -575,81 +575,95 @@ void ProjectBuilder::updateCameras(){
 
 void ProjectBuilder::record(){
     #ifdef ENABLE_RADIATION_MODEL
-    std::string image_dir = "./saved/";
-    // deleteArrows();
-    std::vector<uint> temp_lights{};
-    for (std::string rig_label : rig_labels_set){
-        int rig_index = rig_dict[rig_label];
-        std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
-        std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
-        // ADD RIG LIGHTS
-        for (std::string light : rig_light_labels[rig_dict[rig_label]]){
-            int light_idx = light_dict[light];
-            uint new_light_UUID;
-            if (light_types[light_idx] == "sphere"){
-                new_light_UUID = radiation->addSphereRadiationSource(interpolated_camera_positions[0], light_radius_vec[light_idx]);
-                temp_lights.push_back(new_light_UUID);
-            }else if (light_types[light_dict[light]] == "rectangle"){
-                new_light_UUID = radiation->addRectangleRadiationSource(interpolated_camera_positions[0],
-                    light_size_vec[light_idx], light_rotation_vec[light_idx]);
-                temp_lights.push_back(new_light_UUID);
-            }else if (light_types[light_dict[light]] == "disk"){
-                new_light_UUID = radiation->addDiskRadiationSource(interpolated_camera_positions[0],
-                    light_radius_vec[light_idx], light_rotation_vec[light_idx]);
-                temp_lights.push_back(new_light_UUID);
+    deleteArrows();
+    deleteCameraModels();
+    randomize(true);
+    for (int _ = 0; _ < num_recordings; _++){
+        updateContext();
+        // std::time_t now = std::time(nullptr);
+        // std::tm* tm_ptr = std::localtime(&now);
+        // std::ostringstream oss;
+        // oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
+        // std::string image_dir = "./saved-" + oss.str() + "/";
+        // std::filesystem::create_directory("saved-" + oss.str());
+
+        std::string image_dir = "./saved/";
+        std::vector<uint> temp_lights{};
+        for (std::string rig_label : rig_labels_set){
+            int rig_index = rig_dict[rig_label];
+            std::vector<vec3> interpolated_camera_positions = interpolate(keypoint_frames[rig_index], camera_position_vec[rig_index], num_images_vec[rig_index]);
+            std::vector<vec3> interpolated_camera_lookats = interpolate(keypoint_frames[rig_index], camera_lookat_vec[rig_index], num_images_vec[rig_index]);
+            // ADD RIG LIGHTS
+            for (std::string light : rig_light_labels[rig_dict[rig_label]]){
+                int light_idx = light_dict[light];
+                uint new_light_UUID;
+                if (light_types[light_idx] == "sphere"){
+                    new_light_UUID = radiation->addSphereRadiationSource(interpolated_camera_positions[0], light_radius_vec[light_idx]);
+                    temp_lights.push_back(new_light_UUID);
+                }else if (light_types[light_dict[light]] == "rectangle"){
+                    new_light_UUID = radiation->addRectangleRadiationSource(interpolated_camera_positions[0],
+                        light_size_vec[light_idx], light_rotation_vec[light_idx]);
+                    temp_lights.push_back(new_light_UUID);
+                }else if (light_types[light_dict[light]] == "disk"){
+                    new_light_UUID = radiation->addDiskRadiationSource(interpolated_camera_positions[0],
+                        light_radius_vec[light_idx], light_rotation_vec[light_idx]);
+                    temp_lights.push_back(new_light_UUID);
+                }
+                for (auto &band : bandlabels){
+                    radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
+                }
             }
-            for (auto &band : bandlabels){
-                radiation->setSourceFlux(new_light_UUID, band, light_flux_vec[light_idx]);
-            }
-        }
-        // radiation->updateGeometry(); // TODO: figure out why we can't move updateGeometry here
-        // radiation->setSourceFlux(light_UUID, band, flux_value)
-        //
-        for (int i = 0; i < interpolated_camera_positions.size(); i++){
-            // SET LIGHT POSITIONS
-            for (uint light_ID : temp_lights){
-                radiation->setSourcePosition(light_ID, interpolated_camera_positions[i]);
-            }
+            // radiation->updateGeometry(); // TODO: figure out why we can't move updateGeometry here
             // radiation->setSourceFlux(light_UUID, band, flux_value)
             //
-            for (std::string rig_camera_label : rig_camera_labels[rig_index]){
-                int camera_index = camera_dict[rig_camera_label];
-                std::string cameralabel = rig_label + "_" + rig_camera_label;
-                radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
-                radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
-            }
-            radiation->updateGeometry();
-            for (std::string band_group_name : band_group_names){
-                radiation->runBand(band_group_lookup[band_group_name]);
-            }
-            for (std::string rig_camera_label : rig_camera_labels[rig_index]){
-                std::string cameralabel = rig_label + "_" + rig_camera_label;
-                // Write Images
+            for (int i = 0; i < interpolated_camera_positions.size(); i++){
+                // SET LIGHT POSITIONS
+                for (uint light_ID : temp_lights){
+                    radiation->setSourcePosition(light_ID, interpolated_camera_positions[i]);
+                }
+                // radiation->setSourceFlux(light_UUID, band, flux_value)
+                //
+                for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+                    int camera_index = camera_dict[rig_camera_label];
+                    std::string cameralabel = rig_label + "_" + rig_camera_label;
+                    radiation->setCameraPosition(cameralabel, interpolated_camera_positions[i]);
+                    radiation->setCameraLookat(cameralabel, interpolated_camera_lookats[i]);
+                }
+                radiation->updateGeometry();
                 for (std::string band_group_name : band_group_names){
-                    radiation->writeCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + std::to_string(i), image_dir + rig_label + '/');
-                    radiation->writeNormCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                    radiation->runBand(band_group_lookup[band_group_name]);
                 }
-                radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
-                radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
-                //
-                // Bounding boxes for all primitive types
-                for (std::string primitive_name : primitive_names){
-                    if (!primitive_name.empty()){
-                        primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                for (std::string rig_camera_label : rig_camera_labels[rig_index]){
+                    std::string cameralabel = rig_label + "_" + rig_camera_label;
+                    // Write Images
+                    for (std::string band_group_name : band_group_names){
+                        radiation->writeCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + std::to_string(i), image_dir + rig_label + '/');
+                        radiation->writeNormCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
                     }
-                    radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                    radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
+                    radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
+                    //
+                    // Bounding boxes for all primitive types
+                    for (std::string primitive_name : primitive_names){
+                        if (!primitive_name.empty()){
+                            primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                        }
+                        radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                    }
+                    //
                 }
-                //
             }
+            // REMOVE RIG LIGHTS
+            for (uint temp_light : temp_lights){
+                radiation->deleteRadiationSource(temp_light);
+            }
+            temp_lights.clear();
+            //
         }
-        // REMOVE RIG LIGHTS
-        for (uint temp_light : temp_lights){
-            radiation->deleteRadiationSource(temp_light);
-        }
-        temp_lights.clear();
-        //
+        randomize(false);
     }
-    // updateArrows();
+    updateArrows();
+    updateCameraModels();
     visualizer->plotUpdate();
     #endif //RADIATION_MODEL
 }
@@ -764,8 +778,8 @@ void ProjectBuilder::buildFromXML(){
         }
         ground_UUIDs = primitive_UUIDs["ground"];
         leaf_UUIDs = primitive_UUIDs["leaf"];
-        assert( !ground_UUIDs.empty() );
-        assert( !leaf_UUIDs.empty() );
+        // assert( !ground_UUIDs.empty() );
+        // assert( !leaf_UUIDs.empty() );
         context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
         context->setPrimitiveData(leaf_UUIDs, "object_label", "leaf");
 
@@ -1073,6 +1087,7 @@ void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& par
     }
 }
 
+
 void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& parent, int2 &default_value) {
     helios = xmldoc.child("helios");
     pugi::xml_node p = helios;
@@ -1091,6 +1106,105 @@ void ProjectBuilder::xmlGetValue(const std::string& name, const std::string& par
             helios_runtime_error("ERROR: Value given for '" + name + "' must be greater than 0.");
         }
     }
+}
+
+
+void ProjectBuilder::xmlGetDistribution(const std::string& name, const std::string& parent, distribution& distribution) {
+    helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    if (parent != "helios") {
+        p = helios.child(parent.c_str());
+    }
+    pugi::xml_node node;
+    node = p.child(name.c_str());
+    if( node.empty() ){
+        std::cout << "WARNING: No distribution given for '" << name << "'. Using default distribution of N/A." << std::endl;
+        distribution.flag = -1;
+    }else {
+        const char *node_str = node.child_value();
+        if (!parse_distribution(node_str, distribution)) {
+            helios_runtime_error("ERROR: Value given for '" + name + "' could not be parsed.");
+        }
+    }
+}
+
+
+void ProjectBuilder::xmlSetDistribution(const std::string& name, const std::string& parent, distribution& distribution) {
+    helios = xmldoc.child("helios");
+    pugi::xml_node p = helios;
+    if (parent != "helios") {
+        p = helios.child(parent.c_str());
+    }
+    pugi::xml_node node;
+    node = p.child(name.c_str());
+    if (!node){
+        node = p.append_child(name.c_str());
+    }
+    std::string dist_type;
+    std::string param_1;
+    std::string param_2;
+    std::string repeat;
+    if (distribution.flag == 0){
+        dist_type = "normal";
+        param_1 = std::to_string(distribution.dist.normal->mean());
+        param_2 = std::to_string(distribution.dist.normal->stddev());
+        repeat = std::to_string(distribution.repeat);
+    } else if (distribution.flag == 1){
+        dist_type = "uniform";
+        param_1 = std::to_string(distribution.dist.uniform->a());
+        param_2 = std::to_string(distribution.dist.uniform->b());
+        repeat = std::to_string(distribution.repeat);
+    } else if (distribution.flag == 2){
+        dist_type = "weibull";
+        param_1 = std::to_string(distribution.dist.weibull->a());
+        param_2 = std::to_string(distribution.dist.weibull->b());
+        repeat = std::to_string(distribution.repeat);
+    } else if (distribution.flag == -1){
+        dist_type = "N/A";
+        param_1 = "0";
+        param_2 = "0";
+        repeat = "0";
+    }
+    node.text().set((dist_type + " " + param_1 + " " + param_2 + " " + repeat).c_str());
+}
+
+
+bool parse_distribution( const std::string &input_string, distribution &converted_distribution ){
+    std::istringstream vecstream(input_string);
+    std::vector<std::string> tmp_s(4);
+    vecstream >> tmp_s[0];
+    vecstream >> tmp_s[1];
+    vecstream >> tmp_s[2];
+    vecstream >> tmp_s[3];
+    std::string dist_type;
+    std::vector<float> dist_params = {0.0, 0.0};
+    int repeat = 0;
+    if (!parse_float(tmp_s[1], dist_params[0]) || !parse_float(tmp_s[2], dist_params[1]) || !parse_int(tmp_s[3], repeat) ) {
+        return false;
+    }
+    distUnion dist{};
+    if (dist_type == "normal"){
+        dist.normal = new std::normal_distribution<float>;
+        *dist.normal = std::normal_distribution<float>(dist_params[0], dist_params[1]);
+        converted_distribution.dist = dist;
+        converted_distribution.flag = 0;
+        converted_distribution.repeat = (bool) repeat;
+    } else if (dist_type == "uniform"){
+        dist.uniform = new std::uniform_real_distribution<float>;
+        *dist.uniform = std::uniform_real_distribution<float>(dist_params[0], dist_params[1]);
+        converted_distribution.dist = dist;
+        converted_distribution.flag = 1;
+        converted_distribution.repeat = (bool) repeat;
+    } else if (dist_type == "weibull"){
+        dist.weibull = new std::weibull_distribution<float>;
+        *dist.weibull = std::weibull_distribution<float>(dist_params[0], dist_params[1]);
+        converted_distribution.dist = dist;
+        converted_distribution.flag = 2;
+        converted_distribution.repeat = (bool) repeat;
+    } else{
+        converted_distribution.flag = -1;
+    }
+    return true;
 }
 
 
@@ -1312,17 +1426,27 @@ void ProjectBuilder::xmlGetValues(const std::string& name, const std::string& pa
 }
 
 
-std::map<std::string, int> ProjectBuilder::setNodeLabels(const std::string& name, const std::string& parent, std::vector<std::string>& labels_vec){
+void ProjectBuilder::setNodeLabels(const std::string& name, const std::string& parent, std::set<std::string>& labels_vec){
     int i = 0;
     helios = xmldoc.child("helios");
-    std::map<std::string, int> labels_dict = {};
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_attribute node_label = p.attribute(name.c_str());
-        node_label.set_value(labels_vec[i].c_str());
-        labels_dict.insert({labels_vec[i], i});
-        i++;
+
+    std::set<pugi::xml_node> curr_nodes_set;
+    for (pugi::xml_node node = helios.child(parent.c_str()); node; node = node.next_sibling(parent.c_str())){
+        curr_nodes_set.insert(node);
     }
-    return labels_dict;
+    for (auto node : curr_nodes_set){
+        node.parent().remove_child(node);
+    }
+
+    std::map<std::string, int> labels_dict = {};
+    for (auto new_node_label : labels_vec){
+        pugi::xml_node new_node = helios.append_child(parent.c_str());
+        pugi::xml_attribute node_label = new_node.attribute(name.c_str());
+        node_label.set_value(new_node_label.c_str());
+        new_node.append_attribute(name.c_str()).set_value(new_node_label.c_str());
+    }
+
+    return;
 }
 
 
@@ -1423,138 +1547,162 @@ void ProjectBuilder::xmlSetValue(const std::string& name, const std::string& par
     node.text().set(vec_to_string(default_value).c_str());
 }
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<vec2>& default_values){
+
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<vec2>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(vec_to_string(default_values[i]).c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(vec_to_string(values_vec[idx]).c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<vec3>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<vec3>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(vec_to_string(default_values[i]).c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(vec_to_string(values_vec[idx]).c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::RGBcolor>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
         helios::vec3 default_values_vec;
-        default_values_vec.x = default_values[i].r;
-        default_values_vec.y = default_values[i].g;
-        default_values_vec.z = default_values[i].b;
+        default_values_vec.x = values_vec[idx].r;
+        default_values_vec.y = values_vec[idx].g;
+        default_values_vec.z = values_vec[idx].b;
         node.text().set(vec_to_string(default_values_vec).c_str());
-        i++;
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<int2>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<int2>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(vec_to_string(default_values[i]).c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(vec_to_string(values_vec[idx]).c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::string>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::string>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(default_values[i].c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(values_vec[idx].c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<int>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<int>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(std::to_string(default_values[i]).c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(std::to_string(values_vec[idx]).c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<float>& default_values){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<float>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    pugi::xml_node p = helios;
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
-        pugi::xml_node node = p.child(name.c_str());
-        node.text().set(std::to_string(default_values[i]).c_str());
-        i++;
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
+        pugi::xml_node node = p.child(field_name.c_str());
+        if (!node){
+            node = p.append_child(field_name.c_str());
+        }
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        node.text().set(std::to_string(values_vec[idx]).c_str());
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::vector<vec3>>& default_vec){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::vector<vec3>>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
-    int i = 0;
-    for (pugi::xml_node p = helios.child(parent.c_str()); p; p = p.next_sibling(parent.c_str())){
+
+    for (pugi::xml_node p = helios.child(node_name.c_str()); p; p = p.next_sibling(node_name.c_str())){
         std::vector<pugi::xml_node> remove = {};
-        for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+        for (pugi::xml_node node = p.child(field_name.c_str()); node; node = node.next_sibling(field_name.c_str())){
             remove.push_back(node);
         }
         for (pugi::xml_node &node : remove){
             p.remove_child(node);
         }
-        for (int j = 0; j < default_vec[i].size(); j++){
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        for (int j = 0; j < values_vec[idx].size(); j++){
             // p.append_child(name.c_str()).set_value(vec_to_string(default_vec[i][j]).c_str());
-            pugi::xml_node new_node = p.append_child(name.c_str());
-            new_node.text().set(vec_to_string(default_vec[i][j]).c_str());
+            pugi::xml_node new_node = p.append_child(field_name.c_str());
+            new_node.text().set(vec_to_string(values_vec[idx][j]).c_str());
         }
-        i++;
     }
 }
 
 
-void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec){
+void ProjectBuilder::xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::set<std::string>>& values_vec, std::map<std::string, int>& node_map){
     helios = xmldoc.child("helios");
     int i = 0;
     pugi::xml_node p_;
-    if (parent != "helios") {
-        p_ = helios.child(parent.c_str());
+    if (node_name != "helios") {
+        p_ = helios.child(node_name.c_str());
     }else{
         p_ = helios;
     }
-    for (pugi::xml_node p = p_; p; p = p.next_sibling(parent.c_str())){
+    for (pugi::xml_node p = p_; p; p = p.next_sibling(node_name.c_str())){
         std::vector<pugi::xml_node> remove{};
-        for (pugi::xml_node node = p.child(name.c_str()); node; node = node.next_sibling(name.c_str())){
+        for (pugi::xml_node node = p.child(field_name.c_str()); node; node = node.next_sibling(field_name.c_str())){
             remove.push_back(node);
         }
         for (pugi::xml_node &node : remove){
             p.remove_child(node);
         }
-        for (std::string s : default_vec[i]){
+        pugi::xml_attribute label = p.attribute("label");
+        int idx = node_map[label.as_string()];
+        for (std::string s : values_vec[idx]){
             // p.append_child(name.c_str()).set_value(s.c_str());
-            pugi::xml_node new_node = p.append_child(name.c_str());
+            pugi::xml_node new_node = p.append_child(field_name.c_str());
             new_node.text().set(s.c_str());
         }
-        i++;
     }
 } // TODO: test this function
 
@@ -2005,6 +2153,8 @@ void ProjectBuilder::visualize(){
                 visualizer->buildContextGeometry(context);
                 visualizer->plotUpdate();
             }
+            recordPopup();
+            ImGui::OpenPopupOnItemClick("repeat_record", ImGuiPopupFlags_MouseButtonRight);
             #endif //RADIATION_MODEL
             // ####### RESULTS ####### //
             // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
@@ -2092,15 +2242,7 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Domain Extent");
-                    // ####### WEATHER & GROUND ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Weather & Ground:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    if (ImGui::Button("Update Weather / Ground")){
-                        updateWeatherAndGround();
-                        refreshVisualization();
-                    }
-                    // ####### CSV Weather File ####### //
+                     // ####### Weather File ####### //
                     ImGui::SetNextItemWidth(60);
                     toggle_button("##is_weather_file_csv", &is_weather_file_csv);
                     std::string prev_weather_file;
@@ -2146,26 +2288,61 @@ void ProjectBuilder::visualize(){
                         shorten_weather_file = shorten_weather_file.substr(last_weather_file + 1);
                     }
                     ImGui::Text("%s", shorten_weather_file.c_str());
-                    // ####### GROUND TEXTURE File ####### //
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Ground Texture File")){
-                        std::string ground_texture_file_ = file_dialog();
-                        if (!ground_texture_file_.empty()){
-                            ground_texture_file = ground_texture_file_;
-                        }
+                    // ####### GROUND ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Ground:");
+                    ImGui::SetWindowFontScale(1.0f);
+                    if (ImGui::Button("Update Ground")){
+                        updateGround();
+                        refreshVisualization();
                     }
+                    toggle_button("##use_ground_texture_file", &use_ground_texture_file);
                     ImGui::SameLine();
-                    std::string shorten = ground_texture_file;
-                    for (char &c : shorten){
-                        if (c == '\\'){
-                            c = '/';
+                    if (use_ground_texture_file){
+                        // ####### GROUND TEXTURE File ####### //
+                        ImGui::SetNextItemWidth(60);
+                        if (ImGui::Button("Ground Texture File")){
+                            std::string ground_texture_file_ = file_dialog();
+                            if (!ground_texture_file_.empty()){
+                                ground_texture_file = ground_texture_file_;
+                            }
                         }
+                        ImGui::SameLine();
+                        std::string shorten = ground_texture_file;
+                        for (char &c : shorten){
+                            if (c == '\\'){
+                                c = '/';
+                            }
+                        }
+                        size_t last = shorten.rfind('/');
+                        if (last != std::string::npos){
+                            shorten = shorten.substr(last + 1);
+                        }
+                        ImGui::Text("%s", shorten.c_str());
+                    } else{
+                        // ####### GROUND Model File ####### //
+                        ImGui::SetNextItemWidth(60);
+                        if (ImGui::Button("Ground Model File")){
+                            std::string ground_model_file_ = file_dialog();
+                            if (!ground_model_file_.empty()){
+                                ground_model_file = ground_model_file_;
+                            }
+                        }
+                        ImGui::SameLine();
+                        std::string shorten_ground_model_file = ground_model_file;
+                        for (char &c : shorten_ground_model_file){
+                            if (c == '\\'){
+                                c = '/';
+                            }
+                        }
+                        size_t last_ground_model_file = shorten_ground_model_file.rfind('/');
+                        if (last_ground_model_file != std::string::npos){
+                            shorten_ground_model_file = shorten_ground_model_file.substr(last_ground_model_file + 1);
+                        }
+                        ImGui::Text("%s", shorten_ground_model_file.c_str());
                     }
-                    size_t last = shorten.rfind('/');
-                    if (last != std::string::npos){
-                        shorten = shorten.substr(last + 1);
-                    }
-                    ImGui::Text("%s", shorten.c_str());
+                    // ####### GROUND COLOR ####### //
+                    ImGui::ColorEdit3("##ground_color_edit", ground_color);
                     // ####### GROUND RESOLUTION ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
@@ -2279,7 +2456,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SetNextItemWidth(100);
                         std::string prev_obj_name = obj_names[obj_names_dict[current_obj]];
                         ImGui::InputText("##obj_name", &obj_names[obj_names_dict[current_obj]]);
-                        if (obj_names[obj_names_dict[current_obj]] != prev_obj_name && !obj_names[obj_names_dict[current_obj]].empty()){
+                        if (obj_names[obj_names_dict[current_obj]] != prev_obj_name && !obj_names[obj_names_dict[current_obj]].empty() && obj_names_dict.find(obj_names[obj_names_dict[current_obj]]) == obj_names_dict.end()){
                             int idx = obj_names_dict[current_obj];
                             current_obj = obj_names[obj_names_dict[current_obj]];
                             std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
@@ -2289,7 +2466,7 @@ void ProjectBuilder::visualize(){
                             obj_names_dict[current_obj] = idx;
                             obj_names_set.erase(prev_obj_name);
                             obj_names_set.insert(current_obj);
-                        } else if (obj_names[obj_names_dict[current_obj]].empty()){
+                        } else {
                             obj_names[obj_names_dict[current_obj]] = prev_obj_name;
                         }
                         ImGui::SameLine();
@@ -2309,25 +2486,6 @@ void ProjectBuilder::visualize(){
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
                             // ####### OBJECT COLOR ####### //
-                            // helios::RGBcolor obj_prev_color = obj_colors[obj_names_dict[current_obj]];
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
-                            // randomizePopup("obj_color_r_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].r));
-                            // randomizerParams("obj_color_r_" + std::to_string(obj_names_dict[current_obj]));
-                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_r_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                            // ImGui::SameLine();
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
-                            // randomizePopup("obj_color_g_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].g));
-                            // randomizerParams("obj_color_g_" + std::to_string(obj_names_dict[current_obj]));
-                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_g_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                            // ImGui::SameLine();
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
-                            // randomizePopup("obj_color_b_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_colors[obj_names_dict[current_obj]].b));
-                            // randomizerParams("obj_color_b_" + std::to_string(obj_names_dict[current_obj]));
-                            // ImGui::OpenPopupOnItemClick(("randomize_obj_color_b_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                            // ImGui::SameLine();
                             float col[3];
                             col[0] = obj_colors[obj_names_dict[current_obj]].r;
                             col[1] = obj_colors[obj_names_dict[current_obj]].g;
@@ -2439,56 +2597,18 @@ void ProjectBuilder::visualize(){
                     }
                     if (!current_canopy.empty()){
                         if (ImGui::Button("Update Canopy")){
-                            int update_idx = canopy_labels_dict[current_canopy];
-                            for (auto plant_instance : canopy_UUIDs[update_idx]){
-                                // context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(plant_instance));
-                                plantarchitecture->deletePlantInstance(plant_instance);
-                            }
-                            plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
-                            plantarchitecture->enableGroundClipping( ground_clipping_height );
-                            std::vector<helios::vec3> curr_plant_locations;
-                            std::vector<uint> new_canopy_UUIDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
-                                                                                                                plant_counts[update_idx], plant_ages[update_idx], curr_plant_locations);
-                            individual_plant_locations.push_back(curr_plant_locations);
-
-                            leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
-                            primitive_UUIDs["leaf"] = leaf_UUIDs;
-                            internode_UUIDs = plantarchitecture->getAllInternodeUUIDs();
-                            primitive_UUIDs["internode"] = internode_UUIDs;
-                            petiole_UUIDs = plantarchitecture->getAllPetioleUUIDs();
-                            primitive_UUIDs["petiole"] = petiole_UUIDs;
-                            peduncle_UUIDs = plantarchitecture->getAllPeduncleUUIDs();
-                            primitive_UUIDs["peduncle"] = peduncle_UUIDs;
-                            std::vector<uint> flower_UUIDs = plantarchitecture->getAllFlowerUUIDs();
-                            petal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "petal");
-                            sepal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "sepal");
-                            if( petal_UUIDs.empty() && sepal_UUIDs.empty() ){
-                                petal_UUIDs = flower_UUIDs;
-                                sepal_UUIDs.clear();
-                            }
-                            fruit_UUIDs = plantarchitecture->getAllFruitUUIDs();
-                            primitive_UUIDs["petal"] = petal_UUIDs;
-                            primitive_UUIDs["sepal"] = sepal_UUIDs;
-                            primitive_UUIDs["flower"] = flower_UUIDs;
-
-                            canopy_UUIDs[canopy_labels_dict[current_canopy]] = new_canopy_UUIDs;
-
-                            const char* font_name = "LCD";
-                            visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                                RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                            visualizer->plotUpdate();
-                            visualizer->clearGeometry();
-                            visualizer->buildContextGeometry(context);
-                            visualizer->plotUpdate();
+                            updateCanopy(current_canopy);
+                            refreshVisualization();
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Canopy")){
-                            deleteCanopy();
+                            deleteCanopy(current_canopy);
+                            refreshVisualization();
                         }
                         ImGui::SetNextItemWidth(100);
                         std::string prev_canopy_name = canopy_labels[canopy_labels_dict[current_canopy]];
                         ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[current_canopy]]);
-                        if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name){
+                        if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name && canopy_labels_dict.find(canopy_labels[canopy_labels_dict[current_canopy]]) == canopy_labels_dict.end() && !canopy_labels[canopy_labels_dict[current_canopy]].empty()){
                             int temp = canopy_labels_dict[current_canopy];
                             current_canopy = canopy_labels[canopy_labels_dict[current_canopy]];
                             std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
@@ -2499,6 +2619,8 @@ void ProjectBuilder::visualize(){
 
                             canopy_labels_set.erase(prev_canopy_name);
                             canopy_labels_set.insert(current_canopy);
+                        } else{
+                            canopy_labels[canopy_labels_dict[current_canopy]] = prev_canopy_name;
                         }
                         ImGui::SameLine();
                         ImGui::Text("Canopy Name");
@@ -3269,17 +3391,15 @@ void ProjectBuilder::visualize(){
                         camera_labels.push_back(camera_label);
                         camera_position_vec.push_back(camera_position_vec[rig_dict[current_rig]]);
                         camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[current_rig]]);
-                        // camera_resolutions.push_back(camera_resolution);
-                        // focal_plane_distances.push_back(focal_plane_distance);
-                        // lens_diameters.push_back(lens_diameter);
-                        // FOV_aspect_ratios.push_back(FOV_aspect_ratio);
-                        // HFOVs.push_back(HFOV);
                         rig_labels.push_back(new_rig_label);
                         rig_labels_set.insert(new_rig_label);
                         rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
                         rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
                         keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
                         num_images_vec.push_back(num_images_vec[rig_dict[current_rig]]);
+                        rig_colors.push_back(rig_colors[rig_dict[current_rig]]);
+                        rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+                        rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
                         // current_rig = new_rig_label;
                         std::string parent = "rig";
                         pugi::xml_node rig_block = helios.child(parent.c_str());
@@ -3301,7 +3421,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SetNextItemWidth(100);
                         std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
                         ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
-                        if (rig_labels[rig_dict[current_rig]] != prev_rig_name){
+                        if (rig_labels[rig_dict[current_rig]] != prev_rig_name && rig_dict.find(rig_labels[rig_dict[current_rig]]) == rig_dict.end() && !rig_labels[rig_dict[current_rig]].empty()){
                             int temp = rig_dict[current_rig];
                             current_rig = rig_labels[rig_dict[current_rig]];
                             std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
@@ -3309,6 +3429,10 @@ void ProjectBuilder::visualize(){
                                 rig_dict.erase(current_rig_iter);
                             }
                             rig_dict[current_rig] = temp;
+                            rig_labels_set.erase(prev_rig_name);
+                            rig_labels_set.insert(rig_labels[rig_dict[current_rig]]);
+                        } else{
+                            rig_labels[rig_dict[current_rig]] = prev_rig_name;
                         }
                         ImGui::SameLine();
                         ImGui::Text("Rig Name");
@@ -3442,6 +3566,10 @@ void ProjectBuilder::visualize(){
                         ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Rig Position");
+                        ImGui::SameLine();
+                        ImGui::Button("Add Noise###position");
+                        noisePopup("rig_position_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
+                        ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
                         // ####### CAMERA LOOKAT ####### //
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
@@ -3462,6 +3590,10 @@ void ProjectBuilder::visualize(){
                         ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Rig Lookat");
+                        ImGui::SameLine();
+                        ImGui::Button("Add Noise###lookat");
+                        noisePopup("rig_lookat_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
+                        ImGui::OpenPopupOnItemClick(("rig_lookat_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
                         // ####### NUMBER OF IMAGES ####### //
                         ImGui::SetNextItemWidth(80);
                         ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
@@ -3904,80 +4036,119 @@ void ProjectBuilder::buildAndVisualize(){
 
 void ProjectBuilder::xmlSetValues(){
     // MAIN BLOCK
+    // *** Latitude *** //
     xmlSetValue("latitude", "helios", latitude);
+    xmlSetDistribution("latitude_dist", "helios", distributions[distribution_dict["latitude"]]);
+    // *** Longitude *** //
     xmlSetValue("longitude", "helios", longitude);
+    xmlSetDistribution("longitude_dist", "helios", distributions[distribution_dict["longitude"]]);
+    // *** UTC Offset *** //
     xmlSetValue("UTC_offset", "helios", UTC_offset);
+    xmlSetDistribution("UTC_offset_dist", "helios", distributions[distribution_dict["UTC_offset"]]);
+    // *** CSV Weather File *** //
     xmlSetValue("csv_weather_file", "helios", csv_weather_file);
+    // *** Domain Origin *** //
     xmlSetValue("domain_origin", "helios", domain_origin);
+    xmlSetDistribution("domain_origin_x_dist", "helios", distributions[distribution_dict["domain_origin_x"]]);
+    xmlSetDistribution("domain_origin_y_dist", "helios", distributions[distribution_dict["domain_origin_y"]]);
+    xmlSetDistribution("domain_origin_z_dist", "helios", distributions[distribution_dict["domain_origin_z"]]);
+    // *** Domain Extent *** //
     xmlSetValue("domain_extent", "helios", domain_extent);
+    xmlSetDistribution("domain_extent_x_dist", "helios", distributions[distribution_dict["domain_extent_x"]]);
+    xmlSetDistribution("domain_extent_y_dist", "helios", distributions[distribution_dict["domain_extent_y"]]);
+    // *** Ground Resolution *** //
     xmlSetValue("ground_resolution", "helios", ground_resolution);
+    xmlSetDistribution("ground_resolution_x_dist", "helios", distributions[distribution_dict["ground_resolution_x"]]);
+    xmlSetDistribution("ground_resolution_y_dist", "helios", distributions[distribution_dict["ground_resolution_y"]]);
+    // *** Ground Texture File *** //
     xmlSetValue("ground_texture_file", "helios", ground_texture_file);
+    // *** Camera XML Library File *** //
     xmlSetValues("camera_xml_library_file", "helios", camera_xml_library_files);
+    // *** Light XML Library File *** //
     xmlSetValues("light_xml_library_file", "helios", light_xml_library_files);
     // OBJECT BLOCK
-    obj_names_dict = setNodeLabels("label", "object", obj_names);
-    xmlSetValues("file", "object", obj_files);
-    xmlSetValues("position", "object", obj_positions);
-    xmlSetValues("orientation", "object", obj_orientations);
-    xmlSetValues("scale", "object", obj_scales);
-    xmlSetValues("color", "object", obj_colors);
-    xmlSetValues("data_group", "object", obj_data_groups);
+    // Delete from XML doc
+    helios = xmldoc.child("helios");
+    pugi::xml_node node;
+    node = helios.child("object");
+    if (node){
+        node.parent().remove_child(node);
+    }
+    setNodeLabels("label", "object", obj_names_set);
+    xmlSetValues("file", "object", obj_files, obj_names_dict);
+    xmlSetValues("position", "object", obj_positions, obj_names_dict);
+    xmlSetValues("orientation", "object", obj_orientations, obj_names_dict);
+    xmlSetValues("scale", "object", obj_scales, obj_names_dict);
+    xmlSetValues("color", "object", obj_colors, obj_names_dict);
+    xmlSetValues("data_group", "object", obj_data_groups, obj_names_dict);
     // CANOPY BLOCK
-    canopy_labels_dict = setNodeLabels("label", "canopy_block", canopy_labels);
+    // Delete from XML doc
+    helios = xmldoc.child("helios");
+    node = helios.child("canopy");
+    if (node){
+        node.parent().remove_child(node);
+    }
+    setNodeLabels("label", "canopy_block", canopy_labels_set);
     xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
     xmlSetValue("plant_count", "canopy_block", plant_count);
     xmlSetValue("plant_spacing", "canopy_block", plant_spacing);
     xmlSetValue("plant_library_name", "canopy_block", plant_library_name);
     xmlSetValue("plant_age", "canopy_block", plant_age);
     xmlSetValue("ground_clipping_height", "canopy_block", ground_clipping_height);
-    xmlSetValues("canopy_origin", "canopy_block", canopy_origins);
-    xmlSetValues("plant_count", "canopy_block", plant_counts);
-    xmlSetValues("plant_spacing", "canopy_block", plant_spacings);
-    xmlSetValues("plant_library_name", "canopy_block", plant_library_names);
-    xmlSetValues("plant_age", "canopy_block", plant_ages);
-    xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
-    xmlSetValues("data_group", "canopy", canopy_data_groups);
+    xmlSetValues("canopy_origin", "canopy_block", canopy_origins, canopy_labels_dict);
+    xmlSetValues("plant_count", "canopy_block", plant_counts, canopy_labels_dict);
+    xmlSetValues("plant_spacing", "canopy_block", plant_spacings, canopy_labels_dict);
+    xmlSetValues("plant_library_name", "canopy_block", plant_library_names, canopy_labels_dict);
+    xmlSetValues("plant_age", "canopy_block", plant_ages, canopy_labels_dict);
+    xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights, canopy_labels_dict);
+    xmlSetValues("data_group", "canopy", canopy_data_groups, canopy_labels_dict);
     // RIG BLOCK
-    rig_dict = setNodeLabels("label", "rig", rig_labels);
-    xmlSetValues("color", "rig", rig_colors);
+    // Delete from XML doc
+    helios = xmldoc.child("helios");
+    node = helios.child("rig");
+    if (node){
+        node.parent().remove_child(node);
+    }
+    setNodeLabels("label", "rig", rig_labels_set);
+    xmlSetValues("color", "rig", rig_colors, rig_dict);
     // xmlSetValue("camera_position", "rig", camera_position);
     // xmlSetValue("camera_lookat", "rig", camera_lookat);
     xmlSetValue("camera_label", "rig", camera_label);
     // xmlSetValues("camera_position", "rig", camera_positions);
-    xmlSetValues("camera_position", "rig", camera_position_vec);
+    xmlSetValues("camera_position", "rig", camera_position_vec, rig_dict);
     // xmlSetValues("camera_lookat", "rig", camera_lookats);
-    xmlSetValues("camera_lookat", "rig", camera_lookat_vec);
+    xmlSetValues("camera_lookat", "rig", camera_lookat_vec, rig_dict);
     // xmlSetValues("camera_label", "rig", camera_labels);
-    xmlSetValues("camera_label", "rig", rig_camera_labels);
+    xmlSetValues("camera_label", "rig", rig_camera_labels, rig_dict);
     setKeypoints("keypoint", "camera_position", keypoint_frames);
-    xmlSetValues("images", "rig", num_images_vec);
+    xmlSetValues("images", "rig", num_images_vec, rig_dict);
     // CAMERA BLOCK
-    camera_dict = setNodeLabels("label", "camera", camera_names);
+    setNodeLabels("label", "camera", camera_names_set);
     xmlSetValue("camera_resolution", "camera", camera_resolution);
     xmlSetValue("focal_plane_distance", "camera", focal_plane_distance);
     xmlSetValue("lens_diameter", "camera", lens_diameter);
     xmlSetValue("FOV_aspect_ratio", "camera", FOV_aspect_ratio);
     xmlSetValue("HFOV", "camera", HFOV);
-    xmlSetValues("camera_resolution", "camera", camera_resolutions);
+    xmlSetValues("camera_resolution", "camera", camera_resolutions, camera_dict);
     for (std::string& band : bandlabels){
         for (std::string& camera : camera_names){
             xmlSetValue("camera_calibration_" + band, "camera", camera_calibrations[camera_dict[camera]][band]);
         }
     }
-    xmlSetValues("focal_plane_distance", "camera", focal_plane_distances);
-    xmlSetValues("lens_diameter", "camera", lens_diameters);
-    xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios);
-    xmlSetValues("HFOV", "camera", HFOVs);
+    xmlSetValues("focal_plane_distance", "camera", focal_plane_distances, camera_dict);
+    xmlSetValues("lens_diameter", "camera", lens_diameters, camera_dict);
+    xmlSetValues("FOV_aspect_ratio", "camera", FOV_aspect_ratios, camera_dict);
+    xmlSetValues("HFOV", "camera", HFOVs, camera_dict);
     // LIGHT BLOCK
-    light_dict = setNodeLabels("label", "light", light_names);
-    xmlSetValues("light_type", "light", light_types);
-    xmlSetValues("light_spectra", "light", light_spectra);
-    xmlSetValues("light_direction", "light", light_direction_vec);
-    xmlSetValues("light_rotation", "light", light_rotation_vec);
-    xmlSetValues("light_size", "light", light_size_vec);
-    xmlSetValues("light_source_flux", "light", light_flux_vec);
-    xmlSetValues("light_radius", "light", light_radius_vec);
-    xmlSetValues("light_label", "rig", rig_light_labels);
+    setNodeLabels("label", "light", light_names_set);
+    xmlSetValues("light_type", "light", light_types, light_dict);
+    xmlSetValues("light_spectra", "light", light_spectra, light_dict);
+    xmlSetValues("light_direction", "light", light_direction_vec, light_dict);
+    xmlSetValues("light_rotation", "light", light_rotation_vec, light_dict);
+    xmlSetValues("light_size", "light", light_size_vec, light_dict);
+    xmlSetValues("light_source_flux", "light", light_flux_vec, light_dict);
+    xmlSetValues("light_radius", "light", light_radius_vec, light_dict);
+    xmlSetValues("light_label", "rig", rig_light_labels, light_dict);
     // RADIATION BLOCK
     xmlSetValue("direct_ray_count", "radiation", direct_ray_count);
     xmlSetValue("diffuse_ray_count", "radiation", diffuse_ray_count);
@@ -4025,15 +4196,55 @@ void ProjectBuilder::xmlSetValues(std::string xml_path){
 
 
 void ProjectBuilder::xmlGetValues(){
+    distribution curr_distribution = distribution{};
     // MAIN BLOCK
+    // *** Latitude *** //
     xmlGetValue("latitude", "helios", latitude);
+    curr_distribution = distribution{};
+    xmlGetDistribution("latitude_dist", "helios", curr_distribution);
+    applyDistribution("latitude", curr_distribution, createTaggedPtr(&latitude, dummy_obj));
+    // *** Longitude *** //
     xmlGetValue("longitude", "helios", longitude);
+    curr_distribution = distribution{};
+    xmlGetDistribution("longitude_dist", "helios", curr_distribution);
+    applyDistribution("longitude", curr_distribution, createTaggedPtr(&longitude, dummy_obj));
+    // *** UTC Offset *** //
     xmlGetValue("UTC_offset", "helios", UTC_offset);
+    curr_distribution = distribution{};
+    xmlGetDistribution("UTC_offset_dist", "helios", curr_distribution);
+    applyDistribution("UTC_offset", curr_distribution, createTaggedPtr(&UTC_offset, dummy_obj));
+    // *** CSV Weather File *** //
     xmlGetValue("csv_weather_file", "helios", csv_weather_file);
+    // *** Domain Origin *** //
     xmlGetValue("domain_origin", "helios", domain_origin);
+    curr_distribution = distribution{};
+    xmlGetDistribution("domain_origin_x_dist", "helios", curr_distribution);
+    applyDistribution("domain_origin_x", curr_distribution, createTaggedPtr(&domain_origin.x, dummy_obj));
+    curr_distribution = distribution{};
+    xmlGetDistribution("domain_origin_y_dist", "helios", curr_distribution);
+    applyDistribution("domain_origin_y", curr_distribution, createTaggedPtr(&domain_origin.y, dummy_obj));
+    curr_distribution = distribution{};
+    xmlGetDistribution("domain_origin_z_dist", "helios", curr_distribution);
+    applyDistribution("domain_origin_z", curr_distribution, createTaggedPtr(&domain_origin.z, dummy_obj));
+    // *** Domain Extent *** //
     xmlGetValue("domain_extent", "helios", domain_extent);
+    curr_distribution = distribution{};
+    xmlGetDistribution("domain_extent_x_dist", "helios", curr_distribution);
+    applyDistribution("domain_extent_x", curr_distribution, createTaggedPtr(&domain_extent.x, dummy_obj));
+    curr_distribution = distribution{};
+    xmlGetDistribution("domain_extent_y_dist", "helios", curr_distribution);
+    applyDistribution("domain_extent_y", curr_distribution, createTaggedPtr(&domain_extent.y, dummy_obj));
+    // *** Ground Resolution *** //
     xmlGetValue("ground_resolution", "helios", ground_resolution);
+    curr_distribution = distribution{};
+    xmlGetDistribution("ground_resolution_x_dist", "helios", curr_distribution);
+    applyDistribution("ground_resolution_x", curr_distribution, createTaggedPtr(&ground_resolution.x, dummy_obj));
+    curr_distribution = distribution{};
+    xmlGetDistribution("ground_resolution_y_dist", "helios", curr_distribution);
+    applyDistribution("ground_resolution_y", curr_distribution, createTaggedPtr(&ground_resolution.y, dummy_obj));
+    // *** Ground Texture File *** //
     xmlGetValue("ground_texture_file", "helios", ground_texture_file);
+    // *** Camera XML Library Files *** //
     xmlGetValues("camera_xml_library_file", "helios", camera_xml_library_files);
     possible_camera_calibrations.clear();
     for (auto &xml_library_file : camera_xml_library_files){
@@ -4043,6 +4254,7 @@ void ProjectBuilder::xmlGetValues(){
         std::vector<std::string> current_camera_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
         possible_camera_calibrations.insert(possible_camera_calibrations.end(), current_camera_file.begin(), current_camera_file.end());
     }
+    // *** Light XML Library Files *** //
     xmlGetValues("light_xml_library_file", "helios", light_xml_library_files);
     possible_light_spectra.clear();
     for (auto &xml_library_file : light_xml_library_files){
@@ -4105,6 +4317,8 @@ void ProjectBuilder::xmlGetValues(){
     rig_dict = getNodeLabels("label", "rig", rig_labels);
     for (auto rig : rig_labels){
         rig_labels_set.insert(rig);
+        rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+        rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
     }
     current_rig = rig_labels[0];
     xmlGetValues("color", "rig", rig_colors);
@@ -4130,6 +4344,7 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("images", "rig", num_images_vec);
     // CAMERA BLOCK
     camera_names.clear();
+    camera_names_set.clear();
     camera_dict = getNodeLabels("label", "camera", camera_names);
     current_cam = camera_names[0];
     xmlGetValue("camera_resolution", "camera", camera_resolution);
@@ -4145,6 +4360,7 @@ void ProjectBuilder::xmlGetValues(){
         for (std::string& band : bandlabels){
             xmlGetValue("camera_calibration_" + band, "camera", camera_calibrations[camera_dict[camera]][band]);
         }
+        camera_names_set.insert(camera);
     }
     focal_plane_distances.clear();
     xmlGetValues("focal_plane_distance", "camera", focal_plane_distances);
@@ -4174,7 +4390,11 @@ void ProjectBuilder::xmlGetValues(){
     light_spectra.clear();
     xmlGetValues("light_spectra", "light", light_spectra);
     light_names.clear();
+    light_names_set.clear();
     light_dict = getNodeLabels("label", "light", light_names);
+    for (auto &light : light_names){
+        light_names_set.insert(light);
+    }
     current_light = light_names[0];
     rig_light_labels.clear();
     xmlGetValues("light_label", "rig", rig_light_labels);
@@ -4254,7 +4474,7 @@ void ProjectBuilder::xmlGetValues(std::string xml_path){
 }
 
 void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
-    if (ImGui::Button("Update")){
+    if (ImGui::Button("Update Object")){
         updateObject(curr_obj_name);
         refreshVisualization();
     }
@@ -4276,7 +4496,7 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     ImGui::SetNextItemWidth(100);
     std::string prev_obj_name = obj_names[obj_names_dict[curr_obj_name]];
     ImGui::InputText(("##obj_name_" + std::to_string(id)).c_str(), &obj_names[obj_names_dict[curr_obj_name]]);
-    if (obj_names[obj_names_dict[curr_obj_name]] != prev_obj_name){
+    if (obj_names[obj_names_dict[curr_obj_name]] != prev_obj_name && obj_names_dict.find(obj_names[obj_names_dict[curr_obj_name]]) == obj_names_dict.end() && !obj_names[obj_names_dict[curr_obj_name]].empty()){
         int idx = obj_names_dict[curr_obj_name];
         curr_obj_name = obj_names[obj_names_dict[curr_obj_name]];
         std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
@@ -4284,6 +4504,11 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
             obj_names_dict.erase(current_obj_iter);
         }
         obj_names_dict[curr_obj_name] = idx;
+
+        obj_names_set.erase(prev_obj_name);
+        obj_names_set.insert(obj_names[obj_names_dict[curr_obj_name]]);
+    } else{
+        obj_names[obj_names_dict[curr_obj_name]] = prev_obj_name;
     }
     ImGui::SameLine();
     ImGui::Text("Object Name");
@@ -4376,7 +4601,7 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
     ImGui::SetNextItemWidth(100);
     std::string prev_rig_name = rig_labels[rig_dict[curr_rig_name]];
     ImGui::InputText("##rig_name", &rig_labels[rig_dict[curr_rig_name]]);
-    if (rig_labels[rig_dict[curr_rig_name]] != prev_rig_name && rig_labels_set.find(rig_labels[rig_dict[curr_rig_name]]) == rig_labels_set.end()){
+    if (rig_labels[rig_dict[curr_rig_name]] != prev_rig_name && rig_labels_set.find(rig_labels[rig_dict[curr_rig_name]]) == rig_labels_set.end() && !rig_labels[rig_dict[curr_rig_name]].empty()){
         rig_labels_set.erase(prev_rig_name);
         int temp = rig_dict[curr_rig_name];
         rig_labels_set.insert(rig_labels[temp]);
@@ -4386,6 +4611,11 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
             rig_dict.erase(current_rig_iter);
         }
         rig_dict[curr_rig_name] = temp;
+
+        rig_labels_set.erase(prev_rig_name);
+        rig_labels_set.insert(rig_labels[rig_dict[curr_rig_name]]);
+    } else{
+        rig_labels[rig_dict[curr_rig_name]] = prev_rig_name;
     }
     ImGui::SameLine();
     ImGui::Text("Rig Name");
@@ -4416,22 +4646,19 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id){
 
 void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
     #ifdef ENABLE_PLANT_ARCHITECTURE
-    if (ImGui::Button("Update")){
-        std::vector<uint> current_canopy_vec = canopy_UUIDs[canopy_labels_dict[curr_canopy_name]];
-        std::vector<uint> primitive_UUID_vec;
-        for (int i = 0; i < current_canopy_vec.size(); i++){
-            std::vector<uint> obj_prim_UUIDs =  plantarchitecture->getAllPlantUUIDs(current_canopy_vec[i]);
-            primitive_UUID_vec.insert(primitive_UUID_vec.end(), obj_prim_UUIDs.begin(), obj_prim_UUIDs.end());
-        }
-        context->translatePrimitive(primitive_UUID_vec, canopy_origins[canopy_labels_dict[curr_canopy_name]]);
-        visualizer->clearGeometry();
-        visualizer->buildContextGeometry(context);
-        visualizer->plotUpdate();
+    if (ImGui::Button("Update Canopy")){
+        updateCanopy(curr_canopy_name);
+        refreshVisualization();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete Canopy")){
+        deleteCanopy(curr_canopy_name);
+        refreshVisualization();
     }
     ImGui::SetNextItemWidth(100);
     std::string prev_canopy_name = canopy_labels[canopy_labels_dict[curr_canopy_name]];
     ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[curr_canopy_name]]);
-    if (canopy_labels[canopy_labels_dict[curr_canopy_name]] != prev_canopy_name){
+    if (canopy_labels[canopy_labels_dict[curr_canopy_name]] != prev_canopy_name && canopy_labels_dict.find(canopy_labels[canopy_labels_dict[curr_canopy_name]]) == canopy_labels_dict.end() && !canopy_labels[canopy_labels_dict[curr_canopy_name]].empty()){
         int temp = canopy_labels_dict[curr_canopy_name];
         curr_canopy_name = canopy_labels[canopy_labels_dict[curr_canopy_name]];
         std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
@@ -4439,6 +4666,11 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
             canopy_labels_dict.erase(current_canopy_iter);
         }
         canopy_labels_dict[curr_canopy_name] = temp;
+
+        canopy_labels_set.erase(prev_canopy_name);
+        canopy_labels_set.insert(canopy_labels[canopy_labels_dict[curr_canopy_name]]);
+    } else{
+        canopy_labels[canopy_labels_dict[curr_canopy_name]] = prev_canopy_name;
     }
     ImGui::SetNextItemWidth(60);
     ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[curr_canopy_name]].x);
@@ -4632,6 +4864,7 @@ void ProjectBuilder::addBand(std::string label, bool enable_emission){
     scattering_depth_dict.insert({label, scattering_depth});
 }
 
+
 void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr){
     std::string popup = "randomize_" + popup_name;
     if (ImGui::BeginPopup(popup.c_str())){
@@ -4669,34 +4902,161 @@ void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr){
             ImGui::Checkbox("Randomize for Every Image", &randomize_repeatedly);
         }
         if (ImGui::Button("Apply")){
-            if (current_distribution == "N/A"){
-                distribution_types[popup_name] = "N/A";
-            }
-            if (current_distribution == "Normal (Gaussian)"){
-                std::normal_distribution<float> curr_dist_normal(curr_distribution_params[0],curr_distribution_params[1]);
-                distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_normal, randomize_repeatedly));
-                distribution_types[popup_name] = "Normal (Gaussian)";
-            }
-            if (current_distribution == "Uniform"){
-                std::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0],curr_distribution_params[1]);
-                distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_uniform, randomize_repeatedly));
-                distribution_types[popup_name] = "Uniform";
-            }
-            if (current_distribution == "Weibull"){
-                std::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0],curr_distribution_params[1]);
-                distribution_dict[popup_name] = distributions.size();
-                distributions.push_back(createDistribution(curr_dist_weibull, randomize_repeatedly));
-                distribution_types[popup_name] = "Weibull";
-            }
-            distribution_params[popup_name] = curr_distribution_params;
-            randomized_variable_lookup[popup_name] = ptr;
-            sample(popup_name);
+            applyDistribution(popup_name, ptr);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
     }
+}
+
+
+void ProjectBuilder::noisePopup(std::string popup_name, std::vector<distribution>& dist_vec){
+    std::string popup = popup_name;
+    if (ImGui::BeginPopup(popup.c_str())){
+        ImGui::Text("Add Random Noise Along Path");
+        ImGui::SetNextItemWidth(100);
+        if (ImGui::BeginCombo("##axis_combo", current_axis.c_str())){
+            for (auto axis : possible_axes){
+                bool is_axis_selected = (current_axis == axis);
+                if (ImGui::Selectable(axis.c_str(), is_axis_selected))
+                    current_axis = axis;
+                if (is_axis_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Axis");
+        ImGui::SetNextItemWidth(150);
+        if (ImGui::BeginCombo("##combo_distribution", current_distribution.c_str())){
+            for (int n = 0; n < distribution_names.size(); n++){
+                bool is_dist_selected = (current_distribution == distribution_names[n]);
+                if (ImGui::Selectable(distribution_names[n].c_str(), is_dist_selected))
+                    current_distribution = distribution_names[n];
+                if (is_dist_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Distribution");
+        if (current_distribution == "Normal (Gaussian)"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Mean", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Variance", &curr_distribution_params[1]);
+        }
+        if (current_distribution == "Uniform"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Lower Bound", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Upper Bound", &curr_distribution_params[1]);
+        }
+        if (current_distribution == "Weibull"){
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat("Shape (k)", &curr_distribution_params[0]);
+            ImGui::SetNextItemWidth(150);
+            ImGui::InputFloat(u8"Scale (\u03bb)", &curr_distribution_params[1]);
+        }
+        int idx;
+        if (current_axis == "X"){
+            idx = 0;
+        } else if (current_axis == "Y"){
+            idx = 1;
+        } else{
+            idx = 2;
+        }
+        if (ImGui::Button("Apply")){
+            distUnion dist_union{};
+            if (current_distribution == "Normal (Gaussian)"){
+                dist_union.normal = new std::normal_distribution<float>;
+                *dist_union.normal = std::normal_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_vec[idx].dist = dist_union;
+                dist_vec[idx].flag = 0;
+                dist_vec[idx].repeat = 0;
+            }
+            if (current_distribution == "Uniform"){
+                dist_union.uniform = new std::uniform_real_distribution<float>;
+                *dist_union.uniform = std::uniform_real_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_vec[idx].dist = dist_union;
+                dist_vec[idx].flag = 1;
+                dist_vec[idx].repeat = 0;
+            }
+            if (current_distribution == "Weibull"){
+                dist_union.weibull = new std::weibull_distribution<float>;
+                *dist_union.weibull = std::weibull_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_vec[idx].dist = dist_union;
+                dist_vec[idx].flag = 2;
+                dist_vec[idx].repeat = 0;
+            }
+            if (current_distribution == "N/A"){
+                dist_vec[idx].flag = -1;
+                dist_vec[idx].repeat = 0;
+            }
+
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+
+
+void ProjectBuilder::applyDistribution(std::string var_name, taggedPtr ptr){
+    if (current_distribution == "N/A"){
+        distribution_types[var_name] = "N/A";
+    }
+    if (current_distribution == "Normal (Gaussian)"){
+        std::normal_distribution<float> curr_dist_normal(curr_distribution_params[0],curr_distribution_params[1]);
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(createDistribution(curr_dist_normal, randomize_repeatedly));
+        distribution_types[var_name] = "Normal (Gaussian)";
+    }
+    if (current_distribution == "Uniform"){
+        std::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0],curr_distribution_params[1]);
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(createDistribution(curr_dist_uniform, randomize_repeatedly));
+        distribution_types[var_name] = "Uniform";
+    }
+    if (current_distribution == "Weibull"){
+        std::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0],curr_distribution_params[1]);
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(createDistribution(curr_dist_weibull, randomize_repeatedly));
+        distribution_types[var_name] = "Weibull";
+    }
+    distribution_params[var_name] = curr_distribution_params;
+    randomized_variable_lookup[var_name] = ptr;
+    sample(var_name);
+}
+
+
+void ProjectBuilder::applyDistribution(std::string var_name, distribution dist, taggedPtr ptr){
+    if (dist.flag == -1){
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(dist);
+        distribution_types[var_name] = "N/A";
+        distribution_params[var_name] = std::vector<float>{0.0, 0.0};
+    }
+    if (dist.flag == 0){
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(dist);
+        distribution_types[var_name] = "Normal (Gaussian)";
+        distribution_params[var_name] = std::vector<float>{dist.dist.normal->mean(), dist.dist.normal->stddev()};
+    }
+    if (current_distribution == "Uniform"){
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(dist);
+        distribution_types[var_name] = "Uniform";
+        distribution_params[var_name] = std::vector<float>{dist.dist.uniform->a(), dist.dist.uniform->b()};
+    }
+    if (current_distribution == "Weibull"){
+        distribution_dict[var_name] = distributions.size();
+        distributions.push_back(dist);
+        distribution_types[var_name] = "Weibull";
+        distribution_params[var_name] = std::vector<float>{dist.dist.weibull->a(), dist.dist.weibull->b()};
+    }
+    randomized_variable_lookup[var_name] = ptr;
+    sample(var_name);
 }
 
 
@@ -4760,6 +5120,9 @@ void ProjectBuilder::randomizerParams(std::string var_name){
             current_distribution = distribution_types[var_name];
         } else{
             current_distribution = "N/A";
+        }
+        if (current_distribution != "N/A"){
+            randomize_repeatedly = distributions[distribution_dict[var_name]].repeat;
         }
     }
 }
@@ -4850,18 +5213,26 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
         context->setPrimitiveColor(obj_UUIDs[obj_names_dict[curr_obj]], *curr_color);
     }
     if (obj_type == "rig"){
-        for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
-            context->setPrimitiveColor(arrow, *curr_color);
+        if (arrow_dict.find(curr_obj) != arrow_dict.end()){
+            for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
+                context->setPrimitiveColor(arrow, *curr_color);
+            }
         }
-        context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
+        if (camera_models_dict.find(curr_obj) != camera_models_dict.end()){
+            context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
+        }
     }
     if (obj_type == "arrow"){
-        for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
-            context->setPrimitiveColor(arrow, *curr_color);
+        if (arrow_dict.find(curr_obj) != arrow_dict.end()){
+            for (std::vector<uint> &arrow : arrow_dict.at(curr_obj)){
+                context->setPrimitiveColor(arrow, *curr_color);
+            }
         }
     }
     if (obj_type == "camera"){
-        context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
+        if (camera_models_dict.find(curr_obj) != camera_models_dict.end()){
+            context->setPrimitiveColor(camera_models_dict.at(curr_obj), *curr_color);
+        }
     }
 }
 
@@ -4914,13 +5285,12 @@ void ProjectBuilder::updateRigs(){
 void ProjectBuilder::deleteRig(std::string curr_rig){
     int delete_idx = rig_dict[curr_rig];
     rig_dict.erase(rig_dict.find(curr_rig));
-    refreshVisualization();
-    canopy_labels_dict.erase(current_canopy);
-    canopy_labels_set.erase(current_canopy);
-    if (!canopy_labels_set.empty()){
-        current_canopy = *canopy_labels_set.begin();
+    rig_labels_set.erase(curr_rig);
+    updateRigs();
+    if (!rig_labels_set.empty() && current_rig == curr_rig){
+        current_rig = *rig_labels_set.begin();
     } else{
-        current_canopy = "";
+        current_rig = "";
     }
 }
 
@@ -4953,20 +5323,57 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, st
     }
 }
 
-void ProjectBuilder::deleteCanopy(){
-    int delete_idx = canopy_labels_dict[current_canopy];
-    for (auto canopy_vec : canopy_UUIDs[delete_idx]){
-        context->deletePrimitive(plantarchitecture->getAllPlantUUIDs(canopy_vec));
+void ProjectBuilder::deleteCanopy(std::string canopy){
+    int delete_idx = canopy_labels_dict[canopy];
+    for (auto plant_instance : canopy_UUIDs[delete_idx]){
+        plantarchitecture->deletePlantInstance(plant_instance);
     }
-    refreshVisualization();
-    canopy_labels_dict.erase(current_canopy);
-    canopy_labels_set.erase(current_canopy);
-    if (!canopy_labels_set.empty()){
+    canopy_labels_dict.erase(canopy);
+    canopy_labels_set.erase(canopy);
+    if (!canopy_labels_set.empty() && current_canopy == canopy){
         current_canopy = *canopy_labels_set.begin();
     } else{
         current_canopy = "";
     }
 }
+
+
+void ProjectBuilder::updateCanopy(std::string canopy){
+    int update_idx = canopy_labels_dict[canopy];
+    for (auto plant_instance : canopy_UUIDs[update_idx]){
+        plantarchitecture->deletePlantInstance(plant_instance);
+    }
+    plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
+    plantarchitecture->enableGroundClipping( ground_clipping_height );
+    std::vector<vec3> curr_plant_locations;
+    std::vector<uint> new_canopy_UUIDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
+                                                                                        plant_counts[update_idx], plant_ages[update_idx], curr_plant_locations);
+    individual_plant_locations.push_back(curr_plant_locations);
+
+    leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
+    primitive_UUIDs["leaf"] = leaf_UUIDs;
+    internode_UUIDs = plantarchitecture->getAllInternodeUUIDs();
+    primitive_UUIDs["internode"] = internode_UUIDs;
+    petiole_UUIDs = plantarchitecture->getAllPetioleUUIDs();
+    primitive_UUIDs["petiole"] = petiole_UUIDs;
+    peduncle_UUIDs = plantarchitecture->getAllPeduncleUUIDs();
+    primitive_UUIDs["peduncle"] = peduncle_UUIDs;
+    std::vector<uint> flower_UUIDs = plantarchitecture->getAllFlowerUUIDs();
+    petal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "petal");
+    sepal_UUIDs = context->filterPrimitivesByData(flower_UUIDs, "object_label", "sepal");
+    if( petal_UUIDs.empty() && sepal_UUIDs.empty() ){
+        petal_UUIDs = flower_UUIDs;
+        sepal_UUIDs.clear();
+    }
+    fruit_UUIDs = plantarchitecture->getAllFruitUUIDs();
+    primitive_UUIDs["petal"] = petal_UUIDs;
+    primitive_UUIDs["sepal"] = sepal_UUIDs;
+    primitive_UUIDs["flower"] = flower_UUIDs;
+
+    canopy_UUIDs[canopy_labels_dict[canopy]] = new_canopy_UUIDs;
+}
+
+
 
 void ProjectBuilder::addCanopy(){
     std::string default_canopy_label = "canopy";
@@ -5006,7 +5413,11 @@ void ProjectBuilder::refreshVisualization(){
 
 
 void ProjectBuilder::recordPopup(){
-    ImGui::InputInt("Number of Recordings", &num_recordings);
+    if (ImGui::BeginPopup("repeat_record")){
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputInt("Number of Recordings", &num_recordings);
+        ImGui::EndPopup();
+    }
 }
 
 
@@ -5019,9 +5430,27 @@ void ProjectBuilder::updateLocation(){
 }
 
 
-void ProjectBuilder::updateWeatherAndGround(){
+void ProjectBuilder::updateGround(){
     context->deletePrimitive(primitive_UUIDs["ground"]);
-    uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+    // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+    uint ground_objID;
+    if( !ground_model_file.empty() && !use_ground_texture_file ) {
+        ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
+        ground_objID = context->addPolymeshObject( ground_UUIDs );
+    }else if( !ground_texture_file.empty() && use_ground_texture_file ){
+        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    }else if( ground_color[0] || ground_color[1] || ground_color[2] ){
+        RGBcolor ground_color_;
+        ground_color_.r = ground_color[0];
+        ground_color_.g = ground_color[1];
+        ground_color_.b = ground_color[2];
+        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
+        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    }else {
+        ground_objID = context->addTileObject(domain_origin, domain_extent, nullrotation, ground_resolution);
+        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    }
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
