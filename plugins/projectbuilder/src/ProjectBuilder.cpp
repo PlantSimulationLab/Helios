@@ -568,7 +568,12 @@ void ProjectBuilder::updateCameras(){
         }
     }
     for (std::string band_group_name : band_group_names){
-        radiation->runBand(band_group_lookup[band_group_name]);
+        bandGroup curr_band_group = band_group_lookup[band_group_name];
+        if (!curr_band_group.grayscale){
+            radiation->runBand(curr_band_group.bands);
+        } else{
+            radiation->runBand(std::vector<std::string>{curr_band_group.bands[0]});
+        }
     }
     #endif //RADIATION_MODEL
 }
@@ -631,14 +636,26 @@ void ProjectBuilder::record(){
                 }
                 radiation->updateGeometry();
                 for (std::string band_group_name : band_group_names){
-                    radiation->runBand(band_group_lookup[band_group_name]);
+                    bandGroup curr_band_group = band_group_lookup[band_group_name];
+                    if (!curr_band_group.grayscale){
+                        radiation->runBand(curr_band_group.bands);
+                    } else{
+                        radiation->runBand(std::vector<std::string>{curr_band_group.bands[0]});
+                    }
                 }
                 for (std::string rig_camera_label : rig_camera_labels[rig_index]){
                     std::string cameralabel = rig_label + "_" + rig_camera_label;
                     // Write Images
                     for (std::string band_group_name : band_group_names){
-                        radiation->writeCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + std::to_string(i), image_dir + rig_label + '/');
-                        radiation->writeNormCameraImage( cameralabel, band_group_lookup[band_group_name], band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                        bandGroup curr_band_group = band_group_lookup[band_group_name];
+                        std::vector<std::string> band_group_vec;
+                        if (!curr_band_group.grayscale){
+                            band_group_vec = curr_band_group.bands;
+                        } else{
+                            band_group_vec = std::vector<std::string>{curr_band_group.bands[0]};
+                        }
+                        radiation->writeCameraImage( cameralabel, band_group_vec, band_group_name + std::to_string(i), image_dir + rig_label + '/');
+                        radiation->writeNormCameraImage( cameralabel, band_group_vec, band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
                     }
                     radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
                     radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
@@ -2294,6 +2311,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Ground")){
                         updateGround();
+                        updateSpectra();
                         refreshVisualization();
                     }
                     toggle_button("##use_ground_texture_file", &use_ground_texture_file);
@@ -3632,12 +3650,11 @@ void ProjectBuilder::visualize(){
                             count++;
                             new_band_group_label = default_band_group_label + "_" + std::to_string(count);
                         }
-                        std::vector<std::string> new_band_group;
-                        new_band_group.push_back("red");
-                        if (!is_grayscale){
-                            new_band_group.push_back("green");
-                            new_band_group.push_back("blue");
-                        }
+                        std::vector<std::string> new_band_group_vector;
+                        new_band_group_vector.push_back("red");
+                        new_band_group_vector.push_back("green");
+                        new_band_group_vector.push_back("blue");
+                        bandGroup new_band_group{new_band_group_vector, is_grayscale};
                         band_group_lookup[new_band_group_label] = new_band_group;
                         band_group_names.insert(new_band_group_label);
                     }
@@ -3649,8 +3666,8 @@ void ProjectBuilder::visualize(){
                             current_band_group = prev_group_name;
                         }
                         if (current_band_group != prev_group_name){
-                            std::vector<std::string> temp = band_group_lookup[prev_group_name];
-                            std::map<std::string, std::vector<std::string>>::iterator current_band_group_iter = band_group_lookup.find(prev_group_name);
+                            bandGroup temp = band_group_lookup[prev_group_name];
+                            std::map<std::string, bandGroup>::iterator current_band_group_iter = band_group_lookup.find(prev_group_name);
                             if (current_band_group_iter != band_group_lookup.end()){
                                 band_group_lookup.erase(current_band_group_iter);
                             }
@@ -3667,16 +3684,16 @@ void ProjectBuilder::visualize(){
                         ImGui::Checkbox("Grayscale", &is_grayscale);
                         // Band 1
                         ImGui::SetNextItemWidth(100);
-                        dropDown("##band_1_combo", band_group_lookup[current_band_group][0], bandlabels);
+                        dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
                         if (!is_grayscale){
                             // Band 2
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(100);
-                            dropDown("##band_2_combo", band_group_lookup[current_band_group][1], bandlabels);
+                            dropDown("##band_2_combo", band_group_lookup[current_band_group].bands[1], bandlabels);
                             // Band 3
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(100);
-                            dropDown("##band_3_combo", band_group_lookup[current_band_group][2], bandlabels);
+                            dropDown("##band_3_combo", band_group_lookup[current_band_group].bands[2], bandlabels);
                             ImGui::SameLine();
                             ImGui::Text("Select Bands");
                         } else{

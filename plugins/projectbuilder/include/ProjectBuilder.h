@@ -183,6 +183,12 @@ struct distribution{
  bool repeat;
 };
 
+//! Band group struct
+struct bandGroup{
+ std::vector<std::string> bands;
+ bool grayscale;
+};
+
 bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
 
 //! Function to create a distribution struct from a normal distribution
@@ -246,7 +252,7 @@ class ProjectBuilder {
     std::set<std::string> band_group_names;
 
     //! Band groups lookup map
-    std::map<std::string, std::vector<std::string>> band_group_lookup;
+    std::map<std::string, bandGroup> band_group_lookup;
 
     //! Current band group
     std::string current_band_group = "";
