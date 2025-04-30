@@ -4,7 +4,7 @@
 	<longitude>121.760002</longitude>
 	<UTC_offset>8</UTC_offset>
 	<csv_weather_file>plugins/projectbuilder/inputs/weather_data.csv</csv_weather_file>
-	<domain_origin>1 1 0</domain_origin>
+	<domain_origin>0 0 0</domain_origin>
 	<domain_extent>4 4</domain_extent>
 	<ground_resolution>25 25</ground_resolution>
 	<ground_texture_file>plugins/visualizer/textures/dirt.jpg</ground_texture_file>

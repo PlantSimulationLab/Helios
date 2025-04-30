@@ -192,6 +192,7 @@ std::string file_dialog(){
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
+            file_name = std::string(outPath);
             free(outPath);
         }
         else if ( result == NFD_CANCEL ) {
@@ -208,6 +209,7 @@ std::string file_dialog(){
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
+            file_name = std::string(outPath);
             free(outPath);
         }
         else if ( result == NFD_CANCEL ) {
@@ -259,11 +261,12 @@ std::string save_as_file_dialog(){
         file_name = (std::string)ofn.lpstrFile;
     #elif defined(__APPLE__)
         nfdchar_t *outPath = NULL;
-        nfdresult_t result = NFD_OpenDialog( NULL, NULL, &outPath );
+        nfdresult_t result = NFD_SaveDialog( NULL, NULL, &outPath );
 
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
+            file_name = std::string(outPath);
             free(outPath);
         }
         else if ( result == NFD_CANCEL ) {
@@ -275,11 +278,12 @@ std::string save_as_file_dialog(){
         }
     #elif defined(__linux__)
         nfdchar_t *outPath = NULL;
-        nfdresult_t result = NFD_OpenDialog( NULL, NULL, &outPath );
+        nfdresult_t result = NFD_SaveDialog( NULL, NULL, &outPath );
 
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
+            file_name = std::string(outPath);
             free(outPath);
         }
         else if ( result == NFD_CANCEL ) {
@@ -943,6 +947,10 @@ void ProjectBuilder::buildFromXML(){
     updateCameraModels();
 
     helios = xmldoc.child("helios");
+
+    refreshVisualizationTypes();
+
+    built = true;
 }
 
 
@@ -1752,6 +1760,9 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
 
 
 void ProjectBuilder::visualize(){
+    if (!built){
+        std::cout << "Project must be built before running visualize." << std::endl;
+    }
     // if (enable_visualizer){
     #ifdef ENABLE_HELIOS_VISUALIZER
         visualizer = new Visualizer(800);
@@ -1923,7 +1934,7 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, //&my_tool_active,
                                 ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
                 if (ImGui::IsWindowCollapsed()){
                     ImGui::SetWindowSize(ImVec2(150, 10));
@@ -1955,7 +1966,7 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, // &my_tool_active,
                                 ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
                 if (ImGui::IsWindowCollapsed()){
                     ImGui::SetWindowSize(ImVec2(150, 10));
@@ -1991,7 +2002,7 @@ void ProjectBuilder::visualize(){
                 // } else{
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
-                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), &my_tool_active,
+                ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, // &my_tool_active,
                                 ImGui::IsWindowCollapsed() ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
                 if (ImGui::IsWindowCollapsed()){
                     ImGui::SetWindowSize(ImVec2(150, 10));
@@ -2001,9 +2012,7 @@ void ProjectBuilder::visualize(){
                 object_window_count++;
             }
             //
-
-            // ImGui::Begin("Editor", &my_tool_active, ImGuiWindowFlags_MenuBar);  // Begin a new window
-            ImGui::Begin("Editor", &my_tool_active, window_flags2);  // Begin a new window
+            ImGui::Begin("Editor", nullptr, window_flags2);  // Begin editor window
             // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
             // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always);
             current_position = ImGui::GetWindowPos();
@@ -2067,14 +2076,7 @@ void ProjectBuilder::visualize(){
                     // ImGui::PushFont(font_awesome);
                     // io.FontDefault = font_awesome;
                     if (ImGui::MenuItem("! REFRESH LIST !")){
-                        visualization_types.clear();
-                        std::vector<uint> allUUIDs = context->getAllUUIDs();
-                        for (auto &UUID : allUUIDs){
-                            std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
-                            for (auto &data : primitiveData){
-                                visualization_types.insert(data);
-                            }
-                        }
+                        refreshVisualizationTypes();
                     }
                     // ImGui::PopFont();
                     // io.FontDefault = arial;
@@ -2438,6 +2440,7 @@ void ProjectBuilder::visualize(){
                                 new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
                                 new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
                                 new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
+                                current_obj = new_obj_label;
                             }
                         }
                     }
@@ -3425,6 +3428,7 @@ void ProjectBuilder::visualize(){
                         std::string name = "label";
                         pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
                         node_label.set_value(new_rig_label.c_str());
+                        current_rig = new_rig_label;
                     }
                     if (!current_rig.empty()){
                         // ##### UPDATE RIG ######//
@@ -3657,6 +3661,7 @@ void ProjectBuilder::visualize(){
                         bandGroup new_band_group{new_band_group_vector, is_grayscale};
                         band_group_lookup[new_band_group_label] = new_band_group;
                         band_group_names.insert(new_band_group_label);
+                        current_band_group = new_band_group_label;
                     }
                     if (!current_band_group.empty()){
                         ImGui::SetNextItemWidth(100);
@@ -3737,6 +3742,7 @@ void ProjectBuilder::visualize(){
                         std::string name = "label";
                         pugi::xml_attribute node_label = new_cam_node.attribute(name.c_str());
                         node_label.set_value(new_cam_name.c_str());
+                        current_cam = new_cam_name;
                     }
                     ImGui::SetNextItemWidth(100);
                     std::string prev_cam_name = camera_names[camera_dict[current_cam]];
@@ -3868,6 +3874,7 @@ void ProjectBuilder::visualize(){
                         std::string name = "label";
                         pugi::xml_attribute node_label = new_light_node.attribute(name.c_str());
                         node_label.set_value(new_light_name.c_str());
+                        current_light = new_light_name;
                     }
                     ImGui::SetNextItemWidth(100);
                     std::string prev_light_name = light_names[light_dict[current_light]];
@@ -4328,6 +4335,7 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
     canopy_data_groups.clear();
     xmlGetValues("data_group", "canopy_block", canopy_data_groups);
+    #ifdef ENABLE_RADIATION_MODEL
     // RIG BLOCK
     rig_labels.clear();
     rig_labels_set.clear();
@@ -4479,6 +4487,7 @@ void ProjectBuilder::xmlGetValues(){
             xmlGetValue(prim + "_transmissivity", "radiation", primitive_values[band][prim][1]);
             xmlGetValue(prim + "_emissivity", "radiation", primitive_values[band][prim][2]);
         }
+    #endif
     }
 }
 
@@ -5412,6 +5421,7 @@ void ProjectBuilder::addCanopy(){
     ground_clipping_heights.push_back(ground_clipping_height);
     canopy_labels.push_back(new_canopy_label);
     canopy_UUIDs.push_back(std::vector<unsigned int>{});
+    current_canopy = new_canopy_label;
 }
 
 
@@ -5472,5 +5482,17 @@ void ProjectBuilder::updateGround(){
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     primitive_UUIDs["ground"] = ground_UUIDs;
+}
+
+
+void ProjectBuilder::refreshVisualizationTypes(){
+    visualization_types.clear();
+    std::vector<uint> allUUIDs = context->getAllUUIDs();
+    for (auto &UUID : allUUIDs){
+        std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
+        for (auto &data : primitiveData){
+            visualization_types.insert(data);
+        }
+    }
 }
 

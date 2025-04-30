@@ -189,6 +189,41 @@ struct bandGroup{
  bool grayscale;
 };
 
+//! Canopy struct
+struct canopy{
+ std::string label;
+ std::vector<uint> UUIDs;
+ std::vector<helios::vec3> individual_plant_locations;
+ helios::vec2 plant_spacing;
+ helios::int2 plant_count;
+ helios::vec3 origin;
+ std::string data_group;
+};
+
+//! Object struct
+struct object{
+ std::string name;
+ std::string data_group;
+ helios::vec3 position;
+ helios::vec3 prev_position;
+ helios::vec3 orientation;
+ helios::vec3 prev_orientation;
+ helios::vec3 scale;
+ helios::vec3 prev_scale;
+ helios::RGBcolor color;
+};
+
+//! Rig struct
+struct rig{
+ std::string label;
+ std::vector<distribution> position_noise;
+ helios::RGBcolor color;
+ helios::vec3 position;
+ helios::vec3 lookat;
+ std::set<std::string> camera_labels;
+ std::set<std::string> light_labels;
+};
+
 bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
 
 //! Function to create a distribution struct from a normal distribution
@@ -223,6 +258,9 @@ class ProjectBuilder {
 
     //! User input
     bool user_input;
+
+    //! If true, the project has been built and `visualize()` can be run.
+    bool built = false;
 
     //! Dummy object used if a tagged pointer is not associated with an object or canopy
     obj dummy_obj = obj{-1, false};
@@ -1367,7 +1405,7 @@ class ProjectBuilder {
      * \param[in] name Name of the XML field to be removed
      * \param[in] parent Name of the parent XML node
     */
-    void ProjectBuilder::xmlRemoveField(const std::string& name, const std::string& parent);
+    void xmlRemoveField(const std::string& name, const std::string& parent);
 
     //! Function to set value of an XML field in the XML file
     /**
@@ -1592,6 +1630,9 @@ class ProjectBuilder {
 
     //! Refresh visualizer context and display loading text
     void refreshVisualization();
+
+    //! Refresh visualization types
+    void refreshVisualizationTypes();
 
     //! Popup that appears when right-clicking the "Record" button
     void recordPopup();
