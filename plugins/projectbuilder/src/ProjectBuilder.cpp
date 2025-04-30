@@ -4791,6 +4791,7 @@ void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> ca
 }
 
 void ProjectBuilder::addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission){
+    #ifdef ENABLE_RADIATION_MODEL
     if (label.empty()){
         std::cout << "Failed to add band. Please specify a band label." << std::endl;
         return;
@@ -4840,9 +4841,11 @@ void ProjectBuilder::addBand(std::string label, float wavelength_min, float wave
     diffuse_ray_count_dict.insert({label, diffuse_ray_count});
     radiation->setScatteringDepth(label, scattering_depth);
     scattering_depth_dict.insert({label, scattering_depth});
+    #endif
 }
 
 void ProjectBuilder::addBand(std::string label, bool enable_emission){
+    #ifdef ENABLE_RADIATION_MODEL
     if (label.empty()){
         std::cout << "Failed to add band. Please specify a band label." << std::endl;
         return;
@@ -4888,6 +4891,7 @@ void ProjectBuilder::addBand(std::string label, bool enable_emission){
     diffuse_ray_count_dict.insert({label, diffuse_ray_count});
     radiation->setScatteringDepth(label, scattering_depth);
     scattering_depth_dict.insert({label, scattering_depth});
+    #endif
 }
 
 
