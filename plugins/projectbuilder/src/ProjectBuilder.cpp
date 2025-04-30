@@ -4487,8 +4487,8 @@ void ProjectBuilder::xmlGetValues(){
             xmlGetValue(prim + "_transmissivity", "radiation", primitive_values[band][prim][1]);
             xmlGetValue(prim + "_emissivity", "radiation", primitive_values[band][prim][2]);
         }
-    #endif
     }
+    #endif
 }
 
 void ProjectBuilder::xmlGetValues(std::string xml_path){
