@@ -1762,6 +1762,7 @@ void ProjectBuilder::xmlSetValues(const std::string& name, const std::string& pa
 void ProjectBuilder::visualize(){
     if (!built){
         std::cout << "Project must be built before running visualize." << std::endl;
+        return;
     }
     // if (enable_visualizer){
     #ifdef ENABLE_HELIOS_VISUALIZER
