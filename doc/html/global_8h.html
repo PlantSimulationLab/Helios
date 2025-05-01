@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: core/include/global.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -212,12 +225,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ga6c071a3206c9d7a7d8694275b46b8d42" id="r_ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga6c071a3206c9d7a7d8694275b46b8d42">helios::makeTranslationMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;translation, float(&amp;transform)[16])</td></tr>
 <tr class="memdesc:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct translation matrix.  <br /></td></tr>
 <tr class="separator:ga6c071a3206c9d7a7d8694275b46b8d42"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga9af58af4f070bf9f81a45141569e9c72" id="r_ga9af58af4f070bf9f81a45141569e9c72"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga9af58af4f070bf9f81a45141569e9c72">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, float(&amp;T)[16])</td></tr>
-<tr class="memdesc:ga9af58af4f070bf9f81a45141569e9c72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about the origin.  <br /></td></tr>
-<tr class="separator:ga9af58af4f070bf9f81a45141569e9c72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf092b1b3100fcbc2f9d106a4b560efcd" id="r_gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaf092b1b3100fcbc2f9d106a4b560efcd">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;point, float(&amp;T)[16])</td></tr>
-<tr class="memdesc:gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about arbitrary point in space.  <br /></td></tr>
-<tr class="separator:gaf092b1b3100fcbc2f9d106a4b560efcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga161c5155fdff5a37522d998ca8f3696c" id="r_ga161c5155fdff5a37522d998ca8f3696c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga161c5155fdff5a37522d998ca8f3696c">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:ga161c5155fdff5a37522d998ca8f3696c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about the origin.  <br /></td></tr>
+<tr class="separator:ga161c5155fdff5a37522d998ca8f3696c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gacd8d12db933053859b33c6b4d5cd7a6b" id="r_gacd8d12db933053859b33c6b4d5cd7a6b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gacd8d12db933053859b33c6b4d5cd7a6b">helios::makeScaleMatrix</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scale, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;point, float(&amp;transform)[16])</td></tr>
+<tr class="memdesc:gacd8d12db933053859b33c6b4d5cd7a6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct matrix to scale about arbitrary point in space.  <br /></td></tr>
+<tr class="separator:gacd8d12db933053859b33c6b4d5cd7a6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2404c4bfe8b03cdbde4421a2e0be2b19" id="r_a2404c4bfe8b03cdbde4421a2e0be2b19"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2404c4bfe8b03cdbde4421a2e0be2b19">helios::matmult</a> (const float ML[16], const float MR[16], float(&amp;T)[16])</td></tr>
 <tr class="memdesc:a2404c4bfe8b03cdbde4421a2e0be2b19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply 4x4 matrices: T=ML*MR.  <br /></td></tr>
 <tr class="separator:a2404c4bfe8b03cdbde4421a2e0be2b19"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -225,7 +238,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:ae8cc6f4a10a4efab6057ab6c4c114304"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply 4x4 transformation matrix by 3-element vector: T=M*v.  <br /></td></tr>
 <tr class="separator:ae8cc6f4a10a4efab6057ab6c4c114304"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40054144f951b396cd9f9ba32586862a" id="r_a40054144f951b396cd9f9ba32586862a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a40054144f951b396cd9f9ba32586862a">helios::vecmult</a> (const float M[16], const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;v3, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;result)</td></tr>
-<tr class="memdesc:a40054144f951b396cd9f9ba32586862a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply 4x4 transformation matrix by 3-element vector: T=M*v.  <br /></td></tr>
+<tr class="memdesc:a40054144f951b396cd9f9ba32586862a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply 4x4 transformation matrix by 3D vector: T=M*v.  <br /></td></tr>
 <tr class="separator:a40054144f951b396cd9f9ba32586862a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab044c22f6798031f34744e63d95ca614" id="r_ab044c22f6798031f34744e63d95ca614"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab044c22f6798031f34744e63d95ca614">helios::makeIdentityMatrix</a> (float(&amp;T)[16])</td></tr>
 <tr class="memdesc:ab044c22f6798031f34744e63d95ca614"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct an identity matrix.  <br /></td></tr>
@@ -291,6 +304,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:a786c694c21d9115a7c3e18deba6a8732"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a string into an RGBcolor with error checking.  <br /></td></tr>
 <tr class="separator:a786c694c21d9115a7c3e18deba6a8732"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:affd6907db209d4696779a3d2497cfab5" id="r_affd6907db209d4696779a3d2497cfab5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#affd6907db209d4696779a3d2497cfab5">helios::open_xml_file</a> (const std::string &amp;xml_file, pugi::xml_document &amp;xmldoc, std::string &amp;error_string)</td></tr>
+<tr class="memdesc:affd6907db209d4696779a3d2497cfab5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens and parses an XML file into a pugi::xml_document object.  <br /></td></tr>
 <tr class="separator:affd6907db209d4696779a3d2497cfab5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afcb3f2f96f4679210db6f68845c87a51" id="r_afcb3f2f96f4679210db6f68845c87a51"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcb3f2f96f4679210db6f68845c87a51">helios::parse_xml_tag_int</a> (const pugi::xml_node &amp;node, const std::string &amp;tag, const std::string &amp;calling_function)</td></tr>
 <tr class="memdesc:afcb3f2f96f4679210db6f68845c87a51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an XML tag containing an integer value.  <br /></td></tr>
@@ -437,105 +451,18 @@ Functions</h2></td></tr>
 <tr class="memitem:a95600894b45bcc627d66c3dd8c202cd8" id="r_a95600894b45bcc627d66c3dd8c202cd8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a95600894b45bcc627d66c3dd8c202cd8">helios::writeJPEG</a> (const std::string &amp;filename, uint width, uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;pixel_data)</td></tr>
 <tr class="memdesc:a95600894b45bcc627d66c3dd8c202cd8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to write a JPEG image based on pixel data.  <br /></td></tr>
 <tr class="separator:a95600894b45bcc627d66c3dd8c202cd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga121757e2774279472d1ffa068313dbfc" id="r_ga121757e2774279472d1ffa068313dbfc"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga121757e2774279472d1ffa068313dbfc">helios::flatten</a> (const std::vector&lt; std::vector&lt; int &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga121757e2774279472d1ffa068313dbfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga121757e2774279472d1ffa068313dbfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gabbee61759ee5dbc76a83f1356bc4e427" id="r_gabbee61759ee5dbc76a83f1356bc4e427"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gabbee61759ee5dbc76a83f1356bc4e427">helios::flatten</a> (const std::vector&lt; std::vector&lt; uint &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gabbee61759ee5dbc76a83f1356bc4e427"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D uint &amp;vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gabbee61759ee5dbc76a83f1356bc4e427"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gacce06754824eb0f9ec29d043c8970fdd" id="r_gacce06754824eb0f9ec29d043c8970fdd"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gacce06754824eb0f9ec29d043c8970fdd">helios::flatten</a> (const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gacce06754824eb0f9ec29d043c8970fdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D float vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gacce06754824eb0f9ec29d043c8970fdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga8148b3dd86a772edcee01ed3e788c344" id="r_ga8148b3dd86a772edcee01ed3e788c344"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga8148b3dd86a772edcee01ed3e788c344">helios::flatten</a> (const std::vector&lt; std::vector&lt; double &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga8148b3dd86a772edcee01ed3e788c344"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D double vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga8148b3dd86a772edcee01ed3e788c344"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa82d824f02499ea89a35f49837c73c16" id="r_gaa82d824f02499ea89a35f49837c73c16"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaa82d824f02499ea89a35f49837c73c16">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaa82d824f02499ea89a35f49837c73c16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gaa82d824f02499ea89a35f49837c73c16"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga1d91aa279bfa52924ce4ad1ff25e73fa" id="r_ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga1d91aa279bfa52924ce4ad1ff25e73fa">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga1d91aa279bfa52924ce4ad1ff25e73fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gab81afa45742b33913932e93d18027bb9" id="r_gab81afa45742b33913932e93d18027bb9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gab81afa45742b33913932e93d18027bb9">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gab81afa45742b33913932e93d18027bb9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D vec4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gab81afa45742b33913932e93d18027bb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga7d6b41f67d574ad1eda29386f7602fd3" id="r_ga7d6b41f67d574ad1eda29386f7602fd3"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga7d6b41f67d574ad1eda29386f7602fd3">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga7d6b41f67d574ad1eda29386f7602fd3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga7d6b41f67d574ad1eda29386f7602fd3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaacf3de9501039033bbf3ce1192a5b980" id="r_gaacf3de9501039033bbf3ce1192a5b980"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaacf3de9501039033bbf3ce1192a5b980">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaacf3de9501039033bbf3ce1192a5b980"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gaacf3de9501039033bbf3ce1192a5b980"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaba0182e0dee319764079263d3c6515cb" id="r_gaba0182e0dee319764079263d3c6515cb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gaba0182e0dee319764079263d3c6515cb">helios::flatten</a> (const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gaba0182e0dee319764079263d3c6515cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D int4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gaba0182e0dee319764079263d3c6515cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gacba6e64852b80969f8529e7e4ca9cd0c" id="r_gacba6e64852b80969f8529e7e4ca9cd0c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gacba6e64852b80969f8529e7e4ca9cd0c">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::string &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gacba6e64852b80969f8529e7e4ca9cd0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 2D string vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gacba6e64852b80969f8529e7e4ca9cd0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga9b7c03082c314d9f694fb939c0ea1550" id="r_ga9b7c03082c314d9f694fb939c0ea1550"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga9b7c03082c314d9f694fb939c0ea1550">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; int &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga9b7c03082c314d9f694fb939c0ea1550"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga9b7c03082c314d9f694fb939c0ea1550"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga46b186805c705dc05ded72b791ed90a4" id="r_ga46b186805c705dc05ded72b791ed90a4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga46b186805c705dc05ded72b791ed90a4">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; uint &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga46b186805c705dc05ded72b791ed90a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D uint vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga46b186805c705dc05ded72b791ed90a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4837a536a7387f8721f7b9d8cad201e8" id="r_ga4837a536a7387f8721f7b9d8cad201e8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4837a536a7387f8721f7b9d8cad201e8">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; float &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga4837a536a7387f8721f7b9d8cad201e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D float vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga4837a536a7387f8721f7b9d8cad201e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga480225bd53c0fbc332edca0a0d9a9ebf" id="r_ga480225bd53c0fbc332edca0a0d9a9ebf"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga480225bd53c0fbc332edca0a0d9a9ebf">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; double &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga480225bd53c0fbc332edca0a0d9a9ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D double vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga480225bd53c0fbc332edca0a0d9a9ebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga69b9012c4d9aa9c34bba25cca4e53119" id="r_ga69b9012c4d9aa9c34bba25cca4e53119"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga69b9012c4d9aa9c34bba25cca4e53119">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga69b9012c4d9aa9c34bba25cca4e53119"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga69b9012c4d9aa9c34bba25cca4e53119"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga31baa6f6552d52b2cc79561fc3457a88" id="r_ga31baa6f6552d52b2cc79561fc3457a88"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga31baa6f6552d52b2cc79561fc3457a88">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga31baa6f6552d52b2cc79561fc3457a88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga31baa6f6552d52b2cc79561fc3457a88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga82feb62a40fb10cba137a8d38eacf003" id="r_ga82feb62a40fb10cba137a8d38eacf003"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga82feb62a40fb10cba137a8d38eacf003">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga82feb62a40fb10cba137a8d38eacf003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D vec4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga82feb62a40fb10cba137a8d38eacf003"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga96b392b637a3fcc21a7944000323e57e" id="r_ga96b392b637a3fcc21a7944000323e57e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga96b392b637a3fcc21a7944000323e57e">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga96b392b637a3fcc21a7944000323e57e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga96b392b637a3fcc21a7944000323e57e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadc8836b0f49c4a8b5bc5bcab058a63ad" id="r_gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gadc8836b0f49c4a8b5bc5bcab058a63ad">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gadc8836b0f49c4a8b5bc5bcab058a63ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573" id="r_ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4e10f3b2de7e94bf1d7e6c7c4e5f2573">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D int4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga4e10f3b2de7e94bf1d7e6c7c4e5f2573"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0da91aa5e844a63b491026a1b772cea9" id="r_ga0da91aa5e844a63b491026a1b772cea9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga0da91aa5e844a63b491026a1b772cea9">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::string &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga0da91aa5e844a63b491026a1b772cea9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 3D string vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga0da91aa5e844a63b491026a1b772cea9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga3499b80c2201907203b3457f1fb62c80" id="r_ga3499b80c2201907203b3457f1fb62c80"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga3499b80c2201907203b3457f1fb62c80">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; int &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga3499b80c2201907203b3457f1fb62c80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga3499b80c2201907203b3457f1fb62c80"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga024396adf0d734eb2a5dab7150455412" id="r_ga024396adf0d734eb2a5dab7150455412"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga024396adf0d734eb2a5dab7150455412">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; uint &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga024396adf0d734eb2a5dab7150455412"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D uint vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga024396adf0d734eb2a5dab7150455412"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac265cf2f4fcc89d40729f11cccdcd334" id="r_gac265cf2f4fcc89d40729f11cccdcd334"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gac265cf2f4fcc89d40729f11cccdcd334">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; float &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gac265cf2f4fcc89d40729f11cccdcd334"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D float vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gac265cf2f4fcc89d40729f11cccdcd334"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga1872f5844481b4cd876848cb7282a76a" id="r_ga1872f5844481b4cd876848cb7282a76a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga1872f5844481b4cd876848cb7282a76a">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; double &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga1872f5844481b4cd876848cb7282a76a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D double vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga1872f5844481b4cd876848cb7282a76a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga17ade4062b75a329ec1b59f28d854614" id="r_ga17ade4062b75a329ec1b59f28d854614"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga17ade4062b75a329ec1b59f28d854614">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga17ade4062b75a329ec1b59f28d854614"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga17ade4062b75a329ec1b59f28d854614"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gad0ba764dc082b4fe92c2edf2b691df06" id="r_gad0ba764dc082b4fe92c2edf2b691df06"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gad0ba764dc082b4fe92c2edf2b691df06">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gad0ba764dc082b4fe92c2edf2b691df06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gad0ba764dc082b4fe92c2edf2b691df06"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4bcec227cba69446f0c211a8efa79fa7" id="r_ga4bcec227cba69446f0c211a8efa79fa7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga4bcec227cba69446f0c211a8efa79fa7">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga4bcec227cba69446f0c211a8efa79fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D vec4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga4bcec227cba69446f0c211a8efa79fa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga228d0ed0a34866dd6ae4be83ec7d3246" id="r_ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga228d0ed0a34866dd6ae4be83ec7d3246">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int2 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga228d0ed0a34866dd6ae4be83ec7d3246"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac15b07838d4cd90b7b7f863821d34665" id="r_gac15b07838d4cd90b7b7f863821d34665"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gac15b07838d4cd90b7b7f863821d34665">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gac15b07838d4cd90b7b7f863821d34665"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int3 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gac15b07838d4cd90b7b7f863821d34665"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac6c182edd6f37635bbce1abbb5306a20" id="r_gac6c182edd6f37635bbce1abbb5306a20"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#gac6c182edd6f37635bbce1abbb5306a20">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1int4.html">helios::int4</a> &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:gac6c182edd6f37635bbce1abbb5306a20"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D int4 vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:gac6c182edd6f37635bbce1abbb5306a20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga14adccb0f309850b9d5aa740588b8624" id="r_ga14adccb0f309850b9d5aa740588b8624"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga14adccb0f309850b9d5aa740588b8624">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; std::string &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
-<tr class="memdesc:ga14adccb0f309850b9d5aa740588b8624"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to flatten a 4D string vector into a 1D vector.  <br /></td></tr>
-<tr class="separator:ga14adccb0f309850b9d5aa740588b8624"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga475421ec394da63f3964f56bb5a81335" id="r_ga475421ec394da63f3964f56bb5a81335"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ga475421ec394da63f3964f56bb5a81335"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335">helios::flatten</a> (const std::vector&lt; std::vector&lt; T &gt; &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga475421ec394da63f3964f56bb5a81335"><td class="mdescLeft">&#160;</td><td class="mdescRight">Template function to flatten a 2D vector into a 1D vector.  <br /></td></tr>
+<tr class="separator:ga475421ec394da63f3964f56bb5a81335"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga787134f47aafd8e7d9148d0be4ad07e7" id="r_ga787134f47aafd8e7d9148d0be4ad07e7"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ga787134f47aafd8e7d9148d0be4ad07e7"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#ga787134f47aafd8e7d9148d0be4ad07e7">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; T &gt; &gt; &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga787134f47aafd8e7d9148d0be4ad07e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Template function to flatten a 3D vector into a 1D vector.  <br /></td></tr>
+<tr class="separator:ga787134f47aafd8e7d9148d0be4ad07e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga84d3e20ba0b0b53f9ef8e55bd508e426" id="r_ga84d3e20ba0b0b53f9ef8e55bd508e426"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ga84d3e20ba0b0b53f9ef8e55bd508e426"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#ga84d3e20ba0b0b53f9ef8e55bd508e426">helios::flatten</a> (const std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; T &gt; &gt; &gt; &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga84d3e20ba0b0b53f9ef8e55bd508e426"><td class="mdescLeft">&#160;</td><td class="mdescRight">Template function to flatten a 4D vector into a 1D vector.  <br /></td></tr>
+<tr class="separator:ga84d3e20ba0b0b53f9ef8e55bd508e426"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7f8e948aa3a70481ebd3a829531bee4e" id="r_ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__functions.html#ga7f8e948aa3a70481ebd3a829531bee4e">helios::spline_interp3</a> (float u, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_end, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_end)</td></tr>
 <tr class="memdesc:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform cubic Hermite spline interpolation.  <br /></td></tr>
 <tr class="separator:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -599,6 +526,14 @@ Functions</h2></td></tr>
 <tr class="memitem:a125e8bef86fb7272d4d66898afb7d368" id="r_a125e8bef86fb7272d4d66898afb7d368"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a125e8bef86fb7272d4d66898afb7d368">helios::importVectorFromFile</a> (const std::string &amp;filepath)</td></tr>
 <tr class="memdesc:a125e8bef86fb7272d4d66898afb7d368"><td class="mdescLeft">&#160;</td><td class="mdescRight">Read values contained in a text file into a one-dimensional vector of floats.  <br /></td></tr>
 <tr class="separator:a125e8bef86fb7272d4d66898afb7d368"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9adbbb2cb1b5784701c056062a00458" id="r_aa9adbbb2cb1b5784701c056062a00458"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa9adbbb2cb1b5784701c056062a00458">helios::sample_Beta_distribution</a> (float mu, float nu, std::minstd_rand0 *generator)</td></tr>
+<tr class="memdesc:aa9adbbb2cb1b5784701c056062a00458"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sample from Beta(μ,ν) distribution.  <br /></td></tr>
+<tr class="separator:aa9adbbb2cb1b5784701c056062a00458"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae106b1ce1d55432f4d0da489092e167b" id="r_ae106b1ce1d55432f4d0da489092e167b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae106b1ce1d55432f4d0da489092e167b">helios::sample_ellipsoidal_azimuth</a> (float e, float phi0_degrees, std::minstd_rand0 *generator)</td></tr>
+<tr class="memdesc:ae106b1ce1d55432f4d0da489092e167b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples an azimuth angle for an ellipsoidal distribution.  <br /></td></tr>
+<tr class="separator:ae106b1ce1d55432f4d0da489092e167b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a909bebc6a6e1946ec9a543b4066091c2" id="r_a909bebc6a6e1946ec9a543b4066091c2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a909bebc6a6e1946ec9a543b4066091c2">helios::operator+=</a> (std::vector&lt; float &gt; &amp;lhs, const std::vector&lt; float &gt; &amp;rhs)</td></tr>
+<tr class="separator:a909bebc6a6e1946ec9a543b4066091c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -607,7 +542,7 @@ Variables</h2></td></tr>
 <tr class="memitem:adcd5a98ec7c45292736ec8e19ce9de51" id="r_adcd5a98ec7c45292736ec8e19ce9de51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a> = <a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0,0)</td></tr>
 <tr class="memdesc:adcd5a98ec7c45292736ec8e19ce9de51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null SphericalCoord that applies no rotation.  <br /></td></tr>
 <tr class="separator:adcd5a98ec7c45292736ec8e19ce9de51"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a876dc18d1da8ace50c131f428f8883be" id="r_a876dc18d1da8ace50c131f428f8883be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a> = <a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3</a>(0,0,0)</td></tr>
+<tr class="memitem:a876dc18d1da8ace50c131f428f8883be" id="r_a876dc18d1da8ace50c131f428f8883be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a> = <a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">make_vec3</a>(0,0,0)</td></tr>
 <tr class="memdesc:a876dc18d1da8ace50c131f428f8883be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null vec3 that gives the origin (0,0,0)  <br /></td></tr>
 <tr class="separator:a876dc18d1da8ace50c131f428f8883be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -635,7 +570,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">func</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00022">22</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00025">25</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -651,7 +586,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00026">26</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00029">29</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -678,6 +613,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a> helios::blend </td>
@@ -692,9 +630,14 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>weight_RGBA</em></span>&#160;)</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>weight</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Blend two RGBA colors together. </p>
@@ -703,14 +646,14 @@ Variables</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to blend </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to blend </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color0_RGBA</td><td>First color to be blended. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color1_RGBA</td><td>Second color to be blended. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">weight_RGBA</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be blended. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00069">69</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00070">70</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -719,23 +662,31 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> helios::blend </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>color0_RGB</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>color0</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>color1_RGB</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>color1</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>weight_RGB</em></span>&#160;)</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>weight</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Blend two RGB colors together. </p>
@@ -744,14 +695,14 @@ Variables</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to blend </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to blend </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color0_RGB</td><td>First color to be blended. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color1_RGB</td><td>Second color to be blended. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">weight_RGB</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be blended. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00060">60</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00061">61</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -760,6 +711,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_date.html">Date</a> helios::CalendarDay </td>
@@ -772,6 +726,11 @@ Variables</h2></td></tr>
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>year</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Convert Julian day to calendar day (day,month,year) </p>
@@ -785,7 +744,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>JulianDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01307">1307</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01318">1318</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -794,6 +753,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float helios::fzero </td>
@@ -826,6 +788,11 @@ Variables</h2></td></tr>
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>max_iterations</em></span><span class="paramdefsep"> = </span><span class="paramdefval">100</span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Use Newton-Raphson method to find the zero of a function. </p>
@@ -835,13 +802,13 @@ Variables</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">variables</td><td>Vector of function arguments </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">parameters</td><td>Pointer to any additional parameters needed by the function </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">init_guess</td><td>Initial guess for the zero of the function. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">err_tol</td><td>Maximum allowable relative error in solution. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">max_iterations</td><td>Maximum number of iterations to allow before exiting solver. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">err_tol</td><td>[optional] Maximum allowable relative error in solution. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_iterations</td><td>[optional] Maximum number of iterations to allow before exiting solver. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02977">2977</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02284">2284</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -850,6 +817,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::getFileExtension </td>
@@ -858,6 +828,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse a file string to get the extension. </p>
@@ -870,7 +845,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain an extension, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03075">3075</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02382">2382</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -879,6 +854,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::getFileName </td>
@@ -887,6 +865,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse a file string to get the filename including extension. </p>
@@ -899,7 +882,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename including extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03085">3085</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02392">2392</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -908,6 +891,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::getFilePath </td>
@@ -920,6 +906,11 @@ Variables</h2></td></tr>
           <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>trailingslash</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse a file string to get the path (i.e., portion of the string before the file name). </p>
@@ -933,7 +924,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File path contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a path, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03090">3090</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02397">2397</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -942,6 +933,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::getFileStem </td>
@@ -950,6 +944,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse a file string to get the filename without extension. </p>
@@ -962,7 +961,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename without extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03080">3080</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02387">2387</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -971,6 +970,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1int2.html">helios::int2</a> helios::getImageResolutionJPEG </td>
@@ -979,6 +981,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to read a JPEG image file into pixel data array. </p>
@@ -989,7 +996,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01826">1826</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01892">1892</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1016,7 +1023,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00029">29</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00030">30</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1025,6 +1032,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; float &gt; helios::importVectorFromFile </td>
@@ -1033,6 +1043,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Read values contained in a text file into a one-dimensional vector of floats. </p>
@@ -1044,7 +1059,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-dimensional vector of floats contained in text file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03150">3150</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02457">2457</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1053,6 +1068,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float helios::interp1 </td>
@@ -1065,6 +1083,11 @@ Variables</h2></td></tr>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>x</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to perform linear interpolation based on a vector of discrete (x,y) values. </p>
@@ -1077,7 +1100,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of y interpolated at location x. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03022">3022</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02329">2329</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1086,6 +1109,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int helios::JulianDay </td>
@@ -1103,6 +1129,11 @@ Variables</h2></td></tr>
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>year</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Convert calendar day (day,month,year) to Julian day. </p>
@@ -1117,7 +1148,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01350">1350</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01358">1358</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1137,8 +1168,14 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Construct an identity matrix. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">T</td><td>A reference to a 16-element array representing a flat 4x4 matrix. The array will be filled with the identity matrix values. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00555">555</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00566">566</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1167,8 +1204,17 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Multiply 4x4 matrices: T=ML*MR. </p>
+<p>Performs matrix multiplication between two 4x4 matrices (ML and MR) and stores the result in the output matrix T. This function implements the standard matrix multiplication algorithm where each element of the result is the dot product of the corresponding row of ML and column of MR.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ML</td><td>The left 4x4 matrix in the multiplication </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">MR</td><td>The right 4x4 matrix in the multiplication </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">T</td><td>Reference to a 4x4 matrix where the result will be stored </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00499">499</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00510">510</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1196,7 +1242,49 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00913">913</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p>Opens and parses an XML file into a pugi::xml_document object. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">xml_file</td><td>Path to the XML file to be opened and parsed </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">xmldoc</td><td>Reference to a pugi::xml_document object that will hold the parsed XML data </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">error_string</td><td>Reference to a string that will be populated with error information if the function fails </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if the XML file was successfully opened and parsed, false otherwise (in case of failure, check error_string for details) </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00924">924</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a909bebc6a6e1946ec9a543b4066091c2" name="a909bebc6a6e1946ec9a543b4066091c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a909bebc6a6e1946ec9a543b4066091c2">&#9670;&#160;</a></span>operator+=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; &amp; helios::operator+= </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>lhs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>rhs</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00982">982</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1229,7 +1317,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00779">779</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00790">790</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1262,7 +1350,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00763">763</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00774">774</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1295,7 +1383,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00794">794</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00805">805</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1328,7 +1416,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00809">809</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00820">820</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1361,7 +1449,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00825">825</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00836">836</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1394,7 +1482,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00893">893</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00904">904</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1427,7 +1515,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00842">842</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00853">853</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1460,7 +1548,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00860">860</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00871">871</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1493,7 +1581,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00876">876</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00887">887</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1502,6 +1590,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float helios::parse_xml_tag_float </td>
@@ -1519,6 +1610,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calling_function</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse an XML tag containing a float value. </p>
@@ -1532,7 +1628,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Float value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00954">954</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00965">965</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1541,6 +1637,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int helios::parse_xml_tag_int </td>
@@ -1558,6 +1657,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calling_function</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse an XML tag containing an integer value. </p>
@@ -1571,7 +1675,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integer value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00942">942</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00953">953</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1580,6 +1684,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::parse_xml_tag_string </td>
@@ -1597,6 +1704,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calling_function</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse an XML tag containing a string. </p>
@@ -1610,7 +1722,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>String value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00990">990</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01001">1001</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1619,6 +1731,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec2.html">vec2</a> helios::parse_xml_tag_vec2 </td>
@@ -1636,6 +1751,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calling_function</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse an XML tag containing a vec2 value (i.e., two space delimited floats) </p>
@@ -1649,7 +1769,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vec2 value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00966">966</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00977">977</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1658,6 +1778,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> helios::parse_xml_tag_vec3 </td>
@@ -1675,6 +1798,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calling_function</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Parse an XML tag containing a vec3 value (i.e., three space delimited floats) </p>
@@ -1688,7 +1816,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vec3 value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00978">978</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00989">989</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1697,6 +1825,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool helios::PNGHasAlpha </td>
@@ -1705,6 +1836,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Check whether PNG image file has an alpha/transparency channel. </p>
@@ -1715,7 +1851,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01434">1434</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01402">1402</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1724,6 +1860,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float helios::point_distance </td>
@@ -1736,6 +1875,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>p2</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to calculate the distance between two points. </p>
@@ -1748,7 +1892,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03071">3071</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02378">2378</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1792,7 +1936,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01756">1756</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01822">1822</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1836,7 +1980,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01587">1587</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01586">1586</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1845,6 +1989,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; std::vector&lt; bool &gt; &gt; helios::readPNGAlpha </td>
@@ -1853,6 +2000,11 @@ Variables</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to read the alpha channel from a PNG image. </p>
@@ -1864,7 +2016,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01488">1488</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01491">1491</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1873,6 +2025,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> helios::rotatePointAboutLine </td>
@@ -1895,6 +2050,11 @@ Variables</h2></td></tr>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>theta</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Rotate a 3D vector about an arbitrary line. </p>
@@ -1908,7 +2068,100 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00140">140</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00141">141</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa9adbbb2cb1b5784701c056062a00458" name="aa9adbbb2cb1b5784701c056062a00458"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9adbbb2cb1b5784701c056062a00458">&#9670;&#160;</a></span>sample_Beta_distribution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::sample_Beta_distribution </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>mu</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>nu</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::minstd_rand0 *</td>          <td class="paramname"><span class="paramname"><em>generator</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sample from Beta(μ,ν) distribution. </p>
+<p>Sample θ_L ∈ [0, π/2] from beta distribution given u∼Uniform[0,1] </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">mu</td><td>First parameter of beta distribution </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">nu</td><td>Second parameter of beta distribution </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">generator</td><td>Random number generator </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02471">2471</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae106b1ce1d55432f4d0da489092e167b" name="ae106b1ce1d55432f4d0da489092e167b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae106b1ce1d55432f4d0da489092e167b">&#9670;&#160;</a></span>sample_ellipsoidal_azimuth()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float helios::sample_ellipsoidal_azimuth </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>e</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>phi0_degrees</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::minstd_rand0 *</td>          <td class="paramname"><span class="paramname"><em>generator</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Samples an azimuth angle for an ellipsoidal distribution. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">e</td><td>Eccentricity of the ellipsoidal distribution. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phi0_degrees</td><td>Azimuthal rotation of ellipse (degrees). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">generator</td><td>Random number generator. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The sampled azimuth angle. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02511">2511</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1934,14 +2187,14 @@ Variables</h2></td></tr>
 <p>Check whether output file and/or directory is valid. Add a trailing slash if it is a directory. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">output_path</td><td></td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">allowable_file_extensions</td><td></td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">output_directory</td><td>String containing the output directory or file name </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">allowable_file_extensions</td><td>Vector of allowable file extensions. If the output_directory is a file, it must have one of these extensions. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if directory/file was valid, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l03102">3102</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02409">2409</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1970,8 +2223,16 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Multiply 4x4 transformation matrix by 3-element vector: T=M*v. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">M</td><td>A 4x4 matrix represented as a 1D array of 16 elements in row-major order </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">v</td><td>A 3D vector represented as an array of 3 elements </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">result</td><td>The resulting 3D vector after matrix-vector multiplication </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00539">539</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00550">550</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1999,9 +2260,17 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Multiply 4x4 transformation matrix by 3-element vector: T=M*v. </p>
+<p>Multiply 4x4 transformation matrix by 3D vector: T=M*v. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">M</td><td>A 4x4 matrix represented as a float array of size 16 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">v3</td><td>Input 3D vector to be multiplied with the matrix </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">result</td><td>Output vector containing the result of the multiplication </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00517">517</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00528">528</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2045,7 +2314,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01868">1868</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01929">1929</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2089,7 +2358,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01676">1676</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01743">1743</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2098,6 +2367,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float helios::XMLloadfloat </td>
@@ -2110,6 +2382,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a float. </p>
@@ -2121,7 +2398,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02808">2808</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02115">2115</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2130,6 +2407,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int helios::XMLloadint </td>
@@ -2142,6 +2422,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into an int. </p>
@@ -2153,7 +2438,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02825">2825</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02132">2132</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2162,6 +2447,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1int2.html">helios::int2</a> helios::XMLloadint2 </td>
@@ -2174,6 +2462,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a vec2. </p>
@@ -2185,7 +2478,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02902">2902</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02209">2209</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2194,6 +2487,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1int3.html">helios::int3</a> helios::XMLloadint3 </td>
@@ -2206,6 +2502,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a int3. </p>
@@ -2217,7 +2518,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02917">2917</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02224">2224</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2226,6 +2527,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1int4.html">helios::int4</a> helios::XMLloadint4 </td>
@@ -2238,6 +2542,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a int4. </p>
@@ -2249,7 +2558,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02932">2932</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02239">2239</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2258,6 +2567,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> helios::XMLloadrgb </td>
@@ -2270,6 +2582,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into an RGB color vector. </p>
@@ -2281,7 +2598,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02947">2947</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02254">2254</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2290,6 +2607,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> helios::XMLloadrgba </td>
@@ -2302,6 +2622,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into an RGBA color vector. </p>
@@ -2313,7 +2638,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02962">2962</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02269">2269</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2322,6 +2647,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string helios::XMLloadstring </td>
@@ -2334,6 +2662,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a string. </p>
@@ -2345,7 +2678,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02842">2842</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02149">2149</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2354,6 +2687,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> helios::XMLloadvec2 </td>
@@ -2366,6 +2702,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a vec2. </p>
@@ -2377,7 +2718,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02857">2857</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02164">2164</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2386,6 +2727,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> helios::XMLloadvec3 </td>
@@ -2398,6 +2742,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a vec3. </p>
@@ -2409,7 +2758,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02872">2872</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02179">2179</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2418,6 +2767,9 @@ Variables</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> helios::XMLloadvec4 </td>
@@ -2430,6 +2782,11 @@ Variables</h2></td></tr>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to load and convert a field in a pugi XML node into a vec4. </p>
@@ -2441,7 +2798,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02887">2887</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02194">2194</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2468,7 +2825,7 @@ Variables</h2></td></tr>
 
 <p>Default null vec3 that gives the origin (0,0,0) </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00058">58</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00059">59</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2494,7 +2851,7 @@ Variables</h2></td></tr>
 
 <p>Default null SphericalCoord that applies no rotation. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00057">57</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00058">58</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

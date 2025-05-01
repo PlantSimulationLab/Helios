@@ -1,6 +1,5 @@
 var classhelios_1_1_tile =
 [
-    [ "Tile", "classhelios_1_1_tile.html#ae7a684eae38bd9f5b3397962cd1a2774", null ],
     [ "~Tile", "classhelios_1_1_tile.html#a001e45730aa531c75c90a599b5524956", null ],
     [ "getCenter", "classhelios_1_1_tile.html#a18178d0280f8ecc1149663558947ca06", null ],
     [ "getNormal", "classhelios_1_1_tile.html#ab8c70daf8c14bc60caf499b5adce301c", null ],

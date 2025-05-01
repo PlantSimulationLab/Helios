@@ -4,7 +4,7 @@
 	<longitude>121.760002</longitude>
 	<UTC_offset>8</UTC_offset>
 	<csv_weather_file>plugins/projectbuilder/inputs/weather_data.csv</csv_weather_file>
-	<domain_origin>1 1 0</domain_origin>
+	<domain_origin>0 0 0</domain_origin>
 	<domain_extent>4 4</domain_extent>
 	<ground_resolution>25 25</ground_resolution>
 	<ground_texture_file>plugins/visualizer/textures/dirt.jpg</ground_texture_file>
@@ -17,6 +17,7 @@
 		<plant_library_name>cowpea</plant_library_name>
 		<plant_age>13.000000</plant_age>
 		<ground_clipping_height>0.000000</ground_clipping_height>
+		<data_group></data_group>
 	</canopy_block>
 	<canopy_block label="canopy_1">
 		<canopy_origin>0 0 0</canopy_origin>
@@ -25,6 +26,7 @@
 		<plant_library_name>cowpea</plant_library_name>
 		<plant_age>15.000000</plant_age>
 		<ground_clipping_height>0.000000</ground_clipping_height>
+		<data_group></data_group>
 	</canopy_block>
 	<radiation>
 		<direct_ray_count>100</direct_ray_count>
@@ -64,12 +66,14 @@
 		<camera_label>RGB</camera_label>
 		<camera_label>RGB2</camera_label>
 		<light_label>sphere_0</light_label>
+		<color>1 0 0</color>
 	</rig>
 	<rig label="rig_1">
 		<camera_position>1 1 1</camera_position>
 		<camera_lookat>0 0 0</camera_lookat>
 		<images>20</images>
 		<camera_label>RGB2</camera_label>
+		<color>0 1 0</color>
 	</rig>
 	<camera label="RGB2">
 		<camera_calibration>calibrated_sun_NikonB500_spectral_response</camera_calibration>

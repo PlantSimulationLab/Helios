@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Shoot Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -168,26 +181,34 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:afe4fa0bc2d46f94087c88b658d8aef13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep.  <br /></td></tr>
 <tr class="separator:afe4fa0bc2d46f94087c88b658d8aef13"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aabd26ec09a87e64c2b575896016f0ac8" id="r_aabd26ec09a87e64c2b575896016f0ac8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabd26ec09a87e64c2b575896016f0ac8">terminateApicalBud</a> ()</td></tr>
+<tr class="memdesc:aabd26ec09a87e64c2b575896016f0ac8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Terminates the apical bud of the shoot. This function marks the apical meristem of the shoot as no longer alive.  <br /></td></tr>
 <tr class="separator:aabd26ec09a87e64c2b575896016f0ac8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e41b7edf06fe0d3571e03715a926b75" id="r_a0e41b7edf06fe0d3571e03715a926b75"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e41b7edf06fe0d3571e03715a926b75">terminateAxillaryVegetativeBuds</a> ()</td></tr>
+<tr class="memdesc:a0e41b7edf06fe0d3571e03715a926b75"><td class="mdescLeft">&#160;</td><td class="mdescRight">Terminates all axillary vegetative buds within the shoot. This function iterates through all phytomers of the current shoot and marks the axillary vegetative buds as no longer alive.  <br /></td></tr>
 <tr class="separator:a0e41b7edf06fe0d3571e03715a926b75"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af607df3efe2d0d5c12afc237b6886982" id="r_af607df3efe2d0d5c12afc237b6886982"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af607df3efe2d0d5c12afc237b6886982">addTerminalFloralBud</a> ()</td></tr>
+<tr class="memdesc:af607df3efe2d0d5c12afc237b6886982"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds terminal floral buds to the shoot. This function creates and initializes a specified number of terminal floral buds at the apex of the shoot. Each bud is assigned its position, rotation, and bending axis, based on the shoot's parameters.  <br /></td></tr>
 <tr class="separator:af607df3efe2d0d5c12afc237b6886982"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a749f79bce4cd00e7d1a163a6ed05d4b5" id="r_a749f79bce4cd00e7d1a163a6ed05d4b5"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a749f79bce4cd00e7d1a163a6ed05d4b5">calculateShootInternodeVolume</a> () const</td></tr>
+<tr class="memdesc:a749f79bce4cd00e7d1a163a6ed05d4b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total volume of the shoot's internode tubes. This function iterates through all phytomers of the shoot and sums the volume of the internode tube objects if they exist.  <br /></td></tr>
 <tr class="separator:a749f79bce4cd00e7d1a163a6ed05d4b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae5ddfda1efed081cb6bdea26b1665412" id="r_ae5ddfda1efed081cb6bdea26b1665412"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae5ddfda1efed081cb6bdea26b1665412">calculateShootLength</a> () const</td></tr>
+<tr class="memdesc:ae5ddfda1efed081cb6bdea26b1665412"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total length of the shoot. This function iterates through all phytomers in the shoot and sums their internode lengths.  <br /></td></tr>
 <tr class="separator:ae5ddfda1efed081cb6bdea26b1665412"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a19eb5d6e3248c45de08774d11cbf329b" id="r_a19eb5d6e3248c45de08774d11cbf329b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19eb5d6e3248c45de08774d11cbf329b">updateShootNodes</a> (bool update_context_geometry=true)</td></tr>
-<tr class="memdesc:a19eb5d6e3248c45de08774d11cbf329b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Recalculate and apply the shoot's origin position and shift all downstream shoots.  <br /></td></tr>
-<tr class="separator:a19eb5d6e3248c45de08774d11cbf329b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45286db4b3672dce29dcd6964c831d43" id="r_a45286db4b3672dce29dcd6964c831d43"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a45286db4b3672dce29dcd6964c831d43">getShootAxisVector</a> (float shoot_fraction) const</td></tr>
+<tr class="memdesc:a45286db4b3672dce29dcd6964c831d43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines the shoot axis vector based on a specified fraction along the shoot's length.  <br /></td></tr>
 <tr class="separator:a45286db4b3672dce29dcd6964c831d43"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3fda7ac79d3730527fd14f3e049ea9b8" id="r_a3fda7ac79d3730527fd14f3e049ea9b8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fda7ac79d3730527fd14f3e049ea9b8">sumShootLeafArea</a> (uint start_node_index=0) const</td></tr>
+<tr class="memdesc:a3fda7ac79d3730527fd14f3e049ea9b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total leaf area of a shoot starting from a given node index.  <br /></td></tr>
 <tr class="separator:a3fda7ac79d3730527fd14f3e049ea9b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36ddfab936462e5dc508fb82f9dfb077" id="r_a36ddfab936462e5dc508fb82f9dfb077"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36ddfab936462e5dc508fb82f9dfb077">sumChildVolume</a> (uint start_node_index=0) const</td></tr>
+<tr class="memdesc:a36ddfab936462e5dc508fb82f9dfb077"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total volume of all child shoots starting from a specified node index.  <br /></td></tr>
 <tr class="separator:a36ddfab936462e5dc508fb82f9dfb077"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a77b72a1cbe9ef83ae289256c2c9ea376" id="r_a77b72a1cbe9ef83ae289256c2c9ea376"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77b72a1cbe9ef83ae289256c2c9ea376">propagateDownstreamLeafArea</a> (<a class="el" href="struct_shoot.html">Shoot</a> *shoot, uint node_index, float leaf_area)</td></tr>
-<tr class="separator:a77b72a1cbe9ef83ae289256c2c9ea376"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf4056ac1b7cd3b9c0303fc720e3a2d8" id="r_aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf4056ac1b7cd3b9c0303fc720e3a2d8">propagateDownstreamLeafArea</a> (const <a class="el" href="struct_shoot.html">Shoot</a> *shoot, uint node_index, float leaf_area)</td></tr>
+<tr class="separator:aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19eb5d6e3248c45de08774d11cbf329b" id="r_a19eb5d6e3248c45de08774d11cbf329b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19eb5d6e3248c45de08774d11cbf329b">updateShootNodes</a> (bool update_context_geometry=true)</td></tr>
+<tr class="memdesc:a19eb5d6e3248c45de08774d11cbf329b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates the shoot node positions and their associated geometries.  <br /></td></tr>
+<tr class="separator:a19eb5d6e3248c45de08774d11cbf329b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29e47423670ecb41712873c01a9c115e" id="r_a29e47423670ecb41712873c01a9c115e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29e47423670ecb41712873c01a9c115e">breakDormancy</a> ()</td></tr>
 <tr class="separator:a29e47423670ecb41712873c01a9c115e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50d440a1e74fb466b2c9500b3e90f626" id="r_a50d440a1e74fb466b2c9500b3e90f626"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50d440a1e74fb466b2c9500b3e90f626">makeDormant</a> ()</td></tr>
@@ -219,7 +240,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:aca6decb25760fb99ac8c720236493119"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab08c0fae92963c119e416331e847310f" id="r_ab08c0fae92963c119e416331e847310f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab08c0fae92963c119e416331e847310f">carbohydrate_pool_molC</a> = 0</td></tr>
 <tr class="separator:ab08c0fae92963c119e416331e847310f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad50aaac3abd929c56117059044a0e120" id="r_ad50aaac3abd929c56117059044a0e120"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad50aaac3abd929c56117059044a0e120">old_shoot_volume</a></td></tr>
+<tr class="memitem:ad50aaac3abd929c56117059044a0e120" id="r_ad50aaac3abd929c56117059044a0e120"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad50aaac3abd929c56117059044a0e120">old_shoot_volume</a> = 0</td></tr>
 <tr class="separator:ad50aaac3abd929c56117059044a0e120"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a57da113b239db99dbbec4c95c09359b4" id="r_a57da113b239db99dbbec4c95c09359b4"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a57da113b239db99dbbec4c95c09359b4">phyllochron_increase</a> = 2</td></tr>
 <tr class="separator:a57da113b239db99dbbec4c95c09359b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -278,7 +299,7 @@ Data Fields</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00960">960</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01040">1040</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8b2941ebd2f3c08157bcedf4dd966387" name="a8b2941ebd2f3c08157bcedf4dd966387"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8b2941ebd2f3c08157bcedf4dd966387">&#9670;&#160;</a></span>Shoot()</h2>
@@ -354,7 +375,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01823">1823</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01845">1845</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -374,7 +395,10 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00638">638</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Adds terminal floral buds to the shoot. This function creates and initializes a specified number of terminal floral buds at the apex of the shoot. Each bud is assigned its position, rotation, and bending axis, based on the shoot's parameters. </p>
+<dl class="section note"><dt>Note</dt><dd>The number of floral buds is determined by the "max_terminal_floral_buds" parameter in the shoot's configuration, and the parameter is resampled after creating the buds. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00662">662</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -424,7 +448,7 @@ Data Fields</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of phytomers in the shoot after the new phytomer is appended </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00429">429</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00453">453</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -443,7 +467,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00556">556</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00580">580</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -481,7 +505,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01839">1839</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01861">1861</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -490,6 +514,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Shoot::calculateShootInternodeVolume </td>
@@ -498,9 +525,17 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00661">661</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total volume of the shoot's internode tubes. This function iterates through all phytomers of the shoot and sums the volume of the internode tube objects if they exist. </p>
+<dl class="section return"><dt>Returns</dt><dd>The total volume of the shoot's internode tubes. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00685">685</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -509,6 +544,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Shoot::calculateShootLength </td>
@@ -517,9 +555,17 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00671">671</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total length of the shoot. This function iterates through all phytomers in the shoot and sums their internode lengths. </p>
+<dl class="section return"><dt>Returns</dt><dd>Total length of the shoot. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00695">695</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -528,6 +574,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Shoot::getShootAxisVector </td>
@@ -536,9 +585,24 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00724">724</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Determines the shoot axis vector based on a specified fraction along the shoot's length. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">shoot_fraction</td><td>A float value representing the fraction along the shoot's length (0 to 1). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vec3 representing the direction vector of the shoot axis for the computed position. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>The shoot_fraction parameter is clamped within the range of 0 to 1, with 0 corresponding to the base and 1 to the tip of the shoot. The function uses the closest phytomer's internode axis vector for calculation. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00748">748</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -557,12 +621,12 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00591">591</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00615">615</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a77b72a1cbe9ef83ae289256c2c9ea376" name="a77b72a1cbe9ef83ae289256c2c9ea376"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77b72a1cbe9ef83ae289256c2c9ea376">&#9670;&#160;</a></span>propagateDownstreamLeafArea()</h2>
+<a id="aaf4056ac1b7cd3b9c0303fc720e3a2d8" name="aaf4056ac1b7cd3b9c0303fc720e3a2d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf4056ac1b7cd3b9c0303fc720e3a2d8">&#9670;&#160;</a></span>propagateDownstreamLeafArea()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -570,7 +634,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">void Shoot::propagateDownstreamLeafArea </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="struct_shoot.html">Shoot</a> *</td>          <td class="paramname"><span class="paramname"><em>shoot</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="struct_shoot.html">Shoot</a> *</td>          <td class="paramname"><span class="paramname"><em>shoot</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -585,7 +649,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00737">737</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00761">761</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -594,6 +658,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::string Shoot::sampleChildShootType </td>
@@ -602,12 +669,17 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters. </p>
 <dl class="section return"><dt>Returns</dt><dd>Label of the randomly selected child shoot type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01862">1862</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01884">1884</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -640,7 +712,7 @@ Data Fields</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of epicormic shoots to be produced; position of the epicormic shoot as a fraction of the shoot's length </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01926">1926</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01948">1948</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -649,6 +721,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool Shoot::sampleVegetativeBudBreak </td>
@@ -657,6 +732,11 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Randomly sample whether a vegetative bud should break into a new shoot. </p>
@@ -668,7 +748,7 @@ Data Fields</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the vegetative bud should break into a new shoot </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01897">1897</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01919">1919</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -677,6 +757,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Shoot::sumChildVolume </td>
@@ -685,9 +768,24 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00781">781</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total volume of all child shoots starting from a specified node index. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start_node_index</td><td>The starting index of the node from which to sum child volumes. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The total volume of all child shoots starting from the given node index. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Throws an error if start_node_index is out of range. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00805">805</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -696,6 +794,9 @@ Data Fields</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Shoot::sumShootLeafArea </td>
@@ -704,9 +805,24 @@ Data Fields</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00751">751</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total leaf area of a shoot starting from a given node index. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start_node_index</td><td>[optional] The index of the starting node in the shoot. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Total leaf area of the shoot and its child shoots starting from the given node. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Throws an error if the start_node_index is out of range. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00775">775</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -725,7 +841,9 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00624">624</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Terminates the apical bud of the shoot. This function marks the apical meristem of the shoot as no longer alive. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00648">648</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -744,7 +862,9 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00628">628</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Terminates all axillary vegetative buds within the shoot. This function iterates through all phytomers of the current shoot and marks the axillary vegetative buds as no longer alive. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00652">652</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -763,9 +883,15 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Recalculate and apply the shoot's origin position and shift all downstream shoots. </p>
+<p>Updates the shoot node positions and their associated geometries. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">update_context_geometry</td><td>Indicates whether the geometry context should be updated for the shoot nodes. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00679">679</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00703">703</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -782,7 +908,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01022">1022</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01150">1150</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -798,7 +924,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01023">1023</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01151">1151</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -814,7 +940,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01068">1068</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01196">1196</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -830,7 +956,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01033">1033</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01161">1161</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -846,7 +972,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01071">1071</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01199">1199</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -862,7 +988,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01084">1084</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01212">1212</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -878,7 +1004,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01019">1019</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01147">1147</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -894,7 +1020,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01056">1056</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01184">1184</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -910,7 +1036,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01042">1042</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01170">1170</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -926,7 +1052,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01048">1048</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01176">1176</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -942,7 +1068,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01039">1039</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01167">1167</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -958,7 +1084,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01054">1054</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01182">1182</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -974,7 +1100,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01078">1078</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01206">1206</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -990,7 +1116,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01040">1040</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01168">1168</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1006,7 +1132,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01059">1059</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01187">1187</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1022,7 +1148,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01026">1026</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01154">1154</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1038,7 +1164,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01061">1061</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01189">1189</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1054,7 +1180,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01063">1063</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01191">1191</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1070,7 +1196,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01047">1047</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01175">1175</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1086,7 +1212,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01050">1050</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01178">1178</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1228,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01020">1020</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01148">1148</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1113,12 +1239,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float Shoot::old_shoot_volume</td>
+          <td class="memname">float Shoot::old_shoot_volume = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01034">1034</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01162">1162</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1134,7 +1260,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01029">1029</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01157">1157</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1150,7 +1276,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01031">1031</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01159">1159</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1166,7 +1292,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01027">1027</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01155">1155</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1182,7 +1308,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01052">1052</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01180">1180</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1198,7 +1324,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01036">1036</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01164">1164</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1214,7 +1340,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01077">1077</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01205">1205</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1230,7 +1356,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01053">1053</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01181">1181</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1246,7 +1372,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01037">1037</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01165">1165</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1262,7 +1388,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01080">1080</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01208">1208</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1278,7 +1404,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01082">1082</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01210">1210</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1294,7 +1420,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01028">1028</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01156">1156</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1310,7 +1436,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01024">1024</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01152">1152</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1326,7 +1452,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01030">1030</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01158">1158</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1342,7 +1468,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01066">1066</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01194">1194</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1358,7 +1484,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01065">1065</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01193">1193</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1374,7 +1500,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01073">1073</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01201">1201</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1390,7 +1516,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01075">1075</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01203">1203</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1406,7 +1532,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01057">1057</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01185">1185</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

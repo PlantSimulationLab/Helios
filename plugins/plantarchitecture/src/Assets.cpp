@@ -310,6 +310,31 @@ uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, b
     return objID;
 }
 
+void CapsicumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    if( shoot_node_index<6 && phytomer->rank==0 ){
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+        phytomer->removeLeaf();
+    }
+
+    if( phytomer->rank>=2 ){
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = std::min(1.f, 0.6f + 0.4f * shoot_node_index / 5.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    if ( phytomer->rank == 0 ) {
+        float inode_scale = std::min(1.f, 0.05f + 0.95f * plant_age / 15.f);
+        phytomer->scaleInternodeMaxLength(inode_scale);
+    }
+
+}
+
 uint CheeseweedLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/CheeseweedLeaf.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );

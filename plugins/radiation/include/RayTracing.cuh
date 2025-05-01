@@ -13,11 +13,116 @@
 
 */
 
+#ifndef RAYTRACING_CUH
+#define RAYTRACING_CUH
+
+#include <stdint.h>
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 typedef unsigned int uint;
+
+//launch parameters
+rtDeclareVariable(rtObject,      top_object, , );
+rtDeclareVariable( unsigned int,  random_seed, , );
+rtDeclareVariable( unsigned int,  launch_offset, , );
+rtDeclareVariable( unsigned int,  launch_face, , );
+rtDeclareVariable( unsigned int, Nbands_launch,, );
+rtDeclareVariable( unsigned int, Nbands_global,, );
+rtBuffer<bool, 1> band_launch_flag;
+
+//ray types
+rtDeclareVariable(unsigned int,  direct_ray_type, , );
+rtDeclareVariable(unsigned int,  diffuse_ray_type, , );
+rtDeclareVariable(unsigned int,  camera_ray_type, , );
+rtDeclareVariable(unsigned int,  pixel_label_ray_type, , );
+
+rtDeclareVariable(uint3, launch_index, rtLaunchIndex, );
+rtDeclareVariable(uint3, launch_dim,   rtLaunchDim, );
+
+//texture-related buffers
+rtBuffer<bool, 3>   maskdata;
+rtBuffer<int2, 1>   masksize;
+rtBuffer<int, 1>   maskID;
+rtBuffer<float2, 2> uvdata;
+rtBuffer<int, 1> uvID;
+
+//Object ID for a primitive
+rtBuffer<uint,1> objectID;
+rtBuffer<int2, 1> object_subdivisions;
+
+//ID for first primitive in an object
+rtBuffer<uint,1> primitiveID;
+
+//Radiation sources buffers
+rtDeclareVariable( unsigned int, Nsources, , );
+rtBuffer<float, 1> source_fluxes;
+rtBuffer<float3, 1> source_positions;
+rtBuffer<float3, 1> source_rotations;
+rtBuffer<float2, 1> source_widths;
+rtBuffer<unsigned int, 1> source_types;
+
+//Diffuse radiation
+rtBuffer<float, 1> diffuse_flux;
+rtBuffer<float, 1> diffuse_extinction;
+rtBuffer<float3, 1> diffuse_peak_dir;
+rtBuffer<float, 1> diffuse_dist_norm;
+rtBuffer<float, 1>   Rsky;
+
+//--- Patches ---//
+rtBuffer<float3, 2> patch_vertices;
+rtBuffer<unsigned int, 1> patch_UUID;
+//--- Triangles ---//
+rtBuffer<float3, 2> triangle_vertices;
+rtBuffer<unsigned int, 1> triangle_UUID;
+//--- Disks ---//
+//To-Do: disks not finished
+rtBuffer<unsigned int, 1> disk_UUID;
+//--- Tiles ---//
+rtBuffer<float3, 2> tile_vertices;
+rtBuffer<unsigned int, 1> tile_UUID;
+//--- Voxels ---//
+rtBuffer<float3, 2> voxel_vertices;
+rtBuffer<unsigned int, 1> voxel_UUID;
+//--- Bounding Box ---//
+rtBuffer<float3, 2> bbox_vertices;
+rtBuffer<unsigned int, 1> bbox_UUID;
+
+//Primitive data
+rtDeclareVariable( unsigned int, Nprimitives,, );
+rtDeclareVariable(float2, periodic_flag,, );
+rtBuffer<char, 1> twosided_flag;
+rtBuffer<float, 2>  transform_matrix;
+rtBuffer<unsigned int, 1> primitive_type;
+rtBuffer<float, 1> primitive_solid_fraction;
+
+rtBuffer<float, 1> rho, tau;
+rtBuffer<float, 1> rho_cam, tau_cam;
+
+//Output buffers
+rtBuffer<float, 1>   radiation_in;
+rtBuffer<float, 1>   radiation_in_camera;
+rtBuffer<float, 1>   radiation_out_top;
+rtBuffer<float, 1>   radiation_out_bottom;
+rtBuffer<float, 1>   scatter_buff_top;
+rtBuffer<float, 1>   scatter_buff_bottom;
+rtBuffer<float, 1>   scatter_buff_top_cam;
+rtBuffer<float, 1>   scatter_buff_bottom_cam;
+
+//Camera variables
+rtBuffer<unsigned int, 1>   camera_pixel_label;
+rtBuffer<float, 1>   camera_pixel_depth;
+rtDeclareVariable( unsigned int, camera_ID,, );
+rtDeclareVariable( unsigned int, Ncameras,, );
+rtDeclareVariable( float3, camera_position, , );
+rtDeclareVariable( float2, camera_direction, , );
+rtDeclareVariable( float, camera_lens_diameter, , );
+rtDeclareVariable( float, FOV_aspect_ratio, , );
+rtDeclareVariable( float, camera_focal_length, , );
+rtDeclareVariable( float, camera_viewplane_length, , );
+
 
 void queryGPUMemory( void );
 
@@ -31,17 +136,18 @@ struct PerRayData
   uint origin_UUID;
   //! Face of primitive from which ray was launched (true=top, false=bottom)
   bool face;
-  //! Area of primitive (note for voxels, this is area density)
-  float area;
   //! Seed for curand random number generator
   uint seed;
   //! Number of periodic boundary intersections for ray
-  unsigned char periodic_depth;
+  //unsigned char periodic_depth;
   //! Numerical identifier for radiation source corresponding to each ray
   /**
    * \note The data type limits to a maximum of 256 radiation sources
    */
   unsigned char source_ID;
+  //! Flag to determine if ray hit a periodic boundary
+  bool hit_periodic_boundary;
+  optix::float3 periodic_hit;
 
 };
 
@@ -466,6 +572,105 @@ __device__ void d_sampleSquare( uint& seed, optix::float3& sample ){
 
 }
 
+__device__ bool d_sampleTexture_patch( optix::float3 &sp, const optix::int2 &subpatch_index, const optix::float2 &subpatch_size, PerRayData &prd, int mask_ID, int uv_ID ) {
+
+  int2 sz = masksize[mask_ID];
+  uint3 ind;
+
+  bool solid = false;
+  int count=0;
+  while( !solid ){
+      count ++;
+
+      float2 uv = make_float2((sp.x + 0.5f), (sp.y + 0.5f));
+      if (uv_ID == -1) {//does not have custom (u,v) coordinates
+        ind = make_uint3(floorf(float(sz.x - 1) * uv.x), floorf(float(sz.y - 1) * (1.f - uv.y)), mask_ID);
+      } else {//has custom (u,v) coordinates
+        float2 uvmin = uvdata[make_uint2(0, uv_ID)];
+        float2 duv;
+        duv.x = uvdata[make_uint2(1, uv_ID)].x - uvdata[make_uint2(0, uv_ID)].x;
+        duv.y = uvdata[make_uint2(2, uv_ID)].y - uvdata[make_uint2(1, uv_ID)].y;
+       ind = make_uint3(floorf(float(sz.x - 1) * (uvmin.x + uv.x * duv.x)), floorf(float(sz.y - 1) * (1.f - uvmin.y - uv.y * duv.y)), mask_ID);
+      }
+      solid = maskdata[ind];
+      if (!solid) {
+        if (count > 10) {
+          break;
+        }
+        sp.x = -0.5f + (subpatch_index.x + rnd(prd.seed)) * subpatch_size.x;
+        sp.y = -0.5f + (subpatch_index.y + rnd(prd.seed)) * subpatch_size.y;
+      }
+
+  }
+
+  return solid;
+
+}
+
+__device__ bool d_sampleTexture_triangle( optix::float3 &sp, const optix::float3 &v0, const optix::float3 &v1, const optix::float3 &v2, PerRayData &prd, const float (&m_trans)[16], int mask_ID, int uv_ID ) {
+
+  int2 sz = masksize[mask_ID];
+
+  float2 uv0 = uvdata[ make_uint2(0,uv_ID) ];
+  float2 uv1 = uvdata[ make_uint2(1,uv_ID) ];
+  float2 uv2 = uvdata[ make_uint2(2,uv_ID) ];
+
+  float a = v0.x - v1.x, b = v0.x - v2.x, d = v0.x;
+  float e = v0.y - v1.y, f = v0.y - v2.y,  h = v0.y;
+  float i = v0.z - v1.z, j = v0.z - v2.z, l = v0.z;
+
+  bool solid = false;
+  int count=0;
+  while( !solid ){
+      count ++;
+
+      float3 R = sp;
+      d_transformPoint(m_trans,R);
+
+      float c = R.x, g = R.y, k = R.z;
+
+      float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+      float q = g * i - e * k, s = e * j - f * i;
+
+      float inv_denom  = 1.f / (a * m + b * q + c * s);
+
+      float e1 = d * m - b * n - c * p;
+      float beta = e1 * inv_denom;
+
+      float r = r = e * l - h * i;
+      float e2 = a * n + d * q + c * r;
+      float gamma = e2 * inv_denom;
+
+      float2 uv = uv0 + beta*(uv1-uv0) + gamma*(uv2-uv0);
+
+      uint3 ind = make_uint3( floorf(float(sz.x-1)*uv.x), floorf(float(sz.y-1)*(1.f-uv.y)), mask_ID );
+
+      if( uv.x<0 || uv.x>1.f || uv.y<0 || uv.y>1.f ) {
+          solid = true;
+      }else {
+          solid = maskdata[ind];
+      }
+      if( !solid ){
+          if( count>10 ){
+              break;
+          }
+          float Rx = rnd(prd.seed);
+          float Ry = rnd(prd.seed);
+          if( Rx<Ry ){
+              sp.x = Rx;
+              sp.y = Ry;
+          }else{
+              sp.x = Ry;
+              sp.y = Rx;
+          }
+      }
+
+  }
+
+  return solid;
+
+}
+
 static __host__ __device__ __inline__ float acos_safe( float x )
 {
   if (x < -1.0) x = -1.0 ;
@@ -479,3 +684,81 @@ static __host__ __device__ __inline__ float asin_safe( float x )
   else if (x > 1.0) x = 1.0 ;
   return asin(x) ;
 }
+
+// ––––– auxiliary helpers ––––––––––––––––––––––––––––––––––––––
+static __forceinline__ __device__ uint32_t reverseBits32(uint32_t v)
+{
+    // bitwise reverse (Van-der-Corput direction numbers for dim0)
+    v = (v << 16) | (v >> 16);
+    v = ((v & 0x00ff00ffU) << 8)  | ((v & 0xff00ff00U) >> 8);
+    v = ((v & 0x0f0f0f0fU) << 4)  | ((v & 0xf0f0f0f0U) >> 4);
+    v = ((v & 0x33333333U) << 2)  | ((v & 0xccccccccU) >> 2);
+    v = ((v & 0x55555555U) << 1)  | ((v & 0xaaaaaaaaU) >> 1);
+    return v;
+}
+
+// Simple PCG-style 32-bit hash (acts as an Owen scramble)
+static __forceinline__ __device__ uint32_t pcgHash(uint32_t v)
+{
+    v ^= v >> 17; v *= 0xed5ad4bbU;
+    v ^= v >> 11; v *= 0xac4c1b51U;
+    v ^= v >> 15; v *= 0x31848babU;
+    v ^= v >> 14;
+    return v;
+}
+
+// Convert uint32→float in [0,1)
+static __forceinline__ __device__ float uint32ToUnitFloat(uint32_t v)
+{
+    return v * 2.3283064365386963e-10f;   // 1 / 2^32
+}
+
+// Sobol dimension-0 (Van der Corput) with Owen scramble
+static __forceinline__ __device__ float sobolDim0(uint32_t idx, uint32_t scramble)
+{
+    return uint32ToUnitFloat(reverseBits32(idx) ^ scramble);
+}
+
+// Sobol dimension-1 (direction numbers from poly x^2+x+1)
+static __forceinline__ __device__ float sobolDim1(uint32_t idx, uint32_t scramble)
+{
+    uint32_t v = 1u << 31;          // MSB first
+    uint32_t res = scramble;
+    while (idx) {
+        if (idx & 1) res ^= v;
+        idx >>= 1;
+        v ^= v >> 1;                // Gray-code update
+    }
+    return uint32ToUnitFloat(res);
+}
+
+// ––––– public entry point –––––––––––––––––––––––––––––––––––––
+static __forceinline__ __device__ float2 sobol2D(uint32_t sampleIdx)
+{
+    // Independent Owen scrambles for each dimension
+    uint32_t scramble0 = pcgHash(sampleIdx);
+    uint32_t scramble1 = pcgHash(sampleIdx ^ 0x9e3779b9U);   // golden-ratio XOR
+
+    float  x = sobolDim0(sampleIdx, scramble0);   // dimension 0
+    float  y = sobolDim1(sampleIdx, scramble1);   // dimension 1
+    return make_float2(x, y);
+}
+
+// simple LCG → xorshift → float conversion (1 cycle, 4 ops)
+__forceinline__ __device__ float uint32_to_unit_float(uint32_t v)
+{
+    return v * 2.3283064365386963e-10f;   // 1 / 2^32
+}
+__forceinline__ __device__ float2 hash2D(uint32_t s)
+{
+    s ^= s * 0x6c50b47cu;  s ^= s >> 17;
+    float u = uint32_to_unit_float(s);
+
+    s ^= s * 0xb82f1e52u;  s ^= s >> 17;
+    float v = uint32_to_unit_float(s);
+
+    return make_float2(u, v);
+}
+
+
+#endif

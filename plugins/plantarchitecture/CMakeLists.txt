@@ -5,7 +5,7 @@ project(helios)
 include_directories(include)
 include_directories(../../core/include)
 
-add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp;src/PlantLibrary.cpp;src/Assets.cpp;src/InputOutput.cpp;src/CarbohydrateModel.cpp;src/selfTest.cpp")
+add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp;src/PlantLibrary.cpp;src/Assets.cpp;src/InputOutput.cpp;src/CarbohydrateModel.cpp;src/Hungarian.cpp;src/selfTest.cpp")
 
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
 

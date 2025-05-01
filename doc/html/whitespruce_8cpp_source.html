@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/canopygenerator/src/whitespruce.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -167,7 +180,7 @@ $(function(){initNavTree('whitespruce_8cpp_source.html',''); initResizable(true)
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>  <span class="keywordtype">float</span> dz = params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a46f1f25dba30c6af07228680d80837a6" title="Distance between the ground and top of trunks.">trunk_height</a>/10.f;</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;10; i++ ){</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    rad_main.push_back(params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#ab5771594720bf44fc57c40cedd629ff5" title="Radius of the trunk at the base.">trunk_radius</a>*(9-i)/9.f);</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    pos_main.push_back(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0.,0., i*dz ));</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    pos_main.push_back(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0., i*dz ));</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  }</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>  <span class="keywordflow">for</span>( uint i=0; i&lt;rad_main.size(); i++ ){</div>
@@ -210,8 +223,8 @@ $(function(){initNavTree('whitespruce_8cpp_source.html',''); initResizable(true)
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>      <span class="keywordtype">float</span> r = rcrown + <a class="code hl_function" href="_canopy_generator_8h.html#accfb46da54c7b0e83878a1331bbc94d1" title="Draw a random number (float) from a uniform distribution between -V and V.">getVariation</a>(0.1f*rcrown,generator);</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>      </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>      pos_branch.push_back( origin + <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,z) );</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>      pos_branch.push_back( origin + <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(r*sinf(phi)*cosf(theta),r*cosf(phi)*cosf(theta),z+r*sinf(theta)) );</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>      pos_branch.push_back( origin + <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,z) );</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>      pos_branch.push_back( origin + <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(r*sinf(phi)*cosf(theta),r*cosf(phi)*cosf(theta),z+r*sinf(theta)) );</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>      <span class="comment">//printf(&quot;pos_branch = (%f,%f,%f)\n&quot;,pos_branch.front().x,pos_branch.front().y,pos_branch.front().z);</span></div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>      </div>
@@ -245,7 +258,7 @@ $(function(){initNavTree('whitespruce_8cpp_source.html',''); initResizable(true)
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="comment">//vec3 bdir = l*make_vec3(sinf(phi)*cosf(theta+bangle),cosf(phi)*cosf(theta+0.5*PI_F),sinf(theta+bangle));</span></div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="comment">//bdir = rotatePointAboutLine( bdir, base, interpolateTube( pos_branch, bfrac-0.01 ), getVariation(PI_F,generator) );</span></div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> bdir = l*<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(sinf(phi+(0.4+<a class="code hl_function" href="_canopy_generator_8h.html#accfb46da54c7b0e83878a1331bbc94d1" title="Draw a random number (float) from a uniform distribution between -V and V.">getVariation</a>(0.1f,generator))*PI_F*(-1+2*side)),cosf(phi-0.4*PI_F+0.8*PI_F*side),0);</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> bdir = l*<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(sinf(phi+(0.4+<a class="code hl_function" href="_canopy_generator_8h.html#accfb46da54c7b0e83878a1331bbc94d1" title="Draw a random number (float) from a uniform distribution between -V and V.">getVariation</a>(0.1f,generator))*PI_F*(-1+2*side)),cosf(phi-0.4*PI_F+0.8*PI_F*side),0);</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    </div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    pos_subbranch.push_back( base + bdir );</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    </div>
@@ -270,11 +283,11 @@ $(function(){initNavTree('whitespruce_8cpp_source.html',''); initResizable(true)
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>      <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">cart2sphere</a>(norm);</div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>      UUID_leaf_plant.push_back( context-&gt;addTile( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(0.1*params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>,params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a28eb26d944a0e67a41b1b06343090fc0" title="Number of sub-division segments per needle.">needle_subdivisions</a>, params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#ab3687772981118c2b4aaeb4ff544289a" title="Color of needles.">needle_color</a> ) );</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>      UUID_leaf_plant.push_back( context-&gt;addTile( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(0.1*params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>,params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a28eb26d944a0e67a41b1b06343090fc0" title="Number of sub-division segments per needle.">needle_subdivisions</a>, params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#ab3687772981118c2b4aaeb4ff544289a" title="Color of needles.">needle_color</a> ) );</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>      <span class="keywordtype">float</span> downangle = 0.2*PI_F;</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>      context-&gt;rotatePrimitive( UUID_leaf_plant.back(), downangle-rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>, <span class="stringliteral">&quot;x&quot;</span> );</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>      context-&gt;translatePrimitive( UUID_leaf_plant.back(), <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,-0.55*params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>,0) );</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>      context-&gt;translatePrimitive( UUID_leaf_plant.back(), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,-0.55*params.<a class="code hl_variable" href="struct_white_spruce_canopy_parameters.html#a41a653b953bd7a5f9c6cecfb07f1bfb4" title="Length of needles.">needle_length</a>,0) );</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>      context-&gt;rotatePrimitive( UUID_leaf_plant.back(), 0.5*PI_F-rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>, <span class="stringliteral">&quot;z&quot;</span> );</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>      context-&gt;rotatePrimitive( UUID_leaf_plant.back(), <a class="code hl_function" href="_canopy_generator_8h.html#accfb46da54c7b0e83878a1331bbc94d1" title="Draw a random number (float) from a uniform distribution between -V and V.">getVariation</a>(PI_F,generator), norm );</div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>      context-&gt;translatePrimitive( UUID_leaf_plant.back(), nbase );</div>

@@ -19,22 +19,22 @@ using namespace helios;
 
 // ------ Primitive Data -------- //
 
-void Primitive::setPrimitiveData( const char* label, const int& data ){
+void Primitive::setPrimitiveData(const char* label, int data){
   primitive_data_int[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_INT;
 }
 
-void Primitive::setPrimitiveData( const char* label, const uint& data ){
+void Primitive::setPrimitiveData(const char* label, uint data){
   primitive_data_uint[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_UINT;
 }
 
-void Primitive::setPrimitiveData( const char* label, const float& data ){
+void Primitive::setPrimitiveData(const char* label, float data){
   primitive_data_float[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_FLOAT;
 }
 
-void Primitive::setPrimitiveData( const char* label, const double& data ){
+void Primitive::setPrimitiveData(const char* label, double data){
   primitive_data_double[label] = {data};
   primitive_data_types[label] = HELIOS_TYPE_DOUBLE;
 }
@@ -700,7 +700,7 @@ std::vector<std::string> Primitive::listPrimitiveData() const{
 
 }
 
-void Context::setPrimitiveData( uint UUID, const char* label, const int& data ){
+void Context::setPrimitiveData(uint UUID, const char* label, int data){
 #ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -724,7 +724,7 @@ void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* labe
   }
 }
 
-void Context::setPrimitiveData( uint UUID, const char* label, const uint& data ){
+void Context::setPrimitiveData(uint UUID, const char* label, uint data){
 #ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -748,7 +748,7 @@ void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* labe
   }
 }
 
-void Context::setPrimitiveData( uint UUID, const char* label, const float& data ){
+void Context::setPrimitiveData(uint UUID, const char* label, float data){
 #ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -772,7 +772,7 @@ void Context::setPrimitiveData( const std::vector<uint> &UUIDs, const char* labe
   }
 }
 
-void Context::setPrimitiveData( uint UUID, const char* label, const double& data ){
+void Context::setPrimitiveData(uint UUID, const char* label, double data){
 #ifdef HELIOS_DEBUG
   if( primitives.find(UUID) == primitives.end() ){
     helios_runtime_error( "ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -3563,22 +3563,22 @@ std::vector<std::string> Context::listObjectData(uint ObjID) const{
   return getObjectPointer_private(ObjID)->listObjectData();
 }
 
-void CompoundObject::setObjectData( const char* label, const int& data ){
+void CompoundObject::setObjectData(const char* label, int data){
   object_data_int[label] = {data};
   object_data_types[label] = HELIOS_TYPE_INT;
 }
 
-void CompoundObject::setObjectData( const char* label, const uint& data ){
+void CompoundObject::setObjectData(const char* label, uint data){
   object_data_uint[label] = {data};
   object_data_types[label] = HELIOS_TYPE_UINT;
 }
 
-void CompoundObject::setObjectData( const char* label, const float& data ){
+void CompoundObject::setObjectData(const char* label, float data){
   object_data_float[label] = {data};
   object_data_types[label] = HELIOS_TYPE_FLOAT;
 }
 
-void CompoundObject::setObjectData( const char* label, const double& data ){
+void CompoundObject::setObjectData(const char* label, double data){
   object_data_double[label] = {data};
   object_data_types[label] = HELIOS_TYPE_DOUBLE;
 }
@@ -4368,28 +4368,28 @@ std::vector<uint> Context::filterObjectsByData( const std::vector<uint> &objIDs,
 
 // -------- Global Data ---------- //
 
-void Context::setGlobalData( const char* label, const int& data ){
+void Context::setGlobalData(const char* label, int data){
   std::vector<int> vec{data};
   globaldata[label].type = HELIOS_TYPE_INT;
   globaldata[label].size = 1;
   globaldata[label].global_data_int = vec;
 }
 
-void Context::setGlobalData( const char* label, const uint& data ){
+void Context::setGlobalData(const char* label, uint data){
   std::vector<uint> vec{data};
   globaldata[label].type = HELIOS_TYPE_UINT;
   globaldata[label].size = 1;
   globaldata[label].global_data_uint = vec;
 }
 
-void Context::setGlobalData( const char* label, const float& data ){
+void Context::setGlobalData(const char* label, float data){
   std::vector<float> vec{data};
   globaldata[label].type = HELIOS_TYPE_FLOAT;
   globaldata[label].size = 1;
   globaldata[label].global_data_float = vec;
 }
 
-void Context::setGlobalData( const char* label, const double& data ){
+void Context::setGlobalData(const char* label, double data){
   std::vector<double> vec{data};
   globaldata[label].type = HELIOS_TYPE_DOUBLE;
   globaldata[label].size = 1;

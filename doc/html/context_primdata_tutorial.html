@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 5: Primitive Data</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -177,9 +190,9 @@ Creating Primitive Data (Scalars)</h1>
 <div class="line">    </div>
 <div class="line">    <span class="keywordtype">float</span> data = 10;</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//add primitive data called my_data to only the first primitive with a value of 10</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//add primitive data called my_data to only the first primitive with a value of 10</span></div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs,<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//we could also set the value of all primitives at once</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs,<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//we could also set the value of all primitives at once</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>To retrieve the primitive value we set, we can use the getPrimitiveData() function as illustrated below.</p>
@@ -200,7 +213,7 @@ Creating Primitive Data (Scalars)</h1>
 <div class="line">    </div>
 <div class="line">    <span class="keywordtype">float</span> data = 10;</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//add primitive data called my_data to only the first primitive with a value of 10</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//add primitive data called my_data to only the first primitive with a value of 10</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">float</span> data_new;</div>
 <div class="line"> </div>
@@ -253,7 +266,7 @@ Creating Primitive Data (Arrays)</h1>
 <div class="line">    </div>
 <div class="line">    <span class="keywordtype">float</span> data[5] = {10, 11, 12, 13, 14};</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,5,&amp;data); <span class="comment">//add primitive data called my_data to only the first primitive</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs.at(0),<span class="stringliteral">&quot;my_data&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,5,&amp;data); <span class="comment">//add primitive data called my_data to only the first primitive</span></div>
 <div class="line"> </div>
 <div class="line">    std::vector&lt;float&gt; data_new;</div>
 <div class="line"> </div>

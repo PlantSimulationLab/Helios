@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -155,7 +168,7 @@ $(function(){initNavTree('canopy__w_u_e_tutorial.html',''); initResizable(true);
 <h2><a class="anchor" id="tutorial12_geometry"></a>
 3. Creating Our Model Geometry</h2>
 <p>Next, we will construct a canopy. In this tutorial we will use the CanopyGenerator plugin to create a canopy of ellipsoidal crowns composed of rectangular leaf elements. It is worth noting, however, that there are many ways to construct a canopy. For example, if you want to work with more complicated and/or realistic crowns, you can load in predefined geometries using .xml or .ply files, or you can use the PlantArchitecture model to generate crowns.</p>
-<p>After initializing the plugin, we need to define a number of parameters which will define the geometry of our ellipsoidal crowns. The SphericalCrownParameters parameter grouping inside of the canopy generator plugin requires a 3-input vector of float values to define the 3D (x, y, z) dimensions of our crowns using the crown_radius parameter. We will assume that the crowns each have a circular footprint, with the same x and y dimensions, so will define a single ‘radius’ value that will be used for both of these, but will define a different z dimension ‘height radius’ value. We also need to define the spacing between each of our crowns in both the x and y direction in a 2-input vector of float values using the plant_spacing parameter, so we will define a ‘row spacing’ value, as well as a ‘plant spacing’ value, which will correspond to the x and y dimensions, respectively. For the purposes of this tutorial, we will assume that crowns are immediately next to one another with no extra spacing between them. Since the spacing values are defined going from the center of one crown to the center of its neighbors, we will set these values equal to 2 times the crown radius values that we previously defined. However, if you wished to create greater spacing in either direction, you could easily do so by altering these values. Next, we need to determine the number of rows (in the x dimension) and number of plants per row ( in the y dimension) that we will simulate. For our purposes we will make a 3 x 3 grid of crowns, which will be input as a 2-input vector of integer values using the plant_count parameter. We will also define the size of our leaf elements using a 2-input vector of float values giving the length and width of our leaves using the leaf_size parameter, as well as the number of subdivisions that will be present on each leaf in order to give our models greater resolution in the x and y dimensions of each leaf primitive using a 2-input vector of integer values using the leaf_subdivisions parameter. Finally, we will also define the leaf area density of our crowns (e.g. the m2 leaf area per m3 crown volume).</p>
+<p>After initializing the plugin, we need to define a number of parameters which will define the geometry of our ellipsoidal crowns. The SphericalCrownsCanopyParameters parameter grouping inside of the canopy generator plugin requires a 3-input vector of float values to define the 3D (x, y, z) dimensions of our crowns using the crown_radius parameter. We will assume that the crowns each have a circular footprint, with the same x and y dimensions, so will define a single ‘radius’ value that will be used for both of these, but will define a different z dimension ‘height radius’ value. We also need to define the spacing between each of our crowns in both the x and y direction in a 2-input vector of float values using the plant_spacing parameter, so we will define a ‘row spacing’ value, as well as a ‘plant spacing’ value, which will correspond to the x and y dimensions, respectively. For the purposes of this tutorial, we will assume that crowns are immediately next to one another with no extra spacing between them. Since the spacing values are defined going from the center of one crown to the center of its neighbors, we will set these values equal to 2 times the crown radius values that we previously defined. However, if you wished to create greater spacing in either direction, you could easily do so by altering these values. Next, we need to determine the number of rows (in the x dimension) and number of plants per row ( in the y dimension) that we will simulate. For our purposes we will make a 3 x 3 grid of crowns, which will be input as a 2-input vector of integer values using the plant_count parameter. We will also define the size of our leaf elements using a 2-input vector of float values giving the length and width of our leaves using the leaf_size parameter, as well as the number of subdivisions that will be present on each leaf in order to give our models greater resolution in the x and y dimensions of each leaf primitive using a 2-input vector of integer values using the leaf_subdivisions parameter. Finally, we will also define the leaf area density of our crowns (e.g. the m2 leaf area per m3 crown volume).</p>
 <p>We will then use the CanopyGenerator::buildCanopy() function with our parameter inputs to construct our 3x3 grid of ellipsoidal crowns. We will also need to define a vector containing all of our leaf UUIDs, with 1 unique UUID per leaf primitive that we have constructed. In order to do this, we can loop through each of the 9 crowns that we have created, and add all of their leaf UUIDs into a single vector.</p>
 <p>We will also create a ground object, using the CanopyGenerator::buildGround() function. We need to define the ground’s origin (a vec3 3D locator, centered at 0,0,0 in this case), its size (a vec2 x/y extent indicator, which will have an x length = our row spacing multiplied by the number of rows that we have, and a y length = our plant spacing multiplied by the number of plants per row that we have), as well as a number of ground patches (which we will set equal to the number of crowns) and the number of subpatches that we will have on our ground object, each as a vec2 of integer values.</p>
 <h2><a class="anchor" id="tutorial12_solarposition"></a>
@@ -205,6 +218,7 @@ Code</h2>
 <div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_photosynthesis_model_8h.html">PhotosynthesisModel.h</a>&quot;</span></div>
 <div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_stomatal_conductance_model_8h.html">StomatalConductanceModel.h</a>&quot;</span></div>
 <div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_solar_position_8h.html">SolarPosition.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_boundary_layer_conductance_model_8h.html">BoundaryLayerConductanceModel.h</a>&quot;</span></div>
 <div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
@@ -248,31 +262,27 @@ Code</h2>
 <div class="line">    <span class="keywordtype">float</span> w_leaf = 0.05; <span class="comment">//leaf width</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Leaf and canopy parameters</span></div>
-<div class="line">    SphericalCrownCanopyParameters params;</div>
-<div class="line">    params.crown_radius = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(crown_radius, crown_radius, crown_height_radius);</div>
-<div class="line">    params.plant_spacing = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(spacing_row, spacing_plant);</div>
-<div class="line">    params.plant_count = <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(row_number, plant_number);</div>
-<div class="line">    params.leaf_size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(l_leaf, w_leaf);</div>
-<div class="line">    params.leaf_subdivisions = <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(3, 3);</div>
-<div class="line">    params.leaf_area_density = 1.f;</div>
+<div class="line">    <a class="code hl_struct" href="struct_spherical_crowns_canopy_parameters.html" title="Parameters defining the canopy with spherical crowns.">SphericalCrownsCanopyParameters</a> params;</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d" title="Radius of the spherical crowns.">crown_radius</a> = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(crown_radius, crown_radius, crown_height_radius);</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#a9be21b26afb7d32b61a236bbe5372acd" title="Spacing between adjacent crowns in the x- and y-directions. Note that if canopy_configuration=&#39;random...">plant_spacing</a> = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(spacing_row, spacing_plant);</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#a8ac3d5fbeee86db6289693aa5e14a76f" title="Number of crowns/plants in the x- and y-directions.">plant_count</a> = <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(row_number, plant_number);</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#a48c2ab4110bc38b4f412250d8e3e8051" title="Length of leaf in x- and y- directions (prior to rotation)">leaf_size</a> = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(l_leaf, w_leaf);</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#aa7ddee04ae15e0aa0814702a0ef4a034" title="Number of sub-division segments per leaf.">leaf_subdivisions</a> = <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(3, 3);</div>
+<div class="line">    params.<a class="code hl_variable" href="struct_spherical_crowns_canopy_parameters.html#ab625b07dbc7f73b11d4af2932e96158d" title="One-sided leaf area density within spherical crowns.">leaf_area_density</a> = 1.f;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Create the crowns</span></div>
 <div class="line">    canopygenerator.buildCanopy(params);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Get the UUID numbers for all of the leaves</span></div>
-<div class="line">    <span class="keywordtype">int</span> plantcount = canopygenerator.getPlantCount();</div>
-<div class="line">    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> plant = 0; plant &lt; plantcount; plant++){</div>
-<div class="line">        std::vector&lt;uint&gt; crown_UUIDs = <a class="code hl_function" href="group__functions.html#ga121757e2774279472d1ffa068313dbfc" title="Function to flatten a 2D int vector into a 1D vector.">flatten</a>(canopygenerator.getLeafUUIDs(plant));</div>
-<div class="line">        leaf_UUIDs.insert(std::end(leaf_UUIDs), std::begin(crown_UUIDs), std::end(crown_UUIDs));</div>
-<div class="line">    }</div>
+<div class="line">    leaf_UUIDs = canopygenerator.getLeafUUIDs();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//ground parameters</span></div>
 <div class="line">    <span class="keywordtype">float</span> x_ground = spacing_row*row_number;</div>
-<div class="line">    <span class="keywordtype">float</span> y_ground = spacing_plant*plant_number</div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size_ground = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(x_ground, y_ground);</div>
+<div class="line">    <span class="keywordtype">float</span> y_ground = spacing_plant*plant_number;</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size_ground = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(x_ground, y_ground);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Make the Ground</span></div>
-<div class="line">    canopygenerator.buildGround(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), size_ground, <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(row_number,plant_number), <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(3,3), <span class="stringliteral">&quot;plugins/canopygenerator/textures/dirt.jpg&quot;</span>);</div>
+<div class="line">    canopygenerator.buildGround(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), size_ground, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(row_number,plant_number), <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(3,3), <span class="stringliteral">&quot;plugins/canopygenerator/textures/dirt.jpg&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Ground UUIDs</span></div>
 <div class="line">    std::vector&lt;uint&gt; ground_UUIDs = canopygenerator.getGroundUUIDs();</div>
@@ -282,44 +292,35 @@ Code</h2>
 <div class="line">    <span class="comment">// *** Step 4: Setting Up the Solar Position Model *** //</span></div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_solar_position.html">SolarPosition</a> solar_position(UTC, latitude, longitude, &amp;context);</div>
-<div class="line">    <span class="keywordtype">float</span> LW = solar_position.getAmbientLongwaveFlux(air_temperature, air_humidity);</div>
-<div class="line">    <span class="keywordtype">float</span> PAR = solar_position.getSolarFluxPAR(pressure, air_temperature, air_humidity, turbidity);</div>
-<div class="line">    <span class="keywordtype">float</span> NIR = solar_position.getSolarFluxNIR(pressure, air_temperature, air_humidity, turbidity);</div>
-<div class="line">    <span class="keywordtype">float</span> f_diff = solar_position.getDiffuseFraction(pressure, air_temperature, air_humidity, turbidity);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// *** Step 5: Setting Up the Radiation Model *** //</span></div>
 <div class="line">    <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context);</div>
 <div class="line"> </div>
-<div class="line">    uint SunSource = radiation.addsolar_positionSphereRadiationSource(solar_position.getsolar_positionDirectionVector());</div>
+<div class="line">    uint SunSource = radiation.addSunSphereRadiationSource();</div>
 <div class="line"> </div>
 <div class="line">    radiation.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
 <div class="line">    radiation.disableEmission(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
-<div class="line">    radiation.setSourceFlux(SunSource, <span class="stringliteral">&quot;PAR&quot;</span>, PAR * (1.f - f_diff));</div>
-<div class="line">    radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>, PAR * f_diff);</div>
 <div class="line">    radiation.setScatteringDepth(<span class="stringliteral">&quot;PAR&quot;</span>, 3);</div>
 <div class="line"> </div>
 <div class="line">    radiation.addRadiationBand(<span class="stringliteral">&quot;NIR&quot;</span>);</div>
 <div class="line">    radiation.disableEmission(<span class="stringliteral">&quot;NIR&quot;</span>);</div>
-<div class="line">    radiation.setSourceFlux(SunSource, <span class="stringliteral">&quot;NIR&quot;</span>, NIR * (1.f - f_diff));</div>
-<div class="line">    radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;NIR&quot;</span>, NIR * f_diff);</div>
 <div class="line">    radiation.setScatteringDepth(<span class="stringliteral">&quot;NIR&quot;</span>, 3);</div>
 <div class="line"> </div>
 <div class="line">    radiation.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line">    radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;LW&quot;</span>, LW);</div>
 <div class="line"> </div>
 <div class="line">    radiation.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Set leaf radiative properties</span></div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, 0.10f);</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;transmissivity_PAR&quot;</span>, 0.05f);</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;reflectivity_NIR&quot;</span>, 0.45f);</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;transmissivity_NIR&quot;</span>, 0.4f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, 0.10f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;transmissivity_PAR&quot;</span>, 0.05f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;reflectivity_NIR&quot;</span>, 0.45f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(leaf_UUIDs, <span class="stringliteral">&quot;transmissivity_NIR&quot;</span>, 0.4f);</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, 0.15f);</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;reflectivity_NIR&quot;</span>, 0.4f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, 0.15f);</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;reflectivity_NIR&quot;</span>, 0.4f);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Make sure that the ground is only able to intercept radiation from the top</span></div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(ground_UUIDs, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
 <div class="line"> </div>
 <div class="line">    radiation.updateGeometry();</div>
 <div class="line"> </div>
@@ -330,6 +331,11 @@ Code</h2>
 <div class="line">    energybalance.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
 <div class="line">    energybalance.addRadiationBand(<span class="stringliteral">&quot;NIR&quot;</span>);</div>
 <div class="line">    energybalance.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_b_l_conductance_model.html" title="Boundary-layer conductance model class.">BLConductanceModel</a> boundarylayerconductance(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    boundarylayerconductance.setBoundaryLayerModel( ground_UUIDs, <span class="stringliteral">&quot;Ground&quot;</span> );</div>
+<div class="line">    boundarylayerconductance.setBoundaryLayerModel( leaf_UUIDs, <span class="stringliteral">&quot;Pohlhausen&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//*** Step 7: Setting Up the Stomatal Conductance Model ***//</span></div>
 <div class="line"> </div>
@@ -350,25 +356,39 @@ Code</h2>
 <div class="line"> </div>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;../xml/6_20_2024_CIMIS.xml&quot;</span>);</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> hour = 0; hour&lt;24; hour++){</div>
+<div class="line">    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> hour = 7; hour&lt;18; hour++){</div>
 <div class="line"> </div>
 <div class="line">        <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> time(hour, 0, 0);</div>
 <div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#ae3d9e19581787775556b8dd7dc1ac845" title="Set simulation time.">setTime</a>(time);</div>
 <div class="line"> </div>
-<div class="line">        <span class="keywordtype">float</span> air_temperature = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;air_temperature&quot;</span>, time); <span class="comment">// degrees C</span></div>
-<div class="line">        <span class="keywordtype">float</span> air_humidity = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;humidity&quot;</span>, time); <span class="comment">// Percent</span></div>
-<div class="line">        <span class="keywordtype">float</span> wind_speed = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;wind_speed&quot;</span>, time); <span class="comment">// m/s</span></div>
+<div class="line">        <span class="comment">// this will query these timseries variables based on the date and time set in the Context</span></div>
+<div class="line">        <span class="keywordtype">float</span> air_temperature = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;air_temperature&quot;</span>); <span class="comment">// degrees C</span></div>
+<div class="line">        <span class="keywordtype">float</span> air_humidity = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;humidity&quot;</span>); <span class="comment">// Percent</span></div>
+<div class="line">        <span class="keywordtype">float</span> wind_speed = context.<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(<span class="stringliteral">&quot;wind_speed&quot;</span>); <span class="comment">// m/s</span></div>
 <div class="line"> </div>
 <div class="line">        <span class="comment">// update our primitive data values on each timestep based on timeseries data</span></div>
-<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;air_temperature&quot;</span>, air_temperature);</div>
-<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;air_humidity&quot;</span>, air_humidity);</div>
-<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;wind_speed&quot;</span>, wind_speed);</div>
+<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;air_temperature&quot;</span>, air_temperature);</div>
+<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;air_humidity&quot;</span>, air_humidity);</div>
+<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(all_UUIDs, <span class="stringliteral">&quot;wind_speed&quot;</span>, wind_speed);</div>
+<div class="line"> </div>
+<div class="line">        <span class="keywordtype">float</span> LW = solar_position.getAmbientLongwaveFlux(air_temperature, air_humidity);</div>
+<div class="line">        <span class="keywordtype">float</span> PAR = solar_position.getSolarFluxPAR(pressure, air_temperature, air_humidity, turbidity);</div>
+<div class="line">        <span class="keywordtype">float</span> NIR = solar_position.getSolarFluxNIR(pressure, air_temperature, air_humidity, turbidity);</div>
+<div class="line">        <span class="keywordtype">float</span> f_diff = solar_position.getDiffuseFraction(pressure, air_temperature, air_humidity, turbidity);</div>
+<div class="line"> </div>
+<div class="line">        radiation.setSourceFlux(SunSource, <span class="stringliteral">&quot;NIR&quot;</span>, NIR * (1.f - f_diff));</div>
+<div class="line">        radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;NIR&quot;</span>, NIR * f_diff);</div>
+<div class="line">        radiation.setSourceFlux(SunSource, <span class="stringliteral">&quot;PAR&quot;</span>, PAR * (1.f - f_diff));</div>
+<div class="line">        radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>, PAR * f_diff);</div>
+<div class="line">        radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;LW&quot;</span>, LW);</div>
+<div class="line"> </div>
+<div class="line">        radiation.setSourcePosition( SunSource, solar_position.getSunDirectionVector() );</div>
+<div class="line"> </div>
+<div class="line">        boundarylayerconductance.run();</div>
 <div class="line"> </div>
 <div class="line">        <span class="comment">// *** Step 10: Running the Model *** //</span></div>
 <div class="line"> </div>
-<div class="line">        radiation.runBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
-<div class="line">        radiation.runBand(<span class="stringliteral">&quot;NIR&quot;</span>);</div>
-<div class="line">        radiation.runBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line">        radiation.runBand({<span class="stringliteral">&quot;PAR&quot;</span>,<span class="stringliteral">&quot;NIR&quot;</span>,<span class="stringliteral">&quot;LW&quot;</span>});</div>
 <div class="line"> </div>
 <div class="line">        stomatalconductance.run(leaf_UUIDs);</div>
 <div class="line">        energybalance.run();</div>
@@ -388,25 +408,29 @@ Code</h2>
 <div class="line">            <span class="keywordtype">float</span> E, A, WUE;</div>
 <div class="line">            context.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID, <span class="stringliteral">&quot;latent_flux&quot;</span>, E);</div>
 <div class="line">            context.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, A);</div>
-<div class="line">            E_canopy += E / 44000 * 1000; <span class="comment">// mmol H2O / sec</span></div>
-<div class="line">            A_canopy += A;  <span class="comment">//umol CO2 / sec</span></div>
+<div class="line">            E_canopy += E / 44000 * 1000; <span class="comment">// mmol H2O / m^2 / sec</span></div>
+<div class="line">            A_canopy += A;  <span class="comment">//umol CO2 / m^2 / sec</span></div>
 <div class="line"> </div>
 <div class="line">            WUE = A / (E / 44000 * 1000); <span class="comment">//umol CO2/mmol H2O</span></div>
-<div class="line">            context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;WUE&quot;</span>, WUE);</div>
+<div class="line">            context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;WUE&quot;</span>, WUE);</div>
 <div class="line"> </div>
 <div class="line">        }</div>
 <div class="line">        <span class="keywordtype">float</span> WUE_canopy = A_canopy / E_canopy; <span class="comment">//umol CO2/mmol H2O</span></div>
 <div class="line"> </div>
 <div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;WUE of the canopy = &quot;</span> &lt;&lt; WUE_canopy &lt;&lt; <span class="stringliteral">&quot; umol CO2/mmol H2O&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"> </div>
-<div class="line"> </div>
 <div class="line">        <span class="comment">// *** Step 12: Visualization *** //</span></div>
 <div class="line">        <span class="comment">// This will open the visualizer window for each time step. Close it to proceed to the next time step.</span></div>
 <div class="line">        <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> visualizer(1000);</div>
 <div class="line">        visualizer.buildContextGeometry(&amp;context);</div>
 <div class="line">        visualizer.colorContextPrimitivesByData( <span class="stringliteral">&quot;WUE&quot;</span> );</div>
-<div class="line">        visualizer.setColorbarTitle(<span class="stringliteral">&quot;WUE&quot;</span>);</div>
-<div class="line">        visualizer.plotInteractive();</div>
+<div class="line">        visualizer.setColorbarTitle(<span class="stringliteral">&quot;WUE (umol CO2/mmol H2O)&quot;</span>);;</div>
+<div class="line">        visualizer.setColorbarRange(0.f,15.f);</div>
+<div class="line">        visualizer.setColorbarPosition(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.75, 0.9, 0) );</div>
+<div class="line">        <span class="keywordtype">char</span> time_string[6];</div>
+<div class="line">        sprintf(time_string, <span class="stringliteral">&quot;%02d:%02d&quot;</span>, time.hour, time.minute);</div>
+<div class="line">        visualizer.addTextboxByCenter( time_string, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.5,0.9,0), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5" title="Coordinates are normalized to unity and are window-aligned. The point (x,y)=(0,0) is in the bottom le...">Visualizer::COORDINATES_WINDOW_NORMALIZED</a> );</div>
+<div class="line">        visualizer.plotInteractive(); <span class="comment">// !!! Close the window to advance to the next time step</span></div>
 <div class="line"> </div>
 <div class="line">    }</div>
 <div class="line"> </div>

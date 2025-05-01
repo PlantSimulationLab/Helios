@@ -1,7 +1,7 @@
 var struct_leaf_prototype =
 [
     [ "LeafPrototype", "struct_leaf_prototype.html#af29d0b590d0c675ff43134797d4ade6b", null ],
-    [ "LeafPrototype", "struct_leaf_prototype.html#a1ad2dbbc6bf4c55f598f7060d8d436cd", null ],
+    [ "LeafPrototype", "struct_leaf_prototype.html#a84fd620b7848791fb6a1761259b1a2aa", null ],
     [ "operator=", "struct_leaf_prototype.html#a2dc8e0e35313b52c69cb7076d0392c2a", null ],
     [ "build_petiolule", "struct_leaf_prototype.html#a97e0456a85a039b8c7c318a0cd57663e", null ],
     [ "lateral_curvature", "struct_leaf_prototype.html#a6ccef984c87ae4203d7b620d3ac4e177", null ],

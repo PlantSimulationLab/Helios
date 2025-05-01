@@ -74,7 +74,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"helios__vector__types_8h.html"
+"grapevine_8cpp.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

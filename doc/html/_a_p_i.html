@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: User/API Guide</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -413,17 +426,17 @@ Vector Types</h1>
 <tr>
 <th>Type</th><th>Description</th><th>Data Fields</th><th>Member Functions</th><th>Math Operators</th><th>Creation Function </th></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec2.html">vec2</a></td><td>2D vector of floats</td><td><a class="el" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e">x</a>, <a class="el" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e">y</a></td><td><a class="el" href="structhelios_1_1vec2.html#a04c00c49095d3bbc0a19d5da3d61493f">normalize()</a>, <a class="el" href="structhelios_1_1vec2.html#a1931ec5c78112202c14634634f429073">magnitude()</a></td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec2.html">vec2</a></td><td>2D vector of floats</td><td><a class="el" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e">x</a>, <a class="el" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e">y</a></td><td><a class="el" href="structhelios_1_1vec2.html#a04c00c49095d3bbc0a19d5da3d61493f">normalize()</a>, <a class="el" href="structhelios_1_1vec2.html#a1931ec5c78112202c14634634f429073">magnitude()</a></td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd">make_vec2()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec3.html">vec3</a></td><td>3D vector of floats</td><td><a class="el" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, <a class="el" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, <a class="el" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a></td><td><a class="el" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">normalize()</a>, <a class="el" href="structhelios_1_1vec3.html#adb96b24e6544d106a19e029c2594fee4">magnitude()</a></td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec3.html">vec3</a></td><td>3D vector of floats</td><td><a class="el" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, <a class="el" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, <a class="el" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a></td><td><a class="el" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">normalize()</a>, <a class="el" href="structhelios_1_1vec3.html#adb96b24e6544d106a19e029c2594fee4">magnitude()</a></td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">make_vec3()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec4.html">vec4</a></td><td>4D vector of floats</td><td><a class="el" href="structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73">x</a>, <a class="el" href="structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d">y</a>, <a class="el" href="structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b">z</a>, <a class="el" href="structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937">w</a></td><td>none</td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#ab232dd96cf103ad9ac02b6f5c264ced0">make_vec4()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec4.html">vec4</a></td><td>4D vector of floats</td><td><a class="el" href="structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73">x</a>, <a class="el" href="structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d">y</a>, <a class="el" href="structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b">z</a>, <a class="el" href="structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937">w</a></td><td>none</td><td>* (dot product), * (mult. by scalar), /, +, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c">make_vec4()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74">make_int2()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee">make_int2()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int3.html">int3</a></td><td>3D vector of integers</td><td><a class="el" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50">x</a>, <a class="el" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c">y</a>, <a class="el" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641">z</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2">make_int3()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int3.html">int3</a></td><td>3D vector of integers</td><td><a class="el" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50">x</a>, <a class="el" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c">y</a>, <a class="el" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641">z</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149">make_int3()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int4.html">int4</a></td><td>4D vector of integers</td><td><a class="el" href="structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3">x</a>, <a class="el" href="structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3">y</a>, <a class="el" href="structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99">z</a>, <a class="el" href="structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f">w</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#acdfd23cf323df4bdd409c8e4e2bcdfdc">make_int4()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int4.html">int4</a></td><td>4D vector of integers</td><td><a class="el" href="structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3">x</a>, <a class="el" href="structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3">y</a>, <a class="el" href="structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99">z</a>, <a class="el" href="structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f">w</a></td><td>none</td><td>+, -, +=, ==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6">make_int4()</a> </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a></td><td>Spherical coordinate</td><td><a class="el" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906">radius</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73">elevation</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643">zenith</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59">azimuth</a></td><td>none</td><td>==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord()</a> </td></tr>
 <tr>
@@ -567,8 +580,8 @@ Adding Patches</h3>
 <div class="line">     </div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line"> </div>
 <div class="line">   uint UUID; <span class="comment">//universal unique identifier</span></div>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
@@ -580,8 +593,8 @@ Adding Patches</h3>
 <div class="caption">
 Patch geometric primitive.</div></div>
 <p>The patch can also be rotated by adding the optional SphericalCoord argument:</p>
-<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line"><a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line"><a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.25*M_PI,0.5*M_PI);</div>
 <div class="line">context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, rotation );</div>
 </div><!-- fragment --><p>This will first rotate the patch by 0.25 \(\pi\) rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 \(\pi\) rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
@@ -595,9 +608,9 @@ Adding Triangles</h3>
 <div class="line">     </div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v0 = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(-0.5,-0.5,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0.5,-0.5,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0.5,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v0 = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(-0.5,-0.5,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.5,-0.5,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0.5,1);</div>
 <div class="line"> </div>
 <div class="line">   uint UUID; <span class="comment">//universal unique identifier</span></div>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77" title="Add new Triangle geometric primitive.">addTriangle</a>( v0, v1, v2, RGB::red );</div>
@@ -623,8 +636,8 @@ Adding Voxels</h3>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> size = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> size = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
 <div class="line"> </div>
 <div class="line">   uint UUID; <span class="comment">//universal unique identifier</span></div>
 <div class="line">   UUID = context.<a class="code hl_function" href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10" title="Add new Voxel geometric primitive.">addVoxel</a>( center, size, 0, RGB::red );</div>
@@ -636,8 +649,8 @@ Adding Voxels</h3>
 <div class="caption">
 Voxel geometric primitive.</div></div>
 <p>The voxel can also be rotated by adding the optional SphericalCoord argument:</p>
-<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> size = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> size = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
 <div class="line">rotation = 0.25*M_PI;</div>
 <div class="line">context.<a class="code hl_function" href="group__primitives.html#ga5c3476d33e4c6125276bcae114b49b10" title="Add new Voxel geometric primitive.">addVoxel</a>( center, size, rotation, RGB::red );</div>
 </div><!-- fragment --><h2><a class="anchor" id="PrimTransform"></a>
@@ -661,17 +674,17 @@ Primitive Transformations</h2>
 <tr>
 <td>Rotation</td><td><ul>
 <li>
-<a class="el" href="classhelios_1_1_context.html#a5e5dd3ef9b56a0bf148ed9d315422fe7">helios::Context::rotatePrimitive( uint, float, const char* )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#aef025c766a7ad444ce77a2e8d2d24ab7">helios::Context::rotatePrimitive( uint, float, const char* )</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#a236cf95ad565a77338bd45fe098e9b83">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt;&amp;, float, const char* )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#a885854084afb77b694b5d447e227d7dd">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt;&amp;, float, const char* )</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#a55a61fb7f4a3829b04680dabb9a0276a">helios::Context::rotatePrimitive( uint, float, const helios::vec3&amp; )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#a73a5e262cecf79fbc3f94c0ab00189fa">helios::Context::rotatePrimitive( uint, float, const helios::vec3&amp; )</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#aca6e120f1607b07c71c4da83ab449813">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt; &amp;, float, const helios::vec3&amp; )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#a27bc73610833e1580ff1ddd2e89ff847">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt; &amp;, float, const helios::vec3&amp; )</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#ac325bb44ad539aac6ce37d03ff51de3c">helios::Context::rotatePrimitive( uint, float, const helios::vec3&amp;, const helios::vec3&amp; )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#a898e95ba63ee8acb962843de5bb110e3">helios::Context::rotatePrimitive( uint, float, const helios::vec3&amp;, const helios::vec3&amp; )</a> </li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#ae32a831a933122e64bc2bca4d23d3777">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt; &amp;, float, const helios::vec3&amp;, const helios::vec3&amp; )</a> </li>
+<a class="el" href="classhelios_1_1_context.html#ad35d3d230668cbff7b8991909802034d">helios::Context::rotatePrimitive( const std::vector&lt;uint&gt; &amp;, float, const helios::vec3&amp;, const helios::vec3&amp; )</a> </li>
 </ul>
 </td></tr>
 <tr>
@@ -694,7 +707,7 @@ Primitive Transformations</h2>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Add &#39;Patch&#39; primitive</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center(0,0,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Apply translation</span></div>
@@ -770,8 +783,8 @@ Primitive Properties</h2>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line">   </div>
 <div class="line">   <span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Get Patch size</span></div>
@@ -784,8 +797,8 @@ Texture Mapping</h2>
 <h2><a class="anchor" id="TextureColor"></a>
 Coloring Primitives by Texture Map</h2>
 <p>Patches: To color a Patch based on an image, simply pass the path to a PNG or JPEG image to the appropriate argument of the addPatch() command. Note that the path should either be absolute, or relative to the directory where the executable will be run (typically the &lsquo;build&rsquo; directory).</p>
-<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line"><a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(2.5,1);</div>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(2.5,1);</div>
 <div class="line"><a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0);</div>
 <div class="line">context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, rotation, <span class="stringliteral">&quot;PSL_logo_white.png&quot;</span>);</div>
 </div><!-- fragment --><p><br  />
@@ -817,8 +830,8 @@ Masking Primitives by Image Transparency Channel</h2>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line">   </div>
 <div class="line">   <span class="comment">// Add &#39;Patch&#39; primitive with transparency mask</span></div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   </div>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), <span class="stringliteral">&quot;GrapeLeaf.png&quot;</span> );</div>
 <div class="line"> </div>
@@ -837,8 +850,8 @@ Rectangular patch masked by an image with a transparency channel.</div></div>
 <div class="line">   </div>
 <div class="line">   <span class="comment">// Add &#39;Patch&#39; primitive with transparency mask</span></div>
 <div class="line">   <span class="comment">// We will add a patch at the origin and with unit size, and copy it multiple times</span></div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line"> </div>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), <span class="stringliteral">&quot;GrapeLeaf.png&quot;</span> );</div>
 <div class="line"> </div>
@@ -846,7 +859,7 @@ Rectangular patch masked by an image with a transparency channel.</div></div>
 <div class="line"> </div>
 <div class="line">        uint UUID_copy = context.<a class="code hl_function" href="classhelios_1_1_context.html#a7eb6409748de787c4a8f2cc10c290144" title="Make a copy of a primitive from the context.">copyPrimitive</a>(UUID);</div>
 <div class="line">   </div>
-<div class="line">        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>( i*3, 0, 0 );</div>
+<div class="line">        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> position = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>( i*3, 0, 0 );</div>
 <div class="line"> </div>
 <div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1" title="Translate a primitive using its UUID.">translatePrimitive</a>( UUID_copy, position );</div>
 <div class="line"> </div>
@@ -1039,7 +1052,7 @@ Objects</h2>
 </table>
 <p>Similar to individual primitives, objects have functions to perform transformations on the entire object in unison. These functions are member functions of the <a class="el" href="classhelios_1_1_compound_object.html">helios::CompoundObject</a> class. As with primitives, you can use the identifier to an object to get its pointer, from which you can access member functions.</p>
 <div class="fragment"><div class="line">uint objID; <span class="comment">//unique identifier to object</span></div>
-<div class="line">objID = context.<a class="code hl_function" href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTileObject</a>( center, size, rotation, <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(2,2) );</div>
+<div class="line">objID = context.<a class="code hl_function" href="group__compoundobjects.html#gae5c1fa3bae1ff170c14a4378fb8abd95" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTileObject</a>( center, size, rotation, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(2,2) );</div>
 <div class="line"> </div>
 <div class="line"><a class="code hl_class" href="classhelios_1_1_compound_object.html">CompoundObject</a>* <span class="keywordtype">object</span> = context.<a class="code hl_function" href="classhelios_1_1_context.html#a3d9493949db2c5d8ddeef30afd2a9a0a" title="Get a pointer to a Compound Object.">getObjectPointer</a>(objID);</div>
 <div class="line"> </div>
@@ -1219,7 +1232,7 @@ Primitive Data</h2>
 <h3><a class="anchor" id="SetPrimData"></a>
 Setting Primitive Data Values</h3>
 <p>Primitive data values can be scalar or a one-dimensional array of values.</p>
-<p>Primitive data is set for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4">setPrimitiveData()</a> function. Example use of this function for scalar data is given below.</p>
+<p>Primitive data is set for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">setPrimitiveData()</a> function. Example use of this function for scalar data is given below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -1230,9 +1243,9 @@ Setting Primitive Data Values</h3>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
+</div><!-- fragment --><p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -1248,12 +1261,12 @@ Setting Primitive Data Values</h3>
 <div class="line">   std::vector&lt;float&gt; A;</div>
 <div class="line">   A.push_back(2.3);</div>
 <div class="line">   A.push_back(9.2);</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataA&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,A.size(),&amp;A[0]);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataA&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,A.size(),&amp;A[0]);</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> B[2];</div>
 <div class="line">   B[0] = 2.3;</div>
 <div class="line">   B[1] = 9.2;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataB&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,2,&amp;B[0]);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataB&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,2,&amp;B[0]);</div>
 <div class="line">     </div>
 <div class="line">}</div>
 </div><!-- fragment --><h3><a class="anchor" id="GetPrimData"></a>
@@ -1272,7 +1285,7 @@ Getting Primitive Data Values</h3>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
 <div class="line">   </div>
 <div class="line">   <span class="keywordtype">float</span> emissivity;</div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,emissivity);</div>
@@ -1311,7 +1324,7 @@ Primitive Data Query Functions</h3>
 <div class="line">   uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>, eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>, eps);</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordflow">if</span>( context.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b" title="Check if primitive data &#39;label&#39; exists.">doesPrimitiveDataExist</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>) ){</div>
 <div class="line">      <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> type = context.<a class="code hl_function" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6" title="Get the Helios data type of primitive data.">getPrimitiveDataType</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>);</div>

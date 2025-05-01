@@ -1,6 +1,5 @@
 var classhelios_1_1_tube =
 [
-    [ "Tube", "classhelios_1_1_tube.html#a10d74e5d06813e05c2b188ee170339c9", null ],
     [ "~Tube", "classhelios_1_1_tube.html#a15d0248cb525ce91129abcb398f728e8", null ],
     [ "appendTubeSegment", "classhelios_1_1_tube.html#a7cb8cf830e6017d29c7396c28846f83b", null ],
     [ "appendTubeSegment", "classhelios_1_1_tube.html#aac259b1a564be7ac9cc11bd14ab8cf82", null ],

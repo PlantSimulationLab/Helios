@@ -2092,3 +2092,43 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Radiation*
 - There were many instances where calling setter methods after calling updateGeometry() would cause issues. This has been fixed by making sure the setters force recalculation of the radiative properties.
+
+[1.3.30] 2025-05-01
+
+*Added automated performance benchmarking
+*Fixed documentation sidebar navigation collapse issue
+
+*Context*
+- Added Context::setPrimitiveNormal(), Context::setPrimitiveElevation(), and Context::setPrimitiveAzimuth() methods.
+- Added sample_Beta_distribution() funciton to randomly sample from a Beta distribution for inclination angle.
+- Added sample_ellipsoidal_distribution() funciton to randomly sample from an ellipsoidal distribution for azimuth angle.
+- Added explicit normalize() function for vec2, vec3, and vec4 types.
+- Minor performance improvements for Helios vector types and Context operations.
+- Added OpenMP parallelization for primitive area calculations from transparency textures.
+- Changed the type of 'primitives' and 'objects' from std::map to std::unordered_map to improve performance.
+- Changed Context::getObjectPrimitiveUUIDs( uint ObjID ) method to support passing an ObjID of 0.
+- Context::getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs ) was missing a check for existence of the ObjID object.
+- Overloaded getPrimitiveParentObjectID( const std::vector<uint> &UUIDs  ) added to take a vector of UUIDs.
+- When tile objects are created, completely transparent sub-patch tiles are no longer deleted because this causes problems in the radiation model.
+- Context primitive and object class constructors were made 'protected' so that they cannot be instantiated outside of the Context.
+- Many new self-tests were added (credit to Ismael Mayanja for this addition).
+- Refactoring of PNG and JPEG image to improve robustness.
+
+*Radiation*
+- For two-sided primitives, diffuse ray launches were split into two passes to dramatically improve thread coherence and thus performance.
+- An issue with texture mapping for tile objects was fixed.
+- OptiX variable declarations were moved to RayTracing.cuh header file.
+- Moved texture sampling in rayGeneration.cu into a separate function to avoid redundant code.
+- New method for handling periodic boundaries was implemented to improve performance.
+- Completely transparent sub-patch tiles are no longer excluded from calculations.
+
+*Plant Architecture*
+- Many updates to carbohydrate model code. Credit to Ethan Frehner for these updates.
+- Added methods to calculate the leaf azimuth distribution of a plant (see PlantArchitecture::getPlantLeafAzimuthDistribution()), and overloaded versions of leaf angle distribution calculation functions that take a vector of multiple plant IDs.
+- Added method to set the leaf angle distribution of a plant.
+
+*Visualizer*
+- Visualizer::setColorbarRange() was not properly setting the colorbar range.
+
+*Project Builder*
+- Many updates and improvements to the project builder plug-in. Credit to Sean Banks for these updates.

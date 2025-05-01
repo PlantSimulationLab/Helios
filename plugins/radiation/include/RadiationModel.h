@@ -1123,9 +1123,6 @@ protected:
     //! Steffan Boltzmann Constant
     float sigma = 5.6703744E-8;
 
-    //! Radius of a sphere encapsulating the entire scene/domain
-    float scene_radius;
-
     //! Default primitive reflectivity
     float rho_default;
 
@@ -1375,11 +1372,16 @@ protected:
 
     /* Variables */
 
+    RTgeometrygroup base_geometry_group;
+
     //! Random number generator seed
     RTvariable random_seed_RTvariable;
 
     //! Primitive offset used for tiling ray launches
     RTvariable launch_offset_RTvariable;
+
+    //! Flag designating which face of the primitive the launch is for
+    RTvariable launch_face_RTvariable;
 
     //! Maximum scattering depth
     RTvariable max_scatters_RTvariable;
@@ -1418,11 +1420,6 @@ protected:
     RTvariable emission_flag_RTvariable;
     RTbuffer emission_flag_RTbuffer;
 
-    //! Bounding sphere radius
-    RTvariable bound_sphere_radius_RTvariable;
-    //! Bounding sphere center
-    RTvariable bound_sphere_center_RTvariable;
-
     //! Periodic boundary condition
     helios::vec2 periodic_flag;
     RTvariable periodic_flag_RTvariable;
@@ -1454,9 +1451,9 @@ protected:
     RTvariable primitive_type_RTvariable;
 
     //! Primitive area - RTbuffer object
-    RTbuffer primitive_area_RTbuffer;
+    RTbuffer primitive_solid_fraction_RTbuffer;
     //! Primitive area - RTvariable
-    RTvariable primitive_area_RTvariable;
+    RTvariable primitive_solid_fraction_RTvariable;
 
     //! Primitive UUIDs - RTbuffer object
     RTbuffer patch_UUID_RTbuffer;

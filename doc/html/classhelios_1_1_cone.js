@@ -1,6 +1,5 @@
 var classhelios_1_1_cone =
 [
-    [ "Cone", "classhelios_1_1_cone.html#a1812816ea32de6d7a28fae76ebd66f80", null ],
     [ "~Cone", "classhelios_1_1_cone.html#ac4f380f30c6bb1dbdf2e8c215c05677c", null ],
     [ "getAxisUnitVector", "classhelios_1_1_cone.html#a60fc92fbb15149017956449123c0e4d0", null ],
     [ "getLength", "classhelios_1_1_cone.html#ada36b3fe4850f16c4dfa58c38a8da80c", null ],

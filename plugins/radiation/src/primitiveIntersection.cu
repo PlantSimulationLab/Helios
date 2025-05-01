@@ -20,51 +20,12 @@
 
 using namespace optix;
 
-#include "RayTracing.cu.h"
+#include "RayTracing.cuh"
 
-rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(PerRayData, prd, rtPayload, );
 
 rtDeclareVariable( unsigned int, UUID, attribute UUID, );
-
-//--- Patches ---//
-rtBuffer<float3, 2> patch_vertices;
-rtBuffer<unsigned int, 1> patch_UUID;
-
-//--- Triangles ---//
-rtBuffer<float3, 2> triangle_vertices;
-rtBuffer<unsigned int, 1> triangle_UUID;
-
-//--- Disks ---//
-//To-Do: disks not finished
-rtBuffer<unsigned int, 1> disk_UUID;
-
-//--- Tiles ---//
-rtBuffer<float3, 2> tile_vertices;
-rtBuffer<unsigned int, 1> tile_UUID;
-
-//--- Voxels ---//
-rtBuffer<float3, 2> voxel_vertices;
-rtBuffer<unsigned int, 1> voxel_UUID;
-
-//--- Bounding Box ---//
-rtBuffer<float3, 2> bbox_vertices;
-rtBuffer<unsigned int, 1> bbox_UUID;
-
-//--- Masks ---//
-rtBuffer<bool, 3>   maskdata;
-rtBuffer<int2, 1>   masksize;
-rtBuffer<int, 1>   maskID;
-
-rtBuffer<float2, 2> uvdata;
-rtBuffer<int, 1> uvID;
-
-rtBuffer<uint,1> objectID;
-
-rtBuffer<int2,1> object_subdivisions;
-
-rtBuffer<char, 1> twosided_flag;
 
 //----------------- Rectangle Primitive ----------------------//
 
@@ -118,19 +79,19 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
 	  float amag = d_magnitude(a);
 	  float bmag = d_magnitude(b);
-	  float2 uv = make_float2( ddota/amag/amag, 1.f-ddotb/bmag/bmag );
+	  float2 uv = make_float2( ddota/amag/amag, ddotb/bmag/bmag );
 	  int2 sz = masksize[ maskID[ID] ];
 	  uint3 ind;
 	  if( uvID[ID]==-1 ){ //does not have custom (u,v) coordinates
-	    ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), maskID[ID] );
+	    ind = make_uint3( floorf(float(sz.x-1)*uv.x), floorf(float(sz.y-1)*(1.f-uv.y)), maskID[ID] );
 	  }else{
 	    
-	    float2 uvmin = uvdata[ make_uint2(1,uvID[ID]) ];
+	    float2 uvmin = uvdata[ make_uint2(0,uvID[ID]) ];
 	    float2 duv;
-	    duv.x = uvdata[ make_uint2(0,uvID[ID]) ].x - uvdata[ make_uint2(1,uvID[ID]) ].x;
+	    duv.x = uvdata[ make_uint2(1,uvID[ID]) ].x - uvdata[ make_uint2(0,uvID[ID]) ].x;
 	    duv.y = uvdata[ make_uint2(2,uvID[ID]) ].y - uvdata[ make_uint2(1,uvID[ID]) ].y;
 	    
-	    ind = make_uint3( roundf(float(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(float(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)), maskID[ID] );
+	    ind = make_uint3( floorf(float(sz.x-1)*(uvmin.x+uv.x*duv.x)), floorf(float(sz.y-1)*(1.f - uvmin.y - uv.y*duv.y)), maskID[ID] );
 	    if( ind.x>=sz.x || ind.y>=sz.y ){
 	      rtPrintf("ERROR: texture out of bounds.\n");
 	    }
@@ -390,7 +351,6 @@ RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geomet
   
   if (t0 < t1 && t0 > 1e-5){//note: if ray originated inside voxel, no intersection occurs.
     if( rtPotentialIntersection( t0 ) ) {
-      prd.area = fabs(t1-t0);
       UUID = voxel_UUID[objID];
       rtReportIntersection(0);
     }
@@ -513,7 +473,7 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
 
 	float amag = d_magnitude(a);
 	float bmag = d_magnitude(b);
-	float2 uv = make_float2( 1.f-ddota/amag/amag, ddotb/bmag/bmag );
+	float2 uv = make_float2( ddota/amag/amag, ddotb/bmag/bmag );
 
 	uint U = tile_UUID[objID];
 
@@ -521,19 +481,18 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
 	
 	if( maskID[ID]==-1 ){ //no texture transparency
 	  if( rtPotentialIntersection( t ) ) {
-	    //UUID = tile_UUID[objID]+floor(uv.y*object_subdivisions[objID].y)*object_subdivisions[objID].x+floor((1.f-uv.x)*object_subdivisions[objID].x);
-	    UUID = U+floor(uv.y*object_subdivisions[ID].y)*object_subdivisions[ID].x+floor((1.f-uv.x)*object_subdivisions[ID].x);
+	    UUID = U+floorf(uv.y*object_subdivisions[ID].y)*object_subdivisions[ID].x+floorf(uv.x*object_subdivisions[ID].x);
 	    rtReportIntersection(0);
 	  }	  
 	}else{ 	//use transparency mask
 
 	 
 	  int2 sz = masksize[ maskID[ID] ];
-	  uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), maskID[ID] );
+	  uint3 ind = make_uint3( floorf(float(sz.x-1)*uv.x), floorf(float(sz.y-1)*(1.f-uv.y)), maskID[ID] );
 
 	  if( maskdata[ind] ){
 	    if( rtPotentialIntersection( t ) ) {
-	      UUID = tile_UUID[objID]+floor(uv.y*object_subdivisions[ID].y)*object_subdivisions[ID].x+floor((1.f-uv.x)*object_subdivisions[ID].x);
+	    	UUID = U+floorf(uv.y*object_subdivisions[ID].y)*object_subdivisions[ID].x+floorf(uv.x*object_subdivisions[ID].x);
 	      rtReportIntersection(0);
 	    }
 	    

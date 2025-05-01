@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/stomatalconductance/src/StomatalConductanceModel.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -227,15 +240,15 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <span class="keywordflow">for</span>( uint i=0; i&lt;gs_ref.size(); i++ ) {</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>, Q_ref.at(i)/4.57f );</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, An_ref.at(i) );</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;temperature&quot;</span>, TL_ref.at(i)+273.f );</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_temperature&quot;</span>, Tair_ref.at(i)+273.f );</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_CO2&quot;</span>, Cs_ref );</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_humidity&quot;</span>, hs_ref );</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_pressure&quot;</span>, Patm_ref );</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gbw_ref);</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;Gamma_CO2&quot;</span>, Gamma_ref.at(i));</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>, Q_ref.at(i)/4.57f );</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, An_ref.at(i) );</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;temperature&quot;</span>, TL_ref.at(i)+273.f );</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_temperature&quot;</span>, Tair_ref.at(i)+273.f );</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_CO2&quot;</span>, Cs_ref );</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_humidity&quot;</span>, hs_ref );</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;air_pressure&quot;</span>, Patm_ref );</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, gbw_ref);</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;Gamma_CO2&quot;</span>, Gamma_ref.at(i));</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    gsm.setModelCoefficients(BWBcoeffs);</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    gsm.run();</div>
@@ -489,14 +502,14 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="foldopen" id="foldopen00327" data-start="{" data-end="}">
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a045fd837e2328617901dfd4e15f1da29">  327</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#a045fd837e2328617901dfd4e15f1da29" title="Set time constants for dynamic stomatal opening and closing for all primitives.">StomatalConductanceModel::setDynamicTimeConstants</a>( <span class="keywordtype">float</span> tau_open, <span class="keywordtype">float</span> tau_close ){</div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    dynamic_time_constants.clear();</div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    dynamic_time_constants[0] = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(tau_open,tau_close);</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    dynamic_time_constants[0] = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(tau_open,tau_close);</div>
 <div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>}</div>
 </div>
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span> </div>
 <div class="foldopen" id="foldopen00332" data-start="{" data-end="}">
 <div class="line"><a id="l00332" name="l00332"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a317e6d8d262ddffb5e66839ee987a067">  332</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#a045fd837e2328617901dfd4e15f1da29" title="Set time constants for dynamic stomatal opening and closing for all primitives.">StomatalConductanceModel::setDynamicTimeConstants</a>( <span class="keywordtype">float</span> tau_open, <span class="keywordtype">float</span> tau_close, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
 <div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        dynamic_time_constants[UUID] = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(tau_open,tau_close);</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        dynamic_time_constants[UUID] = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(tau_open,tau_close);</div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    }</div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>}</div>
 </div>

@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Vectors</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -193,15 +206,15 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga39457188bb8c3aba1fdc9217ecc16f74" id="r_ga39457188bb8c3aba1fdc9217ecc16f74"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga39457188bb8c3aba1fdc9217ecc16f74">helios::make_int2</a> (int x, int y)</td></tr>
-<tr class="memdesc:ga39457188bb8c3aba1fdc9217ecc16f74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make an int2 vector from two ints.  <br /></td></tr>
-<tr class="separator:ga39457188bb8c3aba1fdc9217ecc16f74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga70f2d62c3dfc6bbff6581cbc0f8bacee" id="r_ga70f2d62c3dfc6bbff6581cbc0f8bacee"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1int2.html">int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga70f2d62c3dfc6bbff6581cbc0f8bacee">helios::make_int2</a> (int x, int y)</td></tr>
+<tr class="memdesc:ga70f2d62c3dfc6bbff6581cbc0f8bacee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make an int2 vector from two ints.  <br /></td></tr>
+<tr class="separator:ga70f2d62c3dfc6bbff6581cbc0f8bacee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga61cbe7ba7a687fde1273f9883e54c2ac" id="r_ga61cbe7ba7a687fde1273f9883e54c2ac"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga61cbe7ba7a687fde1273f9883e54c2ac">helios::make_int2</a> (int X[2])</td></tr>
 <tr class="memdesc:ga61cbe7ba7a687fde1273f9883e54c2ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make an int2 vector from an array of ints.  <br /></td></tr>
 <tr class="separator:ga61cbe7ba7a687fde1273f9883e54c2ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga7e3752eb5ff9909862380d188d2b3f24" id="r_ga7e3752eb5ff9909862380d188d2b3f24"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7e3752eb5ff9909862380d188d2b3f24">helios::make_vec2</a> (float x, float y)</td></tr>
-<tr class="memdesc:ga7e3752eb5ff9909862380d188d2b3f24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make a vec2 from two floats.  <br /></td></tr>
-<tr class="separator:ga7e3752eb5ff9909862380d188d2b3f24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2c8ce4551d0597a3aaaf32530233c6fd" id="r_ga2c8ce4551d0597a3aaaf32530233c6fd"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga2c8ce4551d0597a3aaaf32530233c6fd">helios::make_vec2</a> (float x, float y)</td></tr>
+<tr class="memdesc:ga2c8ce4551d0597a3aaaf32530233c6fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make a vec2 from two floats.  <br /></td></tr>
+<tr class="separator:ga2c8ce4551d0597a3aaaf32530233c6fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gae5b981fa224fe6f30b850467ec655c0b" id="r_gae5b981fa224fe6f30b850467ec655c0b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae5b981fa224fe6f30b850467ec655c0b">helios::make_RGBcolor</a> (float r, float g, float b)</td></tr>
 <tr class="memdesc:gae5b981fa224fe6f30b850467ec655c0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make an RGBcolor vector.  <br /></td></tr>
 <tr class="separator:gae5b981fa224fe6f30b850467ec655c0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -267,7 +280,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01310">1310</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01312">1312</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -307,7 +320,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01268">1268</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01271">1271</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -353,7 +366,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01241">1241</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01244">1244</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -393,12 +406,12 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01335">1335</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01337">1337</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="ga39457188bb8c3aba1fdc9217ecc16f74" name="ga39457188bb8c3aba1fdc9217ecc16f74"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga39457188bb8c3aba1fdc9217ecc16f74">&#9670;&#160;</a></span>make_int2() <span class="overload">[1/2]</span></h2>
+<a id="ga70f2d62c3dfc6bbff6581cbc0f8bacee" name="ga70f2d62c3dfc6bbff6581cbc0f8bacee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga70f2d62c3dfc6bbff6581cbc0f8bacee">&#9670;&#160;</a></span>make_int2() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -419,7 +432,7 @@ Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -433,7 +446,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00099">99</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00100">100</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -468,7 +481,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00108">108</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00109">109</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -514,7 +527,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01518">1518</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01509">1509</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -566,7 +579,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01133">1133</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01144">1144</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -606,7 +619,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01143">1143</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01154">1154</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -652,7 +665,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00954">954</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00973">973</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -692,7 +705,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01427">1427</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01417">1417</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -738,12 +751,12 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01445">1445</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01435">1435</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="ga7e3752eb5ff9909862380d188d2b3f24" name="ga7e3752eb5ff9909862380d188d2b3f24"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga7e3752eb5ff9909862380d188d2b3f24">&#9670;&#160;</a></span>make_vec2()</h2>
+<a id="ga2c8ce4551d0597a3aaaf32530233c6fd" name="ga2c8ce4551d0597a3aaaf32530233c6fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga2c8ce4551d0597a3aaaf32530233c6fd">&#9670;&#160;</a></span>make_vec2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -764,7 +777,7 @@ Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -778,7 +791,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00433">433</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00435">435</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

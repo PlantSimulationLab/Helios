@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: helios::vec4 Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -163,54 +176,54 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a416f39c133309add363f43fd5f1e340c" id="r_a416f39c133309add363f43fd5f1e340c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a416f39c133309add363f43fd5f1e340c">magnitude</a> () const</td></tr>
 <tr class="memdesc:a416f39c133309add363f43fd5f1e340c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the vector magnitude.  <br /></td></tr>
 <tr class="separator:a416f39c133309add363f43fd5f1e340c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a94756adab8fcf1382e2bde79c00014f0" id="r_a94756adab8fcf1382e2bde79c00014f0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a94756adab8fcf1382e2bde79c00014f0">vec4</a> ()</td></tr>
-<tr class="memdesc:a94756adab8fcf1382e2bde79c00014f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
-<tr class="separator:a94756adab8fcf1382e2bde79c00014f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a1b031b2afc3b17e18411d0d899fbbc" id="r_a5a1b031b2afc3b17e18411d0d899fbbc"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5a1b031b2afc3b17e18411d0d899fbbc">vec4</a> ()</td></tr>
+<tr class="memdesc:a5a1b031b2afc3b17e18411d0d899fbbc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
+<tr class="separator:a5a1b031b2afc3b17e18411d0d899fbbc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fbcf26c016cdceafd9f3354b430363d" id="r_a2fbcf26c016cdceafd9f3354b430363d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2fbcf26c016cdceafd9f3354b430363d">vec4</a> (const std::vector&lt; float &gt; &amp;v)</td></tr>
 <tr class="memdesc:a2fbcf26c016cdceafd9f3354b430363d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec4 using a vector of floats.  <br /></td></tr>
 <tr class="separator:a2fbcf26c016cdceafd9f3354b430363d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab92cc5f8e93238b01c9639f011347281" id="r_ab92cc5f8e93238b01c9639f011347281"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab92cc5f8e93238b01c9639f011347281">vec4</a> (const float v[4])</td></tr>
-<tr class="memdesc:ab92cc5f8e93238b01c9639f011347281"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec3 using an array of floats.  <br /></td></tr>
-<tr class="separator:ab92cc5f8e93238b01c9639f011347281"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade4e8c762963b0ce0a195805f1ebccbd" id="r_ade4e8c762963b0ce0a195805f1ebccbd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade4e8c762963b0ce0a195805f1ebccbd">vec4</a> (float v0, float v1, float v2, float v3)</td></tr>
-<tr class="memdesc:ade4e8c762963b0ce0a195805f1ebccbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec4 using four floats.  <br /></td></tr>
-<tr class="separator:ade4e8c762963b0ce0a195805f1ebccbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac2e0c4e83c5996aaae993fc465793c46" id="r_ac2e0c4e83c5996aaae993fc465793c46"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2e0c4e83c5996aaae993fc465793c46">operator*</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:ac2e0c4e83c5996aaae993fc465793c46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dot (scalar) product of two vec4 vectors.  <br /></td></tr>
-<tr class="separator:ac2e0c4e83c5996aaae993fc465793c46"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a12ed9a7a675ba5a734326d90d82d4ffc" id="r_a12ed9a7a675ba5a734326d90d82d4ffc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12ed9a7a675ba5a734326d90d82d4ffc">operator+</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a12ed9a7a675ba5a734326d90d82d4ffc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sum of two vec4 vectors.  <br /></td></tr>
-<tr class="separator:a12ed9a7a675ba5a734326d90d82d4ffc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a795da5aba8f107010589dffda7f11d4d" id="r_a795da5aba8f107010589dffda7f11d4d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a795da5aba8f107010589dffda7f11d4d">operator+=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a)</td></tr>
-<tr class="memdesc:a795da5aba8f107010589dffda7f11d4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment vec4 vector.  <br /></td></tr>
-<tr class="separator:a795da5aba8f107010589dffda7f11d4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5cff99d238392c388015d1a0ac4456ae" id="r_a5cff99d238392c388015d1a0ac4456ae"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5cff99d238392c388015d1a0ac4456ae">operator-=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a)</td></tr>
-<tr class="memdesc:a5cff99d238392c388015d1a0ac4456ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement vec4 vector.  <br /></td></tr>
-<tr class="separator:a5cff99d238392c388015d1a0ac4456ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a98039082899cd4872d383e039cc0b812" id="r_a98039082899cd4872d383e039cc0b812"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a98039082899cd4872d383e039cc0b812">operator-</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a98039082899cd4872d383e039cc0b812"><td class="mdescLeft">&#160;</td><td class="mdescRight">Difference of two vec4 vectors.  <br /></td></tr>
-<tr class="separator:a98039082899cd4872d383e039cc0b812"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af4405b9a3827567189c0386ce937ed1b" id="r_af4405b9a3827567189c0386ce937ed1b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af4405b9a3827567189c0386ce937ed1b">operator*</a> (float a) const</td></tr>
-<tr class="memdesc:af4405b9a3827567189c0386ce937ed1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by scalar (scalar is multiplied on right: vec4*a)  <br /></td></tr>
-<tr class="separator:af4405b9a3827567189c0386ce937ed1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa86d6caee3381dd0a14a74ea5e743604" id="r_aa86d6caee3381dd0a14a74ea5e743604"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa86d6caee3381dd0a14a74ea5e743604">operator/</a> (float a) const</td></tr>
-<tr class="memdesc:aa86d6caee3381dd0a14a74ea5e743604"><td class="mdescLeft">&#160;</td><td class="mdescRight">Divide each element by scalar (scalar is divided on right: vec4/a)  <br /></td></tr>
-<tr class="separator:aa86d6caee3381dd0a14a74ea5e743604"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a766b22dfe3aa73999248fa60fd753960" id="r_a766b22dfe3aa73999248fa60fd753960"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a766b22dfe3aa73999248fa60fd753960">operator+</a> (float a) const</td></tr>
-<tr class="memdesc:a766b22dfe3aa73999248fa60fd753960"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a scalar to each element (scalar is added on right: vec4+a)  <br /></td></tr>
-<tr class="separator:a766b22dfe3aa73999248fa60fd753960"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd6f6b82dd6d3512cc8e1560e218bab2" id="r_afd6f6b82dd6d3512cc8e1560e218bab2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd6f6b82dd6d3512cc8e1560e218bab2">operator-</a> (float a) const</td></tr>
-<tr class="memdesc:afd6f6b82dd6d3512cc8e1560e218bab2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract a scalar from each element (scalar is subtracted on right: vec4-a)  <br /></td></tr>
-<tr class="separator:afd6f6b82dd6d3512cc8e1560e218bab2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8f6ace5ba502b2b958b64b1d032d1c3" id="r_aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8f6ace5ba502b2b958b64b1d032d1c3">operator==</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
-<tr class="separator:aa8f6ace5ba502b2b958b64b1d032d1c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a628c2b9a02267a04a7a0cea2f81751ea" id="r_a628c2b9a02267a04a7a0cea2f81751ea"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a628c2b9a02267a04a7a0cea2f81751ea">operator!=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const</td></tr>
-<tr class="memdesc:a628c2b9a02267a04a7a0cea2f81751ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
-<tr class="separator:a628c2b9a02267a04a7a0cea2f81751ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a64f1627b4f2c6487231f315527afbf15" id="r_a64f1627b4f2c6487231f315527afbf15"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64f1627b4f2c6487231f315527afbf15">operator-</a> () const</td></tr>
-<tr class="memdesc:a64f1627b4f2c6487231f315527afbf15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by -1.  <br /></td></tr>
-<tr class="separator:a64f1627b4f2c6487231f315527afbf15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25935c490cfe209173263c35e797dca7" id="r_a25935c490cfe209173263c35e797dca7"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25935c490cfe209173263c35e797dca7">vec4</a> (const float v[4])</td></tr>
+<tr class="memdesc:a25935c490cfe209173263c35e797dca7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec3 using an array of floats.  <br /></td></tr>
+<tr class="separator:a25935c490cfe209173263c35e797dca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8b486d04004462974a150bdf2890197" id="r_aa8b486d04004462974a150bdf2890197"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8b486d04004462974a150bdf2890197">vec4</a> (float v0, float v1, float v2, float v3)</td></tr>
+<tr class="memdesc:aa8b486d04004462974a150bdf2890197"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize vec4 using four floats.  <br /></td></tr>
+<tr class="separator:aa8b486d04004462974a150bdf2890197"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb8481d9b13600d3401d3adf613f6092" id="r_adb8481d9b13600d3401d3adf613f6092"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb8481d9b13600d3401d3adf613f6092">operator*</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:adb8481d9b13600d3401d3adf613f6092"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dot (scalar) product of two vec4 vectors.  <br /></td></tr>
+<tr class="separator:adb8481d9b13600d3401d3adf613f6092"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d4c896ddb02114ec7fee8a1e0d1dfe6" id="r_a1d4c896ddb02114ec7fee8a1e0d1dfe6"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d4c896ddb02114ec7fee8a1e0d1dfe6">operator+</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:a1d4c896ddb02114ec7fee8a1e0d1dfe6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sum of two vec4 vectors.  <br /></td></tr>
+<tr class="separator:a1d4c896ddb02114ec7fee8a1e0d1dfe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af23e03e1aabb34782ad87678a98ee98d" id="r_af23e03e1aabb34782ad87678a98ee98d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af23e03e1aabb34782ad87678a98ee98d">operator+=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) noexcept</td></tr>
+<tr class="memdesc:af23e03e1aabb34782ad87678a98ee98d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment vec4 vector.  <br /></td></tr>
+<tr class="separator:af23e03e1aabb34782ad87678a98ee98d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88273a5172c439d51ed5d81c14d6360b" id="r_a88273a5172c439d51ed5d81c14d6360b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88273a5172c439d51ed5d81c14d6360b">operator-=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) noexcept</td></tr>
+<tr class="memdesc:a88273a5172c439d51ed5d81c14d6360b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement vec4 vector.  <br /></td></tr>
+<tr class="separator:a88273a5172c439d51ed5d81c14d6360b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab047fbb156542be423ead1def4fc726e" id="r_ab047fbb156542be423ead1def4fc726e"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab047fbb156542be423ead1def4fc726e">operator-</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:ab047fbb156542be423ead1def4fc726e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Difference of two vec4 vectors.  <br /></td></tr>
+<tr class="separator:ab047fbb156542be423ead1def4fc726e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13aacb7dc142ae005c21c4733f063b9b" id="r_a13aacb7dc142ae005c21c4733f063b9b"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a13aacb7dc142ae005c21c4733f063b9b">operator*</a> (float a) const noexcept</td></tr>
+<tr class="memdesc:a13aacb7dc142ae005c21c4733f063b9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by scalar (scalar is multiplied on right: vec4*a)  <br /></td></tr>
+<tr class="separator:a13aacb7dc142ae005c21c4733f063b9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac37646fffea7aee2ffa8da2ffbb2b1c0" id="r_ac37646fffea7aee2ffa8da2ffbb2b1c0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac37646fffea7aee2ffa8da2ffbb2b1c0">operator/</a> (float a) const noexcept</td></tr>
+<tr class="memdesc:ac37646fffea7aee2ffa8da2ffbb2b1c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Divide each element by scalar (scalar is divided on right: vec4/a)  <br /></td></tr>
+<tr class="separator:ac37646fffea7aee2ffa8da2ffbb2b1c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab3c7b45502a1d56cc7c3b728ce6c7255" id="r_ab3c7b45502a1d56cc7c3b728ce6c7255"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab3c7b45502a1d56cc7c3b728ce6c7255">operator+</a> (float a) const noexcept</td></tr>
+<tr class="memdesc:ab3c7b45502a1d56cc7c3b728ce6c7255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a scalar to each element (scalar is added on right: vec4+a)  <br /></td></tr>
+<tr class="separator:ab3c7b45502a1d56cc7c3b728ce6c7255"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf0aefad856dcbdc570abac87dada236" id="r_aaf0aefad856dcbdc570abac87dada236"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf0aefad856dcbdc570abac87dada236">operator-</a> (float a) const noexcept</td></tr>
+<tr class="memdesc:aaf0aefad856dcbdc570abac87dada236"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract a scalar from each element (scalar is subtracted on right: vec4-a)  <br /></td></tr>
+<tr class="separator:aaf0aefad856dcbdc570abac87dada236"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad90b82550c8250cead707b7e6a34b135" id="r_ad90b82550c8250cead707b7e6a34b135"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad90b82550c8250cead707b7e6a34b135">operator==</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:ad90b82550c8250cead707b7e6a34b135"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
+<tr class="separator:ad90b82550c8250cead707b7e6a34b135"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6fb9d9fbc551eb01323c34c99acdc955" id="r_a6fb9d9fbc551eb01323c34c99acdc955"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6fb9d9fbc551eb01323c34c99acdc955">operator!=</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:a6fb9d9fbc551eb01323c34c99acdc955"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two vec4 vectors  <br /></td></tr>
+<tr class="separator:a6fb9d9fbc551eb01323c34c99acdc955"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc0faff8cebcb34fea48830d7bfcc39f" id="r_acc0faff8cebcb34fea48830d7bfcc39f"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec4.html">vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc0faff8cebcb34fea48830d7bfcc39f">operator-</a> () const noexcept</td></tr>
+<tr class="memdesc:acc0faff8cebcb34fea48830d7bfcc39f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by -1.  <br /></td></tr>
+<tr class="separator:acc0faff8cebcb34fea48830d7bfcc39f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -236,10 +249,10 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Vector of four elements of type 'float'. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00673">673</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00694">694</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a94756adab8fcf1382e2bde79c00014f0" name="a94756adab8fcf1382e2bde79c00014f0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a94756adab8fcf1382e2bde79c00014f0">&#9670;&#160;</a></span>vec4() <span class="overload">[1/4]</span></h2>
+<a id="a5a1b031b2afc3b17e18411d0d899fbbc" name="a5a1b031b2afc3b17e18411d0d899fbbc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a1b031b2afc3b17e18411d0d899fbbc">&#9670;&#160;</a></span>vec4() <span class="overload">[1/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -256,7 +269,7 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -264,7 +277,7 @@ Friends</h2></td></tr>
 <p>Default constructor. </p>
 <p>initializes to zero </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00705">705</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00727">727</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -293,12 +306,12 @@ Friends</h2></td></tr>
 
 <p>Initialize vec4 using a vector of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00708">708</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00730">730</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="ab92cc5f8e93238b01c9639f011347281" name="ab92cc5f8e93238b01c9639f011347281"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab92cc5f8e93238b01c9639f011347281">&#9670;&#160;</a></span>vec4() <span class="overload">[3/4]</span></h2>
+<a id="a25935c490cfe209173263c35e797dca7" name="a25935c490cfe209173263c35e797dca7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25935c490cfe209173263c35e797dca7">&#9670;&#160;</a></span>vec4() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -315,19 +328,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Initialize vec3 using an array of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00718">718</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00740">740</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="ade4e8c762963b0ce0a195805f1ebccbd" name="ade4e8c762963b0ce0a195805f1ebccbd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade4e8c762963b0ce0a195805f1ebccbd">&#9670;&#160;</a></span>vec4() <span class="overload">[4/4]</span></h2>
+<a id="aa8b486d04004462974a150bdf2890197" name="aa8b486d04004462974a150bdf2890197"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8b486d04004462974a150bdf2890197">&#9670;&#160;</a></span>vec4() <span class="overload">[4/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -358,14 +371,14 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Initialize vec4 using four floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00721">721</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00743">743</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -396,7 +409,7 @@ Friends</h2></td></tr>
 <p>Compute the vector magnitude. </p>
 <dl class="section return"><dt>Returns</dt><dd>magnitude of vector. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00699">699</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00721">721</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -425,12 +438,12 @@ Friends</h2></td></tr>
 
 <p>Normalize vector components such that the magnitude is unity. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00686">686</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00707">707</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a628c2b9a02267a04a7a0cea2f81751ea" name="a628c2b9a02267a04a7a0cea2f81751ea"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a628c2b9a02267a04a7a0cea2f81751ea">&#9670;&#160;</a></span>operator!=()</h2>
+<a id="a6fb9d9fbc551eb01323c34c99acdc955" name="a6fb9d9fbc551eb01323c34c99acdc955"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6fb9d9fbc551eb01323c34c99acdc955">&#9670;&#160;</a></span>operator!=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -447,19 +460,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for equality of two vec4 vectors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00832">832</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00861">861</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="ac2e0c4e83c5996aaae993fc465793c46" name="ac2e0c4e83c5996aaae993fc465793c46"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac2e0c4e83c5996aaae993fc465793c46">&#9670;&#160;</a></span>operator*() <span class="overload">[1/2]</span></h2>
+<a id="adb8481d9b13600d3401d3adf613f6092" name="adb8481d9b13600d3401d3adf613f6092"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb8481d9b13600d3401d3adf613f6092">&#9670;&#160;</a></span>operator*() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -476,19 +489,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Dot (scalar) product of two vec4 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00772">772</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00800">800</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="af4405b9a3827567189c0386ce937ed1b" name="af4405b9a3827567189c0386ce937ed1b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af4405b9a3827567189c0386ce937ed1b">&#9670;&#160;</a></span>operator*() <span class="overload">[2/2]</span></h2>
+<a id="a13aacb7dc142ae005c21c4733f063b9b" name="a13aacb7dc142ae005c21c4733f063b9b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a13aacb7dc142ae005c21c4733f063b9b">&#9670;&#160;</a></span>operator*() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -505,19 +518,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Multiply each element by scalar (scalar is multiplied on right: vec4*a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00816">816</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00844">844</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a12ed9a7a675ba5a734326d90d82d4ffc" name="a12ed9a7a675ba5a734326d90d82d4ffc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a12ed9a7a675ba5a734326d90d82d4ffc">&#9670;&#160;</a></span>operator+() <span class="overload">[1/2]</span></h2>
+<a id="a1d4c896ddb02114ec7fee8a1e0d1dfe6" name="a1d4c896ddb02114ec7fee8a1e0d1dfe6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d4c896ddb02114ec7fee8a1e0d1dfe6">&#9670;&#160;</a></span>operator+() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -534,19 +547,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Sum of two vec4 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00776">776</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00804">804</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a766b22dfe3aa73999248fa60fd753960" name="a766b22dfe3aa73999248fa60fd753960"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a766b22dfe3aa73999248fa60fd753960">&#9670;&#160;</a></span>operator+() <span class="overload">[2/2]</span></h2>
+<a id="ab3c7b45502a1d56cc7c3b728ce6c7255" name="ab3c7b45502a1d56cc7c3b728ce6c7255"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab3c7b45502a1d56cc7c3b728ce6c7255">&#9670;&#160;</a></span>operator+() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -563,19 +576,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Add a scalar to each element (scalar is added on right: vec4+a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00796">796</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00824">824</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a795da5aba8f107010589dffda7f11d4d" name="a795da5aba8f107010589dffda7f11d4d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a795da5aba8f107010589dffda7f11d4d">&#9670;&#160;</a></span>operator+=()</h2>
+<a id="af23e03e1aabb34782ad87678a98ee98d" name="af23e03e1aabb34782ad87678a98ee98d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af23e03e1aabb34782ad87678a98ee98d">&#9670;&#160;</a></span>operator+=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -592,19 +605,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Increment vec4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00780">780</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00808">808</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a64f1627b4f2c6487231f315527afbf15" name="a64f1627b4f2c6487231f315527afbf15"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a64f1627b4f2c6487231f315527afbf15">&#9670;&#160;</a></span>operator-() <span class="overload">[1/3]</span></h2>
+<a id="acc0faff8cebcb34fea48830d7bfcc39f" name="acc0faff8cebcb34fea48830d7bfcc39f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc0faff8cebcb34fea48830d7bfcc39f">&#9670;&#160;</a></span>operator-() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -621,19 +634,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Multiply each element by -1. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00836">836</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00865">865</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a98039082899cd4872d383e039cc0b812" name="a98039082899cd4872d383e039cc0b812"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a98039082899cd4872d383e039cc0b812">&#9670;&#160;</a></span>operator-() <span class="overload">[2/3]</span></h2>
+<a id="ab047fbb156542be423ead1def4fc726e" name="ab047fbb156542be423ead1def4fc726e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab047fbb156542be423ead1def4fc726e">&#9670;&#160;</a></span>operator-() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -650,19 +663,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Difference of two vec4 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00804">804</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00832">832</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="afd6f6b82dd6d3512cc8e1560e218bab2" name="afd6f6b82dd6d3512cc8e1560e218bab2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd6f6b82dd6d3512cc8e1560e218bab2">&#9670;&#160;</a></span>operator-() <span class="overload">[3/3]</span></h2>
+<a id="aaf0aefad856dcbdc570abac87dada236" name="aaf0aefad856dcbdc570abac87dada236"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf0aefad856dcbdc570abac87dada236">&#9670;&#160;</a></span>operator-() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -679,19 +692,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Subtract a scalar from each element (scalar is subtracted on right: vec4-a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00808">808</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00836">836</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a5cff99d238392c388015d1a0ac4456ae" name="a5cff99d238392c388015d1a0ac4456ae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5cff99d238392c388015d1a0ac4456ae">&#9670;&#160;</a></span>operator-=()</h2>
+<a id="a88273a5172c439d51ed5d81c14d6360b" name="a88273a5172c439d51ed5d81c14d6360b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a88273a5172c439d51ed5d81c14d6360b">&#9670;&#160;</a></span>operator-=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -708,19 +721,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Decrement vec4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00788">788</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00816">816</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="aa86d6caee3381dd0a14a74ea5e743604" name="aa86d6caee3381dd0a14a74ea5e743604"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa86d6caee3381dd0a14a74ea5e743604">&#9670;&#160;</a></span>operator/()</h2>
+<a id="ac37646fffea7aee2ffa8da2ffbb2b1c0" name="ac37646fffea7aee2ffa8da2ffbb2b1c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac37646fffea7aee2ffa8da2ffbb2b1c0">&#9670;&#160;</a></span>operator/()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -737,19 +750,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Divide each element by scalar (scalar is divided on right: vec4/a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00824">824</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00852">852</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="aa8f6ace5ba502b2b958b64b1d032d1c3" name="aa8f6ace5ba502b2b958b64b1d032d1c3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa8f6ace5ba502b2b958b64b1d032d1c3">&#9670;&#160;</a></span>operator==()</h2>
+<a id="ad90b82550c8250cead707b7e6a34b135" name="ad90b82550c8250cead707b7e6a34b135"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad90b82550c8250cead707b7e6a34b135">&#9670;&#160;</a></span>operator==()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -766,14 +779,14 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for equality of two vec4 vectors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00828">828</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00857">857</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -807,7 +820,7 @@ Friends</h2></td></tr>
 
 <p>Write vec4 to output stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00749">749</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00771">771</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -826,7 +839,7 @@ Friends</h2></td></tr>
 
 <p>Fourth element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00683">683</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00704">704</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -844,7 +857,7 @@ Friends</h2></td></tr>
 
 <p>First element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00677">677</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00698">698</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -862,7 +875,7 @@ Friends</h2></td></tr>
 
 <p>Second element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00679">679</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00700">700</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -880,7 +893,7 @@ Friends</h2></td></tr>
 
 <p>Third element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00681">681</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00702">702</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

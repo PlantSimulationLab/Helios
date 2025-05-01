@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 6: Global Data</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -163,7 +176,7 @@ Creating Global Data (Scalars)</h1>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;  <span class="comment">//Declare the &quot;Context&quot; class</span></div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa92b28a9c26bbff7e5621e1c9dd48086" title="Add global data value (int)">setGlobalData</a>(<span class="stringliteral">&quot;my_data&quot;</span>,10.0); <span class="comment">//add global data called my_data with a value of 10</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>(<span class="stringliteral">&quot;my_data&quot;</span>,10.0); <span class="comment">//add global data called my_data with a value of 10</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="context_globaldata_arrays"></a>
@@ -205,7 +218,7 @@ Creating Global Data (Arrays)</h1>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">float</span> data[5] = {10, 11, 12, 13, 14};</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa92b28a9c26bbff7e5621e1c9dd48086" title="Add global data value (int)">setGlobalData</a>(<span class="stringliteral">&quot;my_data&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,5,&amp;data); <span class="comment">//add global data called my_data to only the first primitive</span></div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>(<span class="stringliteral">&quot;my_data&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,5,&amp;data); <span class="comment">//add global data called my_data to only the first primitive</span></div>
 <div class="line"> </div>
 <div class="line">    std::vector&lt;float&gt; data_new;</div>
 <div class="line"> </div>

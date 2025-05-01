@@ -1,10 +1,26 @@
 #!/bin/bash
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+# Function to display usage information
+usage() {
+    echo "Usage: $(basename "$0") [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "  --checkout       Clone the latest Helios repo to /tmp and run tests"
+    echo "  --nogpu          Run only samples that do not require GPU"
+    echo "  --visbuildonly   Build only, do not run visualizer samples"
+    echo "  --memcheck       Enable memory checking tools (requires leaks on macOS or valgrind on Linux)"
+    echo "  --debugbuild     Build with Debug configuration"
+    echo
+    exit 1
+}
+
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5" )
 SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
 
 TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture"
 TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture"
+
+BUILD_TYPE="Release"
 
 cd ../samples || exit 1
 
@@ -16,7 +32,6 @@ fi
 while [ $# -gt 0 ]; do
   case $1 in
   --checkout)
-
     cd /tmp || exit 1
 
     if [ -e "./helios_test" ]; then
@@ -53,6 +68,14 @@ while [ $# -gt 0 ]; do
     BUILD_TYPE="Debug"
     ;;
 
+  --help|-h)
+    usage
+    ;;
+
+  *)
+    echo "Error: Unknown option: $1"
+    usage
+    ;;
   esac
   shift
 done
@@ -69,6 +92,12 @@ if [ "${MEMCHECK}" == "ON" ];then
       MEMCHECK="OFF"
     fi
   fi
+fi
+
+# Check if cmake command is available
+if ! command -v cmake &> /dev/null; then
+  echo "ERROR: cmake command not found. Please install cmake and make sure it's in your PATH."
+  exit 1
 fi
 
 if [ "${MEMCHECK}" == "ON" ];then
@@ -101,7 +130,7 @@ else
 
     echo -ne "Building project creation script test..."
 
-    cmake .. &>/dev/null
+    cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" &>/dev/null
 
     if (($? == 0)); then
       echo -e "\r\x1B[32mBuilding project creation script test...done.\x1B[39m"

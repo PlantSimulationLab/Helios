@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Phytomer Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -156,28 +169,43 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a588596baf890a4b4e6431096deaa8690" id="r_a588596baf890a4b4e6431096deaa8690"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a588596baf890a4b4e6431096deaa8690">Phytomer</a> (const <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> &amp;params, <a class="el" href="struct_shoot.html">Shoot</a> *parent_shoot, uint phytomer_index, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_internode_axis, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_petiole_axis, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> internode_base_origin, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plantarchitecture_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="separator:a588596baf890a4b4e6431096deaa8690"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada205c30db69f8b310c8c683cb3c7933" id="r_ada205c30db69f8b310c8c683cb3c7933"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada205c30db69f8b310c8c683cb3c7933">getInternodeNodePositions</a> () const</td></tr>
+<tr class="memdesc:ada205c30db69f8b310c8c683cb3c7933"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve the positions of nodes associated with an internode.  <br /></td></tr>
 <tr class="separator:ada205c30db69f8b310c8c683cb3c7933"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0b15ed1ee74bc95f5a8489022ac8e6e2" id="r_a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b15ed1ee74bc95f5a8489022ac8e6e2">getInternodeNodeRadii</a> () const</td></tr>
+<tr class="memdesc:a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve the radii of nodes associated with an internode.  <br /></td></tr>
 <tr class="separator:a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44a1c87c905746ca31befed25f2dd647" id="r_a44a1c87c905746ca31befed25f2dd647"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44a1c87c905746ca31befed25f2dd647">getInternodeAxisVector</a> (float stem_fraction) const</td></tr>
+<tr class="memdesc:a44a1c87c905746ca31befed25f2dd647"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the axis vector of the internode at a given fraction along the internode.  <br /></td></tr>
 <tr class="separator:a44a1c87c905746ca31befed25f2dd647"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42a7e97e8c89a8707852869990933a01" id="r_a42a7e97e8c89a8707852869990933a01"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42a7e97e8c89a8707852869990933a01">getPetioleAxisVector</a> (float stem_fraction, uint petiole_index) const</td></tr>
+<tr class="memdesc:a42a7e97e8c89a8707852869990933a01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the petiole axis vector for a given stem fraction and petiole index.  <br /></td></tr>
 <tr class="separator:a42a7e97e8c89a8707852869990933a01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb8e9c145c85075812f98503c4a6bc44" id="r_acb8e9c145c85075812f98503c4a6bc44"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb8e9c145c85075812f98503c4a6bc44">getInternodeLength</a> () const</td></tr>
+<tr class="memdesc:acb8e9c145c85075812f98503c4a6bc44"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the total length of the internode.  <br /></td></tr>
 <tr class="separator:acb8e9c145c85075812f98503c4a6bc44"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5d05ad6d9e180082a5cda12da493b72b" id="r_a5d05ad6d9e180082a5cda12da493b72b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5d05ad6d9e180082a5cda12da493b72b">getInternodeRadius</a> () const</td></tr>
+<tr class="memdesc:a5d05ad6d9e180082a5cda12da493b72b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the radius of the internode.  <br /></td></tr>
 <tr class="separator:a5d05ad6d9e180082a5cda12da493b72b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0798f9c7d471372199f72172b67da173" id="r_a0798f9c7d471372199f72172b67da173"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0798f9c7d471372199f72172b67da173">getPetioleLength</a> () const</td></tr>
+<tr class="memdesc:a0798f9c7d471372199f72172b67da173"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the length of the petiole.  <br /></td></tr>
 <tr class="separator:a0798f9c7d471372199f72172b67da173"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a38c6cd729c0033fcb0b4acec5089d328" id="r_a38c6cd729c0033fcb0b4acec5089d328"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38c6cd729c0033fcb0b4acec5089d328">getInternodeRadius</a> (float stem_fraction) const</td></tr>
+<tr class="memdesc:a38c6cd729c0033fcb0b4acec5089d328"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the radius of the internode based on the stem fraction.  <br /></td></tr>
 <tr class="separator:a38c6cd729c0033fcb0b4acec5089d328"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a78acccf5f57c43c794c85d9170be4656" id="r_a78acccf5f57c43c794c85d9170be4656"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a78acccf5f57c43c794c85d9170be4656">getLeafArea</a> () const</td></tr>
+<tr class="memdesc:a78acccf5f57c43c794c85d9170be4656"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total leaf area for the current phytomer.  <br /></td></tr>
 <tr class="separator:a78acccf5f57c43c794c85d9170be4656"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6a9cc6c21a82817eee8091481ab8f73" id="r_ab6a9cc6c21a82817eee8091481ab8f73"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab6a9cc6c21a82817eee8091481ab8f73">getLeafBasePosition</a> (uint petiole_index, uint leaf_index) const</td></tr>
+<tr class="memdesc:ab6a9cc6c21a82817eee8091481ab8f73"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the position of the base of a leaf within the phytomer.  <br /></td></tr>
+<tr class="separator:ab6a9cc6c21a82817eee8091481ab8f73"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c3196c1b186e116f85d8a8514a2df40" id="r_a8c3196c1b186e116f85d8a8514a2df40"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c3196c1b186e116f85d8a8514a2df40">hasLeaf</a> () const</td></tr>
+<tr class="memdesc:a8c3196c1b186e116f85d8a8514a2df40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the phytomer has a leaf.  <br /></td></tr>
 <tr class="separator:a8c3196c1b186e116f85d8a8514a2df40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0a2257100ec06229fe39f64cc59c0289" id="r_a0a2257100ec06229fe39f64cc59c0289"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0a2257100ec06229fe39f64cc59c0289">calculateDownstreamLeafArea</a> () const</td></tr>
+<tr class="memdesc:a0a2257100ec06229fe39f64cc59c0289"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total leaf area downstream of the current phytomer.  <br /></td></tr>
 <tr class="separator:a0a2257100ec06229fe39f64cc59c0289"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa463dd3dc4119bf2c8f7fa6b7a104186" id="r_aa463dd3dc4119bf2c8f7fa6b7a104186"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa463dd3dc4119bf2c8f7fa6b7a104186">setInternodeLengthScaleFraction</a> (float internode_scale_factor_fraction, bool update_context_geometry)</td></tr>
+<tr class="memdesc:aa463dd3dc4119bf2c8f7fa6b7a104186"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the current internode length as a fraction of its maximum length.  <br /></td></tr>
 <tr class="separator:aa463dd3dc4119bf2c8f7fa6b7a104186"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aecc6f52f3490562f4daf581bec7f4260" id="r_aecc6f52f3490562f4daf581bec7f4260"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aecc6f52f3490562f4daf581bec7f4260">scaleInternodeMaxLength</a> (float scale_factor)</td></tr>
 <tr class="memdesc:aecc6f52f3490562f4daf581bec7f4260"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale the fully-elongated (maximum) internode length as a fraction of its current fully-elongated length.  <br /></td></tr>
@@ -196,8 +224,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ae6bbbd7dcf85fb3b11062e2b0cb415e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3221b2aca2b12fcb2c83997391c6d7b1" id="r_a3221b2aca2b12fcb2c83997391c6d7b1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3221b2aca2b12fcb2c83997391c6d7b1">scaleLeafPrototypeScale</a> (float scale_factor)</td></tr>
 <tr class="separator:a3221b2aca2b12fcb2c83997391c6d7b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a894f49dbd3ce2804be3105a658f96335" id="r_a894f49dbd3ce2804be3105a658f96335"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a894f49dbd3ce2804be3105a658f96335">setInflorescenceScaleFraction</a> (<a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;fbud, float inflorescence_scale_factor_fraction)</td></tr>
-<tr class="separator:a894f49dbd3ce2804be3105a658f96335"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6e2dddb5b82bcdf790ff5a4b6ffa5ba" id="r_af6e2dddb5b82bcdf790ff5a4b6ffa5ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af6e2dddb5b82bcdf790ff5a4b6ffa5ba">setInflorescenceScaleFraction</a> (<a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;fbud, float inflorescence_scale_factor_fraction) const</td></tr>
+<tr class="separator:af6e2dddb5b82bcdf790ff5a4b6ffa5ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e4e644f128df490344671e847fb31c2" id="r_a5e4e644f128df490344671e847fb31c2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e4e644f128df490344671e847fb31c2">setPetioleBase</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position)</td></tr>
 <tr class="separator:a5e4e644f128df490344671e847fb31c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a698f243e83c9d52282ac60f8e6d4afa9" id="r_a698f243e83c9d52282ac60f8e6d4afa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a698f243e83c9d52282ac60f8e6d4afa9">rotateLeaf</a> (uint petiole_index, uint leaf_index, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;rotation)</td></tr>
@@ -206,16 +234,14 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a1b5659880128988e290b0084b775cc15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac875e12ad2a6d85e68fcac53f338d0b9" id="r_ac875e12ad2a6d85e68fcac53f338d0b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac875e12ad2a6d85e68fcac53f338d0b9">setVegetativeBudState</a> (BudState state, uint petiole_index, uint bud_index)</td></tr>
 <tr class="separator:ac875e12ad2a6d85e68fcac53f338d0b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a482c136a4d5f3de67b59fda6f6368611" id="r_a482c136a4d5f3de67b59fda6f6368611"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a482c136a4d5f3de67b59fda6f6368611">setVegetativeBudState</a> (BudState state, <a class="el" href="struct_vegetative_bud.html">VegetativeBud</a> &amp;vbud)</td></tr>
-<tr class="separator:a482c136a4d5f3de67b59fda6f6368611"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6788927c4adb0c7e07c058f6671efa8b" id="r_a6788927c4adb0c7e07c058f6671efa8b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6788927c4adb0c7e07c058f6671efa8b">setVegetativeBudState</a> (BudState state, <a class="el" href="struct_vegetative_bud.html">VegetativeBud</a> &amp;vbud) const</td></tr>
+<tr class="separator:a6788927c4adb0c7e07c058f6671efa8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b1d72e55ff65f9bd83b415b3ed34fc6" id="r_a1b1d72e55ff65f9bd83b415b3ed34fc6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b1d72e55ff65f9bd83b415b3ed34fc6">setFloralBudState</a> (BudState state)</td></tr>
 <tr class="separator:a1b1d72e55ff65f9bd83b415b3ed34fc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a433831209c45baebf77a4ce61192bc7b" id="r_a433831209c45baebf77a4ce61192bc7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a433831209c45baebf77a4ce61192bc7b">setFloralBudState</a> (BudState state, uint petiole_index, uint bud_index)</td></tr>
 <tr class="separator:a433831209c45baebf77a4ce61192bc7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac012241d44bc67a7a2c933abc835e82d" id="r_ac012241d44bc67a7a2c933abc835e82d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac012241d44bc67a7a2c933abc835e82d">setFloralBudState</a> (BudState state, <a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;fbud)</td></tr>
 <tr class="separator:ac012241d44bc67a7a2c933abc835e82d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af466d68c029f3a7a3f6a46bfbb8f30c6" id="r_af466d68c029f3a7a3f6a46bfbb8f30c6"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af466d68c029f3a7a3f6a46bfbb8f30c6">calculateFruitConstructionCosts</a> (const <a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;fbud)</td></tr>
-<tr class="separator:af466d68c029f3a7a3f6a46bfbb8f30c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89246512cbd00aaefcb781fe63c58f1f" id="r_a89246512cbd00aaefcb781fe63c58f1f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89246512cbd00aaefcb781fe63c58f1f">removeLeaf</a> ()</td></tr>
 <tr class="separator:a89246512cbd00aaefcb781fe63c58f1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a534909ab3f4e0159fc1de28884de5d" id="r_a4a534909ab3f4e0159fc1de28884de5d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4a534909ab3f4e0159fc1de28884de5d">deletePhytomer</a> ()</td></tr>
@@ -224,6 +250,7 @@ Public Member Functions</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a1b322b805aacae1c56c79720cf23bc3d" id="r_a1b322b805aacae1c56c79720cf23bc3d"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b322b805aacae1c56c79720cf23bc3d">getAxisVector</a> (float stem_fraction, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;axis_vertices)</td></tr>
+<tr class="memdesc:a1b322b805aacae1c56c79720cf23bc3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the normalized vector direction along the axis at a given fraction of the stem.  <br /></td></tr>
 <tr class="separator:a1b322b805aacae1c56c79720cf23bc3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
@@ -307,7 +334,7 @@ Friends</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00797">797</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00798">798</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a588596baf890a4b4e6431096deaa8690" name="a588596baf890a4b4e6431096deaa8690"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a588596baf890a4b4e6431096deaa8690">&#9670;&#160;</a></span>Phytomer()</h2>
@@ -388,7 +415,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00803">803</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00827">827</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -398,6 +425,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::calculateDownstreamLeafArea </td>
@@ -406,28 +436,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01819">1819</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total leaf area downstream of the current phytomer. </p>
+<dl class="section return"><dt>Returns</dt><dd>The total downstream leaf area as a float. </dd></dl>
 
-</div>
-</div>
-<a id="af466d68c029f3a7a3f6a46bfbb8f30c6" name="af466d68c029f3a7a3f6a46bfbb8f30c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af466d68c029f3a7a3f6a46bfbb8f30c6">&#9670;&#160;</a></span>calculateFruitConstructionCosts()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Phytomer::calculateFruitConstructionCosts </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>fbud</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00303">303</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01841">1841</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -446,7 +465,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01767">1767</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01790">1790</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -472,12 +491,22 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+<span class="mlabels"><span class="mlabel static">static</span><span class="mlabel nodiscard">nodiscard</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00286">286</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Computes the normalized vector direction along the axis at a given fraction of the stem. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">stem_fraction</td><td>Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">axis_vertices</td><td>A list of 3D points defining the vertices of the axis. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A normalized vector direction at the given fraction along the axis. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00299">299</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -486,6 +515,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Phytomer::getInternodeAxisVector </td>
@@ -494,9 +526,23 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00275">275</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieves the axis vector of the internode at a given fraction along the internode. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">stem_fraction</td><td>Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vec3 representing the axis vector of the internode at the specified internode fraction. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00288">288</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -505,6 +551,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::getInternodeLength </td>
@@ -513,9 +562,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00312">312</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Computes the total length of the internode. </p>
+<dl class="section return"><dt>Returns</dt><dd>The cumulative length of the internode based on its node positions. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00325">325</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -524,6 +581,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; Phytomer::getInternodeNodePositions </td>
@@ -532,9 +592,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00255">255</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieve the positions of nodes associated with an internode. </p>
+<dl class="section return"><dt>Returns</dt><dd>A vector of vec3 objects representing the node positions for the current internode. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00268">268</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -543,6 +611,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; float &gt; Phytomer::getInternodeNodeRadii </td>
@@ -551,9 +622,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00265">265</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieve the radii of nodes associated with an internode. </p>
+<dl class="section return"><dt>Returns</dt><dd>A vector of floats representing the radii of the nodes for the current internode. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00278">278</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -562,6 +641,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::getInternodeRadius </td>
@@ -570,9 +652,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00308">308</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieves the radius of the internode. </p>
+<dl class="section return"><dt>Returns</dt><dd>The radius of the internode. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00321">321</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -581,6 +671,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::getInternodeRadius </td>
@@ -589,9 +682,23 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00326">326</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieves the radius of the internode based on the stem fraction. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">stem_fraction</td><td>Fraction along the stem (value between 0.0 and 1.0) for which the radius is computed. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The radius of the internode at the specified stem fraction. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00339">339</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -600,6 +707,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::getLeafArea </td>
@@ -608,9 +718,58 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00330">330</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Calculates the total leaf area for the current phytomer. </p>
+<dl class="section return"><dt>Returns</dt><dd>Total leaf area as a float value. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00343">343</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab6a9cc6c21a82817eee8091481ab8f73" name="ab6a9cc6c21a82817eee8091481ab8f73"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab6a9cc6c21a82817eee8091481ab8f73">&#9670;&#160;</a></span>getLeafBasePosition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Phytomer::getLeafBasePosition </td>
+          <td>(</td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>leaf_index</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Retrieves the position of the base of a leaf within the phytomer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">petiole_index</td><td>Index of the petiole within the phytomer structure. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">leaf_index</td><td>Index of the leaf within the specified petiole. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vec3 indicating the position of the leaf base. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00358">358</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -619,6 +778,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Phytomer::getPetioleAxisVector </td>
@@ -631,9 +793,24 @@ Friends</h2></td></tr>
           <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00279">279</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieves the petiole axis vector for a given stem fraction and petiole index. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">stem_fraction</td><td>Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">petiole_index</td><td>Index of the petiole for which the axis vector is retrieved. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The axis vector of the specified petiole as a helios::vec3. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00292">292</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -642,6 +819,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float Phytomer::getPetioleLength </td>
@@ -650,9 +830,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00321">321</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Retrieves the length of the petiole. </p>
+<dl class="section return"><dt>Returns</dt><dd>Length of the petiole. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00334">334</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -661,6 +849,9 @@ Friends</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool Phytomer::hasLeaf </td>
@@ -669,9 +860,17 @@ Friends</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01815">1815</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Checks if the phytomer has a leaf. </p>
+<dl class="section return"><dt>Returns</dt><dd>True if the phytomer has at least one leaf, false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01837">1837</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -690,7 +889,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01745">1745</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01768">1768</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -718,7 +917,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01506">1506</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01530">1530</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -745,7 +944,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01601">1601</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01625">1625</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -764,7 +963,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01705">1705</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01728">1728</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -783,7 +982,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00367">367</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00391">391</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -806,7 +1005,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00387">387</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00411">411</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -834,12 +1033,12 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00377">377</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00401">401</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a894f49dbd3ce2804be3105a658f96335" name="a894f49dbd3ce2804be3105a658f96335"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a894f49dbd3ce2804be3105a658f96335">&#9670;&#160;</a></span>setInflorescenceScaleFraction()</h2>
+<a id="af6e2dddb5b82bcdf790ff5a4b6ffa5ba" name="af6e2dddb5b82bcdf790ff5a4b6ffa5ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6e2dddb5b82bcdf790ff5a4b6ffa5ba">&#9670;&#160;</a></span>setInflorescenceScaleFraction()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -852,12 +1051,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>inflorescence_scale_factor_fraction</em></span>&#160;)</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>inflorescence_scale_factor_fraction</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01728">1728</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01751">1751</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -880,7 +1079,16 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01559">1559</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p>Set the current internode length as a fraction of its maximum length. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">internode_scale_factor_fraction</td><td>Fraction of the maximum internode length </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">update_context_geometry</td><td>If true, the context geometry will be immediately updated to reflect the new internode length. If false, the geometry will be updated the next time Context geometry information is needed. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01583">1583</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -907,7 +1115,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01612">1612</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01636">1636</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -934,7 +1142,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01617">1617</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01641">1641</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -961,7 +1169,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01685">1685</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01708">1708</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -988,7 +1196,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01621">1621</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01645">1645</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1007,7 +1215,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01472">1472</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l01496">1496</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1026,7 +1234,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00345">345</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00369">369</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1054,12 +1262,12 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00353">353</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00377">377</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a482c136a4d5f3de67b59fda6f6368611" name="a482c136a4d5f3de67b59fda6f6368611"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a482c136a4d5f3de67b59fda6f6368611">&#9670;&#160;</a></span>setVegetativeBudState() <span class="overload">[3/3]</span></h2>
+<a id="a6788927c4adb0c7e07c058f6671efa8b" name="a6788927c4adb0c7e07c058f6671efa8b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6788927c4adb0c7e07c058f6671efa8b">&#9670;&#160;</a></span>setVegetativeBudState() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1072,12 +1280,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="struct_vegetative_bud.html">VegetativeBud</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>vbud</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="struct_vegetative_bud.html">VegetativeBud</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>vbud</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00363">363</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00387">387</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1310,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00956">956</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01036">1036</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1126,7 +1334,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00955">955</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01035">1035</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1145,7 +1353,7 @@ Friends</h2></td></tr>
 
 <p>Time since the phytomer was created. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00924">924</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01003">1003</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1161,7 +1369,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00932">932</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01011">1011</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1177,7 +1385,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00940">940</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01019">1019</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1193,7 +1401,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00939">939</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01018">1018</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1209,7 +1417,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00927">927</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01006">1006</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1225,7 +1433,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00928">928</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01007">1007</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1241,7 +1449,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00930">930</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01009">1009</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1257,7 +1465,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00933">933</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01012">1012</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1273,7 +1481,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00907">907</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00986">986</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1289,7 +1497,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00937">937</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01016">1016</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1305,7 +1513,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00898">898</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00977">977</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1321,7 +1529,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00898">898</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00977">977</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1337,7 +1545,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00935">935</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01014">1014</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1353,7 +1561,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00936">936</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01015">1015</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1369,7 +1577,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00925">925</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01004">1004</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1385,7 +1593,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00897">897</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00976">976</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1401,7 +1609,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00911">911</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00990">990</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1417,7 +1625,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00905">905</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00984">984</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1433,7 +1641,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00904">904</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00983">983</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1449,7 +1657,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00920">920</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00999">999</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1465,7 +1673,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00921">921</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01000">1000</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1481,7 +1689,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00908">908</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00987">987</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1497,7 +1705,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00903">903</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00982">982</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1513,7 +1721,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00901">901</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00980">980</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1529,7 +1737,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00910">910</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00989">989</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1545,7 +1753,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00902">902</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00981">981</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1561,7 +1769,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00900">900</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00979">979</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1579,7 +1787,7 @@ Friends</h2></td></tr>
 
 <p>Coordinates of internode tube segments. Index is tube segment within internode. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00896">896</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00975">975</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1595,7 +1803,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00800">800</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00801">801</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1611,7 +1819,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00913">913</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00992">992</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1627,7 +1835,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00919">919</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00998">998</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1643,7 +1851,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00915">915</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00994">994</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -1661,7 +1869,7 @@ Friends</h2></td></tr>
 
 <p>.x = index of phytomer along shoot, .y = current number of phytomers on parent shoot, .z = maximum number of phytomers on parent shoot </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00917">917</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00996">996</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

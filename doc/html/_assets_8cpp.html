@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/plantarchitecture/src/Assets.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -187,6 +200,8 @@ Functions</h2></td></tr>
 <tr class="separator:ab7b12236699c8358939c4ed6fb073c1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f867eddd90d2a350a7337731f676163" id="r_a9f867eddd90d2a350a7337731f676163"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f867eddd90d2a350a7337731f676163">BindweedFlowerPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, uint subdivisions, bool flower_is_open)</td></tr>
 <tr class="separator:a9f867eddd90d2a350a7337731f676163"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91dca617067d08d00056ba379ec7b097" id="r_a91dca617067d08d00056ba379ec7b097"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a91dca617067d08d00056ba379ec7b097">CapsicumPhytomerCreationFunction</a> (std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age)</td></tr>
+<tr class="separator:a91dca617067d08d00056ba379ec7b097"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3ee42415f0d9822004b781787971387" id="r_af3ee42415f0d9822004b781787971387"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3ee42415f0d9822004b781787971387">CheeseweedLeafPrototype</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
 <tr class="separator:af3ee42415f0d9822004b781787971387"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af616b7219a9462f21604424a533714d7" id="r_af616b7219a9462f21604424a533714d7"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af616b7219a9462f21604424a533714d7">CowpeaLeafPrototype_unifoliate_OBJ</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr, <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> *prototype_parameters, int compound_leaf_index)</td></tr>
@@ -777,7 +792,45 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00668">668</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00693">693</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a91dca617067d08d00056ba379ec7b097" name="a91dca617067d08d00056ba379ec7b097"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91dca617067d08d00056ba379ec7b097">&#9670;&#160;</a></span>CapsicumPhytomerCreationFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CapsicumPhytomerCreationFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="struct_phytomer.html">Phytomer</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>phytomer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_shoot_node_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>shoot_max_nodes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>plant_age</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00313">313</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -805,7 +858,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00313">313</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00338">338</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -833,7 +886,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00345">345</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00370">370</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -856,7 +909,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00339">339</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00364">364</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -884,7 +937,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00326">326</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00351">351</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -912,7 +965,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00319">319</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00344">344</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -950,7 +1003,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00356">356</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00381">381</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1001,7 +1054,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00391">391</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00416">416</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1039,7 +1092,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00478">478</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00503">503</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1062,7 +1115,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00507">507</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00532">532</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1100,7 +1153,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00514">514</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00539">539</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1123,7 +1176,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00500">500</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00525">525</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1151,7 +1204,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00564">564</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00589">589</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1174,7 +1227,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00556">556</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00581">581</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1202,7 +1255,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00545">545</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00570">570</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1221,7 +1274,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00574">574</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00599">599</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1259,7 +1312,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00570">570</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00595">595</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1287,7 +1340,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00590">590</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00615">615</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1310,7 +1363,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00584">584</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00609">609</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1329,7 +1382,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00606">606</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00631">631</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1367,7 +1420,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00596">596</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00621">621</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1395,7 +1448,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00616">616</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00641">641</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1418,7 +1471,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00377">377</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00402">402</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1446,7 +1499,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00622">622</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00647">647</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1469,7 +1522,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00627">627</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00652">652</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1488,7 +1541,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00636">636</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00661">661</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1526,7 +1579,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00632">632</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00657">657</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1564,7 +1617,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00657">657</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00682">682</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1587,7 +1640,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00651">651</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00676">676</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1610,7 +1663,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00681">681</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00706">706</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1648,7 +1701,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00774">774</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00799">799</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1676,7 +1729,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00791">791</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00816">816</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1699,7 +1752,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00785">785</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00810">810</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1737,7 +1790,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00802">802</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00827">827</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1770,7 +1823,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00382">382</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00407">407</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1798,7 +1851,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00820">820</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00845">845</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1821,7 +1874,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00826">826</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00851">851</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1849,7 +1902,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00838">838</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00863">863</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1872,7 +1925,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00832">832</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00857">857</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1910,7 +1963,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00844">844</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00869">869</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1938,7 +1991,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00866">866</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00891">891</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1961,7 +2014,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00860">860</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00885">885</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1980,7 +2033,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00882">882</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00907">907</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -2018,7 +2071,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00872">872</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00897">897</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -2056,7 +2109,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00892">892</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00917">917</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>
@@ -2079,7 +2132,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00886">886</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_assets_8cpp_source.html#l00911">911</a> of file <a class="el" href="_assets_8cpp_source.html">Assets.cpp</a>.</p>
 
 </div>
 </div>

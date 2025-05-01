@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/plantarchitecture/src/CarbohydrateModel.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -155,15 +168,15 @@ $(function(){initNavTree('_carbohydrate_model_8cpp.html',''); initResizable(true
 Variables</h2></td></tr>
 <tr class="memitem:aeb9ca2b5bdd50a7f2b2a73f49cd72b5b" id="r_aeb9ca2b5bdd50a7f2b2a73f49cd72b5b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb9ca2b5bdd50a7f2b2a73f49cd72b5b">C_molecular_wt</a> = 12.01</td></tr>
 <tr class="separator:aeb9ca2b5bdd50a7f2b2a73f49cd72b5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a86374249ce23ddcb27a251b6780e6fca" id="r_a86374249ce23ddcb27a251b6780e6fca"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86374249ce23ddcb27a251b6780e6fca">rho_w</a> = 650000</td></tr>
+<tr class="memitem:a86374249ce23ddcb27a251b6780e6fca" id="r_a86374249ce23ddcb27a251b6780e6fca"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86374249ce23ddcb27a251b6780e6fca">rho_w</a> = 540000</td></tr>
 <tr class="separator:a86374249ce23ddcb27a251b6780e6fca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87f154d0d3e9a27b96ac9d680ce54e19" id="r_a87f154d0d3e9a27b96ac9d680ce54e19"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a87f154d0d3e9a27b96ac9d680ce54e19">wood_carbon_percentage</a> = .475</td></tr>
+<tr class="memitem:a87f154d0d3e9a27b96ac9d680ce54e19" id="r_a87f154d0d3e9a27b96ac9d680ce54e19"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a87f154d0d3e9a27b96ac9d680ce54e19">wood_carbon_percentage</a> = .4559</td></tr>
 <tr class="separator:a87f154d0d3e9a27b96ac9d680ce54e19"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0fff3e0c51c5189805be9b70bbbd1cd8" id="r_a0fff3e0c51c5189805be9b70bbbd1cd8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0fff3e0c51c5189805be9b70bbbd1cd8">shoot_root_ratio</a> = 10</td></tr>
+<tr class="memitem:a0fff3e0c51c5189805be9b70bbbd1cd8" id="r_a0fff3e0c51c5189805be9b70bbbd1cd8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0fff3e0c51c5189805be9b70bbbd1cd8">shoot_root_ratio</a> = 3</td></tr>
 <tr class="separator:a0fff3e0c51c5189805be9b70bbbd1cd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4d2515e6a52a5528f981426984183a2a" id="r_a4d2515e6a52a5528f981426984183a2a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d2515e6a52a5528f981426984183a2a">SLA</a> = 1.75e-2</td></tr>
+<tr class="memitem:a4d2515e6a52a5528f981426984183a2a" id="r_a4d2515e6a52a5528f981426984183a2a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d2515e6a52a5528f981426984183a2a">SLA</a> = 2.5e-2</td></tr>
 <tr class="separator:a4d2515e6a52a5528f981426984183a2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae3884778ac0dc411474a2f9e05ee5b8f" id="r_ae3884778ac0dc411474a2f9e05ee5b8f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3884778ac0dc411474a2f9e05ee5b8f">leaf_carbon_percentage</a> = .4444</td></tr>
+<tr class="memitem:ae3884778ac0dc411474a2f9e05ee5b8f" id="r_ae3884778ac0dc411474a2f9e05ee5b8f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3884778ac0dc411474a2f9e05ee5b8f">leaf_carbon_percentage</a> = .444</td></tr>
 <tr class="separator:ae3884778ac0dc411474a2f9e05ee5b8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c1f4e921d639b9af45deb5eea965cdc" id="r_a4c1f4e921d639b9af45deb5eea965cdc"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c1f4e921d639b9af45deb5eea965cdc">total_flower_cost</a> = 8.33e-4</td></tr>
 <tr class="separator:a4c1f4e921d639b9af45deb5eea965cdc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -283,7 +296,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float leaf_carbon_percentage = .4444</td>
+          <td class="memname">float leaf_carbon_percentage = .444</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -379,7 +392,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float rho_w = 650000</td>
+          <td class="memname">float rho_w = 540000</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -411,7 +424,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float shoot_root_ratio = 10</td>
+          <td class="memname">float shoot_root_ratio = 3</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -427,7 +440,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float SLA = 1.75e-2</td>
+          <td class="memname">float SLA = 2.5e-2</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -459,7 +472,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float wood_carbon_percentage = .475</td>
+          <td class="memname">float wood_carbon_percentage = .4559</td>
         </tr>
       </table>
 </div><div class="memdoc">

@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/radiation/src/CameraCalibration.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -157,7 +170,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="foldopen" id="foldopen00023" data-start="{" data-end="}">
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="struct_camera_calibration.html#ab101fe425760d29aab58073d626be460">   23</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="struct_camera_calibration.html#ab101fe425760d29aab58073d626be460" title="Add checker board geometry into context.">CameraCalibration::addCheckerboard</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;boardsidesize, <span class="keyword">const</span> <span class="keywordtype">float</span> &amp;patchsize, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;centrelocation,</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>                                                     <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;rotationrad, <span class="keywordtype">bool</span> firstblack) {</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> patchfullsize = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(patchsize,patchsize); <span class="comment">//size of each patch</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> patchfullsize = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(patchsize,patchsize); <span class="comment">//size of each patch</span></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    std::vector&lt;float&gt; bwv(2,0);</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="keywordtype">float</span> bw;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keywordflow">if</span> (firstblack){</div>
@@ -180,7 +193,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>            <span class="keywordtype">float</span> xp = 0-patchsize*(float(boardsidesize.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>)-1)/2+patchsize*<span class="keywordtype">float</span>(inpr);</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>            <span class="keywordtype">float</span> yp = 0-patchsize*(float(boardsidesize.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>)-1)/2+patchsize*<span class="keywordtype">float</span>(inpc);</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>            uint UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(xp,yp,0),patchfullsize,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>,binarycolor);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>            uint UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp,yp,0),patchfullsize,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>,binarycolor);</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>            <span class="keywordflow">if</span> (bw==1){</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>                UUIDs_white.push_back(UUID);</div>
@@ -202,9 +215,9 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>        whitespectra.at(i).y=1;</div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    }</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    context-&gt;setGlobalData(<span class="stringliteral">&quot;white&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,whitespectra.size(),&amp;whitespectra[0]);</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1,0,0));</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,1,0));</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1));</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,0,0));</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,1,0));</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    context-&gt;rotatePrimitive(UUIDs,rotationrad.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1));</div>
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    context-&gt;translatePrimitive(UUIDs,centrelocation);</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keywordflow">return</span> UUIDs;</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>}</div>
@@ -212,7 +225,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span> </div>
 <div class="foldopen" id="foldopen00077" data-start="{" data-end="}">
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno"><a class="line" href="struct_camera_calibration.html#a73e6dfb0a8a3a68beeed498797310702">   77</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="struct_camera_calibration.html#a73e6dfb0a8a3a68beeed498797310702" title="Add default checker board geometry into context.">CameraCalibration::addDefaultCheckerboard</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;centrelocation, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;rotationrad){</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> boardsidesize = <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(10,7);</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> boardsidesize = <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(10,7);</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="keywordtype">float</span> patchsize = 0.029;</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordtype">bool</span> firstblack = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    std::vector&lt;uint&gt; UUID_checkboard = <a class="code hl_function" href="struct_camera_calibration.html#ab101fe425760d29aab58073d626be460" title="Add checker board geometry into context.">CameraCalibration::addCheckerboard</a>(boardsidesize, patchsize, centrelocation, rotationrad, firstblack);</div>
@@ -248,9 +261,9 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>                <span class="keywordflow">if</span>( irow&gt;=colorassignment.size() || icolumn&gt;=colorassignment.at(irow).size() ){</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>                    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (CameraCalibration::addColorboard): Dimensions of color assignment array are not consistent. This should be a square matrix.&quot;</span>);</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>                }</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(xp, yp, centrelocation.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(patchsize, patchsize), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, colorassignment.at(irow).at(icolumn));</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp, yp, centrelocation.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(patchsize, patchsize), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, colorassignment.at(irow).at(icolumn));</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>            }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>                UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(xp, yp, centrelocation.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(patchsize, patchsize), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>);</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>                UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp, yp, centrelocation.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(patchsize, patchsize), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>);</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            }</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            UUIDs.push_back(UUID);</div>
@@ -729,7 +742,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>                    <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>                }</div>
 <div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>                <span class="keywordflow">if</span>(ispectralvalue.x&gt;=wavelengthrange.<a class="code hl_variable" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e" title="First element in vector.">x</a>){</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>                    cal_spectrum.push_back(<a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(ispectralvalue.x,<a class="code hl_function" href="global_8h.html#a4d45cb06725a89f41266c8c89974c73e" title="Function to perform linear interpolation based on a vector of discrete (x,y) values.">interp1</a>(spectrumpair.second, ispectralvalue.x)));</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>                    cal_spectrum.push_back(<a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(ispectralvalue.x,<a class="code hl_function" href="global_8h.html#a4d45cb06725a89f41266c8c89974c73e" title="Function to perform linear interpolation based on a vector of discrete (x,y) values.">interp1</a>(spectrumpair.second, ispectralvalue.x)));</div>
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>                }</div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>            }</div>
 <div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>            allspectra[spectralgrouppair.first][spectrumpair.first] = cal_spectrum;</div>
@@ -821,7 +834,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>        <span class="keywordflow">if</span> ( rotatelf_sc.at(1) &lt; 0) {</div>
 <div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>            rotatelf_sc.at(1) += 2 * M_PI;</div>
 <div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>        }</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> iposlf = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(poslf.at(0),poslf.at(1),poslf.at(2));</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> iposlf = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(poslf.at(0),poslf.at(1),poslf.at(2));</div>
 <div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>        iCUUIDs.push_back(context-&gt;addPatch(iposlf,<a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>(widthlengthlf,widthlengthlf), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<span class="keywordtype">float</span>(0.5*M_PI+rotatelf_sc.at(0)), rotatelf_sc.at(1))));</div>
 <div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    }</div>
 <div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    inputFile.close();</div>

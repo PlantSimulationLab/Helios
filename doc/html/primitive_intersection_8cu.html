@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/radiation/src/primitiveIntersection.cu File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -143,8 +156,7 @@ $(function(){initNavTree('primitive_intersection_8cu.html',''); initResizable(tr
 
 <div class="header">
   <div class="summary">
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">primitiveIntersection.cu File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -152,20 +164,17 @@ $(function(){initNavTree('primitive_intersection_8cu.html',''); initResizable(tr
 <code>#include &lt;optixu/optixu_math_namespace.h&gt;</code><br />
 <code>#include &lt;optixu/optixu_matrix_namespace.h&gt;</code><br />
 <code>#include &lt;optixu/optixu_aabb_namespace.h&gt;</code><br />
-<code>#include &quot;<a class="el" href="_ray_tracing_8cu_8h_source.html">RayTracing.cu.h</a>&quot;</code><br />
+<code>#include &quot;RayTracing.cuh&quot;</code><br />
 </div>
 <p><a href="primitive_intersection_8cu_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a21b987898f0acbea7665ad0c9709bdae" id="r_a21b987898f0acbea7665ad0c9709bdae"><td class="memItemLeft" align="right" valign="top"><a id="a21b987898f0acbea7665ad0c9709bdae" name="a21b987898f0acbea7665ad0c9709bdae"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>rtDeclareVariable</b> (uint2, launch_index, rtLaunchIndex,)</td></tr>
-<tr class="separator:a21b987898f0acbea7665ad0c9709bdae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a17f41494ddc85ef019ced1b8cd2c6529" id="r_a17f41494ddc85ef019ced1b8cd2c6529"><td class="memItemLeft" align="right" valign="top"><a id="a17f41494ddc85ef019ced1b8cd2c6529" name="a17f41494ddc85ef019ced1b8cd2c6529"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>rtDeclareVariable</b> (Ray, ray, rtCurrentRay,)</td></tr>
 <tr class="separator:a17f41494ddc85ef019ced1b8cd2c6529"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8cdfa569831955d47d45181d441934d1" id="r_a8cdfa569831955d47d45181d441934d1"><td class="memItemLeft" align="right" valign="top"><a id="a8cdfa569831955d47d45181d441934d1" name="a8cdfa569831955d47d45181d441934d1"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>rtDeclareVariable</b> (<a class="el" href="struct_per_ray_data.html">PerRayData</a>, prd, rtPayload,)</td></tr>
+&#160;</td><td class="memItemRight" valign="bottom"><b>rtDeclareVariable</b> (PerRayData, prd, rtPayload,)</td></tr>
 <tr class="separator:a8cdfa569831955d47d45181d441934d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5cfe1d3cc5ef29595ba13005c14c61d7" id="r_a5cfe1d3cc5ef29595ba13005c14c61d7"><td class="memItemLeft" align="right" valign="top"><a id="a5cfe1d3cc5ef29595ba13005c14c61d7" name="a5cfe1d3cc5ef29595ba13005c14c61d7"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>rtDeclareVariable</b> (unsigned int, UUID, attribute UUID,)</td></tr>
@@ -194,47 +203,6 @@ Functions</h2></td></tr>
 <tr class="separator:ac645addc8bc3071933ca33a0f053af07"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4fd84a7124be9fea427690a9a2442b3b" id="r_a4fd84a7124be9fea427690a9a2442b3b"><td class="memItemLeft" align="right" valign="top">RT_PROGRAM void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fd84a7124be9fea427690a9a2442b3b">tile_bounds</a> (int objID, float result[6])</td></tr>
 <tr class="separator:a4fd84a7124be9fea427690a9a2442b3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a0bb8fc1704de2ca56d08f6873fbbd462" id="r_a0bb8fc1704de2ca56d08f6873fbbd462"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float3, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0bb8fc1704de2ca56d08f6873fbbd462">patch_vertices</a></td></tr>
-<tr class="separator:a0bb8fc1704de2ca56d08f6873fbbd462"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fc1f30fcf2edcbd16f34bcb6a3d526d" id="r_a3fc1f30fcf2edcbd16f34bcb6a3d526d"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fc1f30fcf2edcbd16f34bcb6a3d526d">patch_UUID</a></td></tr>
-<tr class="separator:a3fc1f30fcf2edcbd16f34bcb6a3d526d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f1ee81121341102bea94a422a181360" id="r_a3f1ee81121341102bea94a422a181360"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float3, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3f1ee81121341102bea94a422a181360">triangle_vertices</a></td></tr>
-<tr class="separator:a3f1ee81121341102bea94a422a181360"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abe4b6281baa683bd3b40fabb8369c698" id="r_abe4b6281baa683bd3b40fabb8369c698"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe4b6281baa683bd3b40fabb8369c698">triangle_UUID</a></td></tr>
-<tr class="separator:abe4b6281baa683bd3b40fabb8369c698"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c62f981b71a23760d04f8f88e6ac696" id="r_a8c62f981b71a23760d04f8f88e6ac696"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c62f981b71a23760d04f8f88e6ac696">disk_UUID</a></td></tr>
-<tr class="separator:a8c62f981b71a23760d04f8f88e6ac696"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1f086ec5bdd4fcc3a08d8334bbd1d66" id="r_ad1f086ec5bdd4fcc3a08d8334bbd1d66"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float3, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1f086ec5bdd4fcc3a08d8334bbd1d66">tile_vertices</a></td></tr>
-<tr class="separator:ad1f086ec5bdd4fcc3a08d8334bbd1d66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acebd534fa3ec556760e70fd92b52e1e5" id="r_acebd534fa3ec556760e70fd92b52e1e5"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acebd534fa3ec556760e70fd92b52e1e5">tile_UUID</a></td></tr>
-<tr class="separator:acebd534fa3ec556760e70fd92b52e1e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a993176e77589e8f29a2012c4f2ade10d" id="r_a993176e77589e8f29a2012c4f2ade10d"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float3, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a993176e77589e8f29a2012c4f2ade10d">voxel_vertices</a></td></tr>
-<tr class="separator:a993176e77589e8f29a2012c4f2ade10d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa59f12290f12518b8d55fb33a392f3cf" id="r_aa59f12290f12518b8d55fb33a392f3cf"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa59f12290f12518b8d55fb33a392f3cf">voxel_UUID</a></td></tr>
-<tr class="separator:aa59f12290f12518b8d55fb33a392f3cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78e3ae75799350571bd60df317577a60" id="r_a78e3ae75799350571bd60df317577a60"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float3, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a78e3ae75799350571bd60df317577a60">bbox_vertices</a></td></tr>
-<tr class="separator:a78e3ae75799350571bd60df317577a60"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7999b515c59c919f7c76ca6dcc161f0" id="r_ae7999b515c59c919f7c76ca6dcc161f0"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; unsigned int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7999b515c59c919f7c76ca6dcc161f0">bbox_UUID</a></td></tr>
-<tr class="separator:ae7999b515c59c919f7c76ca6dcc161f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0a8fcade7bdf07dbfb41e8e66bbfbdb" id="r_aa0a8fcade7bdf07dbfb41e8e66bbfbdb"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; bool, 3 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0a8fcade7bdf07dbfb41e8e66bbfbdb">maskdata</a></td></tr>
-<tr class="separator:aa0a8fcade7bdf07dbfb41e8e66bbfbdb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afae637d09f4bdbcb96b91eaf2c990fa3" id="r_afae637d09f4bdbcb96b91eaf2c990fa3"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; int2, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afae637d09f4bdbcb96b91eaf2c990fa3">masksize</a></td></tr>
-<tr class="separator:afae637d09f4bdbcb96b91eaf2c990fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a30d19154defceb5c260ed20077ed35b6" id="r_a30d19154defceb5c260ed20077ed35b6"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30d19154defceb5c260ed20077ed35b6">maskID</a></td></tr>
-<tr class="separator:a30d19154defceb5c260ed20077ed35b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab2fd7ff80834198e1c5fbada59f57299" id="r_ab2fd7ff80834198e1c5fbada59f57299"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; float2, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab2fd7ff80834198e1c5fbada59f57299">uvdata</a></td></tr>
-<tr class="separator:ab2fd7ff80834198e1c5fbada59f57299"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aebde8d0eb2adebe1035fd6649de7d016" id="r_aebde8d0eb2adebe1035fd6649de7d016"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; int, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aebde8d0eb2adebe1035fd6649de7d016">uvID</a></td></tr>
-<tr class="separator:aebde8d0eb2adebe1035fd6649de7d016"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a437378b3e71822471dd01a492fd1251a" id="r_a437378b3e71822471dd01a492fd1251a"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; uint, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a437378b3e71822471dd01a492fd1251a">objectID</a></td></tr>
-<tr class="separator:a437378b3e71822471dd01a492fd1251a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f8836683b993b0d4138e47ea7834f56" id="r_a5f8836683b993b0d4138e47ea7834f56"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; int2, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5f8836683b993b0d4138e47ea7834f56">object_subdivisions</a></td></tr>
-<tr class="separator:a5f8836683b993b0d4138e47ea7834f56"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a005f753d770fdb7ff70d00a1dbd400d8" id="r_a005f753d770fdb7ff70d00a1dbd400d8"><td class="memItemLeft" align="right" valign="top">rtBuffer&lt; char, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a005f753d770fdb7ff70d00a1dbd400d8">twosided_flag</a></td></tr>
-<tr class="separator:a005f753d770fdb7ff70d00a1dbd400d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>"File containing OptiX ray-primitive intersection and bounding-box programs"</p>
@@ -264,7 +232,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for bounding box rectangle primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00463">463</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00423">423</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -290,7 +258,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00415">415</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00375">375</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -314,7 +282,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for disk primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00304">304</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00265">265</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -340,7 +308,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00269">269</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00230">230</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -364,7 +332,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for rectangle primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00155">155</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00116">116</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -390,7 +358,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00073">73</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00034">34</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -414,7 +382,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for tile objects. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00551">551</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00510">510</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -440,7 +408,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00479">479</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00439">439</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -464,7 +432,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for triangle primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00254">254</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00215">215</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -490,7 +458,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00171">171</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00132">132</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -514,7 +482,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 <p>Axis-aligned bounding box program for voxel primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00403">403</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00363">363</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -540,312 +508,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00316">316</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="ae7999b515c59c919f7c76ca6dcc161f0" name="ae7999b515c59c919f7c76ca6dcc161f0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae7999b515c59c919f7c76ca6dcc161f0">&#9670;&#160;</a></span>bbox_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; bbox_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00053">53</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a78e3ae75799350571bd60df317577a60" name="a78e3ae75799350571bd60df317577a60"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a78e3ae75799350571bd60df317577a60">&#9670;&#160;</a></span>bbox_vertices</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float3, 2&gt; bbox_vertices</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00052">52</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a8c62f981b71a23760d04f8f88e6ac696" name="a8c62f981b71a23760d04f8f88e6ac696"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8c62f981b71a23760d04f8f88e6ac696">&#9670;&#160;</a></span>disk_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; disk_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00041">41</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="aa0a8fcade7bdf07dbfb41e8e66bbfbdb" name="aa0a8fcade7bdf07dbfb41e8e66bbfbdb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0a8fcade7bdf07dbfb41e8e66bbfbdb">&#9670;&#160;</a></span>maskdata</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;bool, 3&gt; maskdata</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00056">56</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a30d19154defceb5c260ed20077ed35b6" name="a30d19154defceb5c260ed20077ed35b6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a30d19154defceb5c260ed20077ed35b6">&#9670;&#160;</a></span>maskID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;int, 1&gt; maskID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00058">58</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="afae637d09f4bdbcb96b91eaf2c990fa3" name="afae637d09f4bdbcb96b91eaf2c990fa3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afae637d09f4bdbcb96b91eaf2c990fa3">&#9670;&#160;</a></span>masksize</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;int2, 1&gt; masksize</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00057">57</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a5f8836683b993b0d4138e47ea7834f56" name="a5f8836683b993b0d4138e47ea7834f56"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5f8836683b993b0d4138e47ea7834f56">&#9670;&#160;</a></span>object_subdivisions</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;int2,1&gt; object_subdivisions</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00065">65</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a437378b3e71822471dd01a492fd1251a" name="a437378b3e71822471dd01a492fd1251a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a437378b3e71822471dd01a492fd1251a">&#9670;&#160;</a></span>objectID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;uint,1&gt; objectID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00063">63</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a3fc1f30fcf2edcbd16f34bcb6a3d526d" name="a3fc1f30fcf2edcbd16f34bcb6a3d526d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fc1f30fcf2edcbd16f34bcb6a3d526d">&#9670;&#160;</a></span>patch_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; patch_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00033">33</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a0bb8fc1704de2ca56d08f6873fbbd462" name="a0bb8fc1704de2ca56d08f6873fbbd462"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0bb8fc1704de2ca56d08f6873fbbd462">&#9670;&#160;</a></span>patch_vertices</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float3, 2&gt; patch_vertices</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00032">32</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="acebd534fa3ec556760e70fd92b52e1e5" name="acebd534fa3ec556760e70fd92b52e1e5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acebd534fa3ec556760e70fd92b52e1e5">&#9670;&#160;</a></span>tile_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; tile_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00045">45</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="ad1f086ec5bdd4fcc3a08d8334bbd1d66" name="ad1f086ec5bdd4fcc3a08d8334bbd1d66"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad1f086ec5bdd4fcc3a08d8334bbd1d66">&#9670;&#160;</a></span>tile_vertices</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float3, 2&gt; tile_vertices</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00044">44</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="abe4b6281baa683bd3b40fabb8369c698" name="abe4b6281baa683bd3b40fabb8369c698"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abe4b6281baa683bd3b40fabb8369c698">&#9670;&#160;</a></span>triangle_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; triangle_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00037">37</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a3f1ee81121341102bea94a422a181360" name="a3f1ee81121341102bea94a422a181360"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3f1ee81121341102bea94a422a181360">&#9670;&#160;</a></span>triangle_vertices</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float3, 2&gt; triangle_vertices</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00036">36</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a005f753d770fdb7ff70d00a1dbd400d8" name="a005f753d770fdb7ff70d00a1dbd400d8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a005f753d770fdb7ff70d00a1dbd400d8">&#9670;&#160;</a></span>twosided_flag</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;char, 1&gt; twosided_flag</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00067">67</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="ab2fd7ff80834198e1c5fbada59f57299" name="ab2fd7ff80834198e1c5fbada59f57299"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab2fd7ff80834198e1c5fbada59f57299">&#9670;&#160;</a></span>uvdata</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float2, 2&gt; uvdata</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00060">60</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="aebde8d0eb2adebe1035fd6649de7d016" name="aebde8d0eb2adebe1035fd6649de7d016"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aebde8d0eb2adebe1035fd6649de7d016">&#9670;&#160;</a></span>uvID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;int, 1&gt; uvID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00061">61</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="aa59f12290f12518b8d55fb33a392f3cf" name="aa59f12290f12518b8d55fb33a392f3cf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa59f12290f12518b8d55fb33a392f3cf">&#9670;&#160;</a></span>voxel_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;unsigned int, 1&gt; voxel_UUID</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00049">49</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a993176e77589e8f29a2012c4f2ade10d" name="a993176e77589e8f29a2012c4f2ade10d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a993176e77589e8f29a2012c4f2ade10d">&#9670;&#160;</a></span>voxel_vertices</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">rtBuffer&lt;float3, 2&gt; voxel_vertices</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00048">48</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="primitive_intersection_8cu_source.html#l00277">277</a> of file <a class="el" href="primitive_intersection_8cu_source.html">primitiveIntersection.cu</a>.</p>
 
 </div>
 </div>

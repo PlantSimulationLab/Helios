@@ -1587,8 +1587,8 @@ void RadiationModel::initializeOptiX() {
     //primitive type buffer
     addBuffer( "primitive_type", primitive_type_RTbuffer, primitive_type_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
 
-    //primitive area buffer
-    addBuffer( "primitive_area", primitive_area_RTbuffer, primitive_area_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+    //primitive solid fraction  buffer
+    addBuffer( "primitive_solid_fraction", primitive_solid_fraction_RTbuffer, primitive_solid_fraction_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
 
     //primitive UUID buffers
     addBuffer( "patch_UUID", patch_UUID_RTbuffer, patch_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
@@ -1690,12 +1690,6 @@ void RadiationModel::initializeOptiX() {
 
     //Diffuse distribution normalization factor
     addBuffer( "diffuse_dist_norm", diffuse_dist_norm_RTbuffer, diffuse_dist_norm_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
-
-    //Bounding sphere radius and center
-    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_radius", &bound_sphere_radius_RTvariable ) );
-    RT_CHECK_ERROR( rtVariableSet1f( bound_sphere_radius_RTvariable, 0.f ));
-    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "bound_sphere_center", &bound_sphere_center_RTvariable ) );
-    RT_CHECK_ERROR( rtVariableSet3f( bound_sphere_center_RTvariable, 0.f, 0.f, 0.f ));
 
     //Bounding Box
     addBuffer( "bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1 );
@@ -1900,8 +1894,6 @@ void RadiationModel::initializeOptiX() {
 
     RTtransform transform;
 
-    RTgeometrygroup geometry_group;
-
     RTgeometryinstance patch_instance;
     RTgeometryinstance triangle_instance;
     RTgeometryinstance disk_instance;
@@ -1932,15 +1924,15 @@ void RadiationModel::initializeOptiX() {
     RT_CHECK_ERROR( rtGroupSetChild( top_level_group, 0, transform ) );
 
     /* Create geometry group and associated acceleration*/
-    RT_CHECK_ERROR( rtGeometryGroupCreate( OptiX_Context, &geometry_group ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChildCount( geometry_group, 6 ) );
-    RT_CHECK_ERROR( rtTransformSetChild( transform, geometry_group ) );
+    RT_CHECK_ERROR( rtGeometryGroupCreate( OptiX_Context, &base_geometry_group ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChildCount( base_geometry_group, 6 ) );
+    RT_CHECK_ERROR( rtTransformSetChild( transform, base_geometry_group ) );
 
     //create acceleration object for group and specify some build hints
     RT_CHECK_ERROR( rtAccelerationCreate(OptiX_Context,&geometry_acceleration) );
     RT_CHECK_ERROR( rtAccelerationSetBuilder(geometry_acceleration,"Trbvh") );
     RT_CHECK_ERROR( rtAccelerationSetTraverser(geometry_acceleration,"Bvh") );
-    RT_CHECK_ERROR( rtGeometryGroupSetAcceleration( geometry_group, geometry_acceleration) );
+    RT_CHECK_ERROR( rtGeometryGroupSetAcceleration( base_geometry_group, geometry_acceleration) );
     RT_CHECK_ERROR( rtAccelerationMarkDirty( geometry_acceleration ) );
 
     /* Create geometry instances */
@@ -1949,38 +1941,38 @@ void RadiationModel::initializeOptiX() {
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( patch_instance, patch ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( patch_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( patch_instance, 0, patch_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 0, patch_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 0, patch_instance ) );
     //triangles
     RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &triangle_instance ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( triangle_instance, triangle ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( triangle_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( triangle_instance, 0, triangle_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 1, triangle_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 1, triangle_instance ) );
     //disks
     RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &disk_instance ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( disk_instance, disk ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( disk_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( disk_instance, 0, disk_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 2, disk_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 2, disk_instance ) );
     //tiles
     RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &tile_instance ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( tile_instance, tile ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( tile_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( tile_instance, 0, tile_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 3, tile_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 3, tile_instance ) );
     //voxels
     RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &voxel_instance ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( voxel_instance, voxel ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( voxel_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( voxel_instance, 0, voxel_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 4, voxel_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 4, voxel_instance ) );
 
-    //voxels
+    //bounding boxes
     RT_CHECK_ERROR( rtGeometryInstanceCreate( OptiX_Context, &bbox_instance ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetGeometry( bbox_instance, bbox ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterialCount( bbox_instance, 1 ) );
     RT_CHECK_ERROR( rtGeometryInstanceSetMaterial( bbox_instance, 0, bbox_material ) );
-    RT_CHECK_ERROR( rtGeometryGroupSetChild( geometry_group, 5, bbox_instance ) );
+    RT_CHECK_ERROR( rtGeometryGroupSetChild( base_geometry_group, 5, bbox_instance ) );
 
     /* Set the top_object variable */
     //NOTE: Not sure exactly where this has to be set
@@ -1994,6 +1986,10 @@ void RadiationModel::initializeOptiX() {
     //launch offset
     RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "launch_offset", &launch_offset_RTvariable ) );
     RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, 0 ) );
+
+    //launch primitive face flag
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "launch_face", &launch_face_RTvariable ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( launch_face_RTvariable, 0 ) );
 
     //maximum scattering depth
     RT_CHECK_ERROR( rtBufferCreate( OptiX_Context, RT_BUFFER_INPUT, &max_scatters_RTbuffer ) );
@@ -2031,24 +2027,34 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
         float area = context->getPrimitiveArea(context_UUIDs.at(u));
         if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
-        }else if( area==0 || area!=area ){
+        }else if( (area==0 || area!=area) && context->getObjectType(context->getPrimitiveParentObjectID(context_UUIDs.at(u)))!=OBJECT_TYPE_TILE ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
         }
     }
 
-    //--- Make Bounding Patches ---//
-
-    //determine domain bounding sphere
-    float sphere_radius;
-    vec3 sphere_center;
-    context->getDomainBoundingSphere( sphere_center, sphere_radius );
-
-    rtVariableSet1f( bound_sphere_radius_RTvariable, sphere_radius );
-    rtVariableSet3f( bound_sphere_center_RTvariable, sphere_center.x, sphere_center.y, sphere_center.z );
-
     //--- Populate Primitive Geometry Buffers ---//
 
     size_t Nprimitives = context_UUIDs.size(); //Number of primitives
+
+    std::vector<uint> objID_all = context->getUniquePrimitiveParentObjectIDs(context_UUIDs, true);
+
+    //We need to reorder the primitive UUIDs so they appear in the proper order within the parent object
+
+    std::vector<uint> primitive_UUIDs_ordered;
+    primitive_UUIDs_ordered.reserve(Nprimitives);
+
+    for ( uint objID : objID_all ) {
+
+        const std::vector<uint> &primitive_UUIDs = context->getObjectPrimitiveUUIDs( objID );
+        for ( uint p : primitive_UUIDs ) {
+            if( context->doesPrimitiveExist(p) ){
+                primitive_UUIDs_ordered.push_back(p);
+            }
+        }
+
+    }
+
+    context_UUIDs = primitive_UUIDs_ordered;
 
     //transformation matrix buffer - size=Nobjects
     std::vector<std::vector<float> > m_global;
@@ -2056,8 +2062,8 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     //primitive type buffer - size=Nobjects
     std::vector<uint> ptype_global;
 
-    //primitive area buffer - size=Nobjects
-    std::vector<float> area_global;
+    //primitive solid fraction buffer - size=Nobjects
+    std::vector<float> solid_fraction_global;
 
     //primitive UUID buffers - total size of all combined is Nobjects
     std::vector<uint> patch_UUID;
@@ -2089,8 +2095,6 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     std::vector<optix::int2> object_subdivisions;
     object_subdivisions.reserve(Nprimitives);
 
-    std::vector<uint> objID_all = context->getAllObjectIDs();
-
     //ID of object corresponding to each primitive - size Nprimitives
     std::vector<uint> objectID;
     objectID.resize(Nprimitives);
@@ -2101,7 +2105,7 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     std::size_t tile_count = 0;
     std::size_t voxel_count = 0;
 
-    area_global.resize(Nprimitives);
+    solid_fraction_global.resize(Nprimitives);
 
     primitiveID.resize(0);
     primitiveID.reserve(Nprimitives);
@@ -2113,8 +2117,8 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
 
         uint p = context_UUIDs.at(u);
 
-        //primitve area
-        area_global.at(u) = context->getPrimitiveArea(p);
+        //primitve solid fraction
+        solid_fraction_global.at(u) = context->getPrimitiveSolidFraction(p);
 
         uint parentID = context->getPrimitiveParentObjectID(p);
 
@@ -2438,7 +2442,7 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
 
     initializeBuffer2Df( transform_matrix_RTbuffer, m_global );
     initializeBuffer1Dui( primitive_type_RTbuffer, ptype_global );
-    initializeBuffer1Df( primitive_area_RTbuffer, area_global );
+    initializeBuffer1Df( primitive_solid_fraction_RTbuffer, solid_fraction_global );
     initializeBuffer1Dchar( twosided_flag_RTbuffer, twosided_flag_global );
     initializeBuffer2Dfloat3( patch_vertices_RTbuffer, patch_vertices );
     initializeBuffer2Dfloat3( triangle_vertices_RTbuffer, triangle_vertices );
@@ -3565,7 +3569,15 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
                 }
                 std::cout << " (batch " << launch+1 << " of " << Nlaunches << ")..." << std::flush;
             }
+
+            //Top surface launch
+            RT_CHECK_ERROR( rtVariableSet1ui( launch_face_RTvariable, 1 ) );
             RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+
+            //Bottom surface launch
+            RT_CHECK_ERROR( rtVariableSet1ui( launch_face_RTvariable, 0 ) );
+            RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+
             if( message_flag ){
                 std::cout << "\r                                                                                                                               \r" << std::flush;
             }
@@ -3646,6 +3658,12 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
 
                 RT_CHECK_ERROR( rtVariableSet1ui( launch_offset_RTvariable, launch*prims_per_launch ) );
 
+                //Top surface launch
+                RT_CHECK_ERROR( rtVariableSet1ui( launch_face_RTvariable, 1 ) );
+                RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
+
+                //Bottom surface launch
+                RT_CHECK_ERROR( rtVariableSet1ui( launch_face_RTvariable, 0 ) );
                 RT_CHECK_ERROR( rtContextLaunch3D( OptiX_Context, RAYTYPE_DIFFUSE , launch_dim_diff.x, launch_dim_diff.y, launch_dim_diff.z ) );
 
             }

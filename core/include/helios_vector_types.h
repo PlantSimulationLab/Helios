@@ -26,9 +26,10 @@ typedef unsigned int uint;
 #include <iostream>
 #include <string>
 #include <cassert>
-#include <stdexcept>
-#include <exception>
+//#include <stdexcept>
 #include <iomanip>
+#include <limits>
+#include <cmath>
 
 //! Vector data structures
 /**
@@ -51,10 +52,10 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int2() : x(0), y(0) {}
+  constexpr int2() : x(0), y(0) {}
 
   //! Construct int2 from a vector of ints
-  explicit int2( const std::vector<int> &v ){
+  explicit int2( const std::vector<int> &v ) {
     if( v.size()!=2){
       throw(std::runtime_error("ERROR: vector for initialization of int2 must have length 2."));
     }
@@ -62,26 +63,26 @@ public:
     y=v[1];
   }
   //! Construct int2 from an array of ints
-  explicit int2( const int v[2] ) : x(v[0]), y(v[1]) {}
+  constexpr explicit int2( const int v[2] ) : x(v[0]), y(v[1]) {}
 
   //! Construct int2 from two ints
-  int2( int v0, int v1 ) : x(v0), y(v1) {}
+  constexpr int2( int v0, int v1 ) : x(v0), y(v1) {}
 
 
   //! Add two int2 vectors
-  int2 operator+(const int2& a) const;
+  inline constexpr int2 operator+(const int2& a) const noexcept;
   //! Increment int2 vector
-  int2& operator+=(const int2& a);
+  inline int2& operator+=(const int2& a) noexcept;
   //! Deccrement int2 vector
-  int2& operator-=(const int2& a);
+  inline int2& operator-=(const int2& a) noexcept;
   //! Subtract two int2 vectors
-  int2 operator-(const int2& a) const;
+  inline constexpr int2 operator-(const int2& a) const noexcept;
   //! Equality for all elements
-  bool operator==( const int2& a ) const;
+  inline constexpr bool operator==( const int2& a ) const noexcept;
   //! Inequality for all elements
-  bool operator!=( const int2& a ) const;
+  inline constexpr bool operator!=( const int2& a ) const noexcept;
   //! Multiply each element by -1
-  int2 operator-() const;
+  inline constexpr int2 operator-() const noexcept;
 
   //! Write int2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int2 &vec) {
@@ -96,7 +97,7 @@ public:
  * \param[in] y First component of integer vector
  * \ingroup vectors
 */
-inline int2 make_int2( int x, int y ){
+inline constexpr int2 make_int2( int x, int y ){
   return {x,y};
 }
  
@@ -109,35 +110,35 @@ inline int2 make_int2( int X[2] ){
   return {X[0],X[1]};
 }
 
-inline int2 int2::operator+(const int2& a) const{
+inline constexpr int2 int2::operator+(const int2& a) const  noexcept {
   return {a.x+x, a.y+y};
 }
 
-inline int2& int2::operator+=(const int2& a){
+inline int2& int2::operator+=(const int2& a) noexcept {
     this->x += a.x;
     this->y += a.y;
     return *this;
 }
 
-inline int2& int2::operator-=(const int2& a){
+inline int2& int2::operator-=(const int2& a) noexcept {
     this->x -= a.x;
     this->y -= a.y;
     return *this;
 }
 
-inline int2 int2::operator-(const int2& a) const{
+inline constexpr int2 int2::operator-(const int2& a) const noexcept {
   return {x-a.x, y-a.y};
 }
 
-inline bool int2::operator==( const int2& a ) const{
+inline constexpr bool int2::operator==( const int2& a ) const noexcept{
   return a.x==x && a.y==y;
 }
 
-inline bool int2::operator!=( const int2& a ) const{
+inline constexpr bool int2::operator!=( const int2& a ) const noexcept{
     return a.x!=x || a.y!=y;
 }
 
-inline int2 int2::operator-() const{
+inline constexpr int2 int2::operator-() const noexcept{
     return {-x,-y};
 }
 
@@ -155,7 +156,7 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int3() : x(0), y(0), z(0) {}
+  constexpr int3() : x(0), y(0), z(0) {}
 
   //! Construct int3 from a vector of ints
   explicit int3( const std::vector<int> &v ){
@@ -167,25 +168,25 @@ public:
     z=v[2];
   }
   //! Construct int3 from an array of ints
-  explicit int3( const int v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
+  constexpr explicit int3( const int v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
 
   //! Construct int3 from three ints
-  int3( int v0, int v1, int v2 ) : x(v0), y(v1), z(v2) {}
+  constexpr int3( int v0, int v1, int v2 ) : x(v0), y(v1), z(v2) {}
 
   //! Add two int3 vectors
-  int3 operator+(const int3& a) const;
+  inline constexpr int3 operator+(const int3& a) const noexcept;
   //! Increment int3 vector
-  int3& operator+=(const int3& a);
+  inline int3& operator+=(const int3& a) noexcept;
   //! Decrement int3 vector
-  int3& operator-=(const int3& a);
+  inline int3& operator-=(const int3& a) noexcept;
   //! Subtract two int3 vectors
-  int3 operator-(const int3& a) const;
+  inline constexpr int3 operator-(const int3& a) const noexcept;
   //! Equality for all elements
-  bool operator==( const int3& a ) const;
+  inline constexpr bool operator==( const int3& a ) const noexcept;
   //! Inequality for all elements
-  bool operator!=( const int3& a ) const;
+  inline constexpr bool operator!=( const int3& a ) const noexcept;
   //! Multiply each element by -1
-  int3 operator-() const;
+  inline constexpr int3 operator-() const noexcept;
 
   //! Write int3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int3 &vec) {
@@ -195,46 +196,46 @@ public:
 };
 
 //! Make an int3 vector from three ints
-inline int3 make_int3( int X, int Y, int Z ){
+inline constexpr int3 make_int3( int X, int Y, int Z ){
   return {X,Y,Z};
 }
 
 //! Make an int2 vector from an array of ints
-inline int3 make_int3( int X[3] ){
+inline constexpr int3 make_int3( int X[3] ){
   return {X[0],X[1],X[2]};
 }
 
-inline int3 int3::operator+(const int3& a) const{
+inline constexpr int3 int3::operator+(const int3& a) const noexcept{
   return {a.x+x, a.y+y, a.z+z};
 }
 
-inline int3& int3::operator+=(const int3& a){
+inline int3& int3::operator+=(const int3& a) noexcept{
     this->x += a.x;
     this->y += a.y;
     this->z += a.z;
     return *this;
 }
 
-inline int3& int3::operator-=(const int3& a){
+inline int3& int3::operator-=(const int3& a) noexcept{
     this->x -= a.x;
     this->y -= a.y;
     this->z -= a.z;
     return *this;
 }
 
-inline int3 int3::operator-(const int3& a) const{
+inline constexpr int3 int3::operator-(const int3& a) const noexcept{
   return {x-a.x, y-a.y, z-a.z};
 }
 
-inline bool int3::operator==( const int3& a ) const{
+inline constexpr bool int3::operator==( const int3& a ) const noexcept{
   return a.x==x && a.y==y && a.z==z;
 }
 
-inline bool int3::operator!=( const int3& a ) const{
+inline constexpr bool int3::operator!=( const int3& a ) const noexcept{
     return a.x!=x || a.y!=y || a.z!=z;
 }
 
-inline int3 int3::operator-() const{
+inline constexpr int3 int3::operator-() const noexcept{
     return {-x,-y,-z};
 }
 
@@ -254,7 +255,7 @@ public:
 
   //! Default constructor
   /* initializes to zero */
-  int4() : x(0), y(0), z(0), w(0) {}
+  constexpr int4() : x(0), y(0), z(0), w(0) {}
 
   //! Construct int3 from a vector of ints
   explicit int4( const std::vector<int> &v ){
@@ -268,25 +269,25 @@ public:
   }
 
   //! Construct int4 from an array of ints
-  explicit int4( const int v[3] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+  explicit constexpr int4( const int v[4] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
 
   //! Construct int4 from four ints
-  int4( int v0, int v1, int v2, int v3 ) : x(v0), y(v1), z(v2), w(v3) {}
+  constexpr int4( int v0, int v1, int v2, int v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Add two int4 vectors
-  int4 operator+(const int4& a) const;
+  inline constexpr int4 operator+(const int4& a) const noexcept;
   //! Increment int4 vector
-  int4& operator+=(const int4& a);
+  inline int4& operator+=(const int4& a) noexcept;
   //! Decrement int4 vector
-  int4& operator-=(const int4& a);
+  inline int4& operator-=(const int4& a) noexcept;
   //! Subtract two int4 vectors
-  int4 operator-(const int4& a) const;
+  inline constexpr int4 operator-(const int4& a) const noexcept;
   //! Equality for all elements
-  bool operator==( const int4& a ) const;
+  inline constexpr bool operator==( const int4& a ) const noexcept;
   //! Inequality for all elements
-  bool operator!=( const int4& a ) const;
+  inline constexpr bool operator!=( const int4& a ) const noexcept;
   //! Multiply each element by -1
-  int4 operator-() const;
+  inline constexpr int4 operator-() const noexcept;
 
   //! Write int4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int4 &vec) {
@@ -296,20 +297,20 @@ public:
 };
 
 //! Make an int4 vector from three ints
- inline int4 make_int4(int x, int y, int z, int w ){
+ inline constexpr int4 make_int4(int x, int y, int z, int w ){
    return {x, y, z, w};
  }
 
  //! Make an int4 vector from an array of ints
-inline int4 make_int4( const int X[4] ){
+inline constexpr int4 make_int4( const int X[4] ){
   return {X[0],X[1],X[2],X[3]};
 }
 
-inline int4 int4::operator+(const int4& a) const{
+inline constexpr int4 int4::operator+(const int4& a) const noexcept{
   return {a.x+x, a.y+y, a.z+z, a.w+w};
 }
 
-inline int4& int4::operator+=(const int4& a){
+inline int4& int4::operator+=(const int4& a) noexcept{
     this->x += a.x;
     this->y += a.y;
     this->z += a.z;
@@ -317,7 +318,7 @@ inline int4& int4::operator+=(const int4& a){
     return *this;
 }
 
-inline int4& int4::operator-=(const int4& a){
+inline int4& int4::operator-=(const int4& a) noexcept{
     this->x -= a.x;
     this->y -= a.y;
     this->z -= a.z;
@@ -325,19 +326,19 @@ inline int4& int4::operator-=(const int4& a){
     return *this;
 }
 
-inline int4 int4::operator-(const int4& a) const{
+inline constexpr int4 int4::operator-(const int4& a) const noexcept{
     return {a.x-x, a.y-y, a.z-z, a.w-w};
 }
 
-inline bool int4::operator==( const int4& a ) const{
+inline constexpr bool int4::operator==( const int4& a ) const noexcept{
   return a.x==x && a.y==y && a.z==z && a.w==w;
 }
 
-inline bool int4::operator!=( const int4& a ) const{
+inline constexpr bool int4::operator!=( const int4& a ) const noexcept{
     return a.x!=x || a.y!=y || a.z!=z || a.w!=w;
 }
 
-inline int4 int4::operator-() const{
+inline constexpr int4 int4::operator-() const noexcept{
     return {-x,-y,-z,-w};
 }
 
@@ -352,63 +353,64 @@ public:
   float y;
 
   //! Normalize vector components such that the magnitude is unity.
-  vec2 normalize(){
-    float mag = sqrt( x*x + y*y );
-    x/=mag;
-    y/=mag;
-    return {x,y};
+  vec2 normalize() {
+    const float m2 = x*x + y*y;
+    const float inv = 1.0f / sqrtf(m2);
+    this->x *= inv;
+    this->y *= inv;
+    return *this;
   }
 
   //! Compute the vector magnitude 
   /**
    * \return magnitude of vector
   */
-  [[nodiscard]] float magnitude() const{
-    return sqrtf( x*x + y*y );
+  [[nodiscard]] float magnitude() const  {
+    return sqrtf(x*x + y*y);
   }
 
   //! Default constructor 
   /** initializes to zero */
-  vec2() : x(0), y(0) {}
+  constexpr vec2()  : x(0), y(0) {}
 
   //! Initialize vec2 using a vector of floats
-  explicit vec2( const std::vector<float> &v ){
-    if( v.size()!=2){
+  explicit vec2(const std::vector<float> &v) {
+    if(v.size()!=2) {
         throw(std::runtime_error("ERROR: vector for initialization of vec2 must have length 2."));
     }
-    x=v.at(0);
-    y=v.at(1);
+    x=v[0];
+    y=v[1];
   }						
   //! Initialize vec2 using an array of floats
-  explicit vec2( const float v[2] ) : x(v[0]), y(v[1]) {}
+  explicit constexpr vec2(const float v[2])  : x(v[0]), y(v[1]) {}
 
   //! Initialize vec2 using two floats
-  vec2( float v0, float v1 ) : x(v0), y(v1) {}
+  constexpr vec2(float v0, float v1)  : x(v0), y(v1) {}
 
   //! Dot (scalar) product of two vec2 vectors
-  float operator*(const vec2& a) const;
+  inline constexpr float operator*(const vec2& a) const noexcept;
   //! Sum of two vec2 vectors
-  vec2 operator+(const vec2& a) const;
+  inline constexpr vec2 operator+(const vec2& a) const noexcept;
   //! Increment vec2 vector
-  vec2& operator+=(const vec2& a);
+  inline vec2& operator+=(const vec2& a) noexcept;
   //! Decrement vec2 vector
-  vec2& operator-=(const vec2& a);
-  //! Difference of two vec2 vectors
-  vec2 operator-(const vec2& a) const;
+  inline vec2& operator-=(const vec2& a) noexcept;
+  //! Difference of two vec2 vectors noexcept
+  inline constexpr vec2 operator-(const vec2& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
-  vec2 operator*( float a) const;
+  inline constexpr vec2 operator*(float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec2/a)
-  vec2 operator/( float a) const;
+  inline vec2 operator/(float a) const noexcept;
   //!Add a scalar to each element (scalar is added on right: vec2+a)
-  vec2 operator+( float a) const;
+  inline constexpr vec2 operator+(float a) const noexcept;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec2-a)
-  vec2 operator-( float a) const;
+  inline constexpr vec2 operator-(float a) const noexcept;
   //! check for equality of two vec2 vectors
-  bool operator==(const vec2& a) const;
+  inline constexpr bool operator==(const vec2& a) const noexcept;
   //! check for inequality of two vec2 vectors
-  bool operator!=(const vec2& a) const;
+  inline constexpr bool operator!=(const vec2& a) const noexcept;
   //! Multiply each element by -1
-  vec2 operator-() const;
+  inline constexpr vec2 operator-() const noexcept;
 
   //! Write vec2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec2 &vec) {
@@ -418,11 +420,11 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec2)
-vec2 operator*( float a, const vec2& v);
+inline constexpr vec2 operator*( float a, const vec2& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec2)
-vec2 operator+( float a, const vec2& v);
+inline constexpr vec2 operator+( float a, const vec2& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec2)
-vec2 operator-( float a, const vec2& v);
+inline constexpr vec2 operator-( float a, const vec2& v) noexcept;
 
 //! Make a vec2 from two floats
 /**
@@ -430,72 +432,79 @@ vec2 operator-( float a, const vec2& v);
  * \param[in] y Second element of vector
  * \ingroup vectors
 */
-inline vec2 make_vec2(float x, float y ){
+inline constexpr vec2 make_vec2(float x, float y ){
   return {x, y};
 }
 
-inline float vec2::operator*(const vec2& a) const{
-  return  a.x*x+a.y*y;
+inline vec2 normalize(const vec2 &v)  {
+  const float m2 = v.x*v.x + v.y*v.y;
+  const float inv = 1.0f / sqrtf(m2);
+  return {v.x*inv, v.y*inv};
 }
 
-inline vec2 vec2::operator+(const vec2& a) const{
-  return  {a.x+x,a.y+y};
+inline constexpr float vec2::operator*(const vec2& a) const noexcept {
+  return a.x*x + a.y*y;
 }
 
-inline vec2& vec2::operator+=(const vec2& a){
-    this->x += a.x;
-    this->y += a.y;
+inline constexpr vec2 vec2::operator+(const vec2& a) const noexcept  {
+  return {a.x+x, a.y+y};
+}
+
+inline vec2& vec2::operator+=(const vec2& a) noexcept  {
+    x += a.x;
+    y += a.y;
     return *this;
 }
 
-inline vec2& vec2::operator-=(const vec2& a){
-    this->x -= a.x;
-    this->y -= a.y;
+inline vec2& vec2::operator-=(const vec2& a) noexcept {
+    x -= a.x;
+    y -= a.y;
     return *this;
 }
 
-inline vec2 vec2::operator+(const float a) const {
+inline constexpr vec2 vec2::operator+(const float a) const noexcept  {
   return {a+x, a+y};
 }
 
-inline vec2 operator+(const float a, const vec2& v){
+inline constexpr vec2 operator+(const float a, const vec2& v) noexcept  {
   return {a+v.x, a+v.y};
 }
 
-inline vec2 vec2::operator-(const vec2& a) const{
-  return  {x-a.x,y-a.y};
+inline constexpr vec2 vec2::operator-(const vec2& a) const noexcept  {
+  return {x-a.x, y-a.y};
 }
 
-inline vec2 vec2::operator-(const float a) const {
+inline constexpr vec2 vec2::operator-(const float a) const noexcept {
   return {x-a, y-a};
 }
 
-inline vec2 operator-(const float a, const vec2& v) {
+inline constexpr vec2 operator-(const float a, const vec2& v) noexcept {
   return {a-v.x, a-v.y};
 }
 
-inline vec2 vec2::operator*(const float a) const{
-  return {x*a,y*a};
+inline constexpr vec2 vec2::operator*(const float a) const noexcept {
+  return {x*a, y*a};
 }
 
-inline vec2 operator*(const float a, const vec2& v) {
-  return {a * v.x, a * v.y};
+inline constexpr vec2 operator*(const float a, const vec2& v) noexcept{
+  return {a*v.x, a*v.y};
 }
 
-inline vec2 vec2::operator/(const float a) const{
-  return {x/a,y/a};
+inline vec2 vec2::operator/(const float a) const noexcept{
+  const float inv_a = ( a!=0.f ? 1.f/a : std::copysign(std::numeric_limits<float>::infinity(), a));
+  return {x*inv_a, y*inv_a};
 }
 
-inline bool vec2::operator==(const vec2& a) const{
+inline constexpr bool vec2::operator==(const vec2& a) const noexcept {
   return x == a.x && y == a.y;
 }
 
-inline bool vec2::operator!=(const vec2& a) const{
-    return x != a.x || y != a.y;
+inline constexpr bool vec2::operator!=(const vec2& a) const noexcept {
+  return x != a.x || y != a.y;
 }
 
-inline vec2 vec2::operator-() const{
-    return {-x,-y};
+inline constexpr vec2 vec2::operator-() const noexcept {
+  return {-x, -y};
 }
 
 //! Vector of three elements of type 'float'. 
@@ -511,29 +520,30 @@ public:
   float z;
 
   //! Normalize vector components such that the magnitude is unity.
-  vec3 normalize(){
-    float mag = sqrt( x*x + y*y + z*z );
-    x/=mag;
-    y/=mag;
-    z/=mag;
-    return {x,y,z};
+  vec3 normalize() {
+    const float m2 = x*x + y*y + z*z;
+    const float inv = 1.0f / sqrtf(m2);
+    this->x *= inv;
+    this->y *= inv;
+    this->z *= inv;
+    return *this;
   }
 
   //! Compute the vector magnitude 
   /**
    * \return magnitude of vector
    */
-  [[nodiscard]] float magnitude() const{
-    return sqrtf( x*x + y*y + z*z );
+  [[nodiscard]] float magnitude() const  {
+    return sqrtf(x*x + y*y + z*z);
   }
 
   //! Default constructor 
   /** initializes to zero */
-  vec3() : x(0), y(0), z(0) {}
+  constexpr vec3()  : x(0), y(0), z(0) {}
 
   //! Initialize vec3 using a vector of floats
-  explicit vec3( const std::vector<float> &v ){
-    if( v.size()!=3){
+  explicit vec3(const std::vector<float> &v) {
+    if(v.size()!=3) {
         throw(std::runtime_error("ERROR: vector for initialization of vec3 must have length 3."));
     }
     x=v[0];
@@ -541,35 +551,35 @@ public:
     z=v[2];
   }
   //! Initialize vec3 using an array of floats
-  explicit vec3( const float v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
+  explicit constexpr vec3(const float v[3])  : x(v[0]), y(v[1]), z(v[2]) {}
 
   //! Initialize vec3 using three floats
-  vec3( float v0, float v1, float v2 ) : x(v0), y(v1), z(v2) {}
+  constexpr vec3(float v0, float v1, float v2)  : x(v0), y(v1), z(v2) {}
 
   //! Dot (scalar) product of two vec3 vectors
-  float operator*(const vec3& a) const;
+  inline constexpr float operator*(const vec3& a) const noexcept;
   //! Sum of two vec3 vectors
-  vec3 operator+(const vec3& a) const;
+  inline constexpr vec3 operator+(const vec3& a) const noexcept;
   //! Increment vec3 vector
-  vec3& operator+=(const vec3& a);
+  inline vec3& operator+=(const vec3& a) noexcept;
   //! Decrement vec3 vector
-  vec3& operator-=(const vec3& a);
+  inline vec3& operator-=(const vec3& a) noexcept;
   //! Difference of two vec3 vectors
-  vec3 operator-(const vec3& a) const;
+  inline constexpr vec3 operator-(const vec3& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
-  vec3 operator*( float a) const;
+  inline constexpr vec3 operator*( float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec3/a)
-  vec3 operator/( float a) const;
+  inline vec3 operator/( float a) const noexcept;
   //! Add a scalar to each element (scalar is added on right: vec3+a)
-  vec3 operator+( float a) const;
+  inline constexpr vec3 operator+( float a) const noexcept;
   //! Subtract a scalar from each element (scalar is subtracted on right: vec3-a)
-  vec3 operator-( float a) const;
+  inline constexpr vec3 operator-( float a) const noexcept;
   //! check for equality of two vec3 vectors
-  bool operator==(const vec3& a) const;
+  inline constexpr bool operator==(const vec3& a) const noexcept;
   //! check for inequality of two vec3 vectors
-  bool operator!=(const vec3& a) const;
+  inline constexpr bool operator!=(const vec3& a) const noexcept;
   //! Multiply vector by -1
-  vec3 operator-() const;
+  inline constexpr vec3 operator-() const noexcept;
 
   //! Write vec3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec3 &vec) {
@@ -579,90 +589,101 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec3)
-vec3 operator*( float a, const vec3& v);
+inline constexpr vec3 operator*( float a, const vec3& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec3)
-vec3 operator+( float a, const vec3& v);
+inline constexpr vec3 operator+( float a, const vec3& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec3)
-vec3 operator-( float a, const vec3& v);
+inline constexpr vec3 operator-( float a, const vec3& v) noexcept;
 
 //! Make a vec3 from three floats
-inline vec3 make_vec3(float x, float y, float z ){
+inline constexpr vec3 make_vec3(float x, float y, float z ){
   return {x, y, z};
 }
 
 //! Make a vec3 from an array of floats
-inline vec3 make_vec3( float X[3] ){
+inline constexpr vec3 make_vec3( float X[3] ){
   return {X[0],X[1],X[2]};
 }
 
 //! Cross product of two vec3 vectors
-inline vec3 cross(const vec3 &a, const vec3 &b ){
-  return {a.y*b.z - b.y*a.z,b.x*a.z - a.x*b.z,a.x*b.y - b.x*a.y };
+inline constexpr vec3 cross(const vec3 &a, const vec3 &b)  {
+  return {
+    a.y*b.z - a.z*b.y,
+    a.z*b.x - a.x*b.z,
+    a.x*b.y - a.y*b.x
+  };
 }
 
-inline float vec3::operator*(const vec3& a) const{
+inline vec3 normalize( const vec3 &v ) noexcept {
+  const float m2 = v.x*v.x + v.y*v.y + v.z*v.z;
+  const float inv = 1.0f / sqrtf(m2);
+  return {v.x*inv, v.y*inv, v.z*inv};
+}
+
+inline constexpr float vec3::operator*(const vec3& a) const noexcept{
   return  a.x*x+a.y*y+a.z*z;
 }
 
-inline vec3 vec3::operator+(const vec3& a) const{
+inline constexpr vec3 vec3::operator+(const vec3& a) const noexcept{
   return  {a.x+x,a.y+y,a.z+z};
 }
 
-inline vec3& vec3::operator+=(const vec3& a){
+inline vec3& vec3::operator+=(const vec3& a) noexcept{
     this->x += a.x;
     this->y += a.y;
     this->z += a.z;
     return *this;
 }
 
-inline vec3& vec3::operator-=(const vec3& a){
+inline vec3& vec3::operator-=(const vec3& a) noexcept{
     this->x -= a.x;
     this->y -= a.y;
     this->z -= a.z;
     return *this;
 }
 
-inline vec3 vec3::operator+(const float a) const{
+inline constexpr vec3 vec3::operator+(float a) const noexcept{
   return { x+a, y+a, z+a };
 }
 
-inline vec3 operator+(const float a, const vec3& v) {
+inline constexpr vec3 operator+(float a, const vec3& v) noexcept{
   return {a+v.x, a+v.y, a+v.z};
 }
 
-inline vec3 vec3::operator-(const vec3& a) const{
+inline constexpr vec3 vec3::operator-(const vec3& a) const noexcept{
   return  {x-a.x,y-a.y,z-a.z};
 }
 
-inline vec3 vec3::operator-(const float a) const{
+inline constexpr vec3 vec3::operator-(float a) const noexcept{
   return { x-a, y-a, z-a };
 }
 
-inline vec3 operator-(const float a, const vec3& v) {
+inline constexpr vec3 operator-(float a, const vec3& v)  noexcept{
   return {a-v.x, a-v.y, a-v.z};
 }
 
-inline vec3 vec3::operator*(const float a) const{
+inline constexpr vec3 vec3::operator*(float a) const noexcept{
   return  {x*a,y*a,z*a};
 }
 
-inline vec3 operator*(const float a, const vec3& v) {
+inline constexpr vec3 operator*(float a, const vec3& v)  noexcept{
   return {a * v.x, a * v.y, a * v.z};
 }
 
-inline vec3 vec3::operator/(const float a) const{
-  return {x/a,y/a,z/a};
+inline vec3 vec3::operator/(const float a) const noexcept{
+  const float inv_a = (a!=0.f ? 1.f/a : std::copysign(std::numeric_limits<float>::infinity(), a));
+  return {x*inv_a,y*inv_a,z*inv_a};
 }
 
-inline bool vec3::operator==(const vec3& a) const{
+inline constexpr bool vec3::operator==(const vec3& a) const noexcept{
   return x == a.x && y == a.y && z == a.z;
 }
 
-inline bool vec3::operator!=(const vec3& a) const{
+inline constexpr bool vec3::operator!=(const vec3& a) const noexcept{
     return x != a.x || y != a.y || z != a.z;
 }
 
-inline vec3 vec3::operator-() const{
+inline constexpr vec3 vec3::operator-() const noexcept{
     return {-x,-y,-z};
 }
 
@@ -684,12 +705,13 @@ public:
 
   //! Normalize vector components such that the magnitude is unity.
   vec4 normalize(){
-    float mag = sqrt( x*x + y*y + z*z + w*w );
-    x/=mag;
-    y/=mag;
-    z/=mag;
-    w/=mag;
-    return {x,y,z,w};
+    const float m2 = x*x + y*y + z*z + w*w;
+    const float inv = 1.0f / sqrtf(m2);
+    this->x *= inv;
+    this->y *= inv;
+    this->z *= inv;
+    this->w *= inv;
+    return *this;
   }
 
   //! Compute the vector magnitude 
@@ -702,7 +724,7 @@ public:
 
   //! Default constructor 
   /** initializes to zero */
-  vec4() : x(0), y(0), z(0), w(0) {}
+  constexpr vec4() : x(0), y(0), z(0), w(0) {}
 
   //! Initialize vec4 using a vector of floats
   explicit vec4( const std::vector<float> &v ){
@@ -715,35 +737,35 @@ public:
     w=v[3];
   }
   //! Initialize vec3 using an array of floats
-  explicit vec4( const float v[4] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+  explicit constexpr vec4( const float v[4] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
 
   //! Initialize vec4 using four floats
-  vec4( float v0, float v1, float v2, float v3 ) : x(v0), y(v1), z(v2), w(v3) {}
+  constexpr vec4( float v0, float v1, float v2, float v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Dot (scalar) product of two vec4 vectors
-  float operator*(const vec4& a) const;
+  inline constexpr float operator*(const vec4& a) const noexcept;
   //! Sum of two vec4 vectors
-  vec4 operator+(const vec4& a) const;
+  inline constexpr vec4 operator+(const vec4& a) const noexcept;
   //! Increment vec4 vector
-  vec4& operator+=(const vec4& a);
+  inline vec4& operator+=(const vec4& a) noexcept;
   //! Decrement vec4 vector
-  vec4& operator-=(const vec4& a);
+  inline vec4& operator-=(const vec4& a) noexcept;
   //! Difference of two vec4 vectors
-  vec4 operator-(const vec4& a) const;
+  inline constexpr vec4 operator-(const vec4& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
-  vec4 operator*( float a) const;
+  inline constexpr vec4 operator*( float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec4/a)
-  vec4 operator/( float a) const;
+  inline vec4 operator/( float a) const noexcept;
   //!Add a scalar to each element (scalar is added on right: vec4+a)
-  vec4 operator+( float a) const;
+  inline constexpr vec4 operator+( float a) const noexcept;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec4-a)
-  vec4 operator-( float a) const;
+  inline constexpr vec4 operator-( float a) const noexcept;
   //! check for equality of two vec4 vectors
-  bool operator==(const vec4& a) const;
+  inline constexpr bool operator==(const vec4& a) const noexcept;
   //! check for equality of two vec4 vectors
-  bool operator!=(const vec4& a) const;
+  inline constexpr bool operator!=(const vec4& a) const noexcept;
   //! Multiply each element by -1
-  vec4 operator-() const;
+  inline constexpr vec4 operator-() const noexcept;
 
   //! Write vec4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec4 &vec) {
@@ -753,31 +775,37 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec4)
-vec4 operator*( float a, const vec4& v);
+inline constexpr vec4 operator*( float a, const vec4& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec4)
-vec4 operator+( float a, const vec4& v);
+inline constexpr vec4 operator+( float a, const vec4& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec4)
-vec4 operator-( float a, const vec4& v);
+inline constexpr vec4 operator-( float a, const vec4& v) noexcept;
 
 //! Make a vec4 from three floats
- inline vec4 make_vec4( float x, float y, float z, float w ){
+ inline constexpr vec4 make_vec4( float x, float y, float z, float w ){
   return {x, y, z, w};
 }
 
 //! Make a vec4 from an array of floats
-inline vec4 make_vec4( float X[4] ){
+inline constexpr vec4 make_vec4( float X[4] ){
   return {X[0],X[1],X[2],X[3]};
 }
 
-inline float vec4::operator*(const vec4& a) const{
+inline vec4 normalize( const vec4 &v ) {
+   const float m2 = v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w;
+   const float inv = 1.0f / sqrtf(m2);
+   return {v.x*inv, v.y*inv, v.z*inv, v.w*inv};
+ }
+
+inline constexpr float vec4::operator*(const vec4& a) const noexcept{
   return  a.x*x+a.y*y+a.z*z+a.w*w;
 }
 
-inline vec4 vec4::operator+(const vec4& a) const{
+inline constexpr vec4 vec4::operator+(const vec4& a) const noexcept{
   return  {a.x+x,a.y+y,a.z+z,a.w+w};
 }
 
-inline vec4& vec4::operator+=(const vec4& a){
+inline vec4& vec4::operator+=(const vec4& a) noexcept{
     this->x += a.x;
     this->y += a.y;
     this->z += a.z;
@@ -785,7 +813,7 @@ inline vec4& vec4::operator+=(const vec4& a){
     return *this;
  }
 
-inline vec4& vec4::operator-=(const vec4& a){
+inline vec4& vec4::operator-=(const vec4& a) noexcept{
     this->x -= a.x;
     this->y -= a.y;
     this->z -= a.z;
@@ -793,47 +821,48 @@ inline vec4& vec4::operator-=(const vec4& a){
     return *this;
     }
 
-inline vec4 vec4::operator+(const float a) const{
+inline constexpr vec4 vec4::operator+(float a) const noexcept{
   return { x+a, y+a, z+a, w+a };
 }
 
-inline vec4 operator+(const float a, const vec4& v) {
+inline constexpr vec4 operator+(float a, const vec4& v)  noexcept{
   return {a+v.x, a+v.y, a+v.z, a+v.w};
 }
 
-inline vec4 vec4::operator-(const vec4& a) const{
+inline constexpr vec4 vec4::operator-(const vec4& a) const noexcept{
   return  {x-a.x,y-a.y,z-a.z,w-a.w};
 }
 
-inline vec4 vec4::operator-(const float a) const{
+inline constexpr vec4 vec4::operator-(float a) const noexcept{
   return { x-a, y-a, z-a, w-a };
 }
 
-inline vec4 operator-(const float a, const vec4& v) {
+inline constexpr vec4 operator-(float a, const vec4& v) noexcept {
   return {a-v.x, a-v.y, a-v.z, a-v.w};
 }
 
-inline vec4 vec4::operator*(const float a) const{
+inline constexpr vec4 vec4::operator*(float a) const noexcept{
   return  {x*a,y*a,z*a,w*a};
 }
 
-inline vec4 operator*(const float a, const vec4& v) {
+inline constexpr vec4 operator*(float a, const vec4& v) noexcept{
   return {a * v.x, a * v.y, a * v.z, a * v.w};
 }
 
-inline vec4 vec4::operator/(const float a) const{
-  return {x/a,y/a,z/a,w/a};
+inline vec4 vec4::operator/(const float a) const noexcept{
+   const float inv_a = (a!=0.f ? 1.f/a : std::copysign(std::numeric_limits<float>::infinity(), a));
+   return {x*inv_a,y*inv_a,z*inv_a,w*inv_a};
 }
 
-inline bool vec4::operator==(const vec4& a) const{
+inline constexpr bool vec4::operator==(const vec4& a) const noexcept{
   return x == a.x && y == a.y && z == a.z && w == a.w;
 }
 
-inline bool vec4::operator!=(const vec4& a) const{
+inline constexpr bool vec4::operator!=(const vec4& a) const noexcept{
   return x != a.x || y != a.y || z != a.z || w != a.w;
 }
 
-inline vec4 vec4::operator-() const{
+inline constexpr vec4 vec4::operator-() const noexcept{
     return {-x,-y,-z, -w};
 }
 
@@ -855,7 +884,7 @@ public:
   float b;
 
   //! Default constructor - initializes color to black.
-  RGBcolor() : r(0), g(0), b(0) {}
+  constexpr RGBcolor() : r(0), g(0), b(0) {}
 
   //! Constructor given three floats denoting R-G-B components.
   /**
@@ -864,21 +893,15 @@ public:
    * \param[in] b Blue color component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  RGBcolor( float r, float g, float b ){
-      this->r=clamp(r);
-      this->g=clamp(g);
-      this->b=clamp(b);
-  }
+   RGBcolor( float r, float g, float b ) : r(RGBcolor::clamp(r)), g(RGBcolor::clamp(g)), b(RGBcolor::clamp(b)) {}
+
   //! Constructor given an array of three floats denoting R-G-B components.
   /**
    * \param[in] C Array (3-elements) of R-G-B color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  explicit RGBcolor( const float C[3] ){
-    r=clamp(C[0]);
-    g=clamp(C[1]);
-    b=clamp(C[2]);
-  }
+  explicit RGBcolor( const float C[3] ) : r(RGBcolor::clamp(C[0])), g(RGBcolor::clamp(C[1])), b(RGBcolor::clamp(C[2])) {}
+
   //! Constructor given a vector of three floats denoting R-G-B components.
   /**
    * \param[in] C Vector (3-elements) of R-G-B color components
@@ -888,20 +911,16 @@ public:
     if( C.size()!=3 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBcolor using supplied vector - size should be 3."));
     }
-    r=clamp(C[0]);
-    g=clamp(C[1]);
-    b=clamp(C[2]);
+    r=RGBcolor::clamp(C[0]);
+    g=RGBcolor::clamp(C[1]);
+    b=RGBcolor::clamp(C[2]);
   }
   //! Constructor given a vec3 denoting R-G-B components.
   /**
    * \param[in] C vec3 of R-G-B color components
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  explicit RGBcolor(const vec3 &C ){
-    r=clamp(C.x);
-    g=clamp(C.y);
-    b=clamp(C.z);
-  }
+  explicit RGBcolor(const vec3 &C ) : r(RGBcolor::clamp(C.x)), g(RGBcolor::clamp(C.y)), b(RGBcolor::clamp(C.z)) {}
 
   //! Scale RGBcolor by some factor.
   /**
@@ -922,9 +941,9 @@ public:
   }
 
   //! check for equality of two RGB colors
-  bool operator==( const RGBcolor &c ) const;
+  inline constexpr bool operator==( const RGBcolor &c ) const noexcept;
   //! check for inequality of two RGB colors
-  bool operator!=( const RGBcolor &c ) const;
+  inline constexpr bool operator!=( const RGBcolor &c ) const noexcept;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -957,17 +976,17 @@ inline RGBcolor make_RGBcolor( float r, float g, float b ){
 
 //! Blend two RGB colors together
 /**
- * \param[in] color0_RGB First color to be blended.
- * \param[in] color1_RGB Second color to be blended.
- * \param[out] weight_RGB Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+ * \param[in] color0 First color to be blended.
+ * \param[in] color1 Second color to be blended.
+ * \param[out] weight Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
-RGBcolor blend(const RGBcolor &color0_RGB, const RGBcolor &color1_RGB, float weight_RGB );
+RGBcolor blend(const RGBcolor &color0, const RGBcolor &color1, float weight );
 
-inline bool RGBcolor::operator==( const RGBcolor &c ) const{
+inline constexpr bool RGBcolor::operator==( const RGBcolor &c ) const noexcept{
   return c.r==r && c.g==g && c.b==b;
 }
 
-inline bool RGBcolor::operator!=( const RGBcolor &c ) const{
+inline constexpr bool RGBcolor::operator!=( const RGBcolor &c ) const noexcept{
   return c.r!=r || c.g!=g || c.b!=b;
 }
 
@@ -1038,7 +1057,7 @@ public:
   float a;
 
   //! Default constructor - initializes color to black.
-  RGBAcolor() : r(0), g(0), b(0), a(1) {}
+  constexpr RGBAcolor() : r(0), g(0), b(0), a(1) {}
 
   //! Constructor given three floats denoting R-G-B components.
   /**
@@ -1048,23 +1067,15 @@ public:
    * \param[in] a Alpha (transparency) component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  RGBAcolor( float r, float g, float b, float a ){
-      this->r=clamp(r);
-      this->g=clamp(g);
-      this->b=clamp(b);
-      this->a=clamp(a);
-  }
+  RGBAcolor( float r, float g, float b, float a ) : r(RGBAcolor::clamp(r)), g(RGBAcolor::clamp(g)), b(RGBAcolor::clamp(b)), a(RGBAcolor::clamp(a)) {}
+
   //! Constructor given an array of three floats denoting R-G-B-A components.
   /**
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    * \param[in] C Array (4-elements) of R-G-B-A color components
    */
-  explicit RGBAcolor( const float C[4] ){
-    r=clamp(C[0]);
-    g=clamp(C[1]);
-    b=clamp(C[2]);
-    a=clamp(C[3]);
-  }
+  explicit RGBAcolor( const float C[4] ) : r(RGBAcolor::clamp(C[0])), g(RGBAcolor::clamp(C[1])), b(RGBAcolor::clamp(C[2])), a(RGBAcolor::clamp(C[3])) {}
+
   //! Constructor given a vector of three floats denoting R-G-B-A components.
   /**
    * \param[in] C Vector (4-elements) of R-G-B-A color components
@@ -1074,10 +1085,10 @@ public:
     if( C.size()!=4 ){
         throw(std::runtime_error("ERROR: cannot initialize RGBAcolor using supplied vector - size should be 4."));
     }
-    r=clamp(C[0]);
-    g=clamp(C[1]);
-    b=clamp(C[2]);
-    a=clamp(C[3]);
+    r=RGBAcolor::clamp(C[0]);
+    g=RGBAcolor::clamp(C[1]);
+    b=RGBAcolor::clamp(C[2]);
+    a=RGBAcolor::clamp(C[3]);
   }
 
   //! Scale RGBAcolor by some factor.
@@ -1100,9 +1111,9 @@ public:
   }
 
   //! check for equality of two RGBA colors
-  bool operator==( const helios::RGBAcolor &c ) const;
+  inline constexpr bool operator==( const helios::RGBAcolor &c ) const noexcept;
   //! check for inequality of two RGBA colors
-  bool operator!=( const helios::RGBAcolor &c ) const;
+  inline constexpr bool operator!=( const helios::RGBAcolor &c ) const noexcept;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -1146,17 +1157,17 @@ inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
 
 //! Blend two RGBA colors together
 /**
- * \param[in] color0_RGBA First color to be blended.
- * \param[in] color1_RGBA Second color to be blended.
- * \param[out] weight_RGBA Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
+ * \param[in] color0 First color to be blended.
+ * \param[in] color1 Second color to be blended.
+ * \param[out] weight Weighting factor (0<weight<1). A weight of 0 returns color0, weight of 1 returns color1.
 */
-RGBAcolor blend(const helios::RGBAcolor &color0_RGBA, const helios::RGBAcolor &color1_RGBA, float weight_RGBA );
+RGBAcolor blend(const helios::RGBAcolor &color0, const helios::RGBAcolor &color1, float weight );
 
-inline bool RGBAcolor::operator==( const RGBAcolor &c ) const{
+inline constexpr bool RGBAcolor::operator==( const RGBAcolor &c ) const noexcept{
   return c.r==r && c.g==g && c.b==b && c.a==a;
 }
 
-inline bool RGBAcolor::operator!=( const RGBAcolor &c ) const{
+inline constexpr bool RGBAcolor::operator!=( const RGBAcolor &c ) const noexcept{
   return c.r!=r || c.g!=g || c.b!=b || c.a!=a;
 }
 
@@ -1176,11 +1187,7 @@ public:
   int year;
 
   //! Default constructor
-  Date(){
-    day = 1;
-    month = 1;
-    year = 2000;
-  }
+  constexpr Date() : day(1), month(1), year(2000) {}
 
   //! Day/Month/Year constructor
   /**
@@ -1188,8 +1195,8 @@ public:
    * \param[in] month Day of year (1-12)
    * \param[in] year Year in YYYY format
   */
-  Date(int day, int month, int year ){
-    
+  Date(int day, int month, int year ) : day(day), month(month), year(year) {
+
     if(day < 1 || day > 31 ){
         throw(std::runtime_error("ERROR (Date constructor): Day of month is out of range (day of " + std::to_string(day) + " was given)."));
     }else if(month < 1 || month > 12){
@@ -1197,10 +1204,6 @@ public:
     }else if( year<1000 ){
         throw(std::runtime_error( "ERROR (Date constructor): Year should be specified in YYYY format."));
     }
-    
-    this->day = day;
-    this->month = month;
-    this->year = year;
     
   }
 
@@ -1220,9 +1223,9 @@ public:
   [[nodiscard]] bool isLeapYear() const;
 
   //! check for equality of two dates
-  bool operator==( const helios::Date &c ) const;
+  inline constexpr bool operator==( const helios::Date &c ) const noexcept;
   //! check for inequality of two Dates
-  bool operator!=( const helios::Date &c ) const;
+  inline constexpr bool operator!=( const helios::Date &c ) const noexcept;
 
   //! Write Date to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
@@ -1251,11 +1254,11 @@ inline Date make_Date( int day, int month, int year ){
   
 }
 
-inline bool Date::operator==( const Date &c ) const{
+inline constexpr bool Date::operator==( const Date &c ) const noexcept{
   return c.day==day && c.month==month && c.year==year;
 }
 
-inline bool Date::operator!=( const Date &c ) const{
+inline constexpr bool Date::operator!=( const Date &c ) const noexcept{
   return c.day!=day || c.month!=month || c.year!=year;
 }
 
@@ -1265,13 +1268,13 @@ inline bool Date::operator!=( const Date &c ) const{
  * \param[in] year Year in YYYY format
  * \ingroup vectors
 */
-inline Date Julian2Calendar( int JulianDay, int year ){
+inline Date Julian2Calendar( int JulianDay, int year ) {
 
-  int day, month; 
+  int month = -1;
   
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
   int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-  int* skips;
+  const int* skips = nullptr;
 
   if( JulianDay<1 || JulianDay>366 ){
       throw(std::runtime_error("ERROR (Julian2Calendar): Julian day of " + std::to_string(JulianDay) + " is out of range (should be >0 and <367)."));
@@ -1283,8 +1286,7 @@ inline Date Julian2Calendar( int JulianDay, int year ){
     skips=skips_nonleap;
   }
 
-  int i;
-  for( i=1; i<=12; i++ ){
+  for( int i=1; i<=12; i++ ){
     if( i==12 ){
       month = 12;
     }else if( JulianDay>skips[i-1] && JulianDay<=skips[i] ){
@@ -1294,11 +1296,11 @@ inline Date Julian2Calendar( int JulianDay, int year ){
   }
   assert( month>0 && month<13 );
 
-  day = JulianDay-skips[month-1];
+  int day = JulianDay - skips[month - 1];
 
   assert(day>0 && day<32 );
   
-  return make_Date(day,month,year);
+  return {day, month, year};
   
 }
 
@@ -1311,7 +1313,7 @@ inline int Calendar2Julian( Date date ){
 
   int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
   int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-  int* skips;
+  int* skips = nullptr;
   
   if( (date.year-2000)%4 == 0 ){  //leap year
     skips=skips_leap;
@@ -1359,28 +1361,20 @@ struct Time{
   int hour;
 
   //! Default constructor
-  Time(){
-    second = 0;
-    minute = 0;
-    hour = 0;
-  }
+  constexpr Time() : second(0), minute(0), hour(0) {}
 
   //! second/minute/hour constructor
   /**
    * \param[in] hour Hour of day (0-23)
    * \param[in] minute Minute of hour (0-59)
   */
-  Time( int hour, int minute ){
+  Time( int hour, int minute ) : second(0), minute(minute), hour(hour) {
 
     if( minute<0 || minute>59 ){
         throw(std::runtime_error("ERROR (Time constructor): Minute out of range (0-59)."));
     }else if( hour<0 || hour>23 ){
         throw(std::runtime_error("ERROR (Time constructor): Hour out of range (0-23)."));
     }
-
-    this->second = 0;
-    this->minute = minute;
-    this->hour = hour;
     
   }
 
@@ -1390,7 +1384,7 @@ struct Time{
    * \param[in] minute Minute of hour (0-59)
    * \param[in] second Second of minute (0-59)
   */
-  Time( int hour, int minute, int second ){
+  Time( int hour, int minute, int second ) : second(second), minute(minute), hour(hour) {
 
     if( second<0 || second>59 ){
         throw(std::runtime_error("ERROR (Time constructor): Second out of range (0-59)."));
@@ -1399,17 +1393,13 @@ struct Time{
     }else if( hour<0 || hour>23 ){
         throw(std::runtime_error("ERROR (Time constructor): Hour out of range (0-23)."));
     }
-
-    this->second = second;
-    this->minute = minute;
-    this->hour = hour;
     
   }
 
   //! check for equality of two times
-  bool operator==( const helios::Time &c ) const;
+  inline constexpr bool operator==( const helios::Time &c ) const noexcept;
   //! check for inequality of two times
-  bool operator!=( const helios::Time &c ) const;
+  inline constexpr bool operator!=( const helios::Time &c ) const noexcept;
 
   //! Write Time to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
@@ -1455,11 +1445,11 @@ inline Time make_Time( int hour, int minute, int second ){
   
 }
 
-inline bool Time::operator==( const Time &c ) const{
+inline constexpr bool Time::operator==( const Time &c ) const noexcept{
    return c.hour==hour && c.minute==minute && c.second==second;
 }
 
-inline bool Time::operator!=( const Time &c ) const{
+inline constexpr bool Time::operator!=( const Time &c ) const noexcept{
    return c.hour!=hour || c.minute!=minute || c.second!=second;
 }
 
@@ -1485,8 +1475,9 @@ inline bool Time::operator!=( const Time &c ) const{
 
         //! latitude/longitude/UTC constructor
         /**
-         * \param[in] hour Hour of day (0-23)
-         * \param[in] minute Minute of hour (0-59)
+         * \param[in] latitude_deg Latitude in degrees (+northern hemisphere, -southern hemisphere)
+         * \param[in] longitude_deg Longitude in degrees (+western hemisphere, -eastern hemisphere)
+         * \param[in] UTC_offset Offset from UTC in hours (+moving West)
         */
         Location( float latitude_deg, float longitude_deg, float UTC_offset ){
 
@@ -1497,9 +1488,9 @@ inline bool Time::operator!=( const Time &c ) const{
         }
 
         //! check for equality of two locations
-        bool operator==( const helios::Location &c ) const;
+        bool operator==( const helios::Location &c ) const noexcept;
         //! check for inequality of two locations
-        bool operator!=( const helios::Location &c ) const;
+        bool operator!=( const helios::Location &c ) const noexcept;
 
         //! Write Location to output stream
         friend std::ostream &operator<<(std::ostream &os, helios::Location const &t) {
@@ -1519,11 +1510,11 @@ inline bool Time::operator!=( const Time &c ) const{
         return {latitude_deg,longitude_deg,UTC_offset};
     }
 
-    inline bool Location::operator==( const Location &c ) const{
+    inline bool Location::operator==( const Location &c ) const noexcept{
         return c.latitude_deg==latitude_deg && c.longitude_deg==longitude_deg && c.UTC_offset==UTC_offset;
     }
 
-    inline bool Location::operator!=( const Location &c ) const{
+    inline bool Location::operator!=( const Location &c ) const noexcept{
         return c.latitude_deg!=latitude_deg || c.longitude_deg!=longitude_deg || c.UTC_offset!=UTC_offset;
     }
 
@@ -1556,7 +1547,7 @@ public:
 
   //! Default constructor 
   /** initializes to vertical unit vector */
-  SphericalCoord() : elevation_private(0.5f*float(M_PI)), zenith_private(0.f), elevation(elevation_private), zenith(zenith_private)   {
+  SphericalCoord() : elevation_private(0.5f*static_cast<float>(M_PI)), zenith_private(0.f), elevation(elevation_private), zenith(zenith_private)   {
     radius=1;
     azimuth=0;
   }
@@ -1566,13 +1557,13 @@ public:
    * \param[in] elevation_radians Elevation angle (radians)
    * \param[in] azimuth_radians Azimuthal angle (radians)
   */
-  SphericalCoord(float radius, float elevation_radians, float azimuth_radians ) : elevation_private(elevation_radians), zenith_private(0.5f * float(M_PI) - elevation_radians), radius(radius), elevation(elevation_private), zenith(zenith_private), azimuth(azimuth_radians) {}
+  SphericalCoord(float radius, float elevation_radians, float azimuth_radians ) : elevation_private(elevation_radians), zenith_private(0.5f * static_cast<float>(M_PI) - elevation_radians), radius(radius), elevation(elevation_private), zenith(zenith_private), azimuth(azimuth_radians) {}
 
   //! Copy constructor
   SphericalCoord( const SphericalCoord &c ) : elevation_private(c.elevation_private), zenith_private(c.zenith_private), radius(c.radius), elevation(c.elevation_private), zenith(c.zenith_private), azimuth(c.azimuth) {}
 
   //! Assignment operator
-  SphericalCoord& operator=( const SphericalCoord &c ){
+  SphericalCoord& operator=( const SphericalCoord &c ) noexcept{
      if( this != &c ){
         elevation_private = c.elevation_private;
         zenith_private = c.zenith_private;
@@ -1583,9 +1574,9 @@ public:
   }
 
   //! check for equality of two spherical coordinates
-  bool operator==( const helios::SphericalCoord &c ) const;
+  bool operator==( const helios::SphericalCoord &c ) const noexcept;
   //! check for inequality of two spherical coordinates
-  bool operator!=( const helios::SphericalCoord &c ) const;
+  bool operator!=( const helios::SphericalCoord &c ) const noexcept;
 
   //! Write SphericalCoord to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::SphericalCoord const &coord) {
@@ -1613,11 +1604,11 @@ inline SphericalCoord make_SphericalCoord(float elevation_radians, float azimuth
   return {radius, elevation_radians, azimuth_radians};
 }
 
-inline bool SphericalCoord::operator==( const SphericalCoord &c ) const{
+inline bool SphericalCoord::operator==( const SphericalCoord &c ) const noexcept{
   return c.radius==radius && c.zenith==zenith && c.elevation==elevation && c.azimuth==azimuth;
 }
 
-inline bool SphericalCoord::operator!=( const SphericalCoord &c ) const {
+inline bool SphericalCoord::operator!=( const SphericalCoord &c ) const  noexcept{
     return c.radius!=radius || c.zenith!=zenith || c.elevation!=elevation || c.azimuth!=azimuth;
 }
 

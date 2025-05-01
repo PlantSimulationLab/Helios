@@ -1,6 +1,5 @@
 var classhelios_1_1_sphere =
 [
-    [ "Sphere", "classhelios_1_1_sphere.html#a4b215db8d3d2c52925b5bdd8b5b02eae", null ],
     [ "~Sphere", "classhelios_1_1_sphere.html#ae7e8121c9a60f9c4e4efa853fd2cee59", null ],
     [ "getCenter", "classhelios_1_1_sphere.html#a48eada17c3dab899a91158f1424518d6", null ],
     [ "getRadius", "classhelios_1_1_sphere.html#a38cf8b6959d22577a1a2f9a6c675bc8b", null ],

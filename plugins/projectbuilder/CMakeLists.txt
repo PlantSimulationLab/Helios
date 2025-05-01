@@ -97,7 +97,8 @@ if("visualizer" IN_LIST PLUGINS)
         #nfd
         list(APPEND SOURCES
             "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_common.c"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_gtk.c"
+            # uncomment for GTK
+#            "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_gtk.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_zenity.c"
         )
     endif(UNIX AND NOT APPLE)
@@ -223,14 +224,15 @@ if("visualizer" IN_LIST PLUGINS)
         include_directories(lib/nativefiledialog/src/include)
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(GTK REQUIRED gtkmm-3.0)
-        include_directories(${GTK_INCLUDE_DIRS})
-        link_directories(${GTK_INCLUDE_DIRS})
-        add_definitions(${GTK_CFLAGS_OTHER})
-        target_include_directories( projectbuilder PUBLIC ${GTK_INCLUDE_DIRS} )
-        target_link_directories( projectbuilder PUBLIC ${GTK_LIBRARY_DIRS} )
-        target_link_libraries( projectbuilder ${GTK_LIBRARIES} )
+        # uncomment for GTK
+#        find_package(PkgConfig REQUIRED)
+#        pkg_check_modules(GTK REQUIRED gtkmm-3.0)
+#        include_directories(${GTK_INCLUDE_DIRS})
+#        link_directories(${GTK_INCLUDE_DIRS})
+#        add_definitions(${GTK_CFLAGS_OTHER})
+#        target_include_directories( projectbuilder PUBLIC ${GTK_INCLUDE_DIRS} )
+#        target_link_directories( projectbuilder PUBLIC ${GTK_LIBRARY_DIRS} )
+#        target_link_libraries( projectbuilder ${GTK_LIBRARIES} )
     endif(UNIX AND NOT APPLE)
     if(APPLE)
         find_library(COCOA_LIBRARY Cocoa REQUIRED)

@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: LeafPrototype Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -154,9 +167,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af29d0b590d0c675ff43134797d4ade6b" id="r_af29d0b590d0c675ff43134797d4ade6b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af29d0b590d0c675ff43134797d4ade6b">LeafPrototype</a> (std::minstd_rand0 *generator)</td></tr>
 <tr class="memdesc:af29d0b590d0c675ff43134797d4ade6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor - sets random number generator.  <br /></td></tr>
 <tr class="separator:af29d0b590d0c675ff43134797d4ade6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ad2dbbc6bf4c55f598f7060d8d436cd" id="r_a1ad2dbbc6bf4c55f598f7060d8d436cd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ad2dbbc6bf4c55f598f7060d8d436cd">LeafPrototype</a> ()</td></tr>
-<tr class="memdesc:a1ad2dbbc6bf4c55f598f7060d8d436cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor - does not set random number generator.  <br /></td></tr>
-<tr class="separator:a1ad2dbbc6bf4c55f598f7060d8d436cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84fd620b7848791fb6a1761259b1a2aa" id="r_a84fd620b7848791fb6a1761259b1a2aa"><td class="memItemLeft" align="right" valign="top"><a id="a84fd620b7848791fb6a1761259b1a2aa" name="a84fd620b7848791fb6a1761259b1a2aa"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>LeafPrototype</b> ()=default</td></tr>
+<tr class="memdesc:a84fd620b7848791fb6a1761259b1a2aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor - does not set random number generator. <br /></td></tr>
+<tr class="separator:a84fd620b7848791fb6a1761259b1a2aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6345d2e15e490bcbc5a7c085cab4e0fb" id="r_a6345d2e15e490bcbc5a7c085cab4e0fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6345d2e15e490bcbc5a7c085cab4e0fb">duplicate</a> (const <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> &amp;a)</td></tr>
 <tr class="separator:a6345d2e15e490bcbc5a7c085cab4e0fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2dc8e0e35313b52c69cb7076d0392c2a" id="r_a2dc8e0e35313b52c69cb7076d0392c2a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2dc8e0e35313b52c69cb7076d0392c2a">operator=</a> (const <a class="el" href="struct_leaf_prototype.html">LeafPrototype</a> &amp;a)</td></tr>
@@ -219,10 +233,10 @@ Data Fields</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00320">320</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00321">321</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="af29d0b590d0c675ff43134797d4ade6b" name="af29d0b590d0c675ff43134797d4ade6b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af29d0b590d0c675ff43134797d4ade6b">&#9670;&#160;</a></span>LeafPrototype() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af29d0b590d0c675ff43134797d4ade6b">&#9670;&#160;</a></span>LeafPrototype()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -250,35 +264,6 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a id="a1ad2dbbc6bf4c55f598f7060d8d436cd" name="a1ad2dbbc6bf4c55f598f7060d8d436cd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1ad2dbbc6bf4c55f598f7060d8d436cd">&#9670;&#160;</a></span>LeafPrototype() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">LeafPrototype::LeafPrototype </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Constructor - does not set random number generator. </p>
-
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00327">327</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
-
-</div>
-</div>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="a6345d2e15e490bcbc5a7c085cab4e0fb" name="a6345d2e15e490bcbc5a7c085cab4e0fb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6345d2e15e490bcbc5a7c085cab4e0fb">&#9670;&#160;</a></span>duplicate()</h2>
@@ -303,7 +288,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00385">385</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00386">386</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -332,7 +317,7 @@ Data Fields</h2></td></tr>
 
 <p>Assignment operator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00407">407</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00408">408</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -359,7 +344,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00443">443</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00444">444</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -378,7 +363,7 @@ Data Fields</h2></td></tr>
 
 <p>Add a petiolule to the base of the leaflet. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00381">381</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00382">382</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -396,7 +381,7 @@ Data Fields</h2></td></tr>
 
 <p>Leaf curvature factor along the lateral/width (y-direction). (+curves upward, -curved downward) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00354">354</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00355">355</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -412,7 +397,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00345">345</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00346">346</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -430,7 +415,7 @@ Data Fields</h2></td></tr>
 
 <p>Angle of the leaf buckle (degrees) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00369">369</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00370">370</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -448,7 +433,7 @@ Data Fields</h2></td></tr>
 
 <p>Fraction of the leaf length where the leaf buckles under its weight. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00367">367</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00368">368</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -466,7 +451,7 @@ Data Fields</h2></td></tr>
 
 <p>Amount to shift the leaf. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00372">372</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00373">373</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -485,7 +470,7 @@ Data Fields</h2></td></tr>
 <p>Image texture file for the leaf. </p>
 <dl class="section note"><dt>Note</dt><dd>Key is the index of the compound leaf (=0 is the tip leaf, &lt;0 increases down left side of the leaflet, &gt;0 increases down the right side of the leaflet), value is the texture file. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00342">342</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00343">343</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -503,7 +488,7 @@ Data Fields</h2></td></tr>
 
 <p>Leaf curvature factor along the longitudinal/length (x-direction). (+curves upward, -curved downward) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00352">352</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00353">353</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -521,7 +506,7 @@ Data Fields</h2></td></tr>
 
 <p>Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00348">348</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00349">349</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -540,7 +525,7 @@ Data Fields</h2></td></tr>
 <p>OBJ model file to load for the leaf. </p>
 <dl class="section note"><dt>Note</dt><dd>If this is set, the leaf will be loaded from the OBJ file and the other leaf parameters will be ignored. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00336">336</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00337">337</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -558,7 +543,7 @@ Data Fields</h2></td></tr>
 
 <p>Creates a rolling at the leaf where the petiole attaches to the leaf blade. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00357">357</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00358">358</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -576,7 +561,7 @@ Data Fields</h2></td></tr>
 
 <p>Custom prototype function for creating leaf prototypes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00330">330</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00331">331</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -594,7 +579,7 @@ Data Fields</h2></td></tr>
 
 <p>Leaf subdivision count in each direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00375">375</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00376">376</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -610,7 +595,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00383">383</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00384">384</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -628,7 +613,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of unique prototypes to generate. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00378">378</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00379">379</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -646,7 +631,7 @@ Data Fields</h2></td></tr>
 
 <p>Amplitude of leaf waves (sets the height of leaf waves) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00363">363</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00364">364</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -664,7 +649,7 @@ Data Fields</h2></td></tr>
 
 <p>Period factor of leaf waves (sets how many waves there are along the leaf length) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00361">361</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00362">362</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

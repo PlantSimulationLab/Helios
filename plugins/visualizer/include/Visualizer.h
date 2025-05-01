@@ -236,7 +236,6 @@ public:
             color_ind=std::round( (x-minval)/(maxval-minval) * float(cmapsize-1) );
         }
 
-        if(color_ind<0){color_ind=0;}
         if(color_ind>cmapsize-1){color_ind=int(cmapsize-1);}
         color.r=cmap.at(color_ind).r;
         color.g=cmap.at(color_ind).g;
@@ -950,6 +949,8 @@ public:
  std::vector<helios::vec3> getCameraPosition();
 
  glm::mat4 getPerspectiveTransformationMatrix();
+
+ glm::mat4 getViewMatrix() const;
 
  std::vector<LightingModel> getPrimaryLightingModel();
 

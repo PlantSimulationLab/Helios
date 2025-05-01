@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/radiation/include/CameraCalibration.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,7 +184,7 @@ $(function(){initNavTree('_camera_calibration_8h_source.html',''); initResizable
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="comment">//    void setColorboardReflectivity(const uint &amp;UUID, const std::string &amp;filename, const std::string &amp;labelname);</span></div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span></div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8" title="Set reflectivity for a specific UUID.">addDefaultColorboard</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;centrelocation, <span class="keywordtype">float</span> patchsize = 0.5, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;rotationrad = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">helios::make_vec3</a>(0,0,0));</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8" title="Set reflectivity for a specific UUID.">addDefaultColorboard</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;centrelocation, <span class="keywordtype">float</span> patchsize = 0.5, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;rotationrad = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(0,0,0));</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    std::vector&lt;uint&gt; getColorBoardUUIDs();</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span></div>

@@ -2666,8 +2666,8 @@ void Visualizer::setColorbarSize( vec2 size ){
 void Visualizer::setColorbarRange( float cmin, float cmax ){
     if( message_flag && cmin>cmax ) {
         std::cout << "WARNING (Visualizer::setColorbarRange): Maximum colorbar value must be greater than minimum value...Ignoring command." << std::endl;
+        return;
     }
-    return;
     colorbar_min = cmin;
     colorbar_max = cmax;
 }
@@ -4711,6 +4711,23 @@ std::vector<helios::vec3> Visualizer::getCameraPosition(){
 
 glm::mat4 Visualizer::getPerspectiveTransformationMatrix(){
     return perspectiveTransformationMatrix;
+}
+
+glm::mat4 Visualizer::getViewMatrix() const {
+    vec3 forward = camera_lookat_center - camera_eye_location;
+    forward = forward.normalize();
+
+    vec3 right = cross(vec3(0, 0, 1), forward);
+    right = right.normalize();
+
+    vec3 up = cross(forward, right);
+    up = up.normalize();
+
+    glm::vec3 camera_pos{camera_eye_location.x, camera_eye_location.y, camera_eye_location.z};
+    glm::vec3 lookat_pos{camera_lookat_center.x, camera_lookat_center.y, camera_lookat_center.z};
+    glm::vec3 up_vec{up.x, up.y, up.z};
+
+    return glm::lookAt(camera_pos, lookat_pos, up_vec);
 }
 
 std::vector<Visualizer::LightingModel> Visualizer::getPrimaryLightingModel(){

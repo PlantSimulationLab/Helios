@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 10: Radiation model basics - tree light interception</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -179,10 +192,10 @@ $(function(){initNavTree('radiation_basics_tutorial.html',''); initResizable(tru
 <div class="line">  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;   <span class="comment">//Declare the &quot;Context&quot; class</span></div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// Load 3D model &quot;Tree.ply&quot; with a base position of (0,0,0) and scaled to a height of 5</span></div>
-<div class="line">  std::vector&lt;uint&gt; UUIDs_tree = context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;../../../PLY/Tree.ply&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 5, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black );</div>
+<div class="line">  std::vector&lt;uint&gt; UUIDs_tree = context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;../../../PLY/Tree.ply&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 5, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black );</div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// Add a ground surface with a center position of (0,0,0) and size of row_spacing x plant_spacing</span></div>
-<div class="line">  std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>(<a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(row_spacing, plant_spacing), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(50, 50));</div>
+<div class="line">  std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(row_spacing, plant_spacing), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(50, 50));</div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// *** 2. Radiation model set-up *** //</span></div>
 <div class="line"> </div>
@@ -199,7 +212,7 @@ $(function(){initNavTree('radiation_basics_tutorial.html',''); initResizable(tru
 <div class="line">  radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>, 50.f);   <span class="comment">//set diffuse (ambient) solar radiation flux of 50 W/m^2</span></div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// We only want the ground to absorb radiation from the top. If we left the default &quot;twosided_flag=1&quot;, our ground would absorb diffuse radiation from below</span></div>
-<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
+<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
 <div class="line"> </div>
 <div class="line">  radiation.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>);  <span class="comment">//Use periodic lateral boundaries so we have repeating trees</span></div>
 <div class="line"> </div>

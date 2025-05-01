@@ -16,106 +16,46 @@
 
 #include <optix_world.h>
 #include <optixu/optixu_math_namespace.h>
+#include <optixu/optixu_matrix_namespace.h>
 
-#include "RayTracing.cu.h"
+#include "RayTracing.cuh"
 
 using namespace optix;
 
 rtDeclareVariable(optix::Ray, ray, rtCurrentRay, );
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(PerRayData, prd, rtPayload, );
-rtDeclareVariable(uint3, launch_dim,   rtLaunchDim, );
-rtDeclareVariable(rtObject,      top_object, , );
 
 rtDeclareVariable( unsigned int, UUID, attribute UUID, );
-
-rtDeclareVariable( unsigned int, Nbands_launch,, );
-rtDeclareVariable( unsigned int, Nbands_global,, );
-rtBuffer<bool, 1> band_launch_flag;
-
-rtDeclareVariable( unsigned int, Nprimitives,, );
-
-rtBuffer<float, 1> diffuse_flux;
-
-rtBuffer<float, 1> diffuse_extinction;
-rtBuffer<float3, 1> diffuse_peak_dir;
-rtBuffer<float, 1> diffuse_dist_norm;
-
-rtDeclareVariable(float2, periodic_flag,, );
-
-rtBuffer<float, 1> rho, tau;
-rtBuffer<float, 1> rho_cam, tau_cam;
-
-rtBuffer<unsigned int, 1> primitive_type;
-
-rtBuffer<float, 1>   radiation_in;
-rtBuffer<float, 1>   radiation_in_camera;
-rtBuffer<float, 1>   radiation_out_top;
-rtBuffer<float, 1>   radiation_out_bottom;
-rtBuffer<float, 1>   scatter_buff_top;
-rtBuffer<float, 1>   scatter_buff_bottom;
-rtBuffer<float, 1>   scatter_buff_top_cam;
-rtBuffer<float, 1>   scatter_buff_bottom_cam;
-
-rtBuffer<unsigned int, 1>   camera_pixel_label;
-rtBuffer<float, 1>   camera_pixel_depth;
-rtDeclareVariable( unsigned int, camera_ID,, );
-rtDeclareVariable( unsigned int, Ncameras,, );
-
-//Radiation sources buffers
-rtDeclareVariable( unsigned int, Nsources, , );
-rtBuffer<float, 1> source_fluxes;
-rtBuffer<float3, 1> source_positions;
-rtBuffer<float2, 1> source_widths;
-rtBuffer<unsigned int, 1> source_types;
-
-rtBuffer<float, 1>   Rsky;
-
-rtBuffer<float, 2>  transform_matrix;
-
-rtBuffer<float3, 2> bbox_vertices;
-
-rtBuffer<uint, 1> objectID;
-
-rtDeclareVariable( float2, camera_direction, , );
 
 RT_PROGRAM void closest_hit_direct(){
 
     uint objID = objectID[UUID];
 
-    float3 ray_origin = ray.origin;
-
     if( (periodic_flag.x==1 || periodic_flag.y==1) && primitive_type[objID] == 5 ){ //periodic boundary condition
 
-        ray_origin = ray_origin + t_hit*ray.direction;
+        prd.hit_periodic_boundary = true;
 
-        float eps=1e-4;
+        float3 ray_origin = ray.origin + t_hit * ray.direction;
 
-        if( prd.periodic_depth<9 ) {
+        float eps = 1e-5;
 
-            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
-            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
+        float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+        float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
-                ray_origin.x = xbounds.y - eps;
-            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
-                ray_origin.x = xbounds.x + eps;
-            }
-            if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
-                ray_origin.y = ybounds.y - eps;
-            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
-                ray_origin.y = ybounds.x + eps;
-            }
+        float width_x  = xbounds.y - xbounds.x;
+        float width_y  = ybounds.y - ybounds.x;
 
+        prd.periodic_hit = ray_origin;
+        if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps) {//-x facing boundary
+            prd.periodic_hit.x += +width_x - eps;
+        } else if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps) {//+x facing boundary
+            prd.periodic_hit.x += -width_x + eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            prd.periodic_hit.y += +width_y - eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps) {//+y facing boundary
+            prd.periodic_hit.y += -width_y + eps;
         }
-
-        float3 ray_direction = ray.direction;
-
-        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-        PerRayData prd_periodic = prd;
-        prd_periodic.periodic_depth++;
-
-        rtTrace(top_object, ray_periodic, prd_periodic);
 
     }
 
@@ -129,34 +69,28 @@ RT_PROGRAM void closest_hit_diffuse() {
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { //periodic boundary condition
 
+        prd.hit_periodic_boundary = true;
+
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
         float eps = 1e-5;
 
-        if (prd.periodic_depth < 9) {
+        float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+        float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
-            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
+        float width_x  = xbounds.y - xbounds.x;
+        float width_y  = ybounds.y - ybounds.x;
 
-            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
-                ray_origin.x = xbounds.y - eps;
-            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
-                ray_origin.x = xbounds.x + eps;
-            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
-                ray_origin.y = ybounds.y - eps;
-            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
-                ray_origin.y = ybounds.x + eps;
-            }
-
+        prd.periodic_hit = ray_origin;
+        if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps) {//-x facing boundary
+            prd.periodic_hit.x += +width_x - eps;
+        } else if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps) {//+x facing boundary
+            prd.periodic_hit.x += -width_x + eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            prd.periodic_hit.y += +width_y - eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps) {//+y facing boundary
+            prd.periodic_hit.y += -width_y + eps;
         }
-
-        float3 ray_direction = ray.direction;
-
-        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-        PerRayData prd_periodic = prd;
-        prd_periodic.periodic_depth++;
-
-        rtTrace(top_object, ray_periodic, prd_periodic);
 
     } else {
 
@@ -293,35 +227,28 @@ RT_PROGRAM void closest_hit_camera() {
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { //periodic boundary condition
 
+        prd.hit_periodic_boundary = true;
+
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
         float eps = 1e-5;
 
-        if (prd.periodic_depth < 9) {
+        float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+        float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
-            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
+        float width_x  = xbounds.y - xbounds.x;
+        float width_y  = ybounds.y - ybounds.x;
 
-            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
-                ray_origin.x = xbounds.y - eps;
-            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
-                ray_origin.x = xbounds.x + eps;
-            }
-            if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
-                ray_origin.y = ybounds.y - eps;
-            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
-                ray_origin.y = ybounds.x + eps;
-            }
-
+        prd.periodic_hit = ray_origin;
+        if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps) {//-x facing boundary
+            prd.periodic_hit.x += +width_x - eps;
+        } else if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps) {//+x facing boundary
+            prd.periodic_hit.x += -width_x + eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            prd.periodic_hit.y += +width_y - eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps) {//+y facing boundary
+            prd.periodic_hit.y += -width_y + eps;
         }
-
-        float3 ray_direction = ray.direction;
-
-        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-        PerRayData prd_periodic = prd;
-        prd_periodic.periodic_depth++;
-
-        rtTrace(top_object, ray_periodic, prd_periodic);
 
     } else {
 
@@ -437,35 +364,28 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { //periodic boundary condition
 
+        prd.hit_periodic_boundary = true;
+
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
         float eps = 1e-5;
 
-        if (prd.periodic_depth < 9) {
+        float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+        float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
 
-            float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
-            float2 ybounds = make_float2(bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
+        float width_x  = xbounds.y - xbounds.x;
+        float width_y  = ybounds.y - ybounds.x;
 
-            if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps ) {//-x facing boundary
-                ray_origin.x = xbounds.y - eps;
-            } else if ( periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps ) {//+x facing boundary
-                ray_origin.x = xbounds.x + eps;
-            }else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
-                ray_origin.y = ybounds.y - eps;
-            } else if ( periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps ) {//+y facing boundary
-                ray_origin.y = ybounds.x + eps;
-            }
-
+        prd.periodic_hit = ray_origin;
+        if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.x)<=eps) {//-x facing boundary
+            prd.periodic_hit.x += +width_x - eps;
+        } else if (periodic_flag.x == 1 && fabs(ray_origin.x-xbounds.y)<=eps) {//+x facing boundary
+            prd.periodic_hit.x += -width_x + eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.x)<=eps ) {//-y facing boundary
+            prd.periodic_hit.y += +width_y - eps;
+        } else if (periodic_flag.y == 1 && fabs(ray_origin.y-ybounds.y)<=eps) {//+y facing boundary
+            prd.periodic_hit.y += -width_y + eps;
         }
-
-        float3 ray_direction = ray.direction;
-
-        optix::Ray ray_periodic = optix::make_Ray(ray_origin, ray_direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-        PerRayData prd_periodic = prd;
-        prd_periodic.periodic_depth++;
-        prd_periodic.strength += t_hit;
-
-        rtTrace(top_object, ray_periodic, prd_periodic);
 
     } else {
 

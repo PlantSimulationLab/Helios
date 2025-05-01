@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Visualizer Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -434,8 +447,8 @@ Automatically importing Context geometry</h3>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(center,size);</div>
 <div class="line">   </div>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
@@ -456,8 +469,8 @@ plotInteractive()</h3>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   context.addRectangleByCenter(center,size);</div>
 <div class="line">   </div>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
@@ -512,8 +525,8 @@ plotUpdate()</h3>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(center,size);</div>
 <div class="line">   </div>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
@@ -656,12 +669,12 @@ Shading</h3>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0);</div>
 <div class="line">   vis.addRectangleByCenter(center,size,rotation,RGB::red,<a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>,0);</div>
 <div class="line"> </div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> light_direction = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> light_direction = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1);</div>
 <div class="line"> </div>
 <div class="line">   vis.setLightingModel( <a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864" title="Phong lighting model plus shadowing is applied to add shading effects to the diffuse color.">Visualizer::LIGHTING_PHONG_SHADOWED</a> );</div>
 <div class="line">   vis.setLightDirection( light_direction );</div>

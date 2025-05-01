@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Timeseries</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -224,7 +237,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01835">1835</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02068">2068</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -251,7 +264,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02038">2038</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02271">2271</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -278,7 +291,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02026">2026</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02259">2259</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -306,7 +319,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01956">1956</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02189">2189</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -345,7 +358,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01906">1906</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02139">2139</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -378,7 +391,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01960">1960</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02193">2193</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -411,7 +424,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Date of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02006">2006</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02239">2239</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -444,7 +457,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Time of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01970">1970</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02203">2203</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -476,7 +489,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01898">1898</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02131">2131</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/weberpenntree/src/WeberPennTree.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -168,7 +181,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>  </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  branch_segs = 6; <span class="comment">//default number of radial triangular subdivisions of branches</span></div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  leaf_segs = <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(1,1); <span class="comment">//default number of patch subdivisions of each leaf</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  leaf_segs = <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1,1); <span class="comment">//default number of patch subdivisions of each leaf</span></div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>  <span class="comment">//seed the random number generator</span></div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>  <span class="keywordtype">unsigned</span> seed = std::chrono::system_clock::now().time_since_epoch().count();</div>
@@ -202,7 +215,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <a class="code hl_function" href="class_weber_penn_tree.html#a5b949a2008b9e4817f2df4b5861c49b5" title="Weber-Penn Tree constructor.">WeberPennTree</a> weberpenntree_1( &amp;context_1 );</div>
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    weberpenntree_1.<a class="code hl_function" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522" title="Only create branch primitives up to a certain recursion level (leaves are still created for all level...">setBranchRecursionLevel</a>(1);</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    weberpenntree_1.<a class="code hl_function" href="class_weber_penn_tree.html#a085a56d129e306469147762509fa7378" title="Set the number of sub-patch divisions for leaves.">setLeafSubdivisions</a>( <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(3,3) );</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    weberpenntree_1.<a class="code hl_function" href="class_weber_penn_tree.html#a085a56d129e306469147762509fa7378" title="Set the number of sub-patch divisions for leaves.">setLeafSubdivisions</a>( <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(3,3) );</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> origin(i*spacing,0,0);</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    </div>
@@ -249,11 +262,11 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="preprocessor">  #endif</span></div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>  }</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>  uint ID_leaf_template = context-&gt;addTileObject( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,M_PI), leaf_segs, parameters.LeafFile.c_str() );</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>  uint ID_leaf_template = context-&gt;addTileObject( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,M_PI), leaf_segs, parameters.LeafFile.c_str() );</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>     </div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>  uint base_nodes = 20;</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>  uint n;</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>  <span class="keywordtype">float</span> z, theta, phi;</div>
@@ -331,7 +344,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keywordflow">for</span>( uint i=1; i&lt;base_nodes; i++ ){</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>      <span class="comment">//nodes.at(i) = nodes.at(i-1) + rotatePoint( make_vec3( 0, 0, length0*(1-parameters.BaseSize)/parameters.nCurveRes.at(0) ), theta, phi );</span></div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>      nodes.at(i) = nodes.at(i-1) + <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>( 0, 0, length0*base0/<span class="keywordtype">float</span>(base_nodes) );</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>      nodes.at(i) = nodes.at(i-1) + <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>( 0, 0, length0*base0/<span class="keywordtype">float</span>(base_nodes) );</div>
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>      <span class="keywordtype">float</span> y = std::max( 0.f, 1.f-8.f*nodes.at(i).z/length0 );</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>      <span class="keywordtype">float</span> flarez = parameters.Flare*(pow(100.f,y)-1.f)/100.f+1.f;</div>
@@ -351,7 +364,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span> </div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>      <span class="keywordtype">float</span> angle_split = (parameters.nSplitAngle.at(0)-getVariation(parameters.nSplitAngleV.at(0)))*M_PI/180.f;</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>      </div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>      <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> current_normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>      <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> current_normal = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>      <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> child_rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(angle_split,phi_split);</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>      </div>
@@ -374,7 +387,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>      <span class="comment">//---- nodes ----//      </span></div>
 <div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>      nodes.at(i) = nodes.at(i-1) + <a class="code hl_function" href="group__functions.html#ga17de9e03f309dedcd648606653ddd05e" title="Function to rotate a 3D vector given spherical angles elevation and azimuth.">rotatePoint</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>( 0, 0, dlength0 ), theta, phi );</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>      nodes.at(i) = nodes.at(i-1) + <a class="code hl_function" href="group__functions.html#ga17de9e03f309dedcd648606653ddd05e" title="Function to rotate a 3D vector given spherical angles elevation and azimuth.">rotatePoint</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>( 0, 0, dlength0 ), theta, phi );</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>      <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> current_normal = nodes.at(i)-nodes.at(i-1);</div>
 <div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>      current_normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
@@ -596,7 +609,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>      vec3 child_normal = <a class="code hl_function" href="group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12" title="Convert Spherical coordinates to Cartesian coordinates.">sphere2cart</a>(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(parent_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>-child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>,parent_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>));</div>
 <div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>      child_normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
 <div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span> </div>
-<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>      child_normal = <a class="code hl_function" href="global_8h.html#a09ae9efe6ba5dddb144519931bcf94b5" title="Rotate a 3D vector about an arbitrary line.">rotatePointAboutLine</a>( child_normal, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), parent_normal, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a> );</div>
+<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>      child_normal = <a class="code hl_function" href="global_8h.html#a09ae9efe6ba5dddb144519931bcf94b5" title="Rotate a 3D vector about an arbitrary line.">rotatePointAboutLine</a>( child_normal, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), parent_normal, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a> );</div>
 <div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>  </div>
 <div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>      nodes.at(i-seg_start) = nodes.at(i-seg_start-1) + child_normal*dlength_child;</div>
 <div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span>       </div>
@@ -735,7 +748,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( -0.5*M_PI - rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>, <span class="stringliteral">&quot;z&quot;</span> );</div>
 <div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span> </div>
 <div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>      vec3 lnorm = context-&gt;getTileObjectPointer(ID)-&gt;getNormal(); <span class="comment">// current leaf normal vector</span></div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>      vec3 pvec = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( parent_normal, lnorm );</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>      vec3 pvec = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( parent_normal, lnorm );</div>
 <div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
 <div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>      <span class="comment">//rotate leaf based on downangle</span></div>
 <div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>      <span class="keywordflow">if</span>( downangle&lt;0.f ){</div>

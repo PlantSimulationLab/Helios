@@ -52,5 +52,4 @@ int PlantArchitecture::selfTest() {
         return 1;
     }
 
-    return 0;
 }

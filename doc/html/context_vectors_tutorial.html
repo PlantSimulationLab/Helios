@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 1: Helios Vector Types Tutorial</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -152,17 +165,17 @@ $(function(){initNavTree('context_vectors_tutorial.html',''); initResizable(true
 <tr>
 <th>Type</th><th>Description</th><th>Data Fields</th><th>Member Functions</th><th>Creation Function </th></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec2.html">vec2</a></td><td>2D vector of floats</td><td><a class="el" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e">x</a>, <a class="el" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e">y</a></td><td><a class="el" href="structhelios_1_1vec2.html#a04c00c49095d3bbc0a19d5da3d61493f">normalize()</a>, <a class="el" href="structhelios_1_1vec2.html#a1931ec5c78112202c14634634f429073">magnitude()</a></td><td><a class="el" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24">make_vec2()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec2.html">vec2</a></td><td>2D vector of floats</td><td><a class="el" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e">x</a>, <a class="el" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e">y</a></td><td><a class="el" href="structhelios_1_1vec2.html#a04c00c49095d3bbc0a19d5da3d61493f">normalize()</a>, <a class="el" href="structhelios_1_1vec2.html#a1931ec5c78112202c14634634f429073">magnitude()</a></td><td><a class="el" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd">make_vec2()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec3.html">vec3</a></td><td>3D vector of floats</td><td><a class="el" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, <a class="el" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, <a class="el" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a></td><td><a class="el" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">normalize()</a>, <a class="el" href="structhelios_1_1vec3.html#adb96b24e6544d106a19e029c2594fee4">magnitude()</a></td><td><a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">make_vec3()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec3.html">vec3</a></td><td>3D vector of floats</td><td><a class="el" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1">x</a>, <a class="el" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65">y</a>, <a class="el" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f">z</a></td><td><a class="el" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524">normalize()</a>, <a class="el" href="structhelios_1_1vec3.html#adb96b24e6544d106a19e029c2594fee4">magnitude()</a></td><td><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">make_vec3()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1vec4.html">vec4</a></td><td>4D vector of floats</td><td><a class="el" href="structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73">x</a>, <a class="el" href="structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d">y</a>, <a class="el" href="structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b">z</a>, <a class="el" href="structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#ab232dd96cf103ad9ac02b6f5c264ced0">make_vec4()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1vec4.html">vec4</a></td><td>4D vector of floats</td><td><a class="el" href="structhelios_1_1vec4.html#a96036e1d3ac15f03190a7bbf74ce0d73">x</a>, <a class="el" href="structhelios_1_1vec4.html#a3dd547e787593c51f07a6ea131bcab8d">y</a>, <a class="el" href="structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b">z</a>, <a class="el" href="structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c">make_vec4()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td><a class="el" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74">make_int2()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int2.html">int2</a></td><td>2D vector of integers</td><td><a class="el" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7">x</a>, <a class="el" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21">y</a></td><td>none</td><td><a class="el" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee">make_int2()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int3.html">int3</a></td><td>3D vector of integers</td><td><a class="el" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50">x</a>, <a class="el" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c">y</a>, <a class="el" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641">z</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2">make_int3()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int3.html">int3</a></td><td>3D vector of integers</td><td><a class="el" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50">x</a>, <a class="el" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c">y</a>, <a class="el" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641">z</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149">make_int3()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1int4.html">int4</a></td><td>4D vector of integers</td><td><a class="el" href="structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3">x</a>, <a class="el" href="structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3">y</a>, <a class="el" href="structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99">z</a>, <a class="el" href="structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#acdfd23cf323df4bdd409c8e4e2bcdfdc">make_int4()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1int4.html">int4</a></td><td>4D vector of integers</td><td><a class="el" href="structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3">x</a>, <a class="el" href="structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3">y</a>, <a class="el" href="structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99">z</a>, <a class="el" href="structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6">make_int4()</a> </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code</td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8">r</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023">g</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td><a class="el" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor()</a> </td></tr>
 <tr>
@@ -174,7 +187,7 @@ $(function(){initNavTree('context_vectors_tutorial.html',''); initResizable(true
 </table>
 <h1><a class="anchor" id="int3tut"></a>
 Vector of Integers</h1>
-<p>Vector types are available for a 2-element (<a class="el" href="structhelios_1_1int2.html">int2</a>) and 3-element (<a class="el" href="structhelios_1_1int3.html">int3</a>) vector of integers. An int2 has two elements: x and y, and and int3 has three elements: x, y, and z. These values of the elements are set using either the <a class="el" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74">make_int2()</a> or <a class="el" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2">make_int3()</a> functions.</p>
+<p>Vector types are available for a 2-element (<a class="el" href="structhelios_1_1int2.html">int2</a>) and 3-element (<a class="el" href="structhelios_1_1int3.html">int3</a>) vector of integers. An int2 has two elements: x and y, and and int3 has three elements: x, y, and z. These values of the elements are set using either the <a class="el" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee">make_int2()</a> or <a class="el" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149">make_int3()</a> functions.</p>
 <p>In the code example below, we'll make an int3, and set is data values to x=1, y=2, and z=3.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -186,11 +199,11 @@ Vector of Integers</h1>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> a;</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Set the data values</span></div>
-<div class="line">   a = <a class="code hl_function" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2" title="Make an int3 vector from three ints.">make_int3</a>(1,2,3);</div>
+<div class="line">   a = <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1,2,3);</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Alternatively, we could have initialized data values in the following equivalent ways</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> b(1,2,3);</div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> b = <a class="code hl_function" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2" title="Make an int3 vector from three ints.">make_int3</a>(1,2,3);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> b = <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1,2,3);</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="vec3tut"></a>
@@ -203,10 +216,10 @@ Vector of Floats</h1>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Declare our vec3, named &#39;a&#39; and set its values</span></div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> a = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0.1,0.2);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> a = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0.1,0.2);</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Declare another vec3, named &#39;b&#39; and set its values</span></div>
-<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> b = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(1.5,1.4,1.3);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> b = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1.5,1.4,1.3);</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Add a and b, and assign it to &#39;c&#39;</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> c = a + b; <span class="comment">//result is c = (1.5,1.5,1.5)</span></div>

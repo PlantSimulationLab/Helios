@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: File Input/Output</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -341,7 +354,7 @@ Reading OBJ (Wavefront) Files</h2>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>(<span class="stringliteral">&quot;relative/path/to/someobjfile.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 0, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::red );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>(<span class="stringliteral">&quot;relative/path/to/someobjfile.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 0, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="PLYwrite"></a>
@@ -388,7 +401,7 @@ Exporting Project to XML File Format</h1>
 <div class="line"> </div>
 <div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
 <div class="line"> </div>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d" title="Write Context geometry and data to XML file for all UUIDs in the context.">writeXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
@@ -417,8 +430,8 @@ Exporting Primitive Data to Text File</h1>
 <div class="line"> </div>
 <div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
 <div class="line"> </div>
 <div class="line">    std::string columns{<span class="stringliteral">&quot;somedata&quot;</span>,<span class="stringliteral">&quot;otherdata&quot;</span>};</div>
 <div class="line"> </div>

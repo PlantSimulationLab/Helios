@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/lidar/src/fileIO.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -231,7 +244,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            <span class="comment">// ----- scan translation ------//</span></div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>            <span class="keyword">const</span> <span class="keywordtype">char</span>* offset_str = s.child_value(<span class="stringliteral">&quot;translation&quot;</span>);</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> translation = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> translation = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            <span class="keywordflow">if</span>( strlen(offset_str)&gt;0 ){</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                translation = <a class="code hl_function" href="group__functions.html#ga65954cbb0f79c3fd5032f2cc27ad3b4f" title="Convert a space-delimited string into a vec3 vector.">string2vec3</a>( offset_str ); <span class="comment">//note: pugi loads xml data as a character.  need to separate it into 3 floats</span></div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>            }</div>
@@ -483,11 +496,11 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>            <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (LiDARcloud::loadXML): The number of grid cells must be positive.&quot;</span>);</div>
 <div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>        }</div>
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span> </div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> gridDivisions = <a class="code hl_function" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2" title="Make an int3 vector from three ints.">helios::make_int3</a>(Nx, Ny, Nz);</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> gridDivisions = <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">helios::make_int3</a>(Nx, Ny, Nz);</div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>        <span class="comment">//add cells to grid</span></div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> gsubsize = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>)/<span class="keywordtype">float</span>(Nx),<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>)/<span class="keywordtype">float</span>(Ny),<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>)/<span class="keywordtype">float</span>(Nz));</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> gsubsize = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>)/<span class="keywordtype">float</span>(Nx),<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>)/<span class="keywordtype">float</span>(Ny),<span class="keywordtype">float</span>(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>)/<span class="keywordtype">float</span>(Nz));</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="keywordtype">float</span> x, y, z;</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        uint count = 0;</div>
@@ -498,7 +511,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>                <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;Nx; i++ ){</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>                    x = -0.5f*float(gsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>) + (float(i)+0.5f)*<span class="keywordtype">float</span>(gsubsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>);</div>
 <div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span> </div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>                    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> subcenter = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(x,y,z);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>                    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> subcenter = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(x,y,z);</div>
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span> </div>
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>                    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> subcenter_rot = <a class="code hl_function" href="group__functions.html#ga17de9e03f309dedcd648606653ddd05e" title="Function to rotate a 3D vector given spherical angles elevation and azimuth.">rotatePoint</a>(subcenter, <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,rotation*M_PI/180.f) );</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
@@ -506,7 +519,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>                        cout &lt;&lt; <span class="stringliteral">&quot;Adding grid cell #&quot;</span> &lt;&lt; count &lt;&lt; <span class="stringliteral">&quot; with center &quot;</span> &lt;&lt; subcenter_rot.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>+center.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; subcenter_rot.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>+center.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt; subcenter.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>+center.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt;&lt; <span class="stringliteral">&quot; and size &quot;</span> &lt;&lt; gsubsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> &lt;&lt; <span class="stringliteral">&quot; x &quot;</span> &lt;&lt; gsubsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> &lt;&lt; <span class="stringliteral">&quot; x &quot;</span> &lt;&lt; gsubsize.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt;&lt; endl;</div>
 <div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>                    }</div>
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span> </div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                    <a class="code hl_function" href="class_li_d_a_rcloud.html#ac850f71f86e2872a78d8ff9bc6df6d08" title="Add a cell to the grid.">addGridCell</a>( subcenter+center, center, gsubsize, gsize, rotation*M_PI/180.f, <a class="code hl_function" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2" title="Make an int3 vector from three ints.">make_int3</a>(i,j,k), <a class="code hl_function" href="helios__vector__types_8h.html#a88347513c8d7e764d5c820b61e5905e2" title="Make an int3 vector from three ints.">make_int3</a>(Nx,Ny,Nz) );</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                    <a class="code hl_function" href="class_li_d_a_rcloud.html#ac850f71f86e2872a78d8ff9bc6df6d08" title="Add a cell to the grid.">addGridCell</a>( subcenter+center, center, gsubsize, gsize, rotation*M_PI/180.f, <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(i,j,k), <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(Nx,Ny,Nz) );</div>
 <div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span> </div>
 <div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>                    count++;</div>
 <div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span> </div>
@@ -547,7 +560,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    std::size_t hit_count = 0;</div>
 <div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>    <span class="keywordflow">while</span> ( datafile.good() ){ <span class="comment">//loop through file to read scan data</span></div>
 <div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span> </div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>        temp_xyz = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(-9999,-9999,-9999);</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>        temp_xyz = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(-9999,-9999,-9999);</div>
 <div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        temp_rgb = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(1,0,0); <span class="comment">//default color: red</span></div>
 <div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        temp_row = -1;</div>
 <div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>        temp_column = -1;</div>
@@ -653,7 +666,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = tri.vertex1;</div>
 <div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = tri.vertex2;</div>
 <div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span> </div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
 <div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>        normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
 <div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span> </div>
 <div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>        file &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> &lt;&lt; <span class="stringliteral">&quot; &quot;</span> &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> &lt;&lt; <span class="stringliteral">&quot; &quot;</span> &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt;&lt; std::endl;</div>
@@ -686,7 +699,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = tri.vertex1;</div>
 <div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = tri.vertex2;</div>
 <div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span> </div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
 <div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>            normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
 <div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span> </div>
 <div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>            file &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> &lt;&lt; <span class="stringliteral">&quot; &quot;</span> &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> &lt;&lt; <span class="stringliteral">&quot; &quot;</span> &lt;&lt; normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt;&lt; std::endl;</div>
@@ -778,7 +791,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = tri.vertex1;</div>
 <div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = tri.vertex2;</div>
 <div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span> </div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
 <div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>        normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
 <div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span> </div>
 <div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>        <span class="keywordtype">float</span> angle = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(fabs(normal.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>));</div>
@@ -841,7 +854,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v1 = tri.vertex1;</div>
 <div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> v2 = tri.vertex2;</div>
 <div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span> </div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> normal = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 );</div>
 <div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>        normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
 <div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>        <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> n_sph= <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">cart2sphere</a>(normal);</div>
 <div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span> </div>
@@ -1108,7 +1121,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> j=0; j&lt;Ny; j++ ){</div>
 <div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>        xyzi.at(j).resize(Nx);</div>
 <div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>        <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;Nx; i++ ){</div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>            xyzi.at(j).at(i) = <a class="code hl_function" href="helios__vector__types_8h.html#ab232dd96cf103ad9ac02b6f5c264ced0" title="Make a vec4 from three floats.">make_vec4</a>(0,0,0,1);</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>            xyzi.at(j).at(i) = <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(0,0,0,1);</div>
 <div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>        }</div>
 <div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    }</div>
 <div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span> </div>
@@ -1137,7 +1150,7 @@ $(function(){initNavTree('lidar_2src_2file_i_o_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>            intensity = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(r, <span class="stringliteral">&quot;intensity&quot;</span>);</div>
 <div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>        }</div>
 <div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span> </div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        xyzi.at(row_column.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>).at(row_column.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>) = <a class="code hl_function" href="helios__vector__types_8h.html#ab232dd96cf103ad9ac02b6f5c264ced0" title="Make a vec4 from three floats.">make_vec4</a>( xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>, xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>, xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>, intensity );</div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        xyzi.at(row_column.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>).at(row_column.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>) = <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>( xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>, xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>, xyz.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>, intensity );</div>
 <div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span> </div>
 <div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>    }</div>
 <div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span> </div>

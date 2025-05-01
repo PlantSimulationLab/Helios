@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/aeriallidar/src/AerialLiDAR.cu Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.29</span>
+       <span id="projectnumber">&#160;v1.3.30</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -1033,7 +1046,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>      <span class="keywordtype">float</span> y = center.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> - 0.5*extent.<a class="code hl_variable" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e" title="Second element in vector.">y</a> + context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>()*extent.<a class="code hl_variable" href="structhelios_1_1vec2.html#ab4afff51f764cbf9bab0949ae067977e" title="Second element in vector.">y</a>;</div>
 <div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>      <span class="keywordtype">float</span> z = center.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
 <div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span> </div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>      rayorigin.at(i) = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">helios::make_vec3</a>(x,y,z);</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>      rayorigin.at(i) = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(x,y,z);</div>
 <div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span> </div>
 <div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>      <span class="keywordtype">float</span> theta = -0.5f*M_PI+0.5f*coneangle*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
 <div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>      <span class="keywordtype">float</span> phi = 2.f*M_PI*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
@@ -1229,8 +1242,8 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span>    data[<span class="stringliteral">&quot;timestamp&quot;</span>] = r;</div>
 <div class="line"><a id="l01089" name="l01089"></a><span class="lineno"> 1089</span>    data[<span class="stringliteral">&quot;intensity&quot;</span>] = t_hit.at(hit).at(1);</div>
 <div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span>    </div>
-<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> dir = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">helios::make_vec3</a>(direction[r].x,direction[r].y,direction[r].z);</div>
-<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> o = <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">helios::make_vec3</a>(origin[r].x,origin[r].y,origin[r].z);</div>
+<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> dir = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(direction[r].x,direction[r].y,direction[r].z);</div>
+<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> o = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(origin[r].x,origin[r].y,origin[r].z);</div>
 <div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> p = o+dir*t_hit.at(hit).at(0);</div>
 <div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>        <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a746b984566c871ff37d87cd52ed046a2" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the origin and hit point.">addHitPoint</a>( s, p, <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">helios::cart2sphere</a>(dir), helios::RGB::red, data );</div>
 <div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span> </div>
@@ -1501,8 +1514,8 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01357" name="l01357"></a><span class="lineno"> 1357</span> </div>
 <div class="line"><a id="l01358" name="l01358"></a><span class="lineno"> 1358</span>  <span class="comment">//Inverse rotate the ray</span></div>
 <div class="line"><a id="l01359" name="l01359"></a><span class="lineno"> 1359</span> </div>
-<div class="line"><a id="l01360" name="l01360"></a><span class="lineno"> 1360</span>  float3 direction_rot = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>(direction,0,-rotation[cell]);</div>
-<div class="line"><a id="l01361" name="l01361"></a><span class="lineno"> 1361</span>  float3 scan_xyz_rot = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>(scan_xyz-anchor[cell],0,-rotation[cell]) + anchor[cell];</div>
+<div class="line"><a id="l01360" name="l01360"></a><span class="lineno"> 1360</span>  float3 direction_rot = d_rotatePoint(direction,0,-rotation[cell]);</div>
+<div class="line"><a id="l01361" name="l01361"></a><span class="lineno"> 1361</span>  float3 scan_xyz_rot = d_rotatePoint(scan_xyz-anchor[cell],0,-rotation[cell]) + anchor[cell];</div>
 <div class="line"><a id="l01362" name="l01362"></a><span class="lineno"> 1362</span> </div>
 <div class="line"><a id="l01363" name="l01363"></a><span class="lineno"> 1363</span>  float3 origin = scan_xyz_rot - direction_rot*1e5;</div>
 <div class="line"><a id="l01364" name="l01364"></a><span class="lineno"> 1364</span>  </div>
@@ -1609,11 +1622,11 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span>  </div>
 <div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
 <div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span> </div>
-<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>  <span class="keywordtype">float</span> zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
+<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>  <span class="keywordtype">float</span> zenith = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
 <div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>  <span class="keywordtype">float</span> azimuth = <a class="code hl_function" href="group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf" title="Four quadrant arc tangent between 0 and 2*pi.">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>  raydir = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );</div>
 <div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span> </div>
-<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span>  float3 disk_pt3 = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
+<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span>  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
 <div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span> </div>
 <div class="line"><a id="l01474" name="l01474"></a><span class="lineno"> 1474</span>  float3 origin = d_origin[idx] + disk_pt3;</div>
 <div class="line"><a id="l01475" name="l01475"></a><span class="lineno"> 1475</span> </div>
@@ -1627,7 +1640,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01483" name="l01483"></a><span class="lineno"> 1483</span>    float3 v3 = d_patch_vertex[4*p+3];</div>
 <div class="line"><a id="l01484" name="l01484"></a><span class="lineno"> 1484</span> </div>
 <div class="line"><a id="l01485" name="l01485"></a><span class="lineno"> 1485</span>    float3 anchor = v0;</div>
-<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span>    float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
+<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span>    float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
 <div class="line"><a id="l01487" name="l01487"></a><span class="lineno"> 1487</span> </div>
 <div class="line"><a id="l01488" name="l01488"></a><span class="lineno"> 1488</span>    float3 a = v1-v0;</div>
 <div class="line"><a id="l01489" name="l01489"></a><span class="lineno"> 1489</span>    float3 b = v3-v0;</div>
@@ -1664,7 +1677,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01520" name="l01520"></a><span class="lineno"> 1520</span>        float2 duv;</div>
 <div class="line"><a id="l01521" name="l01521"></a><span class="lineno"> 1521</span>        duv.x = d_patch_uv[ 2*p+1 ].x - d_patch_uv[ 2*p ].x;</div>
 <div class="line"><a id="l01522" name="l01522"></a><span class="lineno"> 1522</span>        duv.y = d_patch_uv[ 2*p+1 ].y - d_patch_uv[ 2*p ].y;</div>
-<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>        int2 ind = <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );</div>
+<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>        int2 ind = <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*(uvmin.x+fabs(uv.x)*duv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*(uvmin.y+fabs(uv.y)*duv.y)) );</div>
 <div class="line"><a id="l01524" name="l01524"></a><span class="lineno"> 1524</span>        assert( ind.x&gt;=0 &amp;&amp; ind.x&lt;sz.x &amp;&amp; ind.y&gt;=0 &amp;&amp; ind.y&lt;sz.y );</div>
 <div class="line"><a id="l01525" name="l01525"></a><span class="lineno"> 1525</span> </div>
 <div class="line"><a id="l01526" name="l01526"></a><span class="lineno"> 1526</span>        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
@@ -1706,11 +1719,11 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01562" name="l01562"></a><span class="lineno"> 1562</span>  </div>
 <div class="line"><a id="l01563" name="l01563"></a><span class="lineno"> 1563</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
 <div class="line"><a id="l01564" name="l01564"></a><span class="lineno"> 1564</span> </div>
-<div class="line"><a id="l01565" name="l01565"></a><span class="lineno"> 1565</span>  <span class="keywordtype">float</span> zenith = acos_safe( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
+<div class="line"><a id="l01565" name="l01565"></a><span class="lineno"> 1565</span>  <span class="keywordtype">float</span> zenith = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
 <div class="line"><a id="l01566" name="l01566"></a><span class="lineno"> 1566</span>  <span class="keywordtype">float</span> azimuth = <a class="code hl_function" href="group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf" title="Four quadrant arc tangent between 0 and 2*pi.">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span>  raydir = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );</div>
 <div class="line"><a id="l01568" name="l01568"></a><span class="lineno"> 1568</span> </div>
-<div class="line"><a id="l01569" name="l01569"></a><span class="lineno"> 1569</span>  float3 disk_pt3 = <a class="code hl_function" href="_ray_tracing_8cu_8h.html#af48d117e18e1319cd61b4af9ef999b01">d_rotatePoint</a>( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
+<div class="line"><a id="l01569" name="l01569"></a><span class="lineno"> 1569</span>  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
 <div class="line"><a id="l01570" name="l01570"></a><span class="lineno"> 1570</span> </div>
 <div class="line"><a id="l01571" name="l01571"></a><span class="lineno"> 1571</span>  float3 origin = d_origin[idx] + disk_pt3;</div>
 <div class="line"><a id="l01572" name="l01572"></a><span class="lineno"> 1572</span> </div>
@@ -1749,7 +1762,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01605" name="l01605"></a><span class="lineno"> 1605</span> </div>
 <div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span>      <span class="keywordflow">if</span>( d_tri_textureID[tri]&lt;0 ){<span class="comment">//no texture mask      </span></div>
 <div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span>        tmin = t;</div>
-<div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span>        float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
+<div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span>        float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
 <div class="line"><a id="l01609" name="l01609"></a><span class="lineno"> 1609</span>        nmin = fabs(normal*raydir);</div>
 <div class="line"><a id="l01610" name="l01610"></a><span class="lineno"> 1610</span>      }<span class="keywordflow">else</span>{<span class="comment">//has texture mask</span></div>
 <div class="line"><a id="l01611" name="l01611"></a><span class="lineno"> 1611</span> </div>
@@ -1769,7 +1782,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01625" name="l01625"></a><span class="lineno"> 1625</span> </div>
 <div class="line"><a id="l01626" name="l01626"></a><span class="lineno"> 1626</span>        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>
 <div class="line"><a id="l01627" name="l01627"></a><span class="lineno"> 1627</span>          tmin = t;</div>
-<div class="line"><a id="l01628" name="l01628"></a><span class="lineno"> 1628</span>          float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#aa4e7459e7404915c12903a5c08588f5b" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
+<div class="line"><a id="l01628" name="l01628"></a><span class="lineno"> 1628</span>          float3 normal = normalize( <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( v1-v0, v2-v0 ) );</div>
 <div class="line"><a id="l01629" name="l01629"></a><span class="lineno"> 1629</span>          nmin = fabs(normal*raydir);</div>
 <div class="line"><a id="l01630" name="l01630"></a><span class="lineno"> 1630</span>        }</div>
 <div class="line"><a id="l01631" name="l01631"></a><span class="lineno"> 1631</span>        </div>
