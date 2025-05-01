@@ -1036,9 +1036,6 @@ struct Shoot {
     float phyllochron_increase = 2;
     float phyllochron_recovery = phyllochron_increase * 1.5;
 
-    float elongation_decay = 0.5;
-    float elongation_recovery = elongation_decay /1.5 ;
-
     uint days_with_negative_carbon_balance = 0;
 
     void breakDormancy();
@@ -1390,7 +1387,7 @@ public:
 
     void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
 
-    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry);
+    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
@@ -1661,9 +1658,9 @@ protected:
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortOrgans();
-    void checkCarbonPool_adjustPhyllochron();
-    void checkCarbonPool_transferCarbon();
+    void checkCarbonPool_abortOrgans(float dt);
+    void checkCarbonPool_adjustPhyllochron(float dt);
+    void checkCarbonPool_transferCarbon(float dt);
 
     bool carbon_model_enabled = false;
 

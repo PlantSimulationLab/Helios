@@ -623,6 +623,7 @@ void Shoot::makeDormant() {
 
 void Shoot::terminateApicalBud() {
     this->meristem_is_alive = false;
+    this->phyllochron_counter = 0;
 }
 
 void Shoot::terminateAxillaryVegetativeBuds() {
@@ -2216,7 +2217,7 @@ void PlantArchitecture::enableGroundClipping(float ground_height) {
     ground_clipping_height = ground_height;
 }
 
-void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry) {
+void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2247,7 +2248,16 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     auto &segment = shoot->shoot_internode_radii.at(node_number);
     for( float &radius : segment  ) {
         if( phytomer_radius > radius ) { //radius should only increase
-            radius = radius + 0.5*(phytomer_radius - radius);
+            float total_nodes_in_season = plant_instances.at(plantID).dd_to_dormancy_break / shoot->phyllochron_instantaneous; //The total number of nodes that could potentially be produced during the growing season given the phyllochron length
+            float node_development_time_ratio = shoot->shoot_parameters.max_nodes_per_season.val() / total_nodes_in_season; //
+            if (total_nodes_in_season > shoot->shoot_parameters.max_nodes_per_season.val())
+            {
+                radius = radius + (phytomer_radius - radius) * node_development_time_ratio * dt / shoot->phyllochron_instantaneous;
+            }else
+            {
+                radius = radius + (phytomer_radius - radius) * dt / shoot->phyllochron_instantaneous;
+            }
+
         }
     }
 
@@ -2983,22 +2993,33 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         }
     }
 
-    int Nsteps = std::floor(time_step_days / phyllochron_min);
-    float remainder_time = time_step_days - phyllochron_min * float(Nsteps);
+    if( carbon_model_enabled ){
+        accumulateShootPhotosynthesis();
+    }
+
+    float dt_max;
+    int Nsteps;
+
+    if (time_step_days<=phyllochron_min)
+    {
+        Nsteps = time_step_days;
+        dt_max = 1;
+    }else
+    {
+        Nsteps = std::floor(time_step_days / phyllochron_min);
+        dt_max = phyllochron_min;
+    }
+
+    float remainder_time = time_step_days - dt_max * float(Nsteps);
     if (remainder_time > 0.f) {
         Nsteps++;
     }
-
     for (int timestep = 0; timestep < Nsteps; timestep++) {
-        float dt_max = phyllochron_min;
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
             dt_max = remainder_time;
         }
         std::cout << "timestep: " << timestep << std::endl;
         // **** accumulate photosynthate **** //
-        if( carbon_model_enabled ){
-            accumulateShootPhotosynthesis();
-        }
 
         if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max > plant_instance.max_age) {
             std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
@@ -3015,6 +3036,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             plant_instance.time_since_dormancy = 0;
             for (const auto &shoot: *shoot_tree) {
                 shoot->makeDormant();
+                shoot->phyllochron_counter = 0;
             }
             harvestPlant(plantID);
             continue;
@@ -3036,6 +3058,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
             // breaking dormancy
             if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
+                shoot->phyllochron_counter = shoot->phyllochron_instantaneous;
                 shoot->breakDormancy();
             }
 
@@ -3128,10 +3151,12 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
 
             int node_index = 0;
+            float total_nodes_in_season = plant_instances.at(plantID).dd_to_dormancy_break / shoot->phyllochron_instantaneous; //The total number of nodes that could potentially be produced during the growing season given the phyllochron length
+            float node_development_time_ratio = shoot->shoot_parameters.max_nodes_per_season.val() / total_nodes_in_season; //
             for (auto &phytomer: shoot->phytomers) {
                 //scale internode length
                 if (phytomer->current_internode_scale_factor < 1) {
-                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
+                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * node_development_time_ratio * phytomer->internode_length_max;
                     float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                      phytomer->setInternodeLengthScaleFraction(length_scale, false);
                 }
@@ -3139,7 +3164,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                 //scale internode girth
                 float inode_radius = phytomer->getInternodeRadius();
                 if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
-                    incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, false);
+                    incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max, false);
                 }
 
                 node_index++;
@@ -3282,13 +3307,13 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
             // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
             shoot->phyllochron_counter += dt_max;
-            if (shoot->phyllochron_counter >= shoot->shoot_parameters.phyllochron_min.val() && !shoot->phytomers.back()->isdormant ) {
+            std::cout<<"Phyllochron Counter: "<<shoot->phyllochron_counter<<std::endl;
+            if (shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant ) {
                 float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                 shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
                 float internode_length_max = shoot->internode_length_max_shoot_initial;
                 appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01); //\todo These factors should be set to be consistent with the shoot
-                shoot->shoot_parameters.phyllochron_min.resample();
-                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->shoot_parameters.phyllochron_min.val();
+                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->phyllochron_instantaneous;
             }
 
             // ****** EPICORMIC SHOOTS ****** //
@@ -3316,17 +3341,22 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         // **** subtract maintenance carbon costs **** //
         std::cout << "is carbon enabled: " << carbon_model_enabled << std::endl;
         if( carbon_model_enabled ){
-            subtractShootMaintenanceCarbon(time_step_days);
+            subtractShootMaintenanceCarbon(dt_max);
             subtractShootGrowthCarbon();
-            checkCarbonPool_adjustPhyllochron();
-            checkCarbonPool_abortOrgans();
-            checkCarbonPool_transferCarbon();
-            std::cout << "ENABLED " <<std::endl;
+            checkCarbonPool_transferCarbon(dt_max);
+            checkCarbonPool_adjustPhyllochron(dt_max);
+            checkCarbonPool_abortOrgans(dt_max);
         }
     }
 
     //update Context geometry
     shoot_tree->front()->updateShootNodes(true);
+
+    //Assign current volume as old volume for your next timestep
+    for( auto &shoot: *shoot_tree ){
+        float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume(); //Find current volume for each shoot in the plant
+        shoot->old_shoot_volume = shoot_volume; //Set old volume to the current volume for the next timestep
+    }
 
 }
 
