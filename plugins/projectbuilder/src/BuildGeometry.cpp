@@ -3,7 +3,7 @@
 
 using namespace helios;
 
-void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_architecture_ptr, Context *context_ptr) {
+void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_architecture_ptr, Context *context_ptr, std::vector<std::vector<uint>> &canopy_UUID_vector, std::vector<std::vector<helios::vec3>> &individual_plant_locations) {
 
     std::vector<uint> ground_UUIDs;
     std::vector<uint> leaf_UUIDs;
@@ -284,6 +284,10 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
             }
 
             std::vector<uint> canopy_UUIDs = context_ptr->loadOBJ(canopy_model_file.c_str());
+
+            std::vector<helios::vec3> curr_plant_locations{};
+            individual_plant_locations.push_back(curr_plant_locations);
+            // TODO: save canopy_UUIDs for individual canopies here
             if( canopy_origin_read ) {
                 context_ptr->translatePrimitive(canopy_UUIDs, canopy_origin);
             }
@@ -297,6 +301,8 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
             sepal_UUIDs = context_ptr->filterPrimitivesByData(canopy_UUIDs, "object_label", "sepal");
             fruit_UUIDs = context_ptr->filterPrimitivesByData(canopy_UUIDs, "object_label", "fruit");
 
+            canopy_UUID_vector.push_back(canopy_UUIDs);
+
         }else{ //canopy geometry will be generated using the plant architecture plug-in
 
             if( plant_library_name.empty() ){
@@ -309,7 +315,9 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
                 plant_architecture_ptr->enableGroundClipping( ground_clipping_height );
             }
 
-            plant_architecture_ptr->buildPlantCanopyFromLibrary( canopy_origin, plant_spacing, plant_count, plant_age );
+            std::vector<uint> canopy_UUIDs = plant_architecture_ptr->buildPlantCanopyFromLibrary( canopy_origin, plant_spacing, plant_count, plant_age);
+            std::vector<helios::vec3> curr_plant_locations = plant_architecture_ptr->getPlantBasePosition(canopy_UUIDs);
+            individual_plant_locations.push_back(curr_plant_locations);
 
             leaf_UUIDs = plant_architecture_ptr->getAllLeafUUIDs();
             internode_UUIDs = plant_architecture_ptr->getAllInternodeUUIDs();
@@ -323,6 +331,8 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
                 sepal_UUIDs.clear();
             }
             fruit_UUIDs = plant_architecture_ptr->getAllFruitUUIDs();
+
+            canopy_UUID_vector.push_back(canopy_UUIDs);
 
         }
 

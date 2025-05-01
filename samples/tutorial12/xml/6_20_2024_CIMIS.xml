@@ -1,0 +1,620 @@
+<?xml version=1.0?>
+
+<helios>
+
+<timeseries label="air_temperature">
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 0 0 0 </time>
+		<value> 286.25 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 1 0 0 </time>
+		<value> 285.55 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 2 0 0 </time>
+		<value> 284.65 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 3 0 0 </time>
+		<value> 284.45 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 4 0 0 </time>
+		<value> 283.65 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 5 0 0 </time>
+		<value> 283.95 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 6 0 0 </time>
+		<value> 285.25 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 7 0 0 </time>
+		<value> 288.55 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 8 0 0 </time>
+		<value> 291.75 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 9 0 0 </time>
+		<value> 294.35 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 10 0 0 </time>
+		<value> 296.85 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 11 0 0 </time>
+		<value> 298.75 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 300.15 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 13 0 0 </time>
+		<value> 301.35 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 14 0 0 </time>
+		<value> 302.35 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 15 0 0 </time>
+		<value> 302.65 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 16 0 0 </time>
+		<value> 303.15 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 17 0 0 </time>
+		<value> 302.75 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 18 0 0 </time>
+		<value> 299.85 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 19 0 0 </time>
+		<value> 296.05 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 20 0 0 </time>
+		<value> 292.65 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 21 0 0 </time>
+		<value> 290.75 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 22 0 0 </time>
+		<value> 289.35 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 23 0 0 </time>
+		<value> 287.95 </value>
+	</datapoint>
+</timeseries>
+
+<timeseries label="humidity">
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 0 0 0 </time>
+		<value> 0.76 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 1 0 0 </time>
+		<value> 0.78 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 2 0 0 </time>
+		<value> 0.82 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 3 0 0 </time>
+		<value> 0.83 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 4 0 0 </time>
+		<value> 0.91 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 5 0 0 </time>
+		<value> 0.94 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 6 0 0 </time>
+		<value> 0.89 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 7 0 0 </time>
+		<value> 0.75 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 8 0 0 </time>
+		<value> 0.61 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 9 0 0 </time>
+		<value> 0.53 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 10 0 0 </time>
+		<value> 0.47 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 11 0 0 </time>
+		<value> 0.45 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.43 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 13 0 0 </time>
+		<value> 0.4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 14 0 0 </time>
+		<value> 0.36 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 15 0 0 </time>
+		<value> 0.31 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 16 0 0 </time>
+		<value> 0.3 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 17 0 0 </time>
+		<value> 0.37 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 18 0 0 </time>
+		<value> 0.44 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 19 0 0 </time>
+		<value> 0.52 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 20 0 0 </time>
+		<value> 0.59 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 21 0 0 </time>
+		<value> 0.63 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 22 0 0 </time>
+		<value> 0.68 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 23 0 0 </time>
+		<value> 0.74 </value>
+	</datapoint>
+</timeseries>
+
+<timeseries label="radiation">
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 0 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 1 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 2 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 3 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 4 0 0 </time>
+		<value> 4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 5 0 0 </time>
+		<value> 80 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 6 0 0 </time>
+		<value> 247 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 7 0 0 </time>
+		<value> 439 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 8 0 0 </time>
+		<value> 618 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 9 0 0 </time>
+		<value> 778 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 10 0 0 </time>
+		<value> 780 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 11 0 0 </time>
+		<value> 897 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 900 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 13 0 0 </time>
+		<value> 836 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 14 0 0 </time>
+		<value> 770 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 15 0 0 </time>
+		<value> 576 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 16 0 0 </time>
+		<value> 429 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 17 0 0 </time>
+		<value> 283 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 18 0 0 </time>
+		<value> 71 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 19 0 0 </time>
+		<value> 13 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 20 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 21 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 22 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 23 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+</timeseries>
+
+<timeseries label="wind_speed">
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 0 0 0 </time>
+		<value> 1.7 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 1 0 0 </time>
+		<value> 1.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 2 0 0 </time>
+		<value> 1.6 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 3 0 0 </time>
+		<value> 0.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 4 0 0 </time>
+		<value> 0.7 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 5 0 0 </time>
+		<value> 0.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 6 0 0 </time>
+		<value> 1.3 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 7 0 0 </time>
+		<value> 1.2 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 8 0 0 </time>
+		<value> 1.4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 9 0 0 </time>
+		<value> 1.4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 10 0 0 </time>
+		<value> 1.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 11 0 0 </time>
+		<value> 2 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 2.3 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 13 0 0 </time>
+		<value> 2.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 14 0 0 </time>
+		<value> 3.3 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 15 0 0 </time>
+		<value> 3.5 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 16 0 0 </time>
+		<value> 3.2 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 17 0 0 </time>
+		<value> 3.2 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 18 0 0 </time>
+		<value> 3.2 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 19 0 0 </time>
+		<value> 1.9 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 20 0 0 </time>
+		<value> 1.7 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 21 0 0 </time>
+		<value> 1.8 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 22 0 0 </time>
+		<value> 1.4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 23 0 0 </time>
+		<value> 1.9 </value>
+	</datapoint>
+</timeseries>
+
+<timeseries label="ETo">
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 0 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 1 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 2 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 3 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 4 0 0 </time>
+		<value> 0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 5 0 0 </time>
+		<value> 0.01 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 6 0 0 </time>
+		<value> 0.13 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 7 0 0 </time>
+		<value> 0.25 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 8 0 0 </time>
+		<value> 0.4 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 9 0 0 </time>
+		<value> 0.53 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 10 0 0 </time>
+		<value> 0.59 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 11 0 0 </time>
+		<value> 0.7 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.72 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 13 0 0 </time>
+		<value> 0.71 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 14 0 0 </time>
+		<value> 0.68 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 15 0 0 </time>
+		<value> 0.55 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 16 0 0 </time>
+		<value> 0.43 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 17 0 0 </time>
+		<value> 0.31 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 18 0 0 </time>
+		<value> 0.17 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 19 0 0 </time>
+		<value> 0.07 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 20 0 0 </time>
+		<value> 0.04 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 21 0 0 </time>
+		<value> 0.03 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 22 0 0 </time>
+		<value> 0.02 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 172 2024 </dateJulian>
+		<time> 23 0 0 </time>
+		<value> 0.01 </value>
+	</datapoint>
+</timeseries>
+
+</helios>

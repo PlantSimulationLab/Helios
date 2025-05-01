@@ -18,6 +18,7 @@
 
 #include "Context.h"
 #include <utility>
+#include "Hungarian.h"
 
 //forward declarations of classes/structs
 class PlantArchitecture;
@@ -324,7 +325,7 @@ public:
     explicit LeafPrototype( std::minstd_rand0 *generator );
 
     //! Constructor - does not set random number generator
-    LeafPrototype( ){};
+    LeafPrototype( )= default;
 
     //! Custom prototype function for creating leaf prototypes
     uint (*prototype_function)(helios::Context *, LeafPrototype* prototype_parameters, int compound_leaf_index) = nullptr;
@@ -806,45 +807,125 @@ public:
 
     // ---- query info about the phytomer ---- //
 
-    std::vector<helios::vec3> getInternodeNodePositions() const;
+    /**
+     * \brief Retrieve the positions of nodes associated with an internode.
+     *
+     * \return A vector of vec3 objects representing the node positions for the current internode.
+     */
+    [[nodiscard]] std::vector<helios::vec3> getInternodeNodePositions() const;
 
-    std::vector<float> getInternodeNodeRadii() const;
+    /**
+     * \brief Retrieve the radii of nodes associated with an internode.
+     *
+     * \return A vector of floats representing the radii of the nodes for the current internode.
+     */
+    [[nodiscard]] std::vector<float> getInternodeNodeRadii() const;
 
-    helios::vec3 getInternodeAxisVector( float stem_fraction ) const;
+    /**
+     * \brief Retrieves the axis vector of the internode at a given fraction along the internode.
+     *
+     * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed.
+     * \return A vec3 representing the axis vector of the internode at the specified internode fraction.
+     */
+    [[nodiscard]] helios::vec3 getInternodeAxisVector(float stem_fraction) const;
 
-    helios::vec3 getPetioleAxisVector(float stem_fraction, uint petiole_index) const;
+    /**
+     * \brief Retrieves the petiole axis vector for a given stem fraction and petiole index.
+     *
+     * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed.
+     * \param[in] petiole_index Index of the petiole for which the axis vector is retrieved.
+     * \return The axis vector of the specified petiole as a helios::vec3.
+     */
+    [[nodiscard]] helios::vec3 getPetioleAxisVector(float stem_fraction, uint petiole_index) const;
 
-    static helios::vec3 getAxisVector( float stem_fraction, const std::vector<helios::vec3> &axis_vertices ) ;
+    /**
+     * \brief Computes the normalized vector direction along the axis at a given fraction of the stem.
+     *
+     * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed.
+     * \param[in] axis_vertices A list of 3D points defining the vertices of the axis.
+     * \return A normalized vector direction at the given fraction along the axis.
+     */
+    [[nodiscard]] static helios::vec3 getAxisVector(float stem_fraction, const std::vector<helios::vec3> &axis_vertices) ;
 
-    float getInternodeLength() const;
+    /**
+     * \brief Computes the total length of the internode.
+     *
+     * \return The cumulative length of the internode based on its node positions.
+     */
+    [[nodiscard]] float getInternodeLength() const;
 
-    float getInternodeRadius() const;
+    /**
+     * \brief Retrieves the radius of the internode.
+     *
+     * \return The radius of the internode.
+     */
+    [[nodiscard]] float getInternodeRadius() const;
 
-    float getPetioleLength() const;
+    /**
+     * \brief Retrieves the length of the petiole.
+     *
+     * \return Length of the petiole.
+     */
+    [[nodiscard]] float getPetioleLength() const;
 
-    float getInternodeRadius( float stem_fraction ) const;
+    /**
+     * \brief Retrieves the radius of the internode based on the stem fraction.
+     *
+     * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the radius is computed.
+     * \return The radius of the internode at the specified stem fraction.
+     */
+    [[nodiscard]] float getInternodeRadius(float stem_fraction) const;
 
-    float getLeafArea() const;
+    /**
+     * \brief Calculates the total leaf area for the current phytomer.
+     *
+     * \return Total leaf area as a float value.
+     */
+    [[nodiscard]] float getLeafArea() const;
 
-    bool hasLeaf() const;
+    /**
+     * \brief Retrieves the position of the base of a leaf within the phytomer.
+     *
+     * \param[in] petiole_index Index of the petiole within the phytomer structure.
+     * \param[in] leaf_index Index of the leaf within the specified petiole.
+     * \return A vec3 indicating the position of the leaf base.
+     */
+    [[nodiscard]] helios::vec3 getLeafBasePosition(uint petiole_index, uint leaf_index) const;
 
-    float calculateDownstreamLeafArea() const;
+    /**
+     * \brief Checks if the phytomer has a leaf.
+     *
+     * \return True if the phytomer has at least one leaf, false otherwise.
+     */
+    [[nodiscard]] bool hasLeaf() const;
+
+    /**
+     * \brief Calculates the total leaf area downstream of the current phytomer.
+     *
+     * \return The total downstream leaf area as a float.
+     */
+    [[nodiscard]] float calculateDownstreamLeafArea() const;
 
     // ---- modify the phytomer ---- //
 
+    //! Set the current internode length as a fraction of its maximum length
+    /**
+     * \param[in] internode_scale_factor_fraction Fraction of the maximum internode length
+     * \param[in] update_context_geometry If true, the context geometry will be immediately updated to reflect the new internode length. If false, the geometry will be updated the next time Context geometry information is needed.
+     */
     void setInternodeLengthScaleFraction(float internode_scale_factor_fraction, bool update_context_geometry);
 
     //! Scale the fully-elongated (maximum) internode length as a fraction of its current fully-elongated length
     /**
      * \param[in] scale_factor Fraction by which to scale the fully-elongated internode length
      */
-    void scaleInternodeMaxLength( float scale_factor );
+    void scaleInternodeMaxLength(float scale_factor);
 
     //! Set the fully-elongated (maximum) internode length
     /**
      * \param[in] internode_length_max_new Fully-elongated length of the internode
      */
-    void setInternodeMaxLength( float internode_length_max_new );
+    void setInternodeMaxLength(float internode_length_max_new);
 
     //! Set the maximum radius of the internode
     /**
@@ -866,7 +947,7 @@ public:
 
     void scaleLeafPrototypeScale( float scale_factor );
 
-    void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction);
+    void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction) const;
 
     void setPetioleBase( const helios::vec3 &base_position );
 
@@ -876,15 +957,13 @@ public:
 
     void setVegetativeBudState(BudState state, uint petiole_index, uint bud_index);
 
-    void setVegetativeBudState( BudState state, VegetativeBud &vbud );
+    void setVegetativeBudState( BudState state, VegetativeBud &vbud ) const;
 
     void setFloralBudState(BudState state );
 
     void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
     void setFloralBudState(BudState state, FloralBud &fbud);
-
-    float calculateFruitConstructionCosts(const FloralBud &fbud);
 
     void removeLeaf();
 
@@ -949,8 +1028,9 @@ protected:
 
     void updateInflorescence(FloralBud &fbud);
 
-    float calculatePhytomerConstructionCosts();
-    float calculateFlowerConstructionCosts(const FloralBud &fbud);
+    [[nodiscard]] float calculatePhytomerConstructionCosts();
+    [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud);
+    [[nodiscard]] float calculateFruitConstructionCosts(const FloralBud &fbud);
 
     friend struct Shoot;
     friend class PlantArchitecture;
@@ -978,14 +1058,14 @@ struct Shoot {
     /**
      * \return Label of the randomly selected child shoot type.
      */
-    std::string sampleChildShootType() const;
+    [[nodiscard]] std::string sampleChildShootType() const;
 
     //! Randomly sample whether a vegetative bud should break into a new shoot
     /**
      * \param[in] node_index Index of the node along the shoot
      * \return True if the vegetative bud should break into a new shoot
      */
-    bool sampleVegetativeBudBreak( uint node_index ) const;
+    [[nodiscard]] bool sampleVegetativeBudBreak( uint node_index ) const;
 
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
@@ -995,26 +1075,74 @@ struct Shoot {
      */
     uint sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction );
 
+    /**
+     * \brief Terminates the apical bud of the shoot.
+     * This function marks the apical meristem of the shoot as no longer alive.
+     */
     void terminateApicalBud();
 
+    /**
+     * \brief Terminates all axillary vegetative buds within the shoot.
+     * This function iterates through all phytomers of the current shoot and marks the axillary vegetative buds as no longer alive.
+     */
     void terminateAxillaryVegetativeBuds();
 
+    /**
+     * \brief Adds terminal floral buds to the shoot.
+     * This function creates and initializes a specified number of terminal floral buds at the apex of the shoot.
+     * Each bud is assigned its position, rotation, and bending axis, based on the shoot's parameters.
+     * \note The number of floral buds is determined by the "max_terminal_floral_buds" parameter in the shoot's configuration,
+     * and the parameter is resampled after creating the buds.
+     */
     void addTerminalFloralBud();
 
-    float calculateShootInternodeVolume() const;
+    /**
+     * \brief Calculates the total volume of the shoot's internode tubes.
+     * This function iterates through all phytomers of the shoot and sums the volume
+     * of the internode tube objects if they exist.
+     * \return The total volume of the shoot's internode tubes.
+     */
+    [[nodiscard]] float calculateShootInternodeVolume() const;
 
-    float calculateShootLength() const;
+    /**
+     * \brief Calculates the total length of the shoot.
+     * This function iterates through all phytomers in the shoot and sums their internode lengths.
+     * \return Total length of the shoot.
+     */
+    [[nodiscard]] float calculateShootLength() const;
 
-    //! Recalculate and apply the shoot's origin position and shift all downstream shoots
+    /**
+     * \brief Determines the shoot axis vector based on a specified fraction along the shoot's length.
+     * \param[in] shoot_fraction A float value representing the fraction along the shoot's length (0 to 1).
+     * \return A vec3 representing the direction vector of the shoot axis for the computed position.
+     * \note The shoot_fraction parameter is clamped within the range of 0 to 1, with 0 corresponding to the base and 1 to the tip of the shoot. The function uses the closest phytomer's internode axis vector for calculation.
+     */
+    [[nodiscard]] helios::vec3 getShootAxisVector( float shoot_fraction ) const;
+
+    /**
+     * \brief Calculates the total leaf area of a shoot starting from a given node index.
+     *
+     * \param[in] start_node_index [optional] The index of the starting node in the shoot.
+     * \return Total leaf area of the shoot and its child shoots starting from the given node.
+     * \note Throws an error if the start_node_index is out of range.
+     */
+    [[nodiscard]] float sumShootLeafArea( uint start_node_index = 0 ) const;
+
+    /**
+     * \brief Calculates the total volume of all child shoots starting from a specified node index.
+     * \param[in] start_node_index The starting index of the node from which to sum child volumes.
+     * \return The total volume of all child shoots starting from the given node index.
+     * \note Throws an error if start_node_index is out of range.
+     */
+    [[nodiscard]] float sumChildVolume( uint start_node_index = 0) const;
+
+    void propagateDownstreamLeafArea(const Shoot* shoot, uint node_index, float leaf_area);
+
+    /**
+     * \brief Updates the shoot node positions and their associated geometries.
+     * \param[in] update_context_geometry Indicates whether the geometry context should be updated for the shoot nodes.
+     */
     void updateShootNodes(bool update_context_geometry = true );
-
-    helios::vec3 getShootAxisVector( float shoot_fraction ) const;
-
-    float sumShootLeafArea( uint start_node_index = 0 ) const;
-
-    float sumChildVolume( uint start_node_index = 0) const;
-
-    void propagateDownstreamLeafArea(Shoot* shoot, uint node_index, float leaf_area);
 
     uint current_node_number = 0;
     uint nodes_this_season = 0;
@@ -1031,7 +1159,7 @@ struct Shoot {
     const uint parent_petiole_index;
 
     float carbohydrate_pool_molC = 0;  // mol C
-    float old_shoot_volume;
+    float old_shoot_volume = 0;
 
     float phyllochron_increase = 2;
     float phyllochron_recovery = phyllochron_increase * 1.5;
@@ -1156,11 +1284,21 @@ public:
      * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy.
-     * \param[in] germination_rate [OPTIONAL] Probability that a plant in the canopy germinates and a plant is created.
+     * \param[in] germination_rate [optional] Probability that a plant in the canopy germinates and a plant is created.
      * \return Vector of plant instance IDs.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f);
 
+    //! Build a canopy of randomly scattered plants based on the model currently loaded from the library
+    /**
+     * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy boundaries.
+     * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
+     * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
+     * \param[in] age Age of the plants in the canopy.
+     * \return Vector of plant instance IDs.
+     */
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age);
+    
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type.
@@ -1236,8 +1374,8 @@ public:
      * \param[in] time_to_fruit_set Time from flower opening required to reach fruit set (i.e., flower dies and fruit is created).
      * \param[in] time_to_fruit_maturity Time from fruit set date required to reach fruit maturity.
      * \param[in] time_to_dormancy Time from emergence/dormancy break required to enter the next dormancy period.
-     * \param[in] max_leaf_lifespan [OPTIONAL] Maximum lifespan of a leaf in days.
-     * \param[in] is_evergreen [OPTIONAL] True if the plant is evergreen (i.e., does not lose all leaves during senescence).
+     * \param[in] max_leaf_lifespan [optional] Maximum lifespan of a leaf in days.
+     * \param[in] is_evergreen [optional] True if the plant is evergreen (i.e., does not lose all leaves during senescence).
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy, float max_leaf_lifespan = 1e6, bool is_evergreen= false);
@@ -1321,7 +1459,7 @@ public:
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
-     * \param[in] petiole_index [OPTIONAL] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
+     * \param[in] petiole_index [optional] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
@@ -1378,87 +1516,317 @@ public:
 
     //! Enable automatic removal of organs that are below the ground plane
     /**
-     * \param[in] ground_height [OPTIONAL] Height of the ground plane (default = 0).
+     * \param[in] ground_height [optional] Height of the ground plane (default = 0).
      */
     void enableGroundClipping( float ground_height = 0.f );
 
     // -- methods for modifying the current plant state -- //
 
+    /**
+     * \brief Initializes the carbohydrate pool for all shoots of all plant instances
+     * \param[in] carbohydrate_concentration_molC_m3 Concentration of carbohydrates in molC per cubic meter
+     */
     void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3);
 
+    /**
+     * \brief Initializes the carbohydrate pool for a specific plant.
+     * \param[in] plantID Unique identifier of the plant.
+     * \param[in] carbohydrate_concentration_molC_m3 Initial carbohydrate concentration in moles of carbon per cubic meter.
+     * \note The plant with the specified ID must exist, and the carbohydrate concentration must be non-negative.
+     */
     void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3 );
 
+    /**
+     * \brief Initializes the carbohydrate pool for a specific shoot of a plant.
+     *
+     * \param[in] plantID Identifier for the plant whose shoot's carbohydrate pool is being initialized.
+     * \param[in] shootID Identifier for the shoot of the plant.
+     * \param[in] carbohydrate_concentration_molC_m3 Carbohydrate concentration in moles of carbon per cubic meter; must be non-negative.
+     * \note Throws an error if the plant or shoot ID does not exist, or if the carbohydrate concentration is negative.
+     */
     void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
 
-    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry);
-
+    /**
+     * \brief Adjusts the leaf scaling factor (length as a fraction of its maximal length) for a specific phytomer on a plant shoot.
+     *
+     * \param[in] plantID Identifier of the plant.
+     * \param[in] shootID Identifier of the shoot on the specified plant.
+     * \param[in] node_number Node number of the phytomer to adjust.
+     * \param[in] leaf_scale_factor_fraction Fractional scaling factor for the leaf, must be in the range [0, 1].
+     */
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
-//    void setShootOrigin(uint plantID, uint shootID, const helios::vec3 &origin);
-
+    /**
+     * \brief Sets the base position of a plant with the specified ID.
+     * \param[in] plantID Unique identifier of the plant
+     * \param[in] base_position Coordinates representing the new base position of the plant
+     */
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
+
+    /**
+     * \brief Sets the leaf elevation angle distribution for a specific plant.
+     *
+     * This method modifies the elevation angles of leaves in the plant such that they follow a Beta distribution.
+     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
+     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
+     *
+     * \param[in] plantID Identifier for the plant.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     */
+    void setPlantLeafElevationAngleDistribution(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination) const;
+
+    /**
+     * \brief Sets the leaf elevation angle distribution for a list of plants.
+     *
+     * This method modifies the elevation angles of leaves in the plants such that they follow a Beta distribution.
+     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
+     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
+     *
+     * \param[in] plantIDs List of plant IDs for which to set the elevation angle distribution.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     */
+    void setPlantLeafElevationAngleDistribution(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination) const;
+
+    /**
+     * \brief Sets the azimuth angle distribution for plant leaves.
+     *
+     * This method modifies the azimuth angles of leaves in the plant such that they follow an ellipsoidal distribution.
+     * The methodology does not simply randomly sample angles from the ellipsoidal distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
+     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
+     *
+     * \param[in] plantID Identifier of the plant whose leaf azimuth angle distribution is being set.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     */
+    void setPlantLeafAzimuthAngleDistribution(uint plantID, float eccentricity, float ellipse_rotation_degrees) const;
+
+    /**
+     * \brief Sets the azimuth angle distribution of plant leaves.
+     *
+     * This method modifies the azimuth angles of leaves in the plants such that they follow a Beta distribution.
+     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
+     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
+     *
+     * \param[in] plantIDs List of plant IDs to which the angle distribution will be applied.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     */
+    void setPlantLeafAzimuthAngleDistribution(const std::vector<uint> &plantIDs, float eccentricity, float ellipse_rotation_degrees) const;
+
+    /**
+     * \brief Sets the leaf angle distribution (both elevation and azimuth) for a specific plant
+     *
+     * This method modifies the elevation angles of leaves in the plant such that they follow a Beta distribution, and the azimuth angles such that they follow an ellipsoidal distribution.
+     * The methodology does not simply randomly sample angles from the distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
+     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] Beta_mu_inclination The mean inclination angle parameter (Beta distribution).
+     * \param[in] Beta_nu_inclination The shape parameter nu of the distribution (Beta distribution).
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     */
+    void setPlantLeafAngleDistribution(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees) const;
+
+    /**
+     * \brief Sets the leaf angle distribution (both elevation and azimuth) for a list of specified plants
+     *
+     * This method modifies the elevation angles of leaves in the plants such that they follow a Beta distribution, and the azimuth angles such that they follow an ellipsoidal distribution.
+     * The methodology does not simply randomly sample angles from the distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
+     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
+     *
+     * \param[in] plantIDs Vector of plant IDs to which the leaf angle distribution is to be applied.
+     * \param[in] Beta_mu_inclination Mean parameter for the beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the beta distribution of inclination angles.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     */
+    void setPlantLeafAngleDistribution(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees) const;
 
     void setPlantAge(uint plantID, float current_age);
 
+    /**
+     * \brief Harvests a plant by removing all leaves and fruit.
+     *
+     * \param[in] plantID The unique identifier of the plant to be harvested.
+     */
     void harvestPlant(uint plantID);
 
+    /**
+     * \brief Removes all leaves from a specified shoot in a specified plant.
+     *
+     * \param[in] plantID ID of the plant from which leaves are to be removed.
+     * \param[in] shootID ID of the shoot within the plant whose leaves are to be removed.
+     */
     void removeShootLeaves(uint plantID, uint shootID);
 
+    /**
+     * \brief Removes all leaves from the plant with the specified ID.
+     *
+     * \param[in] plantID The unique identifier of the plant whose leaves are to be removed.
+     */
     void removePlantLeaves(uint plantID );
 
+    /**
+     * \brief Makes the specified plant enter a dormant state.
+     *
+     * \param[in] plantID ID of the plant to be made dormant.
+     */
     void makePlantDormant( uint plantID );
 
+    /**
+     * \brief Breaks the dormancy of all shoots in the specified plant.
+     *
+     * \param[in] plantID Identifier of the plant whose shoots' dormancy should be broken.
+     */
     void breakPlantDormancy( uint plantID );
 
+    /**
+     * \brief Prunes a branch from a specific plant at a designated node index.
+     *
+     * \param[in] plantID Unique identifier of the plant to prune.
+     * \param[in] shootID Identifier of the shoot to prune from within the plant.
+     * \param[in] node_index Index of the node on the shoot where the branch will be pruned.
+     */
     void pruneBranch(uint plantID, uint shootID, uint node_index);
 
     // -- methods for querying information about the plant -- //
 
-    std::string getPlantName(uint plantID) const;
+    /**
+     * \brief Retrieves the name of the plant associated with a given plant ID.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return The name of the plant corresponding to the provided plant ID.
+     */
+    [[nodiscard]] std::string getPlantName(uint plantID) const;
 
-    float getPlantAge(uint plantID) const;
+    /**
+     * \brief Retrieves the age of a specific plant.
+     *
+     * \param[in] plantID Unique identifier of the plant.
+     * \return The age of the plant in days associated with the given plantID.
+     */
+    [[nodiscard]] float getPlantAge(uint plantID) const;
 
-    uint getShootNodeCount( uint plantID, uint shootID ) const;
+    /**
+     * \brief Retrieves the number of nodes in a specific shoot of a specific plant.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The index of the shoot within the plant.
+     * \return The current number of nodes in the specified shoot.
+     */
+    [[nodiscard]] uint getShootNodeCount( uint plantID, uint shootID ) const;
 
-    float getShootTaper( uint plantID, uint shootID ) const;
+    /**
+     * \brief Retrieves the taper of a shoot based on its radius measurements.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot within the specified plant.
+     * \return The taper of the shoot as a float value, constrained between 0 and 1.
+     */
+    [[nodiscard]] float getShootTaper( uint plantID, uint shootID ) const;
 
-    helios::vec3 getPlantBasePosition(uint plantID) const;
+    /**
+     * \brief Retrieves the base position of the specified plant.
+     *
+     * \param[in] plantID Identifier of the plant whose base position is being queried.
+     * \return Base position of the plant as a helios::vec3 object.
+     */
+    [[nodiscard]] helios::vec3 getPlantBasePosition(uint plantID) const;
+
+    /**
+     * \brief Retrieves the base positions of multiple plants.
+     *
+     * \param[in] plantIDs A vector containing the IDs of the plants for which the base positions are required.
+     * \return A vector of vec3 objects representing the base positions of the specified plants.
+     */
+    [[nodiscard]] std::vector<helios::vec3> getPlantBasePosition(const std::vector<uint> &plantIDs) const;
 
     //! Sum the one-sided leaf area of all leaves in the plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Total one-sided leaf area of all leaves in the plant.
      */
-    float sumPlantLeafArea(uint plantID) const;
+    [[nodiscard]] float sumPlantLeafArea(uint plantID) const;
 
     //! Calculate the height of the last internode on the base stem/shoot
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Height of the last internode on the base stem/shoot.
      */
-    float getPlantStemHeight(uint plantID) const;
+    [[nodiscard]] float getPlantStemHeight(uint plantID) const;
 
     //! Calculate the height of the highest element in the plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Height of the highest element in the plant.
      */
-    float getPlantHeight(uint plantID) const;
+    [[nodiscard]] float getPlantHeight(uint plantID) const;
 
-    //! Calculate the leaf angle distribution of all leaves in the plant.
+    //! Calculate the leaf inclination angle distribution of all leaves in the plant.
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] Nbins Number of bins for the histogram.
+     * \param[in] normalize [optional] Normalize the histogram (default = true).
      * \return Histogram of leaf inclination angles. Bins are evenly spaced between 0 and 90 degrees.
      */
-    std::vector<float> getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins) const;
+    [[nodiscard]] std::vector<float> getPlantLeafInclinationAngleDistribution(uint plantID, uint Nbins, bool normalize = true) const;
+
+    //! Calculate the leaf inclination angle distribution of all leaves in multiple plants.
+    /**
+     * \param[in] plantIDs Vector of IDs of the plant instances.
+     * \param[in] Nbins Number of bins for the histogram.
+     * \param[in] normalize [optional] Normalize the histogram (default = true).
+     * \return Histogram of leaf inclination angles. Bins are evenly spaced between 0 and 90 degrees.
+     */
+    [[nodiscard]] std::vector<float> getPlantLeafInclinationAngleDistribution(const std::vector<uint> &plantIDs, uint Nbins, bool normalize = true) const;
+
+    //! Calculate the leaf azimuth angle distribution of all leaves in the plant.
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] Nbins Number of bins for the histogram.
+     * \param[in] normalize [optional] Normalize the histogram (default = true).
+     * \return Histogram of leaf azimuth angles. Bins are evenly spaced between 0 and 360 degrees.
+     */
+    [[nodiscard]] std::vector<float> getPlantLeafAzimuthAngleDistribution(uint plantID, uint Nbins, bool normalize = true) const;
+
+    //! Calculate the leaf azimuth angle distribution of all leaves in multiple plants.
+    /**
+     * \param[in] plantIDs Vector of ID of the plant instances.
+     * \param[in] Nbins Number of bins for the histogram.
+     * \param[in] normalize [optional] Normalize the histogram (default = true).
+     * \return Histogram of leaf azimuth angles. Bins are evenly spaced between 0 and 360 degrees.
+     */
+    [[nodiscard]] std::vector<float> getPlantLeafAzimuthAngleDistribution(const std::vector<uint> &plantIDs, uint Nbins, bool normalize = true) const;
 
     //! Get the total number of leaves on the plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Total number of leaves on the plant.
      */
-    uint getPlantLeafCount(uint plantID) const;
+    [[nodiscard]] uint getPlantLeafCount(uint plantID) const;
+
+    //! Get the base positions of all leaves on the plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of base positions of all leaves on the plant.
+     */
+    [[nodiscard]] std::vector<helios::vec3> getPlantLeafBases(uint plantID) const;
+
+    //! Get the base positions of all leaves for a list of plants
+    /**
+     * \param[in] plantIDs List of IDs of the plant instances.
+     * \return Vector of base positions of all leaves on the plants.
+     */
+    [[nodiscard]] std::vector<helios::vec3> getPlantLeafBases(const std::vector<uint> &plantIDs) const;
 
     //! Write all vertices in the plant to a file for external processing (e.g., bounding volume, convex hull)
     /**
@@ -1471,128 +1839,181 @@ public:
     /**
      * \return Vector of plant IDs for all plant instances
      */
-    std::vector<uint> getAllPlantIDs() const;
+    [[nodiscard]] std::vector<uint> getAllPlantIDs() const;
 
     //! Get object IDs for all organs objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all organs in the plant.
      */
-    std::vector<uint> getAllPlantObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getAllPlantObjectIDs(uint plantID) const;
 
     //! Get primitive UUIDs for all primitives in a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of primitive UUIDs for all primitives in the plant.
      */
-    std::vector<uint> getAllPlantUUIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getAllPlantUUIDs(uint plantID) const;
 
     //! Get object IDs for all internode (Tube) objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all internodes in the plant.
      */
-    std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
 
     //! Get object IDs for all petiole (Tube) objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all petioles in the plant.
      */
-    std::vector<uint> getPlantPetioleObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantPetioleObjectIDs(uint plantID) const;
 
     //! Get object IDs for all leaf objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all leaves in the plant.
      */
-    std::vector<uint> getPlantLeafObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantLeafObjectIDs(uint plantID) const;
+
+    //! Get object IDs for all leaf objects for a list of plants
+    /**
+     * \param[in] plantIDs List of IDs of the plant instances.
+     * \return Vector of object IDs for all leaves in the plants.
+     */
+    [[nodiscard]] std::vector<uint> getPlantLeafObjectIDs(const std::vector<uint> &plantIDs) const;
 
     //! Get object IDs for all peduncle (Tube) objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all peduncles in the plant.
      */
-    std::vector<uint> getPlantPeduncleObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantPeduncleObjectIDs(uint plantID) const;
 
     //! Get object IDs for all inflorescence objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all inflorescences in the plant.
      */
-    std::vector<uint> getPlantFlowerObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantFlowerObjectIDs(uint plantID) const;
 
     //! Get object IDs for all fruit objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.
      * \return Vector of object IDs for all fruits in the plant.
      */
-    std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
     //! Get UUIDs for all existing plant primitives
     /**
      * \return Vector of UUIDs for all plant primitives.
      */
-    std::vector<uint> getAllUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllUUIDs() const;
 
     //! Get UUIDs for all existing leaf primitives
     /**
      * \return Vector of UUIDs for all leaf primitives.
      */
-    std::vector<uint> getAllLeafUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllLeafUUIDs() const;
 
     //! Get UUIDs for all existing internode primitives
     /**
      * \return Vector of UUIDs for all internode primitives.
      */
-    std::vector<uint> getAllInternodeUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllInternodeUUIDs() const;
 
     //! Get UUIDs for all existing petiole primitives
     /**
      * \return Vector of UUIDs for all petiole primitives.
      */
-    std::vector<uint> getAllPetioleUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllPetioleUUIDs() const;
 
     //! Get UUIDs for all existing peduncle primitives
     /**
      * \return Vector of UUIDs for all peduncle primitives.
      */
-    std::vector<uint> getAllPeduncleUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllPeduncleUUIDs() const;
 
     //! Get UUIDs for all existing flower primitives
     /**
      * \return Vector of UUIDs for all flower primitives.
      */
-    std::vector<uint> getAllFlowerUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllFlowerUUIDs() const;
 
     //! Get UUIDs for all existing fruit primitives
     /**
      * \return Vector of UUIDs for all fruit primitives.
      */
-    std::vector<uint> getAllFruitUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllFruitUUIDs() const;
 
     //! Get object IDs for all existing plant compound objects
     /**
      * \return Vector of object IDs for all plant compound objects.
      */
-    std::vector<uint> getAllObjectIDs() const;
+    [[nodiscard]] std::vector<uint> getAllObjectIDs() const;
 
     // -- carbohydrate model -- //
 
+    /**
+     * \brief Enables the carbohydrate model in the plant architecture development.
+     */
     void enableCarbohydrateModel();
 
+    /**
+     * \brief Disables the carbohydrate model
+     */
     void disableCarbohydrateModel();
 
     // -- manual plant generation from input string -- //
 
-    std::string getPlantString(uint plantID) const;
+    /**
+     * \brief Retrieves a string representation of a plant based on its ID.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return A string encoding of the plant structure.
+     */
+    [[nodiscard]] std::string getPlantString(uint plantID) const;
 
+    /**
+     * \brief Generates a plant model based on the given generation string and phytomer parameters.
+     *
+     * \param[in] generation_string Input string describing the plant generation rules and structure.
+     * \param[in] phytomer_parameters Parameters that define the characteristics of a single phytomer.
+     * \return The total number of phytomers generated in the plant architecture.
+     */
     uint generatePlantFromString(const std::string &generation_string, const PhytomerParameters &phytomer_parameters);
 
+    /**
+     * \brief Generates a plant based on the provided description string and phytomer parameters.
+     *
+     * \param[in] generation_string A string encoding of the plant structure.
+     * \param[in] phytomer_parameters A map containing parameter configurations for each type of phytomer.
+     * \return A unique identifier for the generated plant.
+     * \note The input string must begin with '{', and valid phytomer parameters must be provided.
+     */
     uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
 
+    /**
+     * \brief Writes the structure of a plant instance to an XML file.
+     *
+     * \param[in] plantID The unique identifier for the plant instance.
+     * \param[in] filename Path to the XML file where the plant structure will be saved.
+     * \note The function checks if the plant instance exists and if the output file path
+     * is valid and writable. Errors related to invalid plant ID or file issues will throw exceptions.
+     */
     void writePlantStructureXML(uint plantID, const std::string &filename) const;
 
+    /**
+     * \brief Reads plant structure data from an XML file.
+     *
+     * Parses the specified XML file containing plant architecture information and extracts
+     * relevant data.
+     *
+     * \param[in] filename The path to the XML file to load.
+     * \param[in] quiet [optional] If true, suppresses console output of status messages.
+     * \return A vector of unsigned integers representing the plant IDs parsed from the XML file.
+     * \note Throws an exception if the file cannot be parsed or is missing required tags.
+     */
     std::vector<uint> readPlantStructureXML( const std::string &filename, bool quiet = false);
 
     friend struct Phytomer;
@@ -1651,8 +2072,15 @@ protected:
 
     bool detectGroundCollision(const std::vector<uint> &objID);
 
+    void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float
+                                               ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
+
     //! Names of additional object data to add to the Context
     std::map<std::string,bool> output_object_data;
+
+    // --- Plant Growth --- //
+
+    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry);
 
     // --- Carbohydrate Model --- //
 
@@ -1661,7 +2089,7 @@ protected:
     void subtractShootMaintenanceCarbon(float dt );
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortBuds();
+    void checkCarbonPool_abortOrgans();
     void checkCarbonPool_adjustPhyllochron();
     void checkCarbonPool_transferCarbon();
 
@@ -1688,6 +2116,10 @@ protected:
     void initializeBeanShoots();
 
     uint buildBeanPlant( const helios::vec3 &base_position );
+
+    void initializeCapsicumShoots();
+
+    uint buildCapsicumPlant( const helios::vec3 &base_position );
 
     void initializeCheeseweedShoots();
 
