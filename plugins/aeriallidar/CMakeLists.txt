@@ -35,7 +35,7 @@ endif()
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
-CUDA_ADD_LIBRARY( aeriallidar STATIC "src/AerialLiDAR.cu" "src/AerialLiDAR.cpp" "src/fileIO.cpp" "../../core/src/pugixml.cpp" )
+CUDA_ADD_LIBRARY( aeriallidar STATIC "src/AerialLiDAR.cu" "src/AerialLiDAR.cpp" "src/fileIO.cpp" "src/selfTest.cpp" "../../core/src/pugixml.cpp" )
 
 include_directories("${CUDA_INCLUDE_DIRS}")
 target_link_libraries( aeriallidar ${CUDA_LIBRARIES} )

@@ -1155,7 +1155,7 @@
 
  Next, we will construct a canopy. In this tutorial we will use the CanopyGenerator plugin to create a canopy of ellipsoidal crowns composed of rectangular leaf elements. It is worth noting, however, that there are many ways to construct a canopy. For example, if you want to work with more complicated and/or realistic crowns, you can load in predefined geometries using .xml or .ply files, or you can use the PlantArchitecture model to generate crowns.
 
- After initializing the plugin, we need to define a number of parameters which will define the geometry of our ellipsoidal crowns. The SphericalCrownParameters parameter grouping inside of the canopy generator plugin requires a 3-input vector of float values to define the 3D (x, y, z) dimensions of our crowns using the crown_radius parameter. We will assume that the crowns each have a circular footprint, with the same x  and y dimensions, so will define a single ‘radius’ value that will be used for both of these, but will define a different z dimension ‘height radius’ value. We also need to define the spacing between each of our crowns in both the x and y direction in a 2-input vector of float values using the plant_spacing parameter, so we will define a ‘row spacing’ value, as well as a ‘plant spacing’ value, which will correspond to the x and y dimensions, respectively. For the purposes of this tutorial, we will assume that crowns are immediately next to one another with no extra spacing between them. Since the spacing values are defined going from the center of one crown to the center of its neighbors, we will set these values equal to 2 times the crown radius values that we previously defined. However, if you wished to create greater spacing in either direction, you could easily do so by altering these values. Next, we need to determine the number of rows (in the x dimension) and number of plants per row ( in the y dimension) that we will simulate. For our purposes we will make a 3 x 3 grid of crowns, which will be input as a 2-input vector of integer values using the plant_count parameter. We will also define the size of our leaf elements using a 2-input vector of float values giving the length and width of our leaves using the leaf_size parameter, as well as the number of subdivisions that will be present on each leaf in order to give our models greater resolution in the x and y dimensions of each leaf primitive using a 2-input vector of integer values using the leaf_subdivisions parameter. Finally, we will also define the leaf area density of our crowns (e.g. the m2 leaf area per m3 crown volume).
+ After initializing the plugin, we need to define a number of parameters which will define the geometry of our ellipsoidal crowns. The SphericalCrownsCanopyParameters parameter grouping inside of the canopy generator plugin requires a 3-input vector of float values to define the 3D (x, y, z) dimensions of our crowns using the crown_radius parameter. We will assume that the crowns each have a circular footprint, with the same x  and y dimensions, so will define a single ‘radius’ value that will be used for both of these, but will define a different z dimension ‘height radius’ value. We also need to define the spacing between each of our crowns in both the x and y direction in a 2-input vector of float values using the plant_spacing parameter, so we will define a ‘row spacing’ value, as well as a ‘plant spacing’ value, which will correspond to the x and y dimensions, respectively. For the purposes of this tutorial, we will assume that crowns are immediately next to one another with no extra spacing between them. Since the spacing values are defined going from the center of one crown to the center of its neighbors, we will set these values equal to 2 times the crown radius values that we previously defined. However, if you wished to create greater spacing in either direction, you could easily do so by altering these values. Next, we need to determine the number of rows (in the x dimension) and number of plants per row ( in the y dimension) that we will simulate. For our purposes we will make a 3 x 3 grid of crowns, which will be input as a 2-input vector of integer values using the plant_count parameter. We will also define the size of our leaf elements using a 2-input vector of float values giving the length and width of our leaves using the leaf_size parameter, as well as the number of subdivisions that will be present on each leaf in order to give our models greater resolution in the x and y dimensions of each leaf primitive using a 2-input vector of integer values using the leaf_subdivisions parameter. Finally, we will also define the leaf area density of our crowns (e.g. the m2 leaf area per m3 crown volume).
 
  We will then use the CanopyGenerator::buildCanopy() function with our parameter inputs to construct our 3x3 grid of ellipsoidal crowns. We will also need to define a vector containing all of our leaf UUIDs, with 1 unique UUID per leaf primitive that we have constructed. In order to do this, we can loop through each of the 9 crowns that we have created, and add all of their leaf UUIDs into a single vector.
 
@@ -1230,6 +1230,7 @@
  #include "PhotosynthesisModel.h"
  #include "StomatalConductanceModel.h"
  #include "SolarPosition.h"
+ #include "BoundaryLayerConductanceModel.h"
  #include "Visualizer.h"
 
  using namespace helios;
@@ -1273,7 +1274,7 @@
      float w_leaf = 0.05; //leaf width
 
      //Leaf and canopy parameters
-     SphericalCrownCanopyParameters params;
+     SphericalCrownsCanopyParameters params;
      params.crown_radius = make_vec3(crown_radius, crown_radius, crown_height_radius);
      params.plant_spacing = make_vec2(spacing_row, spacing_plant);
      params.plant_count = make_int2(row_number, plant_number);
@@ -1285,15 +1286,11 @@
      canopygenerator.buildCanopy(params);
 
      //Get the UUID numbers for all of the leaves
-     int plantcount = canopygenerator.getPlantCount();
-     for (int plant = 0; plant < plantcount; plant++){
-         std::vector<uint> crown_UUIDs = flatten(canopygenerator.getLeafUUIDs(plant));
-         leaf_UUIDs.insert(std::end(leaf_UUIDs), std::begin(crown_UUIDs), std::end(crown_UUIDs));
-     }
+     leaf_UUIDs = canopygenerator.getLeafUUIDs();
 
      //ground parameters
      float x_ground = spacing_row*row_number;
-     float y_ground = spacing_plant*plant_number
+     float y_ground = spacing_plant*plant_number;
      vec2 size_ground = make_vec2(x_ground, y_ground);
 
      //Make the Ground
@@ -1307,30 +1304,21 @@
      // *** Step 4: Setting Up the Solar Position Model *** //
 
      SolarPosition solar_position(UTC, latitude, longitude, &context);
-     float LW = solar_position.getAmbientLongwaveFlux(air_temperature, air_humidity);
-     float PAR = solar_position.getSolarFluxPAR(pressure, air_temperature, air_humidity, turbidity);
-     float NIR = solar_position.getSolarFluxNIR(pressure, air_temperature, air_humidity, turbidity);
-     float f_diff = solar_position.getDiffuseFraction(pressure, air_temperature, air_humidity, turbidity);
 
      // *** Step 5: Setting Up the Radiation Model *** //
      RadiationModel radiation(&context);
 
-     uint SunSource = radiation.addsolar_positionSphereRadiationSource(solar_position.getsolar_positionDirectionVector());
+     uint SunSource = radiation.addSunSphereRadiationSource();
 
      radiation.addRadiationBand("PAR");
      radiation.disableEmission("PAR");
-     radiation.setSourceFlux(SunSource, "PAR", PAR * (1.f - f_diff));
-     radiation.setDiffuseRadiationFlux("PAR", PAR * f_diff);
      radiation.setScatteringDepth("PAR", 3);
 
      radiation.addRadiationBand("NIR");
      radiation.disableEmission("NIR");
-     radiation.setSourceFlux(SunSource, "NIR", NIR * (1.f - f_diff));
-     radiation.setDiffuseRadiationFlux("NIR", NIR * f_diff);
      radiation.setScatteringDepth("NIR", 3);
 
      radiation.addRadiationBand("LW");
-     radiation.setDiffuseRadiationFlux("LW", LW);
 
      radiation.enforcePeriodicBoundary("xy");
 
@@ -1356,6 +1344,11 @@
      energybalance.addRadiationBand("NIR");
      energybalance.addRadiationBand("LW");
 
+     BLConductanceModel boundarylayerconductance(&context);
+
+     boundarylayerconductance.setBoundaryLayerModel( ground_UUIDs, "Ground" );
+     boundarylayerconductance.setBoundaryLayerModel( leaf_UUIDs, "Pohlhausen" );
+
      //*** Step 7: Setting Up the Stomatal Conductance Model ***//
 
      StomatalConductanceModel stomatalconductance(&context);
@@ -1375,25 +1368,39 @@
 
      context.loadXML("../xml/6_20_2024_CIMIS.xml");
 
-     for( int hour = 0; hour<24; hour++){
+     for( int hour = 7; hour<18; hour++){
 
          Time time(hour, 0, 0);
          context.setTime(time);
 
-         float air_temperature = context.queryTimeseriesData("air_temperature", time); // degrees C
-         float air_humidity = context.queryTimeseriesData("humidity", time); // Percent
-         float wind_speed = context.queryTimeseriesData("wind_speed", time); // m/s
+         // this will query these timseries variables based on the date and time set in the Context
+         float air_temperature = context.queryTimeseriesData("air_temperature"); // degrees C
+         float air_humidity = context.queryTimeseriesData("humidity"); // Percent
+         float wind_speed = context.queryTimeseriesData("wind_speed"); // m/s
 
          // update our primitive data values on each timestep based on timeseries data
          context.setPrimitiveData(all_UUIDs, "air_temperature", air_temperature);
          context.setPrimitiveData(all_UUIDs, "air_humidity", air_humidity);
          context.setPrimitiveData(all_UUIDs, "wind_speed", wind_speed);
 
+         float LW = solar_position.getAmbientLongwaveFlux(air_temperature, air_humidity);
+         float PAR = solar_position.getSolarFluxPAR(pressure, air_temperature, air_humidity, turbidity);
+         float NIR = solar_position.getSolarFluxNIR(pressure, air_temperature, air_humidity, turbidity);
+         float f_diff = solar_position.getDiffuseFraction(pressure, air_temperature, air_humidity, turbidity);
+
+         radiation.setSourceFlux(SunSource, "NIR", NIR * (1.f - f_diff));
+         radiation.setDiffuseRadiationFlux("NIR", NIR * f_diff);
+         radiation.setSourceFlux(SunSource, "PAR", PAR * (1.f - f_diff));
+         radiation.setDiffuseRadiationFlux("PAR", PAR * f_diff);
+         radiation.setDiffuseRadiationFlux("LW", LW);
+
+         radiation.setSourcePosition( SunSource, solar_position.getSunDirectionVector() );
+
+         boundarylayerconductance.run();
+
          // *** Step 10: Running the Model *** //
 
-         radiation.runBand("PAR");
-         radiation.runBand("NIR");
-         radiation.runBand("LW");
+         radiation.runBand({"PAR","NIR","LW"});
 
          stomatalconductance.run(leaf_UUIDs);
          energybalance.run();
@@ -1413,8 +1420,8 @@
              float E, A, WUE;
              context.getPrimitiveData(UUID, "latent_flux", E);
              context.getPrimitiveData(UUID, "net_photosynthesis", A);
-             E_canopy += E / 44000 * 1000; // mmol H2O / sec
-             A_canopy += A;  //umol CO2 / sec
+             E_canopy += E / 44000 * 1000; // mmol H2O / m^2 / sec
+             A_canopy += A;  //umol CO2 / m^2 / sec
 
              WUE = A / (E / 44000 * 1000); //umol CO2/mmol H2O
              context.setPrimitiveData(UUID, "WUE", WUE);
@@ -1424,14 +1431,18 @@
 
          std::cout << "WUE of the canopy = " << WUE_canopy << " umol CO2/mmol H2O" << std::endl;
 
-
          // *** Step 12: Visualization *** //
          // This will open the visualizer window for each time step. Close it to proceed to the next time step.
          Visualizer visualizer(1000);
          visualizer.buildContextGeometry(&context);
          visualizer.colorContextPrimitivesByData( "WUE" );
-         visualizer.setColorbarTitle("WUE");
-         visualizer.plotInteractive();
+         visualizer.setColorbarTitle("WUE (umol CO2/mmol H2O)");;
+         visualizer.setColorbarRange(0.f,15.f);
+         visualizer.setColorbarPosition(make_vec3(0.75, 0.9, 0) );
+         char time_string[6];
+         sprintf(time_string, "%02d:%02d", time.hour, time.minute);
+         visualizer.addTextboxByCenter( time_string, make_vec3(0.5,0.9,0), nullrotation, RGB::black, 16, "Arial", Visualizer::COORDINATES_WINDOW_NORMALIZED );
+         visualizer.plotInteractive(); // !!! Close the window to advance to the next time step
 
      }
 

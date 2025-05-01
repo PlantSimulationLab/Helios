@@ -11,6 +11,7 @@
  * optimizations.  Most users will not need to touch this file.
  */
 
+#pragma once  //BNB 4/30/2025
 
 /*
  * Define BITS_IN_JSAMPLE as either
