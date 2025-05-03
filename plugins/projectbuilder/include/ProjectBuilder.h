@@ -205,6 +205,7 @@ struct object{
  helios::vec3 scale;
  helios::vec3 prev_scale;
  helios::RGBcolor color;
+ std::string texture_file;
 };
 
 //! Rig struct
@@ -736,6 +737,12 @@ class ProjectBuilder {
 
     //! Air turbidity
     float air_turbidity = 0.05;
+
+    //! Use texture file
+    std::vector<bool> use_obj_texture_file;
+
+    //! Object texture files
+    std::vector<std::string> obj_texture_files;
 
     //! Obj / Ply files
     std::vector<std::string> obj_files;
@@ -1639,6 +1646,9 @@ class ProjectBuilder {
 
     //! Update context
     void updateContext();
+
+    //! Shorten absolute path to file name
+    std::string shortenPath(std::string path_name);
 
     //! Constructor
     ProjectBuilder(){

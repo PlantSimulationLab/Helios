@@ -2397,6 +2397,31 @@ void ProjectBuilder::visualize(){
                                 } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
                                     new_UUIDs = context->loadPLY(new_obj_file.c_str());
                                 }
+                                // get object color
+                                std::vector<RGBAcolor> colors(new_UUIDs.size());
+                                std::set<std::vector<float>> colors_set = {};
+                                std::vector<std::string> textures(new_UUIDs.size());
+                                std::set<std::string> textures_set = {};
+                                for (int i = 0; i < new_UUIDs.size(); i++){
+                                    colors[i] = context->getPrimitiveColorRGBA(new_UUIDs[i]);
+                                    textures[i] = context->getPrimitiveTextureFile(new_UUIDs[i]);
+                                    colors_set.insert(std::vector<float>{colors[i].r, colors[i].g, colors[i].b, colors[i].a});
+                                    textures_set.insert(textures[i]);
+                                }
+                                std::vector<uint> objIDs = context->getUniquePrimitiveParentObjectIDs(new_UUIDs, true);
+                                std::set<uint> objID_set(objIDs.begin(), objIDs.end());
+                                // check for MTL file
+                                std::filesystem::path mtl_path(new_obj_file);
+                                mtl_path.replace_extension("mtl");
+                                if (std::filesystem::exists(mtl_path)){
+                                    obj_texture_files.push_back(mtl_path.string());
+                                    use_obj_texture_file.push_back(true);
+                                    // std::string new_MTL = context->getPrimitiveTextureFile(new_UUIDs[0]);
+                                    // context->usePrimitiveTextureColor(new_UUIDs);
+                                } else{
+                                    obj_texture_files.push_back("");
+                                    use_obj_texture_file.push_back(false);
+                                }
                                 // const char* font_name = "LCD";
                                 // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
                                 //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
@@ -2429,8 +2454,11 @@ void ProjectBuilder::visualize(){
                                 //     node_label.set_value(new_obj_label.c_str());
                                 // }
                                 obj_positions.push_back(vec3(0, 0, 0));
+                                prev_obj_positions.push_back(vec3(0, 0, 0));
                                 obj_orientations.push_back(vec3(0, 0, 0));
+                                prev_obj_orientations.push_back(vec3(0, 0, 0));
                                 obj_scales.push_back(vec3(0, 0, 0));
+                                prev_obj_scales.push_back(vec3(0, 0, 0));
                                 obj_colors.push_back(RGBcolor(0, 0, 1));
                                 obj_data_groups.push_back("");
                                 std::string parent = "object";
@@ -2508,20 +2536,39 @@ void ProjectBuilder::visualize(){
                             }
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
-                            // ####### OBJECT COLOR ####### //
-                            float col[3];
-                            col[0] = obj_colors[obj_names_dict[current_obj]].r;
-                            col[1] = obj_colors[obj_names_dict[current_obj]].g;
-                            col[2] = obj_colors[obj_names_dict[current_obj]].b;
-                            ImGui::ColorEdit3("##obj_color_edit", col);
-                            updateColor(current_obj, "obj", col);
-                            // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
-                            //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
-                            //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
-                            //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
-                            // }
+                            bool use_obj_texture = use_obj_texture_file[obj_names_dict[current_obj]];
+                            toggle_button("##use_texture_file", &use_obj_texture);
+                            if (use_obj_texture != use_obj_texture_file[obj_names_dict[current_obj]]){
+                                use_obj_texture_file[obj_names_dict[current_obj]] = use_obj_texture;
+                            }
                             ImGui::SameLine();
-                            ImGui::Text("Object Color");
+                            if (!use_obj_texture){
+                                // ####### OBJECT COLOR ####### //
+                                float col[3];
+                                col[0] = obj_colors[obj_names_dict[current_obj]].r;
+                                col[1] = obj_colors[obj_names_dict[current_obj]].g;
+                                col[2] = obj_colors[obj_names_dict[current_obj]].b;
+                                ImGui::ColorEdit3("##obj_color_edit", col);
+                                if (obj_colors[obj_names_dict[current_obj]].r != col[0] ||
+                                    obj_colors[obj_names_dict[current_obj]].g != col[1] ||
+                                    obj_colors[obj_names_dict[current_obj]].b != col[2]){
+                                    updateColor(current_obj, "obj", col);
+                                }
+                                ImGui::SameLine();
+                                ImGui::Text("Object Color");
+                            } else{
+                                // ####### OBJECT TEXTURE FILE ####### //
+                                ImGui::SetNextItemWidth(60);
+                                if (ImGui::Button("Object Texture File")){
+                                    std::string object_texture_file_ = file_dialog();
+                                    if (!object_texture_file_.empty()){
+                                        obj_texture_files[obj_names_dict[current_obj]] = object_texture_file_;
+                                    }
+                                }
+                                ImGui::SameLine();
+                                std::string shorten = shortenPath(obj_texture_files[obj_names_dict[current_obj]]);
+                                ImGui::Text("%s", shorten.c_str());
+                            }
                             // ####### OBJECT SCALE ####### //
                             obj curr_obj = obj{obj_names_dict[current_obj], false};
                             ImGui::SetNextItemWidth(60);
@@ -4299,6 +4346,16 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("position", "object", obj_positions);
     xmlGetValues("orientation", "object", obj_orientations);
     xmlGetValues("scale", "object", obj_scales);
+    obj_texture_files.clear();
+    use_obj_texture_file.clear();
+    xmlGetValues("texture_file", "object", obj_texture_files);
+    for (int i = 0; i < obj_texture_files.size(); i++){
+        if (obj_texture_files[i].empty() || !std::filesystem::exists(obj_texture_files[i])){
+            use_obj_texture_file.push_back(false);
+        } else{
+            use_obj_texture_file.push_back(true);
+        }
+    }
     prev_obj_positions = obj_positions;
     prev_obj_orientations = obj_orientations;
     prev_obj_scales = obj_scales;
@@ -5501,5 +5558,20 @@ void ProjectBuilder::refreshVisualizationTypes(){
             visualization_types.insert(data);
         }
     }
+}
+
+
+std::string ProjectBuilder::shortenPath(std::string path_name){
+    std::string shorten_path = path_name;
+    for (char &c : shorten_path){
+        if (c == '\\'){
+            c = '/';
+        }
+    }
+    size_t last_file = shorten_path.rfind('/');
+    if (last_file != std::string::npos){
+        shorten_path = shorten_path.substr(last_file + 1);
+    }
+    return shorten_path;
 }
 
