@@ -205,7 +205,7 @@ struct object{
  helios::vec3 scale;
  helios::vec3 prev_scale;
  helios::RGBcolor color;
- std::string texture_file;
+ bool use_texture_file;
 };
 
 //! Rig struct
@@ -740,9 +740,6 @@ class ProjectBuilder {
 
     //! Use texture file
     std::vector<bool> use_obj_texture_file;
-
-    //! Object texture files
-    std::vector<std::string> obj_texture_files;
 
     //! Obj / Ply files
     std::vector<std::string> obj_files;
