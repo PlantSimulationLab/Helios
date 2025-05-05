@@ -898,6 +898,14 @@ void ProjectBuilder::buildFromXML(){
             } else {
                 std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
             }
+            // check for MTL file
+            std::filesystem::path mtl_path(new_obj_file);
+            mtl_path.replace_extension("mtl");
+            if (std::filesystem::exists(mtl_path)){
+                use_obj_texture_file.push_back(true);
+            } else{
+                use_obj_texture_file.push_back(false);
+            }
             SphericalCoord orientation_sph = cart2sphere(obj_orientations[i]);
             context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
             context->scalePrimitive(new_UUIDs, obj_scales[i]);
@@ -2414,12 +2422,10 @@ void ProjectBuilder::visualize(){
                                 std::filesystem::path mtl_path(new_obj_file);
                                 mtl_path.replace_extension("mtl");
                                 if (std::filesystem::exists(mtl_path)){
-                                    obj_texture_files.push_back(mtl_path.string());
                                     use_obj_texture_file.push_back(true);
                                     // std::string new_MTL = context->getPrimitiveTextureFile(new_UUIDs[0]);
                                     // context->usePrimitiveTextureColor(new_UUIDs);
                                 } else{
-                                    obj_texture_files.push_back("");
                                     use_obj_texture_file.push_back(false);
                                 }
                                 // const char* font_name = "LCD";
@@ -2558,16 +2564,7 @@ void ProjectBuilder::visualize(){
                                 ImGui::Text("Object Color");
                             } else{
                                 // ####### OBJECT TEXTURE FILE ####### //
-                                ImGui::SetNextItemWidth(60);
-                                if (ImGui::Button("Object Texture File")){
-                                    std::string object_texture_file_ = file_dialog();
-                                    if (!object_texture_file_.empty()){
-                                        obj_texture_files[obj_names_dict[current_obj]] = object_texture_file_;
-                                    }
-                                }
-                                ImGui::SameLine();
-                                std::string shorten = shortenPath(obj_texture_files[obj_names_dict[current_obj]]);
-                                ImGui::Text("%s", shorten.c_str());
+                                ImGui::Text("Use Object Texture File");
                             }
                             // ####### OBJECT SCALE ####### //
                             obj curr_obj = obj{obj_names_dict[current_obj], false};
@@ -4346,16 +4343,6 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("position", "object", obj_positions);
     xmlGetValues("orientation", "object", obj_orientations);
     xmlGetValues("scale", "object", obj_scales);
-    obj_texture_files.clear();
-    use_obj_texture_file.clear();
-    xmlGetValues("texture_file", "object", obj_texture_files);
-    for (int i = 0; i < obj_texture_files.size(); i++){
-        if (obj_texture_files[i].empty() || !std::filesystem::exists(obj_texture_files[i])){
-            use_obj_texture_file.push_back(false);
-        } else{
-            use_obj_texture_file.push_back(true);
-        }
-    }
     prev_obj_positions = obj_positions;
     prev_obj_orientations = obj_orientations;
     prev_obj_scales = obj_scales;
