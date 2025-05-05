@@ -223,6 +223,7 @@ struct object{
  helios::vec3 scale;
  helios::vec3 prev_scale;
  helios::RGBcolor color;
+ helios::RGBcolor prev_color;
  bool use_texture_file;
  bool is_dirty;
 };

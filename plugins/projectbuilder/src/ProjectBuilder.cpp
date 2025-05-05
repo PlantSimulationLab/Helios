@@ -973,6 +973,7 @@ void ProjectBuilder::buildFromXML(){
             new_object.scale = obj_scales[i];
             new_object.prev_scale = obj_scales[i];
             new_object.color = obj_colors[i];
+            new_object.prev_color = obj_colors[i];
             new_object.is_dirty = false;
             objects_dict[new_object.name] = new_object;
         }
@@ -2448,6 +2449,7 @@ void ProjectBuilder::visualize(){
 
                     ImGui::EndTabItem();
                 }
+                // OBJECT TAB
                 if (ImGui::BeginTabItem("Object")){
                     current_tab = "Object";
                     if (ImGui::Button("Load Object File")){
@@ -2493,15 +2495,6 @@ void ProjectBuilder::visualize(){
                                 new_obj.prev_scale = vec3(1,1,1);
                                 new_obj.color = RGBcolor(0, 0, 1);
                                 new_obj.data_group = "";
-                                // std::string parent = "object";
-                                // pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
-                                // std::string name = "label";
-                                // new_obj_node.append_attribute(name.c_str()).set_value(new_obj_label.c_str());
-                                // new_obj_node.append_child("file").text().set(new_obj_file.c_str());
-                                // new_obj_node.append_child("position").text().set(vec_to_string(obj_positions[0]).c_str());
-                                // new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
-                                // new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
-                                // new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
                                 current_obj = new_obj_label;
                                 objects_dict[new_obj_label] = new_obj;
                             }
@@ -2527,6 +2520,12 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Object")){
                             deleteObject(current_obj);
+                        }
+                        if (objects_dict[current_obj].is_dirty){
+                            ImGui::SameLine();
+                            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // Red text
+                            ImGui::Text("update required");
+                            ImGui::PopStyleColor();
                         }
                         ImGui::SetNextItemWidth(100);
                         std::string prev_obj_name = objects_dict[current_obj].name;
@@ -2645,6 +2644,12 @@ void ProjectBuilder::visualize(){
                             ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::Text("Object Orientation");
+                        }
+                        if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position ||
+                            objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
+                            objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale ||
+                            objects_dict[current_obj].color != objects_dict[current_obj].prev_color){
+                            objects_dict[current_obj].is_dirty = true;
                         }
                     }
                     ImGui::EndTabItem();
@@ -5349,6 +5354,8 @@ void ProjectBuilder::updateObject(std::string curr_obj){
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position - objects_dict[curr_obj].prev_position);
         objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
     }
+    objects_dict[curr_obj].prev_color = objects_dict[curr_obj].color;
+    objects_dict[curr_obj].is_dirty = false;
 }
 
 
