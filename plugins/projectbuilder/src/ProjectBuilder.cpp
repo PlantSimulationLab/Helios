@@ -5545,7 +5545,7 @@ void ProjectBuilder::updateGround(){
     }else if( !ground_texture_file.empty() && ground_flag == 1 ){
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-    }else if( (ground_color[0] || ground_color[1] || ground_color[2]) && ground_flag == 0 ){
+    }else if( ground_flag == 0 ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
