@@ -1286,7 +1286,7 @@ public:
     void disablePlantPhenology( uint plantID );
 
 
-    //! Specify the threshold values for plant phenological stages
+    //! Specify the parameter values associated with carbon balance for a given plant.
        /**
         * \param[in] plantID ID of the plant.
         * \param[in] stem_density Overall density of the stem (g m^-3)
