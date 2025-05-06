@@ -2252,10 +2252,10 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
             float node_development_time_ratio = shoot->shoot_parameters.max_nodes_per_season.val() / total_nodes_in_season; //
             if (total_nodes_in_season > shoot->shoot_parameters.max_nodes_per_season.val())
             {
-                radius = radius + (phytomer_radius - radius) * node_development_time_ratio * dt / shoot->phyllochron_instantaneous;
+                radius = radius + (phytomer_radius - radius) * 0.1* dt / shoot->phyllochron_instantaneous;
             }else
             {
-                radius = radius + (phytomer_radius - radius) * dt / shoot->phyllochron_instantaneous;
+                radius = radius + (phytomer_radius - radius) * 0.1 * dt / shoot->phyllochron_instantaneous;
             }
 
         }
@@ -3156,7 +3156,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             for (auto &phytomer: shoot->phytomers) {
                 //scale internode length
                 if (phytomer->current_internode_scale_factor < 1) {
-                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * node_development_time_ratio * phytomer->internode_length_max;
+                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * 0.1 * phytomer->internode_length_max;
                     float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                      phytomer->setInternodeLengthScaleFraction(length_scale, false);
                 }

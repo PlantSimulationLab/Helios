@@ -256,7 +256,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.max_nodes = 50;
     shoot_parameters_proleptic.max_nodes_per_season = 30;
     shoot_parameters_proleptic.phyllochron_min = 2.5;
-    shoot_parameters_proleptic.elongation_rate_max = 0.20;
+    shoot_parameters_proleptic.elongation_rate_max = 0.10;
     shoot_parameters_proleptic.girth_area_factor = 7.5;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
