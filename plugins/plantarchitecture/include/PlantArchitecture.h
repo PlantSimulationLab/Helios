@@ -1285,7 +1285,30 @@ public:
 
     void disablePlantPhenology( uint plantID );
 
-    void setPlantCarbohydrateParameters(uint plantID, float rho_w, float wood_carbon_percentage,
+
+    //! Specify the threshold values for plant phenological stages
+       /**
+        * \param[in] plantID ID of the plant.
+        * \param[in] stem_density Overall density of the stem (g m^-3)
+        * \param[in] stem_carbon_percentage Percentage of the stem made up of carbon.
+        * \param[in] shoot_root_ratio Ratio between shoot volume and root volume in the plant.
+        * \param[in] SLA Ratio of leaf area to leaf dry mass m^2 / g DW
+        * \param[in] leaf_carbon_percentage Portion of the dry weight of the leaf made up by carbon
+        * \param[in] total_flower_cost Carbon cost of full flower development, including growth and respiration (mol C flower^-1)
+        * \param[in] fruit_density Overall density of the fruti (g m^-3)
+        * \param[in] fruit_carbon_percentage Overall portion of the nut made up of carbon by dry weight
+        * \param[in] stem_maintainance_respiration_rate Maintenance respiration rate in the stems (mol C respired/mol C in pool/day)
+        * \param[in] root_maintainance_respiration_rate Maintenance respiration rate in the roots (mol C respired/mol C in pool/day)
+        * \param[in] growth_respiration_fraction Accounts for the carbon lost to respiration during growth (assumed 28% of the carbon that goes toward growth)
+        * \param[in] carbohydrate_abortion_threshold NSC density below which growth and organ development is unsustainable (mol C/m3)
+        * \param[in] bud_death_threshold Number of days before which a shoot will begin to abort buds if it stays below the abortion threshold carbohydrate density.
+        * \param[in] branch_death_threshold Number of days before which the shoot will be lost if it stays below the abortion threshold carbohydrate density.
+        * \param[in] carbohydrate_phyllochron_threshold Carbohydrate density below which the phyllochron will begin to increase (mol C/m3)
+        * \param[in] carbohydrate_phyllochron_threshold_low Carbohydrate density below which the phyllochron will reach its greatest value (mol C/m3)
+        * \param[in] carbohydrate_transfer_threshold Carbohydrate density above which it is allowable to tranfer carbon between shoots (mol C/m3)
+        */
+
+    void setPlantCarbohydrateParameters(uint plantID, float stem_density, float stem_carbon_percentage,
         float shoot_root_ratio, float SLA, float leaf_carbon_percentage, float total_flower_cost,float fruit_density,
         float fruit_carbon_percentage, float stem_maintainance_respiration_rate, float root_maintainance_respiration_rate,
         float growth_respiration_fraction, float carbohydrate_abortion_threshold, float bud_death_threshold, float branch_death_threshold,
