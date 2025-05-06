@@ -486,6 +486,32 @@ void ProjectBuilder::updatePrimitiveTypes(){
 }
 
 
+void ProjectBuilder::updateDataGroups(){
+    data_groups_set.clear();
+    data_groups_set.insert("All");
+    std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    for (uint UUID : all_UUIDs){
+        std::string curr_data_group = "";
+        if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
+        context->getPrimitiveData(UUID, "data_group", curr_data_group);
+        if (!curr_data_group.empty()){
+            data_groups_set.insert(curr_data_group);
+        }
+    }
+    for (std::string data_group : data_groups_set){ //initialize new data_groups if necessary
+        if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()){
+            primitive_continuous_dict[data_group] = primitive_continuous;
+        }
+        if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()){
+            primitive_spectra_dict[data_group] = primitive_spectra;
+        }
+        if (primitive_values_dict.find(data_group) == primitive_values_dict.end()){
+            primitive_values_dict[data_group] = primitive_values;
+        }
+    }
+}
+
+
 
 void ProjectBuilder::updateSpectra(){
     for (std::pair<std::string, std::vector<uint>> primitive_pair : primitive_UUIDs){
@@ -2843,7 +2869,9 @@ void ProjectBuilder::visualize(){
                             if ( xml_library_files.find(new_xml_library_file) == xml_library_files.end() ){
                                 xml_library_files.insert(new_xml_library_file);
                                 std::vector<std::string> current_spectra_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
-                                possible_spectra.insert(possible_spectra.end(), current_spectra_file.begin(), current_spectra_file.end());
+                                for (int i = 0; i < current_spectra_file.size(); i++){
+                                    possible_spectra.insert(current_spectra_file[i]);
+                                }
                             }
                             context->loadXML( new_xml_library_file.c_str() );
                         }
@@ -2885,10 +2913,10 @@ void ProjectBuilder::visualize(){
                     ImGui::SetNextItemWidth(250);
                     // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
                     if (ImGui::BeginCombo("##combo_solar_direct_spectrum", solar_direct_spectrum.c_str())){
-                        for (int n = 0; n < possible_spectra.size(); n++){
-                            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == possible_spectra[n]);
-                            if (ImGui::Selectable(possible_spectra[n].c_str(), is_solar_direct_spectrum_selected))
-                                solar_direct_spectrum = possible_spectra[n];
+                        for (auto &spectra : possible_spectra){
+                            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == spectra);
+                            if (ImGui::Selectable(spectra.c_str(), is_solar_direct_spectrum_selected))
+                                solar_direct_spectrum = spectra;
                             if (is_solar_direct_spectrum_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -3039,28 +3067,8 @@ void ProjectBuilder::visualize(){
                     ImGui::SetNextItemWidth(100);
                     // ######### SELECT DATA GROUP ############//
                     if (ImGui::Button("Refresh###data_groups_refresh")){
-                        data_groups_set.clear();
-                        data_groups_set.insert("All");
-                        std::vector<uint> all_UUIDs = context->getAllUUIDs();
-                        for (uint UUID : all_UUIDs){
-                            std::string curr_data_group = "";
-                            if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
-                            context->getPrimitiveData(UUID, "data_group", curr_data_group);
-                            if (!curr_data_group.empty()){
-                                data_groups_set.insert(curr_data_group);
-                            }
-                        }
-                        for (std::string data_group : data_groups_set){ //initialize new data_groups if necessary
-                            if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()){
-                                primitive_continuous_dict[data_group] = primitive_continuous;
-                            }
-                            if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()){
-                                primitive_spectra_dict[data_group] = primitive_spectra;
-                            }
-                            if (primitive_values_dict.find(data_group) == primitive_values_dict.end()){
-                                primitive_values_dict[data_group] = primitive_values;
-                            }
-                        }
+                        updatePrimitiveTypes();
+                        updateDataGroups();
                     }
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(150);
@@ -3081,6 +3089,7 @@ void ProjectBuilder::visualize(){
                     // ######### SELECT PRIMITIVE ############//
                     if (ImGui::Button("Refresh")){
                         updatePrimitiveTypes();
+                        updateDataGroups();
                     }
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(150);
@@ -3147,11 +3156,11 @@ void ProjectBuilder::visualize(){
                             }
                         }else{
                             std::string reflectivity_prev = primitive_spectra[current_primitive][0];
-                            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][0] = possible_spectra[n];
+                            if (ImGui::BeginCombo("##reflectivity_combo_all", reflectivity_prev.c_str())){
+                                for (auto& spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][0] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3215,10 +3224,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string transmissivity_prev = primitive_spectra[current_primitive][1];
                             if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][1] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][1] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3319,10 +3328,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string reflectivity_prev = primitive_spectra_dict[current_data_group][current_primitive][0];
                             if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][0] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][0] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3386,10 +3395,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string transmissivity_prev = primitive_spectra_dict[current_data_group][current_primitive][1];
                             if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][1] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][1] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -4511,7 +4520,9 @@ void ProjectBuilder::xmlGetValues(){
             continue;
         }
         std::vector<std::string> current_spectra_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
-        possible_spectra.insert(possible_spectra.end(), current_spectra_file.begin(), current_spectra_file.end());
+        for (int i = 0; i < current_spectra_file.size(); i++){
+            possible_spectra.insert(current_spectra_file[i]);
+        }
     }
     xmlGetValue("solar_direct_spectrum", "radiation", solar_direct_spectrum);
     xmlGetValue("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);

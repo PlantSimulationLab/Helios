@@ -802,7 +802,7 @@ class ProjectBuilder {
                                                "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
 
     //! Possible spectra vector from spectral library files
-    std::vector<std::string> possible_spectra;
+    std::set<std::string> possible_spectra;
 
     //! Camera XML library files
     std::set<std::string> camera_xml_library_files = {"plugins/radiation/spectral_data/camera_spectral_library.xml"};
@@ -1082,6 +1082,9 @@ class ProjectBuilder {
 
     //! Function to delete camera models in visualization
     void deleteCameraModels();
+
+    //! Function to update data groups
+    void updateDataGroups();
 
     //! Function to update primitive types
     void updatePrimitiveTypes();
