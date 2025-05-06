@@ -962,6 +962,8 @@ void ProjectBuilder::buildFromXML(){
             context->rotatePrimitive(new_UUIDs, -orientation_sph.azimuth, "z");
             context->translatePrimitive(new_UUIDs, obj_positions[i]);
             obj_UUIDs.push_back(new_UUIDs);
+            new_object.index = obj_idx;
+            obj_idx++;
             new_object.name = obj_names[i];
             new_object.file = obj_files[i];
             new_object.data_group = obj_data_groups[i];
@@ -2457,8 +2459,7 @@ void ProjectBuilder::visualize(){
                         if ( !new_obj_file.empty() && std::filesystem::exists(new_obj_file) ){
                             if( std::filesystem::path(new_obj_file).extension() != ".obj" && std::filesystem::path(new_obj_file).extension() != ".ply" ){
                                 std::cout << "Object file must have .obj or .ply extension." << std::endl;
-                            }
-                            else{
+                            } else{
                                 object new_obj;
                                 std::vector<uint> new_UUIDs;
                                 if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
@@ -2484,6 +2485,8 @@ void ProjectBuilder::visualize(){
                                     new_obj_label = default_object_label + "_" + std::to_string(count);
                                 }
                                 obj_names_set.insert(new_obj_label);
+                                new_obj.index = obj_idx;
+                                obj_idx++;
                                 new_obj.name = new_obj_label;
                                 new_obj.file = new_obj_file;
                                 new_obj.UUIDs = new_UUIDs;
@@ -2494,7 +2497,9 @@ void ProjectBuilder::visualize(){
                                 new_obj.scale = vec3(1,1,1);
                                 new_obj.prev_scale = vec3(1,1,1);
                                 new_obj.color = RGBcolor(0, 0, 1);
+                                new_obj.prev_color = RGBcolor(0, 0, 1);
                                 new_obj.data_group = "";
+                                new_obj.is_dirty = false;
                                 current_obj = new_obj_label;
                                 objects_dict[new_obj_label] = new_obj;
                             }
@@ -2682,6 +2687,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Canopy")){
                             deleteCanopy(current_canopy);
+                            updatePrimitiveTypes();
                             refreshVisualization();
                         }
                         ImGui::SetNextItemWidth(100);
@@ -5327,6 +5333,22 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
 
 void ProjectBuilder::updateObject(std::string curr_obj){
     // Scale, rotate, and translate object
+    // if (objects_dict[curr_obj].use_texture_file && objects_dict[curr_obj].is_dirty){
+    //     if( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".obj" ){
+    //         objects_dict[curr_obj].UUIDs = context->loadOBJ(objects_dict[curr_obj].file.c_str());
+    //     } else if ( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".ply" ){
+    //         objects_dict[curr_obj].UUIDs = context->loadPLY(objects_dict[curr_obj].file.c_str());
+    //     }
+    //     SphericalCoord orientation_sph = cart2sphere(objects_dict[curr_obj].orientation);
+    //     context->scalePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].scale);
+    //     context->rotatePrimitive(objects_dict[curr_obj].UUIDs, orientation_sph.elevation, "x");
+    //     context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -orientation_sph.azimuth, "z");
+    //     context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position);
+    //
+    //     objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
+    //     objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
+    //     objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
+    // }
     if (objects_dict[curr_obj].scale != objects_dict[curr_obj].prev_scale){
         SphericalCoord orientation_sph_ = cart2sphere(objects_dict[curr_obj].prev_orientation);
         vec3 obj_scale_;
