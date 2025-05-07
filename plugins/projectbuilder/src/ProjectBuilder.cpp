@@ -982,10 +982,10 @@ void ProjectBuilder::buildFromXML(){
                 new_object.use_texture_file = false;
                 context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
             }
-            SphericalCoord orientation_sph = cart2sphere(obj_orientations[i]);
             context->scalePrimitive(new_UUIDs, obj_scales[i]);
-            context->rotatePrimitive(new_UUIDs, orientation_sph.elevation, "x");
-            context->rotatePrimitive(new_UUIDs, -orientation_sph.azimuth, "z");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].x), "x");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].y), "y");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].z), "z");
             context->translatePrimitive(new_UUIDs, obj_positions[i]);
             obj_UUIDs.push_back(new_UUIDs);
             new_object.index = obj_idx;
@@ -5361,25 +5361,27 @@ void ProjectBuilder::updateObject(std::string curr_obj){
     //     objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
     // }
     if (objects_dict[curr_obj].scale != objects_dict[curr_obj].prev_scale){
-        SphericalCoord orientation_sph_ = cart2sphere(objects_dict[curr_obj].prev_orientation);
         vec3 obj_scale_;
         obj_scale_.x = objects_dict[curr_obj].scale.x / objects_dict[curr_obj].prev_scale.x;
         obj_scale_.y = objects_dict[curr_obj].scale.y / objects_dict[curr_obj].prev_scale.y;
         obj_scale_.z = objects_dict[curr_obj].scale.z / objects_dict[curr_obj].prev_scale.z;
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, -objects_dict[curr_obj].prev_position); // translate back to origin
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -orientation_sph_.elevation, "x");
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, orientation_sph_.azimuth, "z");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.z), "z");
+
         context->scalePrimitive(objects_dict[curr_obj].UUIDs, obj_scale_);
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, orientation_sph_.elevation, "x");
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -orientation_sph_.azimuth, "z");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.z), "z");
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].prev_position); // restore translation
         objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
     }
     if (objects_dict[curr_obj].orientation != objects_dict[curr_obj].prev_orientation){
-        SphericalCoord orientation_sph = cart2sphere(objects_dict[curr_obj].orientation - objects_dict[curr_obj].prev_orientation);
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, -objects_dict[curr_obj].prev_position); // translate back to origin
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, orientation_sph.elevation, "x");
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -orientation_sph.azimuth, "z");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x - objects_dict[curr_obj].prev_orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y - objects_dict[curr_obj].prev_orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z - objects_dict[curr_obj].prev_orientation.z), "z");
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].prev_position); // restore translation
         objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
     }
