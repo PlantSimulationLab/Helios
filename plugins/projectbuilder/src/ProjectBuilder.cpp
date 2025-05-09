@@ -670,8 +670,13 @@ void ProjectBuilder::record(){
         // oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
         // std::string image_dir = "./saved-" + oss.str() + "/";
         // std::filesystem::create_directory("saved-" + oss.str());
-
         std::string image_dir = "./saved/";
+        std::string image_dir_base = "./saved_";
+        int image_dir_idx = 0;
+        while (std::filesystem::exists(image_dir)){
+            image_dir = image_dir_base + std::to_string(image_dir_idx) + "/";
+            image_dir_idx++;
+        }
         std::vector<uint> temp_lights{};
         for (std::string rig_label : rig_labels_set){
             int rig_index = rig_dict[rig_label];
@@ -734,9 +739,13 @@ void ProjectBuilder::record(){
                             band_group_vec = std::vector<std::string>{curr_band_group.bands[0]};
                         }
                         radiation->writeCameraImage( cameralabel, band_group_vec, band_group_name + std::to_string(i), image_dir + rig_label + '/');
-                        radiation->writeNormCameraImage( cameralabel, band_group_vec, band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                        if (band_group_lookup[band_group_name].norm){
+                            radiation->writeNormCameraImage( cameralabel, band_group_vec, band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                        }
                     }
+                    if (write_depth[rig_dict[current_rig]])
                     radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
+                    if (write_norm_depth[rig_dict[current_rig]])
                     radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
                     //
                     // Bounding boxes for all primitive types
@@ -744,6 +753,7 @@ void ProjectBuilder::record(){
                         if (!primitive_name.empty()){
                             primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                         }
+                        if (primitive_name != "all")
                         radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
                     }
                     //
@@ -1036,7 +1046,7 @@ void ProjectBuilder::buildFromXML(){
             radiation->copyRadiationBand("red", "green");
             radiation->copyRadiationBand("red", "blue");
 
-            radiation->enforcePeriodicBoundary("xy");
+            radiation->enforcePeriodicBoundary("xy"); // TODO: make this a user setting
         // } //SOLARPOSITION && RADIATION_MODEL
         #endif //SOLARPOSITION && RADIATION_MODEL
     }
@@ -2146,7 +2156,7 @@ void ProjectBuilder::visualize(){
                             if (file_extension == "xml"){
                                 if (!std::filesystem::exists(new_xml_file)){
                                     // Create file
-                                    std::ofstream outFile(new_xml_file);
+                                    std::filesystem::copy(xml_input_file, new_xml_file, std::filesystem::copy_options::overwrite_existing);
                                 }
                                 // Change XML input file
                                 std::string xml_input_file_ = xml_input_file;
@@ -3530,6 +3540,14 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::SameLine();
                         ImGui::Text("Rig Name");
+                        // ####### WRITE DEPTH ####### //
+                        bool write_depth_ = write_depth[rig_dict[current_rig]];
+                        ImGui::Checkbox("Write Depth Images", &write_depth_);
+                        write_depth[rig_dict[current_rig]] = write_depth_;
+                        ImGui::SameLine();
+                        bool write_norm_depth_ = write_norm_depth[rig_dict[current_rig]];
+                        ImGui::Checkbox("Write Norm Depth Images", &write_norm_depth_);
+                        write_norm_depth[rig_dict[current_rig]] = write_norm_depth_;
                         // ####### RIG COLOR ####### //
                         float col[3];
                         col[0] = rig_colors[rig_dict[current_rig]].r;
@@ -3725,7 +3743,7 @@ void ProjectBuilder::visualize(){
                         new_band_group_vector.push_back("red");
                         new_band_group_vector.push_back("green");
                         new_band_group_vector.push_back("blue");
-                        bandGroup new_band_group{new_band_group_vector, is_grayscale};
+                        bandGroup new_band_group{new_band_group_vector, false, false};
                         band_group_lookup[new_band_group_label] = new_band_group;
                         band_group_names.insert(new_band_group_label);
                         current_band_group = new_band_group_label;
@@ -3753,11 +3771,13 @@ void ProjectBuilder::visualize(){
                             band_group_lookup.erase(current_band_group);
                             current_band_group = "";
                         }
-                        ImGui::Checkbox("Grayscale", &is_grayscale);
+                        ImGui::Checkbox("Grayscale", &band_group_lookup[current_band_group].grayscale);
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Norm", &band_group_lookup[current_band_group].norm);
                         // Band 1
                         ImGui::SetNextItemWidth(100);
                         dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
-                        if (!is_grayscale){
+                        if (!band_group_lookup[current_band_group].grayscale){
                             // Band 2
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(100);
@@ -4231,6 +4251,22 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("camera_label", "rig", rig_camera_labels, rig_dict);
     setKeypoints("keypoint", "camera_position", keypoint_frames);
     xmlSetValues("images", "rig", num_images_vec, rig_dict);
+    std::vector<int> write_depth_{};
+    std::vector<int> write_norm_depth_{};
+    for (int i = 0; i < write_depth.size(); i++){
+        if (write_depth[i]){
+            write_depth_.push_back(1);
+        } else{
+            write_depth_.push_back(0);
+        }
+        if (write_norm_depth[i]){
+            write_norm_depth_.push_back(1);
+        } else{
+            write_norm_depth_.push_back(0);
+        }
+    }
+    xmlSetValues("depth", "rig", write_depth_, rig_dict);
+    xmlSetValues("normdepth", "rig", write_norm_depth_, rig_dict);
     // CAMERA BLOCK
     setNodeLabels("label", "camera", camera_names_set);
     xmlSetValue("camera_resolution", "camera", camera_resolution);
@@ -4451,6 +4487,24 @@ void ProjectBuilder::xmlGetValues(){
     current_keypoint = std::to_string(keypoint_frames[0][0]);
     num_images_vec.clear();
     xmlGetValues("images", "rig", num_images_vec);
+    write_depth.clear();
+    write_norm_depth.clear();
+    std::vector<int> write_depth_{};
+    std::vector<int> write_norm_depth_{};
+    xmlGetValues("depth", "rig", write_depth_);
+    xmlGetValues("depth", "rig", write_norm_depth_);
+    for (int i = 0; i < write_depth_.size(); i++){
+        if (write_depth_[i] == 1){
+            write_depth.push_back(true);
+        } else{
+            write_depth.push_back(false);
+        }
+        if (write_norm_depth_[i] == 1){
+            write_norm_depth.push_back(true);
+        } else{
+            write_norm_depth.push_back(false);
+        }
+    }
     // CAMERA BLOCK
     camera_names.clear();
     camera_names_set.clear();
@@ -5344,27 +5398,29 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
 
 void ProjectBuilder::updateObject(std::string curr_obj){
     // Scale, rotate, and translate object
-    // if (objects_dict[curr_obj].use_texture_file && objects_dict[curr_obj].is_dirty){
-    //     if( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".obj" ){
-    //         objects_dict[curr_obj].UUIDs = context->loadOBJ(objects_dict[curr_obj].file.c_str());
-    //     } else if ( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".ply" ){
-    //         objects_dict[curr_obj].UUIDs = context->loadPLY(objects_dict[curr_obj].file.c_str());
-    //     }
-    //     SphericalCoord orientation_sph = cart2sphere(objects_dict[curr_obj].orientation);
-    //     context->scalePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].scale);
-    //     context->rotatePrimitive(objects_dict[curr_obj].UUIDs, orientation_sph.elevation, "x");
-    //     context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -orientation_sph.azimuth, "z");
-    //     context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position);
-    //
-    //     objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
-    //     objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
-    //     objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
-    // }
+    if (objects_dict[curr_obj].use_texture_file && objects_dict[curr_obj].is_dirty){
+        context->deletePrimitive(objects_dict[curr_obj].UUIDs);
+        if( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".obj" ){
+            objects_dict[curr_obj].UUIDs = context->loadOBJ(objects_dict[curr_obj].file.c_str());
+        } else if ( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".ply" ){
+            objects_dict[curr_obj].UUIDs = context->loadPLY(objects_dict[curr_obj].file.c_str());
+        }
+        context->scalePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].scale);
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z), "z");
+        context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position);
+
+        objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
+        objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
+        objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
+    }
     if (objects_dict[curr_obj].scale != objects_dict[curr_obj].prev_scale){
         vec3 obj_scale_;
         obj_scale_.x = objects_dict[curr_obj].scale.x / objects_dict[curr_obj].prev_scale.x;
         obj_scale_.y = objects_dict[curr_obj].scale.y / objects_dict[curr_obj].prev_scale.y;
         obj_scale_.z = objects_dict[curr_obj].scale.z / objects_dict[curr_obj].prev_scale.z;
+        // context->scalePrimitiveAboutPoint();
         context->translatePrimitive(objects_dict[curr_obj].UUIDs, -objects_dict[curr_obj].prev_position); // translate back to origin
         context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.x), "x");
         context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.y), "y");
@@ -5378,11 +5434,11 @@ void ProjectBuilder::updateObject(std::string curr_obj){
         objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
     }
     if (objects_dict[curr_obj].orientation != objects_dict[curr_obj].prev_orientation){
-        context->translatePrimitive(objects_dict[curr_obj].UUIDs, -objects_dict[curr_obj].prev_position); // translate back to origin
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x - objects_dict[curr_obj].prev_orientation.x), "x");
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y - objects_dict[curr_obj].prev_orientation.y), "y");
-        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z - objects_dict[curr_obj].prev_orientation.z), "z");
-        context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].prev_position); // restore translation
+        // context->rotatePrimitive(origin = prev_position, axis = (1,0,0));
+        //rotate about x
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x - objects_dict[curr_obj].prev_orientation.x), objects_dict[curr_obj].prev_position, make_vec3(1, 0, 0));
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y - objects_dict[curr_obj].prev_orientation.y), objects_dict[curr_obj].prev_position, make_vec3(0, 1, 0));
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z - objects_dict[curr_obj].prev_orientation.z), objects_dict[curr_obj].prev_position, make_vec3(0, 0, 1));
         objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
     }
     if (objects_dict[curr_obj].position != objects_dict[curr_obj].prev_position){

@@ -196,6 +196,7 @@ struct distribution{
 struct bandGroup{
  std::vector<std::string> bands;
  bool grayscale;
+ bool norm;
 };
 
 //! Canopy struct
@@ -237,6 +238,8 @@ struct rig{
  helios::vec3 lookat;
  std::set<std::string> camera_labels;
  std::set<std::string> light_labels;
+ bool write_depth;
+ bool write_norm_depth;
 };
 
 bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
@@ -306,9 +309,6 @@ class ProjectBuilder {
 
     //! Current band group
     std::string current_band_group;
-
-    //! Is band group grayscale (true = 1 band; false = 3 bands)
-    bool is_grayscale = false;
 
     //! Band Labels set
     std::set<std::string> bandlabels_set;
@@ -482,6 +482,12 @@ class ProjectBuilder {
 
     //! Rig labels
     std::set<std::string> rig_labels_set;
+
+    //! Vector of bools representing whether to write depth images for each rig
+    std::vector<bool> write_depth;
+
+    //! Vector of bools representing whether to write norm depth images for each rig
+    std::vector<bool> write_norm_depth;
 
     //! Rig position
     helios::vec3 camera_position = {0,0,0};
