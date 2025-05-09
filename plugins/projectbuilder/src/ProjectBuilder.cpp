@@ -2429,8 +2429,8 @@ void ProjectBuilder::visualize(){
                         updateSpectra();
                         refreshVisualization();
                     }
-                    ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
-                    ImGui::SameLine();
+                    // ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
+                    // ImGui::SameLine();
                     ImGui::RadioButton("Use Texture File", ground_flag == 1); if (ImGui::IsItemClicked()) ground_flag = 1;
                     ImGui::SameLine();
                     ImGui::RadioButton("Use Model File", ground_flag == 2); if (ImGui::IsItemClicked()) ground_flag = 2;
@@ -2469,6 +2469,17 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::SameLine();
                         ImGui::Text("%s", shortenPath(ground_model_file).c_str());
+                    }
+                    toggle_button("##use_ground_texture_color", &use_ground_texture);
+                    // ####### GROUND COLOR ####### //
+                    if (use_ground_texture){
+                        ImGui::SameLine();
+                        ImGui::Text("Use Ground Texture Color");
+                    } else{
+                        ImGui::SameLine();
+                        ImGui::ColorEdit3("##ground_color_edit", ground_color);
+                        ImGui::SameLine();
+                        ImGui::Text("Manually Set Ground Color");
                     }
                     // ####### GROUND RESOLUTION ####### //
                     ImGui::SetNextItemWidth(100);
@@ -2890,6 +2901,24 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.25f);
                     ImGui::Text("Global Properties:");
                     ImGui::SetWindowFontScale(1.0f);
+                    // ####### ENFORCE PERIODIC BOUNDARY CONDITION ####### //
+                    ImGui::Text("Enforce Periodic Boundary Condition:");
+                    ImGui::SameLine();
+                    bool prev_cond_x = enforce_periodic_boundary_x;
+                    ImGui::Checkbox("x###periodic_boundary_x", &enforce_periodic_boundary_x);
+                    ImGui::SameLine();
+                    bool prev_cond_y = enforce_periodic_boundary_y;
+                    ImGui::Checkbox("y###periodic_boundary_y", &enforce_periodic_boundary_y);
+                    if (prev_cond_x != enforce_periodic_boundary_x || prev_cond_y != enforce_periodic_boundary_y){
+                        if (enforce_periodic_boundary_x && enforce_periodic_boundary_y)
+                            radiation->enforcePeriodicBoundary("xy");
+                        else if (enforce_periodic_boundary_x)
+                            radiation->enforcePeriodicBoundary("x");
+                        else if (enforce_periodic_boundary_y)
+                            radiation->enforcePeriodicBoundary("y");
+                        else
+                            radiation->enforcePeriodicBoundary("");
+                    }
                     // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
                     ImGui::SetNextItemWidth(60);
                     float prev_value = diffuse_extinction_coeff;
@@ -5630,23 +5659,32 @@ void ProjectBuilder::updateGround(){
     context->deletePrimitive(primitive_UUIDs["ground"]);
     // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullptr, ground_resolution, ground_texture_file.c_str() );
     uint ground_objID;
-    if( !ground_model_file.empty() && ground_flag == 2 ) {
+    if( !ground_model_file.empty() && ground_flag == 2 && use_ground_texture ) {
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
         ground_objID = context->addPolymeshObject( ground_UUIDs );
-    }else if( !ground_texture_file.empty() && ground_flag == 1 ){
+    }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-    }else if( ground_flag == 0 ){
+    }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-    }else {
-        ground_objID = context->addTileObject(domain_origin, domain_extent, nullrotation, ground_resolution);
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    }else if( ground_flag == 2  && !use_ground_texture ){
+        RGBcolor ground_color_;
+        ground_color_.r = ground_color[0];
+        ground_color_.g = ground_color[1];
+        ground_color_.b = ground_color[2];
+        ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
+        ground_objID = context->addPolymeshObject( ground_UUIDs );
+        context->setObjectColor(ground_objID, ground_color_);
     }
+    // else {
+    //     ground_objID = context->addTileObject(domain_origin, domain_extent, nullrotation, ground_resolution);
+    //     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    // }
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );

@@ -295,6 +295,12 @@ class ProjectBuilder {
     //! Diffuse extinction coefficient
     float diffuse_extinction_coeff = 0.1;
 
+    //! Enforce periodic boundary x
+    bool enforce_periodic_boundary_x = true;
+
+    //! Enforce periodic boundary y
+    bool enforce_periodic_boundary_y = true;
+
     //! Sun ID
     uint sun_ID;
 
@@ -621,6 +627,8 @@ class ProjectBuilder {
 
     //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
     int ground_flag = 1;
+
+    bool use_ground_texture = true;
 
     //! Ground color
     float ground_color[3] = { 0.0, 0.0, 0.0 };
