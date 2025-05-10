@@ -20,7 +20,7 @@ var searchData=
   ['writeobjectdatalabelmap_17',['writeObjectDataLabelMap',['../class_radiation_model.html#afdbe940b3c4ae5855a0fcbe5b0b7f708',1,'RadiationModel']]],
   ['writeplantmeshvertices_18',['writePlantMeshVertices',['../class_plant_architecture.html#a1314accedeb4c376ee8283aa05c811c5',1,'PlantArchitecture']]],
   ['writeplantstructurexml_19',['writePlantStructureXML',['../class_plant_architecture.html#ac979100d2972a70a51a1ef0b1c2acf98',1,'PlantArchitecture']]],
-  ['writeply_20',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context']]],
+  ['writeply_20',['writePLY',['../classhelios_1_1_context.html#aa47b8b6f8cefb3c9d55a3cda10d851d7',1,'helios::Context::writePLY(const char *filename) const'],['../classhelios_1_1_context.html#a7bce699f40429b89748303efce3fe5b4',1,'helios::Context::writePLY(const char *filename, const std::vector&lt; uint &gt; &amp;UUIDs) const']]],
   ['writepng_21',['writePNG',['../global_8h.html#afc2520441ef9a290c5221dd892ea9f01',1,'helios']]],
   ['writeprimitivedata_22',['writePrimitiveData',['../classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, bool print_header=false) const'],['../classhelios_1_1_context.html#a97378b12bfaf42c2052960c54ff096d4',1,'helios::Context::writePrimitiveData(std::string filename, const std::vector&lt; std::string &gt; &amp;column_format, const std::vector&lt; uint &gt; &amp;UUIDs, bool print_header=false) const']]],
   ['writeprimitivedatalabelmap_23',['writePrimitiveDataLabelMap',['../class_radiation_model.html#a771c53fe19d75303c3f60017db8a2b50',1,'RadiationModel']]],

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -678,9 +678,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const 
 <tr class="memitem:af614872eb351fa3f8dbb46e79cd551e3" id="r_af614872eb351fa3f8dbb46e79cd551e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af614872eb351fa3f8dbb46e79cd551e3">setObjectTransformationMatrix</a> (const std::vector&lt; uint &gt; &amp;ObjIDs, float(&amp;T)[16]) const</td></tr>
 <tr class="memdesc:af614872eb351fa3f8dbb46e79cd551e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to set the Affine transformation matrix of an Object for a vector Object IDs.  <br /></td></tr>
 <tr class="separator:af614872eb351fa3f8dbb46e79cd551e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72f0306a4635365ff8c63fe885649ec4" id="r_a72f0306a4635365ff8c63fe885649ec4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a72f0306a4635365ff8c63fe885649ec4">setObjectAverageNormal</a> (uint objectID, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;new_normal)</td></tr>
-<tr class="memdesc:a72f0306a4635365ff8c63fe885649ec4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the average normal of a given object in the context.  <br /></td></tr>
-<tr class="separator:a72f0306a4635365ff8c63fe885649ec4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a47bbdc02fe2c829753f04d5e5b426884" id="r_a47bbdc02fe2c829753f04d5e5b426884"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a47bbdc02fe2c829753f04d5e5b426884">setObjectAverageNormal</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;new_normal)</td></tr>
+<tr class="memdesc:a47bbdc02fe2c829753f04d5e5b426884"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the average normal of a given object in the context.  <br /></td></tr>
+<tr class="separator:a47bbdc02fe2c829753f04d5e5b426884"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afbdf67c60f6a4efc93cd9526151d5d89" id="r_afbdf67c60f6a4efc93cd9526151d5d89"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbdf67c60f6a4efc93cd9526151d5d89">objectHasTexture</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:afbdf67c60f6a4efc93cd9526151d5d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to check whether an Object has texture data.  <br /></td></tr>
 <tr class="separator:afbdf67c60f6a4efc93cd9526151d5d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1662,6 +1662,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const 
 <tr class="memitem:aa47b8b6f8cefb3c9d55a3cda10d851d7" id="r_aa47b8b6f8cefb3c9d55a3cda10d851d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa47b8b6f8cefb3c9d55a3cda10d851d7">writePLY</a> (const char *filename) const</td></tr>
 <tr class="memdesc:aa47b8b6f8cefb3c9d55a3cda10d851d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write geometry in the Context to a Stanford polygon file (.ply)  <br /></td></tr>
 <tr class="separator:aa47b8b6f8cefb3c9d55a3cda10d851d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7bce699f40429b89748303efce3fe5b4" id="r_a7bce699f40429b89748303efce3fe5b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7bce699f40429b89748303efce3fe5b4">writePLY</a> (const char *filename, const std::vector&lt; uint &gt; &amp;UUIDs) const</td></tr>
+<tr class="memdesc:a7bce699f40429b89748303efce3fe5b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a subset of geometry in the Context to a Stanford polygon file (.ply)  <br /></td></tr>
+<tr class="separator:a7bce699f40429b89748303efce3fe5b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8657240a0b2926e8c73b083f0fdc339d" id="r_a8657240a0b2926e8c73b083f0fdc339d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8657240a0b2926e8c73b083f0fdc339d">loadOBJ</a> (const char *filename, bool silent=false)</td></tr>
 <tr class="memdesc:a8657240a0b2926e8c73b083f0fdc339d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.  <br /></td></tr>
 <tr class="separator:a8657240a0b2926e8c73b083f0fdc339d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -11300,7 +11303,7 @@ markGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03742">3742</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03760">3760</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11363,7 +11366,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03754">3754</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03772">3772</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11420,7 +11423,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the OBJ model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03746">3746</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03764">3764</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11483,7 +11486,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03750">3750</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03768">3768</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11797,7 +11800,7 @@ markGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04589">4589</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04607">4607</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -13986,8 +13989,8 @@ isGeometryDirty() </dd></dl>
 
 </div>
 </div>
-<a id="a72f0306a4635365ff8c63fe885649ec4" name="a72f0306a4635365ff8c63fe885649ec4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a72f0306a4635365ff8c63fe885649ec4">&#9670;&#160;</a></span>setObjectAverageNormal()</h2>
+<a id="a47bbdc02fe2c829753f04d5e5b426884" name="a47bbdc02fe2c829753f04d5e5b426884"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a47bbdc02fe2c829753f04d5e5b426884">&#9670;&#160;</a></span>setObjectAverageNormal()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -13995,7 +13998,7 @@ isGeometryDirty() </dd></dl>
         <tr>
           <td class="memname">void Context::setObjectAverageNormal </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>objectID</em></span>, </td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>ObjID</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -14013,7 +14016,7 @@ isGeometryDirty() </dd></dl>
 <p>Sets the average normal of a given object in the context. </p>
 <p>This function adjusts the transformation matrix of the specified object to align its average normal with a given direction, while maintaining its forward direction in world space. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">objectID</td><td>The unique identifier of the object whose average normal is being set. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>The unique identifier of the object whose average normal is being set. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>The origin point about which the rotation is applied. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">new_normal</td><td>The desired new average normal direction for the object. </td></tr>
   </table>
@@ -14047,7 +14050,7 @@ isGeometryDirty() </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ObjIDs</td><td>Vector of identifiers of objects. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of object </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of object. </td></tr>
   </table>
   </dd>
 </dl>
@@ -14111,7 +14114,7 @@ isGeometryDirty() </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Identifier of object. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of object </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">color</td><td>New color of object. </td></tr>
   </table>
   </dd>
 </dl>
@@ -19107,7 +19110,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04128">4128</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04146">4146</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19145,7 +19148,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04132">4132</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04150">4150</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19189,12 +19192,12 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04136">4136</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04154">4154</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
 <a id="aa47b8b6f8cefb3c9d55a3cda10d851d7" name="aa47b8b6f8cefb3c9d55a3cda10d851d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa47b8b6f8cefb3c9d55a3cda10d851d7">&#9670;&#160;</a></span>writePLY()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa47b8b6f8cefb3c9d55a3cda10d851d7">&#9670;&#160;</a></span>writePLY() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -19217,6 +19220,38 @@ setSunDirection() </dd></dl>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03678">3678</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7bce699f40429b89748303efce3fe5b4" name="a7bce699f40429b89748303efce3fe5b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7bce699f40429b89748303efce3fe5b4">&#9670;&#160;</a></span>writePLY() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::writePLY </td>
+          <td>(</td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write a subset of geometry in the Context to a Stanford polygon file (.ply) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>name of ply file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of UUIDs for which geometry should be written </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03682">3682</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19254,7 +19289,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04510">4510</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04528">4528</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19298,7 +19333,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04514">4514</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04532">4532</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>

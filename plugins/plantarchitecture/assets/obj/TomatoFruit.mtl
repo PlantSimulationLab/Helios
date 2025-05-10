@@ -1,10 +1,10 @@
-# Blender 3.3.0 MTL File: 'Tomato.blend'
+# Blender 4.2.2 LTS MTL File: 'TomatoFruit.blend'
 # www.blender.org
 
 newmtl Material
 Ns 250.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.780000 0.212668 0.113850
+Kd 0.840000 0.240000 0.130000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000

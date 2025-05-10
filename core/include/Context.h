@@ -3437,14 +3437,14 @@ public:
     //! Method to set the diffuse color of an Object with transparency
     /**
      * \param[in] ObjID Identifier of object.
-     * \param[in] color New color of object
+     * \param[in] color New color of object.
      */
     void setObjectColor( uint ObjID, const helios::RGBAcolor& color );
 
     //! Method to set the diffuse color of an Object with transparency for a vector of ObjIDs
     /**
      * \param[in] ObjIDs Vector of identifiers of objects.
-     * \param[in] color New color of object
+     * \param[in] color New color of object.
      */
     void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBAcolor& color ) const;
     
@@ -3480,11 +3480,11 @@ public:
      * This function adjusts the transformation matrix of the specified object to align
      * its average normal with a given direction, while maintaining its forward direction
      * in world space.
-     * \param[in] objectID The unique identifier of the object whose average normal is being set.
+     * \param[in] ObjID The unique identifier of the object whose average normal is being set.
      * \param[in] origin The origin point about which the rotation is applied.
      * \param[in] new_normal The desired new average normal direction for the object.
      */
-    void setObjectAverageNormal(uint objectID, const vec3& origin, const vec3& new_normal);
+    void setObjectAverageNormal(uint ObjID, const vec3& origin, const vec3& new_normal);
     
     //! Method to check whether an Object has texture data
     /**
@@ -3643,7 +3643,6 @@ public:
      * @return Path to texture map file.
      */
     [[nodiscard]] std::string getPrimitiveTextureFile( uint UUID ) const;
-
 
     //! Set the texture map file for a primitive
     /**
@@ -6148,6 +6147,13 @@ public:
      * \param[in] filename name of ply file
     */
     void writePLY( const char* filename ) const;
+
+    //! Write a subset of geometry in the Context to a Stanford polygon file (.ply)
+    /**
+     * \param[in] filename name of ply file
+     * \param[in] UUIDs Vector of UUIDs for which geometry should be written
+    */
+    void writePLY( const char* filename, const std::vector<uint> &UUIDs ) const;
 
     //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
     /**

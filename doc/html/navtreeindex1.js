@@ -1,5 +1,7 @@
 var NAVTREEINDEX1 =
 {
+"globals_enum.html":[4,1,2],
+"globals_func.html":[4,1,1],
 "grapevine_8cpp.html":[4,0,2,2,1,2],
 "grapevine_8cpp_source.html":[4,0,2,2,1,2],
 "helios__vector__types_8h.html":[4,0,0,0,2],

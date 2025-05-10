@@ -272,15 +272,10 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
         helios_runtime_error("ERROR (read_PNG_file): File " + fn + " is not PNG format.");
     }
 
-    int x, y;
-
-    png_byte color_type;
-    png_byte bit_depth;
+    int y;
 
     png_structp png_ptr;
     png_infop info_ptr;
-    int number_of_passes;
-    png_bytep * row_pointers;
 
     char header[8];    // 8 is the maximum size that can be checked
 
@@ -318,10 +313,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 
     width = png_get_image_width(png_ptr, info_ptr);
     height = png_get_image_height(png_ptr, info_ptr);
-    color_type = png_get_color_type(png_ptr, info_ptr);
-    bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
-    number_of_passes = png_set_interlace_handling(png_ptr);
     png_read_update_info(png_ptr, info_ptr);
 
     /* read file */
@@ -329,7 +321,7 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
         helios_runtime_error("ERROR (read_png_file): read_image failed.");
     }
 
-    row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
+    auto *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
     for (y=0; y<height; y++)
         row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
 
@@ -355,27 +347,26 @@ void read_png_file( const char* filename, std::vector<unsigned char> &texture, u
 
 }
 
-Visualizer::Visualizer( uint Wdisplay ) : colormap_current(), colormap_lava(), colormap_rainbow(), colormap_gray(), colormap_cool(), colormap_parula(), colormap_hot() {
+Visualizer::Visualizer( uint Wdisplay ) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
     initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay ) : colormap_lava(), colormap_current(), colormap_cool(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_hot() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay ) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
     initialize(Wdisplay, Hdisplay, 16, true);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples ) : colormap_lava(), colormap_cool(), colormap_rainbow(), colormap_current(), colormap_hot(), colormap_parula(), colormap_gray() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples ) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, true);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations ) : colormap_current(), colormap_cool(), colormap_gray(), colormap_hot(), colormap_parula(), colormap_rainbow(), colormap_lava() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations ) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations);
 }
 
 void Visualizer::openWindow(){
 
     // Open a window and create its OpenGL context
-    GLFWwindow* _window;
-    _window = glfwCreateWindow( Wdisplay, Hdisplay, "Helios 3D Simulation", nullptr, nullptr);
+    GLFWwindow *_window = glfwCreateWindow(Wdisplay, Hdisplay, "Helios 3D Simulation", nullptr, nullptr);
     if( _window == nullptr ){
         std::string errorsrtring;
         errorsrtring.append("ERROR(Visualizer): Failed to initialize graphics.\n");
@@ -589,7 +580,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     primaryLightingModel.push_back( Visualizer::LIGHTING_NONE );
 
     camera_lookat_center = make_vec3(0,0,0);
-    camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f,90.f*M_PI/180.f,0) );
+    camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f,90.f*PI_F/180.f,0) );
 
     backgroundColor = make_RGBcolor( 0.8, 0.8, 0.8 );
 
@@ -691,7 +682,7 @@ Visualizer::~Visualizer(){
     glfwTerminate();
 }
 
-int Visualizer::selfTest() {
+int Visualizer::selfTest() const {
 
     if( message_flag ){
         std::cout << "Running visualizer self-test..." << std::flush;
@@ -699,7 +690,7 @@ int Visualizer::selfTest() {
 
     Visualizer visualizer( 1000 );
 
-    visualizer.setCameraPosition( make_SphericalCoord(10,0.49*M_PI,0), make_vec3(0,0,0) );
+    visualizer.setCameraPosition( make_SphericalCoord(10,0.49*PI_F,0), make_vec3(0,0,0) );
 
     visualizer.setLightingModel( Visualizer::LIGHTING_NONE );
 
@@ -782,7 +773,7 @@ void Visualizer::setCameraPosition(const helios::vec3 &cameraPosition, const hel
 
 void Visualizer::setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt ){
     camera_lookat_center = lookAt;
-    camera_eye_location = camera_lookat_center + sphere2cart(cameraAngle);vec3 camvec = camera_eye_location-camera_lookat_center;
+    camera_eye_location = camera_lookat_center + sphere2cart(cameraAngle);
 }
 
 void Visualizer::setCameraFieldOfView( float angle_FOV ){
@@ -805,11 +796,7 @@ void Visualizer::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zboun
     zbounds.x = 1e8;
     zbounds.y = -1e8;
 
-    for( std::map<std::string,std::vector<float> >::const_iterator iter = positionData.begin(); iter != positionData.end(); ++iter ){
-
-        std::string ptype = iter->first;
-
-        std::vector<float> positions = iter->second;
+    for(const auto &[ptype, positions] : positionData){
 
         for( size_t p=0; p<positions.size()/3; p++ ){
 
@@ -843,9 +830,6 @@ void Visualizer::getDomainBoundingBox( vec2& xbounds, vec2& ybounds, vec2& zboun
         }
 
     }
-
-    return;
-
 }
 
 float Visualizer::getDomainBoundingRadius() const{
@@ -863,8 +847,8 @@ float Visualizer::getDomainBoundingRadius() const{
 }
 
 void Visualizer::setLightingModel(LightingModel lightingmodel ){
-    for( uint i=0; i<primaryLightingModel.size(); i++ ){
-        primaryLightingModel.at(i) = lightingmodel;
+    for(auto & i : primaryLightingModel){
+        i = lightingmodel;
     }
 }
 
@@ -1237,7 +1221,7 @@ void Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const
     if( coordFlag == COORDINATES_WINDOW_NORMALIZED ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for(auto vertex : vertices){
+        for(const auto &vertex : vertices){
             if(vertex.x < 0.f || vertex.x > 1.f ){
                 if( message_flag ){
                     std::cout << "WARNING (Visualizer::addRectangleByVertices): Rectangle `x' position ( " << vertex.x << " ) is outside of drawable area." << std::endl;
@@ -1755,31 +1739,31 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
 
 void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const RGBAcolor &color, CoordinateSystem coordFlag){
 
-    std::vector<vec3> v{vertex0, vertex1, vertex2};
+    std::vector<vec3> tri_vertices{vertex0, vertex1, vertex2};
 
     if( coordFlag == 0 ){ //No vertex transformation (i.e., identity matrix)
 
         //Check that coordinates are inside drawable area
-        for( uint i=0; i<v.size(); i++ ){
-            if( v.at(i).x<0.f || v.at(i).x>1.f ){
+        for(const auto & tri_vertex : tri_vertices){
+            if( tri_vertex.x<0.f || tri_vertex.x>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `x' position ( " << v.at(i).x << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `x' position ( " << tri_vertex.x << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).y<0.f || v.at(i).y>1.f ){
+            }else if( tri_vertex.y<0.f || tri_vertex.y>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `y' position ( " << v.at(i).y << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `y' position ( " << tri_vertex.y << " ) is outside of drawable area." << std::endl;
                 }
-            }else if( v.at(i).z<-1.f || v.at(i).z>1.f ){
+            }else if( tri_vertex.z<-1.f || tri_vertex.z>1.f ){
                 if( message_flag ){
-                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `z' position ( " << v.at(i).z << " ) is outside of drawable area." << std::endl;
+                    std::cout << "WARNING (Visualizer::addTriangle): Triangle `z' position ( " << tri_vertex.z << " ) is outside of drawable area." << std::endl;
                 }
             }
         }
 
         //NOTE for vertex positions: OpenGL window coordinates range from -1 to 1, but our rectangle coordinates are from 0 to 1 ---- need to convert
-        for( uint i=0; i<v.size(); i++ ){
-            v.at(i).x = 2.f*v.at(i).x - 1.f;
-            v.at(i).y = 2.f*v.at(i).y - 1.f;
+        for(auto & tri_vertex : tri_vertices){
+            tri_vertex.x = 2.f*tri_vertex.x - 1.f;
+            tri_vertex.y = 2.f*tri_vertex.y - 1.f;
         }
 
     }
@@ -1794,9 +1778,9 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     normal.normalize();
 
     //Vertex 0
-    position_data[0] = v.at(0).x;
-    position_data[1] = v.at(0).y;
-    position_data[2] = v.at(0).z;
+    position_data[0] = tri_vertices.at(0).x;
+    position_data[1] = tri_vertices.at(0).y;
+    position_data[2] = tri_vertices.at(0).z;
     color_data[0] = color.r;
     color_data[1] = color.g;
     color_data[2] = color.b;
@@ -1808,9 +1792,9 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     normal_data[2] = normal.z;
 
     //Vertex 1
-    position_data[3] = v.at(1).x;
-    position_data[4] = v.at(1).y;
-    position_data[5] = v.at(1).z;
+    position_data[3] = tri_vertices.at(1).x;
+    position_data[4] = tri_vertices.at(1).y;
+    position_data[5] = tri_vertices.at(1).z;
     color_data[4] = color.r;
     color_data[5] = color.g;
     color_data[6] = color.b;
@@ -1822,9 +1806,9 @@ void Visualizer::addTriangle( const vec3 &vertex0, const vec3 &vertex1, const ve
     normal_data[5] = normal.z;
 
     //Vertex 2
-    position_data[6] = v.at(2).x;
-    position_data[7] = v.at(2).y;
-    position_data[8] = v.at(2).z;
+    position_data[6] = tri_vertices.at(2).x;
+    position_data[7] = tri_vertices.at(2).y;
+    position_data[8] = tri_vertices.at(2).z;
     color_data[8] = color.r;
     color_data[9] = color.g;
     color_data[10] = color.b;
@@ -1863,19 +1847,19 @@ void Visualizer::addVoxelByCenter( const vec3 &center, const vec3 &size, const S
     float az = rotation.azimuth;
 
     vec3 c0 = center + rotatePoint(make_vec3(0,-0.5f*size.y, 0.f),0,az) + eps;
-    addRectangleByCenter( c0, make_vec2(size.x,size.z), make_SphericalCoord(-0.5*M_PI,az), color, coordFlag );
+    addRectangleByCenter( c0, make_vec2(size.x,size.z), make_SphericalCoord(-0.5*PI_F,az), color, coordFlag );
 
     vec3 c1 = center + rotatePoint(make_vec3(0, 0.5f*size.y, 0.f),0,az) + eps;
-    addRectangleByCenter( c1, make_vec2(size.x,size.z), make_SphericalCoord(0.5*M_PI,az), color, coordFlag );
+    addRectangleByCenter( c1, make_vec2(size.x,size.z), make_SphericalCoord(0.5*PI_F,az), color, coordFlag );
 
     vec3 c2 = center + rotatePoint(make_vec3(0.5f*size.x, 0.f, 0.f),0,az) + eps;
-    addRectangleByCenter( c2, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
+    addRectangleByCenter( c2, make_vec2(size.y,size.z), make_SphericalCoord(0.5*PI_F,0.5*PI_F+az), color, coordFlag );
 
     vec3 c3 = center + rotatePoint(make_vec3(-0.5f*size.x, 0.f, 0.f),0,az) + eps;
-    addRectangleByCenter( c3, make_vec2(size.y,size.z), make_SphericalCoord(0.5*M_PI,0.5*M_PI+az), color, coordFlag );
+    addRectangleByCenter( c3, make_vec2(size.y,size.z), make_SphericalCoord(0.5*PI_F,0.5*PI_F+az), color, coordFlag );
 
     vec3 c4 = center + make_vec3(0.f, 0.f, -0.5f*size.z) + eps;
-    addRectangleByCenter( c4, make_vec2(size.x,size.y), make_SphericalCoord(M_PI,az), color, coordFlag );
+    addRectangleByCenter( c4, make_vec2(size.x,size.y), make_SphericalCoord(PI_F,az), color, coordFlag );
 
     vec3 c5 = center + make_vec3(0.f, 0.f, 0.5f*size.z) + eps;
     addRectangleByCenter( c5, make_vec2(size.x,size.y), make_SphericalCoord(0,az), color, coordFlag );
@@ -1919,7 +1903,7 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
         normal_data.push_back( normal.y);
         normal_data.push_back( normal.z);
 
-        float theta1 = 2.f*M_PI*float(i)/float(Ndivisions-1);
+        float theta1 = 2.f*PI_F*float(i)/float(Ndivisions-1);
         vec3 v1 = make_vec3( disk_size.x*cos(theta1), disk_size.y*sin(theta1), 0 );
         v1 = rotatePoint(v1,rotation);
 
@@ -1934,7 +1918,7 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
         normal_data.push_back( normal.y );
         normal_data.push_back( normal.z );
 
-        float theta2 = 2.f*M_PI*float(i)/float(Ndivisions-1);
+        float theta2 = 2.f*PI_F*float(i)/float(Ndivisions-1);
 
         vec3 v2 = make_vec3( disk_size.x*cos(theta2), disk_size.y*sin(theta2), 0 );
         v2 = rotatePoint(v2,rotation);
@@ -2001,7 +1985,7 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
         uv_data.push_back( 0.5*(texture_size.x-1) );
         uv_data.push_back( 0.5*(texture_size.y-1) );
 
-        float theta1 = 2.f*M_PI*float(i)/float(Ndivisions-1);
+        float theta1 = 2.f*PI_F*float(i)/float(Ndivisions-1);
         vec3 v1 = make_vec3( disk_size.x*cos(theta1), disk_size.y*sin(theta1), 0 );
         v1 = rotatePoint(v1,rotation);
 
@@ -2012,9 +1996,9 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
         normal_data.push_back( normal.y );
         normal_data.push_back( normal.z );
         uv_data.push_back( (texture_size.x-1)*(0.5f+0.5f*cos(theta1)) );
-        uv_data.push_back( (texture_size.y-1)*(0.5f+0.5f*sin(theta1+M_PI)) );
+        uv_data.push_back( (texture_size.y-1)*(0.5f+0.5f*sin(theta1+PI_F)) );
 
-        float theta2 = 2.f*M_PI*float(i)/float(Ndivisions-1);
+        float theta2 = 2.f*PI_F*float(i)/float(Ndivisions-1);
 
         vec3 v2 = make_vec3( disk_size.x*cos(theta2), disk_size.y*sin(theta2), 0 );
         v2 = rotatePoint(v2,rotation);
@@ -2025,7 +2009,7 @@ void Visualizer::addDiskByCenter( const vec3 &center, const vec2 &size, const Sp
         normal_data.push_back( normal.y );
         normal_data.push_back( normal.z );
         uv_data.push_back( (texture_size.x-1)*(0.5f+0.5f*cos(theta2)) );
-        uv_data.push_back( (texture_size.y-1)*(0.5f+0.5f*sin(theta2+M_PI)) );
+        uv_data.push_back( (texture_size.y-1)*(0.5f+0.5f*sin(theta2+PI_F)) );
 
     }
 
@@ -2157,17 +2141,16 @@ void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivi
 }
 
 void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivisions, const RGBAcolor &color, CoordinateSystem coordFlag ){
-
-    float theta;
-    float dtheta=M_PI/float(Ndivisions);
-    float dphi=2.0*M_PI/float(Ndivisions);
+    
+    float dtheta=PI_F/float(Ndivisions);
+    float dphi=2.f*PI_F/float(Ndivisions);
 
     //bottom cap
     for( int j=0; j<Ndivisions; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI, 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+dtheta, float(j+1)*dphi ) );
+        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F, 0 ) );
+        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+dtheta, float(j)*dphi ) );
+        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+dtheta, float(j+1)*dphi ) );
 
         addTriangle(v0,v1,v2,color,coordFlag);
 
@@ -2176,9 +2159,9 @@ void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivi
     //top cap
     for( int j=0; j<Ndivisions; j++ ){
 
-        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI, 0 ) );
-        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j)*dphi ) );
-        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5*M_PI-dtheta, float(j+1)*dphi ) );
+        vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*PI_F, 0 ) );
+        vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*PI_F-dtheta, float(j)*dphi ) );
+        vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, 0.5f*PI_F-dtheta, float(j+1)*dphi ) );
 
         addTriangle(v2,v1,v0,color,coordFlag);
 
@@ -2188,10 +2171,10 @@ void Visualizer::addSphereByCenter( float radius, const vec3 &center, uint Ndivi
     for( int j=0; j<Ndivisions; j++ ){
         for( int i=1; i<Ndivisions-1; i++ ){
 
-            vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j)*dphi ) );
-            vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j)*dphi ) );
-            vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i+1)*dtheta, float(j+1)*dphi ) );
-            vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5*M_PI+float(i)*dtheta, float(j+1)*dphi ) );
+            vec3 v0 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+float(i)*dtheta, float(j)*dphi ) );
+            vec3 v1 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+float(i+1)*dtheta, float(j)*dphi ) );
+            vec3 v2 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+float(i+1)*dtheta, float(j+1)*dphi ) );
+            vec3 v3 = center + sphere2cart( make_SphericalCoord(radius, -0.5f*PI_F+float(i)*dtheta, float(j+1)*dphi ) );
 
             addTriangle(v0,v1,v2,color,coordFlag);
             addTriangle(v0,v2,v3,color,coordFlag);
@@ -2211,10 +2194,10 @@ void Visualizer::addSkyDomeByCenter( float radius, const vec3 &center, uint Ndiv
     int Ntheta=Ndivisions;
     int Nphi=2*Ndivisions;
 
-    float thetaStart = -0.1*M_PI;
+    float thetaStart = -0.1f*PI_F;
 
-    float dtheta=(0.5*M_PI-thetaStart)/float(Ntheta-1);
-    float dphi=2.f*M_PI/float(Nphi-1);
+    float dtheta=(0.5f*PI_F-thetaStart)/float(Ntheta-1);
+    float dphi=2.f*PI_F/float(Nphi-1);
 
     uint textureID;
     int2 texture_size;
@@ -2522,7 +2505,7 @@ void Visualizer::addColorbarByCenter(const char* title, const helios::vec2 &size
 
         float x;
         float value;
-        if( colorbar_ticks.size()==0 ){
+        if( colorbar_ticks.empty() ){
             x = center.x -0.5f*size.x + float(i)*dx;
             value = cmin+float(i)/float(Nticks-1)*(cmax-cmin);
         }else{
@@ -2530,13 +2513,13 @@ void Visualizer::addColorbarByCenter(const char* title, const helios::vec2 &size
             x = center.x -0.5f*size.x + (value-cmin)/(cmax-cmin)*size.x;
         }
 
-        int d1, d2;
         if( std::fabs(floor(value)-value)<1e-4 ){ //value is an integer
             std::snprintf(precision,10,"%%d");
             std::snprintf(textstr,10,precision,int(floor(value)));
-        }else if( value!=0.f ){ //value needs decimal formatting
-            d1 = floor(log10(std::fabs(value)));
-            d2= -d1+1;
+        }else if( value!=0.f ){
+            //value needs decimal formatting
+            int d1 = floor(log10(std::fabs(value)));
+            int d2= -d1+1;
             if(d2<1){
                 d2=1;
             }
@@ -2606,14 +2589,13 @@ void Visualizer::addCoordinateAxes(const helios::vec3 &origin, const helios::vec
 
 
 void Visualizer::addGridWireFrame(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &subdiv){
+
+    helios::vec3 boxmin = make_vec3(center.x - 0.5f * size.x, center.y - 0.5f * size.y, center.z - 0.5f * size.z);
+    helios::vec3 boxmax = make_vec3(center.x + 0.5f * size.x, center.y + 0.5f * size.y, center.z + 0.5f * size.z);
     
-    helios::vec3 boxmin, boxmax;
-    boxmin = make_vec3(center.x - 0.5*size.x, center.y - 0.5*size.y, center.z - 0.5*size.z);
-    boxmax = make_vec3(center.x + 0.5*size.x, center.y + 0.5*size.y, center.z + 0.5*size.z);
-    
-    float spacing_x = size.x/subdiv.x;
-    float spacing_y = size.y/subdiv.y;
-    float spacing_z = size.z/subdiv.z;
+    float spacing_x = size.x/static_cast<float>(subdiv.x);
+    float spacing_y = size.y/static_cast<float>(subdiv.y);
+    float spacing_z = size.z/static_cast<float>(subdiv.z);
     
     for(int i=0; i <= subdiv.x; i++)
     {
@@ -2782,7 +2764,7 @@ void Visualizer::buildContextGeometry(helios::Context* context_ptr, const std::v
             context->getDomainBoundingSphere( UUIDs, center_sph, radius );
             context->getDomainBoundingBox( UUIDs, xbounds, ybounds, zbounds );
             camera_lookat_center = make_vec3( 0.5*(xbounds.x+xbounds.y), 0.5*(ybounds.x+ybounds.y), 0.5*(zbounds.x+zbounds.y) );
-            camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f*radius,20.f*M_PI/180.f,0) );
+            camera_eye_location = camera_lookat_center + sphere2cart( make_SphericalCoord(2.f*radius,20.f*PI_F/180.f,0) );
 
         }
     }
@@ -2884,13 +2866,9 @@ void Visualizer::buildContextGeometry_private() {
         colorbar_min = INFINITY;
         colorbar_max = -INFINITY;
 
-        for(auto iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
+        for(auto &[texture_string, UUIDs] : UUID_texture){
 
-            std::vector<uint> UUIDs = iter->second;
-
-            for( size_t u=0; u<UUIDs.size(); u++ ){
-
-                uint UUID = UUIDs.at(u);
+            for(uint UUID : UUIDs){
 
                 float colorValue=-9999;
                 if( !colorPrimitivesByData.empty() ){
@@ -2921,9 +2899,7 @@ void Visualizer::buildContextGeometry_private() {
                 }else if( !colorPrimitivesByObjectData.empty() ){
                     if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
                         uint ObjID = context->getPrimitiveParentObjectID(UUID);
-                        if( ObjID==0 ){
-                            colorValue = 0;
-                        }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
+                        if( ObjID!=0 && context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
                             HeliosDataType type = context->getObjectDataType( ObjID, colorPrimitivesByObjectData.c_str() );
                             if( type==HELIOS_TYPE_FLOAT ){
                                 context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
@@ -2948,7 +2924,7 @@ void Visualizer::buildContextGeometry_private() {
                     }
                 }
 
-                if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                if( std::isnan(colorValue) || std::isinf(colorValue) ) {//check for NaN or infinity
                     colorValue = 0;
                 }
 
@@ -2977,13 +2953,9 @@ void Visualizer::buildContextGeometry_private() {
 
     //add primitives
 
-    for(auto iter = UUID_texture.begin(); iter != UUID_texture.end(); ++iter){
+    for(auto &[texture_string, UUIDs] : UUID_texture){
 
-        std::vector<uint> UUIDs = iter->second;
-
-        for( size_t u=0; u<UUIDs.size(); u++ ){
-
-            uint UUID = UUIDs.at(u);
+        for(unsigned int UUID : UUIDs){
 
             if( !context->doesPrimitiveExist(UUID) ){
                 std::cerr << "WARNING (Visualizer::buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
@@ -2992,8 +2964,8 @@ void Visualizer::buildContextGeometry_private() {
 
             helios::PrimitiveType ptype = context->getPrimitiveType(UUID);
 
-            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
-            std::string texture_file = context->getPrimitiveTextureFile(UUID);
+            const std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            const std::string texture_file = context->getPrimitiveTextureFile(UUID);
 
             RGBAcolor color;
             float colorValue;
@@ -3023,7 +2995,7 @@ void Visualizer::buildContextGeometry_private() {
                         colorValue = 0;
                     }
 
-                    if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                    if( std::isnan(colorValue) || std::isinf(colorValue) ) {//check for NaN or infinity
                         colorValue = 0;
                     }
 
@@ -3034,9 +3006,7 @@ void Visualizer::buildContextGeometry_private() {
             }else if( !colorPrimitivesByObjectData.empty() ){
                 if( colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end() ){
                     uint ObjID = context->getPrimitiveParentObjectID(UUID);
-                    if( ObjID==0 ){
-                        colorValue = 0;
-                    }else if( context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
+                    if( ObjID!=0 && context->doesObjectDataExist( ObjID, colorPrimitivesByObjectData.c_str() ) ){
                         HeliosDataType type = context->getObjectDataType( ObjID, colorPrimitivesByObjectData.c_str() );
                         if( type==HELIOS_TYPE_FLOAT ){
                             context->getObjectData( ObjID, colorPrimitivesByObjectData.c_str(), colorValue );
@@ -3059,7 +3029,7 @@ void Visualizer::buildContextGeometry_private() {
                         colorValue = 0;
                     }
 
-                    if( colorValue!=colorValue || colorValue==INFINITY ) {//check for NaN or infinity
+                    if( std::isnan(colorValue) || std::isinf(colorValue) ) {//check for NaN or infinity
                         colorValue = 0;
                     }
 
@@ -3110,7 +3080,7 @@ void Visualizer::buildContextGeometry_private() {
 
                     std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
 
-                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
+                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.empty()  ){//coloring primitive based on texture
                         if( context->isPrimitiveTextureColorOverridden(UUID) ){
                             addTriangle( verts.at(0), verts.at(1), verts.at(2), texture_file.c_str(), uvs.at(0), uvs.at(1), uvs.at(2), make_RGBAcolor(color.r,color.g,color.b,1), COORDINATES_CARTESIAN );
                         }else{
@@ -3170,7 +3140,7 @@ void Visualizer::buildContextGeometry_private() {
                 py_vertices.at(2) = v_vertices.at(7);
                 py_vertices.at(3) = v_vertices.at(6);
 
-                if( texture_file.size()==0 ){//Voxel does not have an associated texture or we are ignoring texture
+                if( texture_file.empty() ){//Voxel does not have an associated texture or we are ignoring texture
 
                     addRectangleByVertices( bottom_vertices, color, COORDINATES_CARTESIAN );
                     addRectangleByVertices( top_vertices, color, COORDINATES_CARTESIAN );
@@ -3181,7 +3151,7 @@ void Visualizer::buildContextGeometry_private() {
 
                 }else{ //Voxel has a texture
 
-                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.size()==0  ){//coloring primitive based on texture
+                    if( colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.empty()  ){//coloring primitive based on texture
                         if( context->isPrimitiveTextureColorOverridden(UUID) ){
                             addRectangleByVertices( bottom_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
                             addRectangleByVertices( top_vertices, make_RGBcolor(color.r,color.g,color.b), texture_file.c_str(), COORDINATES_CARTESIAN );
@@ -3395,8 +3365,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
     bool shadow_flag = false;
-    for( uint m=0; m<primaryLightingModel.size(); m++ ){
-        if( primaryLightingModel.at(m) == Visualizer::LIGHTING_PHONG_SHADOWED ){
+    for(const auto & model : primaryLightingModel){
+        if( model == Visualizer::LIGHTING_PHONG_SHADOWED ){
             shadow_flag = true;
             break;
         }
@@ -3430,7 +3400,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         depthShader.enableTextureMaps();
         depthShader.enableTextureMasks();
 
-        render( 1 );
+        render( true );
 
     }else{
 
@@ -3481,7 +3451,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         glBindTexture(GL_TEXTURE_2D, depthTexture);
         glUniform1i(primaryShader.shadowmapUniform,1);
 
-        render( 0 );
+        render( false );
 
         glfwPollEvents();
         getViewKeystrokes( camera_eye_location, camera_lookat_center );
@@ -3553,8 +3523,8 @@ glm::mat4 Visualizer::plotInit() {
     glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
     bool shadow_flag = false;
-    for( uint m=0; m<primaryLightingModel.size(); m++ ){
-        if( primaryLightingModel.at(m) == Visualizer::LIGHTING_PHONG_SHADOWED ){
+    for(const auto & model : primaryLightingModel){
+        if( model == Visualizer::LIGHTING_PHONG_SHADOWED ){
             shadow_flag = true;
             break;
         }
@@ -3588,7 +3558,7 @@ glm::mat4 Visualizer::plotInit() {
         depthShader.enableTextureMaps();
         depthShader.enableTextureMasks();
 
-        render( 1 );
+        render( true );
 
     }else{
 
@@ -3606,7 +3576,7 @@ glm::mat4 Visualizer::plotInit() {
 
 }
 
-void Visualizer::plotOnce(glm::mat4 depthMVP, bool getKeystrokes) {
+void Visualizer::plotOnce(const glm::mat4 &depthMVP, bool getKeystrokes) {
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
@@ -3642,7 +3612,7 @@ void Visualizer::plotOnce(glm::mat4 depthMVP, bool getKeystrokes) {
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(primaryShader.shadowmapUniform,1);
 
-    render( 0 );
+    render( false );
 
     // glfwPollEvents();
     if ( getKeystrokes ){
@@ -3676,49 +3646,49 @@ void Visualizer::setupPlot(){
 
     std::vector<std::string> keys{"triangle", "line", "point", "sky" };
 
-    for( int i=0; i<keys.size(); i++ ){
-        position_data.insert( position_data.end(), positionData[keys.at(i)].begin(), positionData[keys.at(i)].end() );
-        color_data.insert( color_data.end(), colorData[keys.at(i)].begin(), colorData[keys.at(i)].end() );
-        normal_data.insert( normal_data.end(), normalData[keys.at(i)].begin(), normalData[keys.at(i)].end() );
-        uv_data.insert( uv_data.end(), uvData[keys.at(i)].begin(), uvData[keys.at(i)].end() );
-        coordinate_data.insert( coordinate_data.end(), coordinateFlagData[keys.at(i)].begin(), coordinateFlagData[keys.at(i)].end() );
-        texture_data.insert( texture_data.end(), textureFlagData[keys.at(i)].begin(), textureFlagData[keys.at(i)].end() );
+    for(const auto & key : keys){
+        position_data.insert( position_data.end(), positionData[key].begin(), positionData[key].end() );
+        color_data.insert( color_data.end(), colorData[key].begin(), colorData[key].end() );
+        normal_data.insert( normal_data.end(), normalData[key].begin(), normalData[key].end() );
+        uv_data.insert( uv_data.end(), uvData[key].begin(), uvData[key].end() );
+        coordinate_data.insert( coordinate_data.end(), coordinateFlagData[key].begin(), coordinateFlagData[key].end() );
+        texture_data.insert( texture_data.end(), textureFlagData[key].begin(), textureFlagData[key].end() );
     }
 
     // 1st attribute buffer : vertex positions
     glBindBuffer(GL_ARRAY_BUFFER, positionBuffer );
     glBufferData(GL_ARRAY_BUFFER, position_data.size()*sizeof(GLfloat), &position_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 2nd attribute buffer : vertex colors
     glBindBuffer(GL_ARRAY_BUFFER, colorBuffer );
     glBufferData(GL_ARRAY_BUFFER, color_data.size()*sizeof(GLfloat), &color_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 3rd attribute buffer : vertex normals
     glBindBuffer(GL_ARRAY_BUFFER, normalBuffer );
     glBufferData(GL_ARRAY_BUFFER, normal_data.size()*sizeof(GLfloat), &normal_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 4th attribute buffer : vertex uv
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer );
     glBufferData(GL_ARRAY_BUFFER, uv_data.size()*sizeof(GLfloat), &uv_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 3, 2, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 3, 2, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 5th attribute buffer : vertex texture flag
     glBindBuffer(GL_ARRAY_BUFFER, textureFlagBuffer );
     glBufferData(GL_ARRAY_BUFFER, texture_data.size()*sizeof(GLint), &texture_data[0], GL_STATIC_DRAW);
-    glVertexAttribIPointer( 4, 1, GL_INT, 0, (void*)0 );
+    glVertexAttribIPointer( 4, 1, GL_INT, 0, (void*)nullptr );
 
     // 6th attribute buffer : vertex coordinate flag
     glBindBuffer(GL_ARRAY_BUFFER, coordinateFlagBuffer );
     glBufferData(GL_ARRAY_BUFFER, coordinate_data.size()*sizeof(GLint), &coordinate_data[0], GL_STATIC_DRAW);
-    glVertexAttribIPointer( 5, 1, GL_INT, 0, (void*)0 );
+    glVertexAttribIPointer( 5, 1, GL_INT, 0, (void*)nullptr );
 
     //figure out texture switches
 
     uint textureID_current;
-    if( textureIDData["triangle"].size()==0 ){
+    if( textureIDData["triangle"].empty() ){
         textureID_current = 0;
     }else{
         textureID_current = textureIDData["triangle"].at(0);
@@ -3731,8 +3701,6 @@ void Visualizer::setupPlot(){
             group_start[ start_current ] = make_int2(textureID_current,p-start_current+1);
             textureID_current = textureIDData["triangle"].at(p);
             start_current = p;
-        }else{
-            continue;
         }
 
     }
@@ -3743,22 +3711,15 @@ void Visualizer::render( bool shadow ){
 
     //--- Triangles------
 
-    uint textureID_current;
-    if( textureIDData["triangle"].size()==0 ){
-        textureID_current = 0;
-    }else{
-        textureID_current = textureIDData["triangle"].at(0);
-    }
-
     glBindTexture(GL_TEXTURE_RECTANGLE,0);
 
-    for( std::map<uint,int2>::iterator iter=group_start.begin(); iter!=group_start.end(); ++iter ){
+    for(auto &[group, range] : group_start){
 
-        if( iter->second.x!=0 ){
-            glBindTexture(GL_TEXTURE_RECTANGLE,iter->second.x);
+        if( range.x!=0 ){
+            glBindTexture(GL_TEXTURE_RECTANGLE,range.x);
         }
 
-        glDrawArrays(GL_TRIANGLES, iter->first, iter->second.y );
+        glDrawArrays(GL_TRIANGLES, group, range.y );
 
     }
 
@@ -3777,7 +3738,7 @@ void Visualizer::render( bool shadow ){
             glDrawArrays(GL_POINTS, triangle_size+line_size, point_size );
         }
 
-        if( positionData["sky"].size()>0 ){
+        if( !positionData["sky"].empty() ){
             primaryShader.setLightingModel( LIGHTING_NONE );
             glBindTexture(GL_TEXTURE_RECTANGLE,textureIDData["sky"].at(0));
             glDrawArrays(GL_TRIANGLES, triangle_size+line_size+point_size, positionData["sky"].size()/3 );
@@ -3798,7 +3759,7 @@ void Visualizer::plotUpdate( bool hide_window ){
     }
 
     if( !hide_window ) {
-        glfwShowWindow((GLFWwindow *) window);
+        glfwShowWindow(static_cast<GLFWwindow *>(window));
     }
 
     //Update the Context geometry (if needed)
@@ -3833,8 +3794,8 @@ void Visualizer::plotUpdate( bool hide_window ){
     glm::vec3 lightInvDir = view_center + glm::vec3(light_direction.x,light_direction.y,light_direction.z);
 
     bool shadow_flag = false;
-    for( uint m=0; m<primaryLightingModel.size(); m++ ){
-        if( primaryLightingModel.at(m) == Visualizer::LIGHTING_PHONG_SHADOWED ){
+    for(const auto & model : primaryLightingModel){
+        if( model == Visualizer::LIGHTING_PHONG_SHADOWED ){
             shadow_flag = true;
             break;
         }
@@ -3868,7 +3829,7 @@ void Visualizer::plotUpdate( bool hide_window ){
         depthShader.enableTextureMaps();
         depthShader.enableTextureMasks();
 
-        render( 1 );
+        render( true );
 
     }else{
 
@@ -3913,7 +3874,7 @@ void Visualizer::plotUpdate( bool hide_window ){
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(primaryShader.shadowmapUniform,1);
 
-    render( 0 );
+    render( false );
 
     glfwPollEvents();
     getViewKeystrokes( camera_eye_location, camera_lookat_center );
@@ -3948,10 +3909,7 @@ void Visualizer::plotDepthMap() {
     vec2 xbounds, ybounds, zbounds;
     getDomainBoundingBox( xbounds, ybounds, zbounds );
 
-    glm::vec3 view_center = glm::vec3( xbounds.x+0.5*(xbounds.y-xbounds.x), ybounds.x+0.5*(ybounds.y-ybounds.x), zbounds.x+0.5*(zbounds.y-zbounds.x) );
     float bound_R = 1.4f*0.5f*fmax(xbounds.y-xbounds.x,fmax(ybounds.y-ybounds.x,zbounds.y-zbounds.x));
-
-    glm::mat4 depthMVP;
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
@@ -3963,7 +3921,7 @@ void Visualizer::plotDepthMap() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     //glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wdisplay, Hdisplay, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wframebuffer, Hframebuffer, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, Wframebuffer, Hframebuffer, 0,GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
     // Clear the screen
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -3976,7 +3934,7 @@ void Visualizer::plotDepthMap() {
     depthShader.enableTextureMaps();
     depthShader.enableTextureMasks();
 
-    render( 1 );
+    render( true );
 
     assert(checkerrors());
 
@@ -4070,27 +4028,27 @@ void Visualizer::plotDepthMap() {
     // 1st attribute buffer : vertex positions
     glBindBuffer(GL_ARRAY_BUFFER, positionBuffer );
     glBufferData(GL_ARRAY_BUFFER, position_data.size()*sizeof(GLfloat), &position_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 2nd attribute buffer : vertex colors
     glBindBuffer(GL_ARRAY_BUFFER, colorBuffer );
     glBufferData(GL_ARRAY_BUFFER, color_data.size()*sizeof(GLfloat), &color_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 4th attribute buffer : vertex uv
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer );
     glBufferData(GL_ARRAY_BUFFER, uv_data.size()*sizeof(GLfloat), &uv_data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer( 3, 2, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+    glVertexAttribPointer( 3, 2, GL_FLOAT, GL_FALSE, 0, (void*)nullptr );
 
     // 5th attribute buffer : vertex texture flag
     glBindBuffer(GL_ARRAY_BUFFER, textureFlagBuffer );
     glBufferData(GL_ARRAY_BUFFER, texture_data.size()*sizeof(GLint), &texture_data[0], GL_STATIC_DRAW);
-    glVertexAttribIPointer( 4, 1, GL_INT, 0, (void*)0 );
+    glVertexAttribIPointer( 4, 1, GL_INT, 0, (void*)nullptr );
 
     // 6th attribute buffer : vertex coordinate flag
     glBindBuffer(GL_ARRAY_BUFFER, coordinateFlagBuffer );
     glBufferData(GL_ARRAY_BUFFER, coordinate_data.size()*sizeof(GLint), &coordinate_data[0], GL_STATIC_DRAW);
-    glVertexAttribIPointer( 5, 1, GL_INT, 0, (void*)0 );
+    glVertexAttribIPointer( 5, 1, GL_INT, 0, (void*)nullptr );
 
 
     //do{
@@ -4143,7 +4101,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     std::string VertexShaderCode;
     std::ifstream VertexShaderStream(vertex_shader_file, std::ios::in);
     assert(VertexShaderStream.is_open());
-    std::string Line = "";
+    std::string Line;
     while(getline(VertexShaderStream, Line))
         VertexShaderCode += "\n" + Line;
     VertexShaderStream.close();
@@ -4162,7 +4120,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
     // Compile Vertex Shader
     char const * VertexSourcePointer = VertexShaderCode.c_str();
-    glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
+    glShaderSource(VertexShaderID, 1, &VertexSourcePointer , nullptr);
     glCompileShader(VertexShaderID);
 
     assert(checkerrors());
@@ -4172,7 +4130,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
     std::vector<char> VertexShaderErrorMessage(InfoLogLength);
     if( !VertexShaderErrorMessage.empty() ) {
-        glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
+        glGetShaderInfoLog(VertexShaderID, InfoLogLength, nullptr, &VertexShaderErrorMessage[0]);
     }
     int success = 0;
     glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &success);
@@ -4183,7 +4141,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
     // Compile Fragment Shader
     char const * FragmentSourcePointer = FragmentShaderCode.c_str();
-    glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
+    glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , nullptr);
     glCompileShader(FragmentShaderID);
 
     assert(checkerrors());
@@ -4193,7 +4151,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
     std::vector<char> FragmentShaderErrorMessage(InfoLogLength);
     if( !VertexShaderErrorMessage.empty() ) {
-        glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
+        glGetShaderInfoLog(FragmentShaderID, InfoLogLength, nullptr, &FragmentShaderErrorMessage[0]);
     }
     success = 0;
     glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &success);
@@ -4214,7 +4172,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
     glGetProgramiv(shaderID, GL_LINK_STATUS, &Result);
     glGetProgramiv(shaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
     std::vector<char> ProgramErrorMessage( std::max(InfoLogLength, int(1)) );
-    glGetProgramInfoLog(shaderID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+    glGetProgramInfoLog(shaderID, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
     if( isspace( ProgramErrorMessage[0] ) ){
         fprintf(stderr, "%s\n", &ProgramErrorMessage[0]);
         throw(1);
@@ -4280,7 +4238,7 @@ void Shader::initialize( const char* vertex_shader_file, const char* fragment_sh
 
 }
 
-Shader::~Shader( void ){
+Shader::~Shader(){
     glDeleteVertexArrays( 1, &VertexArrayID);
     glDeleteProgram(shaderID);
 }
@@ -4309,7 +4267,6 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
 
     //--- Load the Texture ----//
 
-    int Nchannels=3;
     std::vector<unsigned char> texture;
     uint texture_height, texture_width;
     std::string file = texture_file;
@@ -4365,7 +4322,7 @@ void Shader::setTextureMap( const char* texture_file, uint& textureID, int2& tex
 
     textureMaps.push_back(textureID);
     textureSizes.push_back(texture_size);
-    textureMapFiles.push_back(texture_file);
+    textureMapFiles.emplace_back(texture_file);
 
 }
 
@@ -4391,7 +4348,7 @@ void Shader::setTextureMask( const Glyph* glyph, uint& textureID ){
 
     //Check if this texture has already been added to the shader
     for( uint i=0; i<textureMaskFiles.size(); i++ ){
-        if( textureMaskFiles.at(i).compare(glyph->filename)==0 ){
+        if( textureMaskFiles.at(i)==glyph->filename ){
             textureID = textureMasks.at(i); //copy the handle
             return;
         }
@@ -4402,7 +4359,7 @@ void Shader::setTextureMask( const Glyph* glyph, uint& textureID ){
     while( pow(2,POT)<texture_size.x ){
         POT++;
     }
-    int2 texture_size_POT = make_int2( pow(2,POT), texture_size.y );
+    int2 texture_size_POT = make_int2( std::pow(2,POT), texture_size.y );
 
     std::vector<unsigned char> texture(texture_size_POT.x*texture_size_POT.y);
     for(int j=0;j<texture_size.y;j++){
@@ -4424,7 +4381,7 @@ void Shader::setTextureMask( const Glyph* glyph, uint& textureID ){
 
     if( strlen(glyph->filename)>0 ){
         textureMasks.push_back(textureID);
-        textureMaskFiles.push_back(glyph->filename);
+        textureMaskFiles.emplace_back(glyph->filename);
     }
 
 }
@@ -4434,7 +4391,7 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
     //Check if this texture has already been added to the shader
     //Note: if the texture_file is empy, it will automatically load a new texture
     for( uint i=0; i<textureMapFiles.size(); i++ ){
-        if( textureMapFiles.at(i).compare(texture_file)==0 && strlen(texture_file)>0 ){
+        if( textureMapFiles.at(i)==texture_file && strlen(texture_file)>0 ){
             textureID = textureMaps.at(i); //copy the handle
             texture_size = textureSizes.at(i); //copy the size
             return;
@@ -4443,11 +4400,10 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
 
     //--- Load the Texture ----//
 
-    int Nchannels=3;
     std::vector<unsigned char> texture;
     uint texture_height, texture_width;
     std::string file = texture_file;
-    if(file.substr(file.find_last_of(".") + 1) == "png") {
+    if(file.substr(file.find_last_of('.') + 1) == "png") {
         read_png_file (texture_file,texture,texture_height,texture_width);
     }else {
         std::cerr << "ERROR: texture mask file " << texture_file << " must be a PNG image." << std::endl;
@@ -4485,7 +4441,7 @@ void Shader::setTextureMask( const char* texture_file, uint& textureID, int2& te
 
     textureMaps.push_back(textureID);
     textureSizes.push_back(texture_size);
-    textureMapFiles.push_back(texture_file);
+    textureMapFiles.emplace_back(texture_file);
 
 }
 
@@ -4538,43 +4494,55 @@ bool scroll = false;
 
 
 void mouseCallback( GLFWwindow *window, int button, int action, int mods ){
+    if (action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &startX, &startY);
+    }
     if (button == GLFW_MOUSE_BUTTON_LEFT){
-        if (GLFW_PRESS == action) {lbutton_down = true;}
-        else if (GLFW_RELEASE == action) {lbutton_down = false;}
+        if (GLFW_PRESS == action) {
+            lbutton_down = true;
+        }else if (GLFW_RELEASE == action) {
+            lbutton_down = false;
+        }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE){
-        if (GLFW_PRESS == action) {mbutton_down = true;}
-        else if (GLFW_RELEASE == action) {mbutton_down = false;}
+        if (GLFW_PRESS == action) {
+            mbutton_down = true;
+        }
+        else if (GLFW_RELEASE == action) {
+            mbutton_down = false;
+        }
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT){
-        if (GLFW_PRESS == action) {rbutton_down = true;}
-        else if (GLFW_RELEASE == action) {rbutton_down = false;}
+        if (GLFW_PRESS == action) {
+            rbutton_down = true;
+        }else if (GLFW_RELEASE == action) {
+            rbutton_down = false;
+        }
     }
 }
 
 
 void cursorCallback( GLFWwindow* window, double xpos, double ypos ){
-    if (lbutton_down){
-        dphi = (float) xpos - startX;
-        dtheta = (float) ypos - startY;
-    } else {dphi = 0; dtheta = 0;}
-    if (rbutton_down){
-        dx = (float) xpos - startX;
-        dy = (float) ypos - startY;
-    } else {dx = 0; dy = 0;}
-    if (mbutton_down){
-        dx_m = (float) xpos - startX;
-        dy_m = (float) ypos - startY;
-    } else {dx_m = 0; dy_m = 0;}
+    if (rbutton_down) {
+        dx = static_cast<float>(xpos) - startX;
+        dy = static_cast<float>(ypos) - startY;
+    }else if (lbutton_down || mbutton_down){
+        dphi   = static_cast<float>(xpos - startX);
+        dtheta = static_cast<float>(ypos - startY);
+    } else {
+        dphi = dtheta = 0.f;
+    }
     startX = xpos;
     startY = ypos;
 }
 
 
 void scrollCallback( GLFWwindow* window, double xoffset, double yoffset ){
-    dscroll = (float) yoffset;
+    dscroll = static_cast<float>(yoffset);
     scrollY = yoffset;
     if (yoffset > 0.0 || yoffset < 0.0){
         scroll = true;
-    } else {scroll = false;}
+    } else {
+        scroll = false;
+    }
 }
 
 
@@ -4594,47 +4562,51 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
     float theta = Spherical.elevation;
     float phi = Spherical.azimuth;
 
-    phi+=M_PI * (dphi/160.f);
-    if( dtheta > 0 && theta + M_PI/80.f < 0.49f*M_PI ){
-        theta+=M_PI * (dtheta/120.f);
-    } else if( dtheta < 0 && theta>-0.25*M_PI ){
-        theta+=M_PI * (dtheta/120.f);
+    phi+=PI_F * (dphi/160.f);
+    if( dtheta > 0 && theta + PI_F/80.f < 0.49f*PI_F ){
+        theta+=PI_F * (dtheta/120.f);
+    } else if( dtheta < 0 && theta>-0.25*PI_F ){
+        theta+=PI_F * (dtheta/120.f);
     }
-    if (rbutton_down){
-        center += 0.05 * dy * up;
-        center -= 0.05 * dx * right;
+    dtheta = dphi = 0;
+    if ( dx!=0.f ) {
+        center -= 0.05f * dx * right;
     }
-    if (mbutton_down){
-        eye += 0.05 * dy_m * up;
-        eye -= 0.05 * dx_m * right;
+    if ( dy!=0.f ) {
+        center += 0.05f * dy * up;
     }
-    if (scroll){
-        center -= 0.2 * dscroll * forward;
+    dx = dy = 0.f;
+    if (scroll) {
+        if (dscroll > 0.0f) {
+            radius *= 0.9f;
+        }else {
+            radius *= 1.1f;
+        }
     }
     scroll = false;
 
-    GLFWwindow* _window = (GLFWwindow*) window;
+    auto* _window = static_cast<GLFWwindow *>(window);
 
     //----- Holding SPACEBAR -----//
     if (glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS){
 
         // Move center to the left - SPACE + LEFT KEY
         if (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){
-            center.x +=0.1*sin(phi);
-            center.y +=0.1*cos(phi);
+            center.x +=0.1f*sin(phi);
+            center.y +=0.1f*cos(phi);
         }
             // Move center to the right - SPACE + RIGHT KEY
         else if (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
-            center.x -=0.1*sin(phi);
-            center.y -=0.1*cos(phi);
+            center.x -=0.1f*sin(phi);
+            center.y -=0.1f*cos(phi);
         }
             // Move center upward - SPACE + UP KEY
         else if (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){
-            center.z +=0.2;
+            center.z +=0.2f;
         }
             // Move center downward - SPACE + DOWN KEY
         else if (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){
-            center.z -=0.2;
+            center.z -=0.2f;
         }
 
         //----- Not Holding SPACEBAR -----//
@@ -4642,23 +4614,23 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
         //   Orbit left - LEFT ARROW KEY
         if (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){
-            phi+=M_PI/40.f;
+            phi+=PI_F/40.f;
         }
             // Orbit right - RIGHT ARROW KEY
         else if (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
-            phi-=M_PI/40.f;
+            phi-=PI_F/40.f;
         }
 
             // Increase Elevation - UP ARROW KEY
         else if (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){
-            if( theta + M_PI/80.f < 0.49f*M_PI ){
-                theta+=M_PI/80.f;
+            if( theta + PI_F/80.f < 0.49f*PI_F ){
+                theta+=PI_F/80.f;
             }
         }
             // Decrease Elevation - DOWN ARROW KEY
         else if (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){
-            if( theta>-0.25*M_PI ){
-                theta-=M_PI/80.f;
+            if( theta>-0.25*PI_F ){
+                theta-=PI_F/80.f;
             }
         }
 
@@ -4682,7 +4654,7 @@ void Visualizer::getViewKeystrokes( vec3& eye, vec3& center ){
 
 }
 
-void* Visualizer::getWindow(){
+void* Visualizer::getWindow() const {
     return window;
 }
 

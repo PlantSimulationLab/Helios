@@ -2132,3 +2132,28 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Project Builder*
 - Many updates and improvements to the project builder plug-in. Credit to Sean Banks for these updates.
+
+[1.3.31] 2025-05-10
+
+*Context*
+- Fixed minor compiler warning that appeared within Context::readPNGAlpha().
+- Added overloaded Context::writePLY() to take a vector of UUIDs. Also added optional parameter to silence output printing.
+- Some minor refactoring was done for the existing Context::writePLY() method to better validate file names and paths.
+- helios::CalendarDay() function was not working correctly. The bug appeared to be introduced in the last version.
+
+*Radiation*
+- Changed RadiationModel::setDiffuseSpectrum() such that it always needs to be associated with a band. This prevents confusion about the required order of the method call in the code.
+- The spectral data file plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml, the diffuse spectrum contained negative values which caused an error.
+
+*Plant Architecture*
+- Added PlantArchitecture::isPlantDormant().
+- Carbohydrate model updated to take a parameter structure rather than having hard-coded model parameters. Thanks to Ethan Frehner for these updates.
+- Minor refactoring improvements throughtout plant architecture code.
+- Error corrected that was causing plants to flower too quickly if starting with closed flowers.
+
+*Visualizer*
+- Minor refactoring improvements throughout visualizer code.
+- There was an error in the mouse-based camera controls that could cause phantom camera rotation while zooming.
+
+*Project Builder*
+- Lots of project builder updates and bug fixes. Credit to Sean Banks for these updates.

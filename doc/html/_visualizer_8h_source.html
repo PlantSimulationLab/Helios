@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -381,7 +381,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>  <span class="comment">// !Visualizer destructor</span></div>
 <div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>  <a class="code hl_function" href="class_visualizer.html#a9277e99596d46d77d31a2249a1406983" title="Visualizer constructor.">~Visualizer</a>();</div>
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span></div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_visualizer.html#a1dc0a74852187800f44d2eaba4154650" title="Visualizer self-test routine.">selfTest</a>();</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_visualizer.html#a3c2e5c3cda246c326067c9b7745ef278" title="Visualizer self-test routine.">selfTest</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span></div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_visualizer.html#aaf6a79caee464bfe52cb4fd34d3882d2" title="Enable standard output from this plug-in (default)">enableMessages</a>();</div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span></div>
@@ -629,7 +629,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>  glm::mat4 <a class="code hl_function" href="class_visualizer.html#a7be1572cd8696b4209712e1362c0a74c" title="Plot interactive setup.">plotInit</a>();</div>
 <div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span></div>
 <div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span></div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_visualizer.html#ae9df3d9d3b6d110abbe0a0b67937208b" title="Run one rendering loop from plotInteractive()">plotOnce</a>(glm::mat4 depthMVP, <span class="keywordtype">bool</span> getKeystrokes);</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_visualizer.html#ae1ffd2fe25ca030b8bc5c4abc1c22613" title="Run one rendering loop from plotInteractive()">plotOnce</a>(<span class="keyword">const</span> glm::mat4 &amp;depthMVP, <span class="keywordtype">bool</span> getKeystrokes);</div>
 <div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span></div>
 <div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_visualizer.html#a133187767033ad1f89c312a2d6f4a533" title="Plot the depth map (distance from camera to nearest object)">plotDepthMap</a>();</div>
 <div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span></div>
@@ -659,7 +659,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span></div>
 <div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_visualizer.html#a6b7be76387563b2981bba995a7578d78" title="Close the graphics window.">closeWindow</a>();</div>
 <div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span> </div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> <span class="keywordtype">void</span>* getWindow();</div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> <span class="keywordtype">void</span>* getWindow() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span> </div>
 <div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span> std::vector&lt;uint&gt; getFrameBufferSize();</div>
 <div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span> </div>

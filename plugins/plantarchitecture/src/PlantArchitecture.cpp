@@ -647,6 +647,7 @@ void Shoot::makeDormant() {
 
 void Shoot::terminateApicalBud() {
     this->meristem_is_alive = false;
+    this->phyllochron_counter = 0;
 }
 
 void Shoot::terminateAxillaryVegetativeBuds() {
@@ -1148,8 +1149,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
         vec3 petiole_tip_axis = getPetioleAxisVector(1.f, petiole);
 
-        vec3 leaf_rotation_axis = cross(internode_axis, petiole_tip_axis);
-
         // Create unique leaf prototypes for each shoot type so we can simply copy them for each leaf
         assert( phytomer_parameters.leaf.prototype.unique_prototype_identifier!=0 );
         if( phytomer_parameters.leaf.prototype.unique_prototypes>0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end() ) {
@@ -1589,8 +1588,6 @@ void Phytomer::setInternodeLengthScaleFraction(const float internode_scale_facto
 
     float delta_scale = internode_scale_factor_fraction / current_internode_scale_factor;
 
-    float current_internode_length = getInternodeLength();
-    float internode_length = current_internode_length * delta_scale;
     current_internode_scale_factor = internode_scale_factor_fraction;
 
     int p = shoot_index.x;
@@ -1602,7 +1599,7 @@ void Phytomer::setInternodeLengthScaleFraction(const float internode_scale_facto
         int s_minus = s - 1;
         if (s_minus < 0) {
             p_minus--;
-            s_minus = int(parent_shoot_ptr->shoot_internode_vertices.at(p_minus).size() - 1);
+            s_minus = static_cast<int>(parent_shoot_ptr->shoot_internode_vertices.at(p_minus).size() - 1);
         }
 
         vec3 central_axis = (parent_shoot_ptr->shoot_internode_vertices.at(p).at(s) - parent_shoot_ptr->shoot_internode_vertices.at(p_minus).at(s_minus));
@@ -1706,6 +1703,7 @@ void Phytomer::setLeafScaleFraction(float leaf_scale_factor_fraction) {
 }
 
 void Phytomer::setLeafPrototypeScale(float leaf_prototype_scale) {
+
     float tip_ind = ceil(float(leaf_size_max.front().size() - 1) / 2.f);
     float scale_factor = leaf_prototype_scale / leaf_size_max.front().at(tip_ind);
     current_leaf_scale_factor = current_leaf_scale_factor * scale_factor;
@@ -1746,7 +1744,6 @@ void Phytomer::scaleLeafPrototypeScale(float scale_factor) {
         current_leaf_scale_factor = 1.f;
     }
 }
-
 
 void Phytomer::setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction) const {
     assert(inflorescence_scale_factor_fraction >= 0 && inflorescence_scale_factor_fraction <= 1);
@@ -1862,14 +1859,6 @@ void Shoot::buildShootPhytomers(float internode_radius, float internode_length, 
 
     for( int i=0; i<current_node_number; i++ ) { //loop over phytomers to build up the shoot
 
-        //Determine position of internode base
-        vec3 internode_base_position;
-        if( i==0 ){ //first phytomer on shoot
-            internode_base_position = base_position;
-        }else{ // not the first phytomer on the shoot
-            internode_base_position = shoot_internode_vertices.back().back();
-        }
-
         float taper = 1.f;
         if (current_node_number > 1) {
             taper = 1.f - radius_taper * float(i) / float(current_node_number - 1);
@@ -1933,7 +1922,11 @@ bool Shoot::sampleVegetativeBudBreak( uint node_index ) const {
     } else if ( probability_decay<0 ) { //probability maximum at base
         bud_break_probability = std::fmax( probability_min, 1.f - fabs(probability_decay) * float(node_index) );
     } else {
-      bud_break_probability = 1.f;
+        if ( probability_decay==0.f ) {
+            bud_break_probability = probability_min;
+        }else {
+            bud_break_probability = 1.f;
+        }
     }
 
     bool bud_break = true;
@@ -1945,7 +1938,7 @@ bool Shoot::sampleVegetativeBudBreak( uint node_index ) const {
 
 }
 
-uint Shoot::sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction ){
+uint Shoot::sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction ) const {
 
     std::string epicormic_shoot_label = plantarchitecture_ptr->plant_instances.at(this->plantID).epicormic_shoot_probability_perlength_per_day.first;
 
@@ -2085,11 +2078,10 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
     auto shoot_parameters = shoot_types.at(shoot_type_label);
     validateShootTypes(shoot_parameters);
     uint parent_rank = (int) shoot_tree_ptr->at(parent_shoot_ID)->rank;
-    int parent_node_count = shoot_tree_ptr->at(parent_shoot_ID)->current_node_number;
     int childID = int(shoot_tree_ptr->size());
 
     // Calculate the position of the shoot base
-    auto parent_shoot_ptr = shoot_tree_ptr->at(parent_shoot_ID);
+    const auto parent_shoot_ptr = shoot_tree_ptr->at(parent_shoot_ID);
 
     vec3 shoot_base_position = parent_shoot_ptr->shoot_internode_vertices.at(parent_node_index).back();
 
@@ -2238,7 +2230,7 @@ void PlantArchitecture::enableGroundClipping(float ground_height) {
     ground_clipping_height = ground_height;
 }
 
-void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry) {
+void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry) {
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
         helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -2627,6 +2619,22 @@ std::vector<helios::vec3> PlantArchitecture::getPlantLeafBases(const std::vector
     return leaf_bases;
 }
 
+bool PlantArchitecture::isPlantDormant( uint plantID ) const {
+
+    if ( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::isPlantDormant): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    for ( const auto &shoot : plant_instances.at(plantID).shoot_tree ) {
+        if ( !shoot->isdormant ) {
+            return false;
+        }
+    }
+
+    return true;
+
+}
+
 void PlantArchitecture::writePlantMeshVertices(uint plantID, const std::string &filename) const{
 
     if( plant_instances.find(plantID) == plant_instances.end() ){
@@ -2756,6 +2764,10 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
     auto &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
     shoot->phytomers.at(node_index)->deletePhytomer();
+
+    if ( plant_instances.at(plantID).shoot_tree.empty() ) {
+        std::cout << "WARNING (PlantArchitecture::pruneBranch): Plant " << plantID << " base shoot was pruned." << std::endl;
+    }
 
 }
 
@@ -3446,6 +3458,22 @@ void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_
     plant_instances.at(plantID).is_evergreen = is_evergreen;
 }
 
+void PlantArchitecture::setPlantCarbohydrateModelParameters( uint plantID, const CarbohydrateParameters &carb_parameters ) {
+
+    if ( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantCarbohydrateModelParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    plant_instances.at(plantID).carb_parameters = carb_parameters;
+
+}
+
+void PlantArchitecture::setPlantCarbohydrateModelParameters( const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters ) {
+    for ( uint plantID : plantIDs ) {
+        setPlantCarbohydrateModelParameters( plantID, carb_parameters );
+    }
+}
+
 void PlantArchitecture::disablePlantPhenology(uint plantID) {
     plant_instances.at(plantID).dd_to_dormancy_break = 0;
     plant_instances.at(plantID).dd_to_flower_initiation = -1;
@@ -3493,24 +3521,35 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         }
     }
 
-    int Nsteps = std::floor(time_step_days / phyllochron_min);
-    float remainder_time = time_step_days - phyllochron_min * float(Nsteps);
+    // **** accumulate photosynthate **** //
+    if( carbon_model_enabled ){
+        accumulateShootPhotosynthesis();
+    }
+
+    float dt_max_days;
+    int Nsteps;
+
+    if (time_step_days<=phyllochron_min)
+    {
+        Nsteps = time_step_days;
+        dt_max_days = 1;
+    }else
+    {
+        Nsteps = std::floor(time_step_days / phyllochron_min);
+        dt_max_days = phyllochron_min;
+    }
+
+    float remainder_time = time_step_days - dt_max_days * float(Nsteps);
     if (remainder_time > 0.f) {
         Nsteps++;
     }
-
     for (int timestep = 0; timestep < Nsteps; timestep++) {
-        float dt_max = phyllochron_min;
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
-            dt_max = remainder_time;
+            dt_max_days = remainder_time;
         }
 
-        // **** accumulate photosynthate **** //
-        if( carbon_model_enabled ){
-            accumulateShootPhotosynthesis();
-        }
 
-        if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max > plant_instance.max_age) {
+        if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max_days > plant_instance.max_age) {
             std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
         } else if (plant_instance.current_age >= plant_instance.max_age) {
             //update Context geometry
@@ -3518,14 +3557,15 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             return;
         }
 
-        plant_instance.current_age += dt_max;
-        plant_instance.time_since_dormancy += dt_max;
+        plant_instance.current_age += dt_max_days;
+        plant_instance.time_since_dormancy += dt_max_days;
 
         if (plant_instance.time_since_dormancy > plant_instance.dd_to_dormancy_break+plant_instance.dd_to_dormancy) {
             // std::cout << "Going dormant " << plant_instance.current_age << " " << plant_instance.time_since_dormancy << std::endl;
             plant_instance.time_since_dormancy = 0;
             for (const auto &shoot: *shoot_tree) {
                 shoot->makeDormant();
+                shoot->phyllochron_counter = 0;
             }
             harvestPlant(plantID);
             continue;
@@ -3536,7 +3576,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             auto shoot = shoot_tree->at(i);
 
             for (auto &phytomer: shoot->phytomers) {
-                phytomer->age += dt_max;
+                phytomer->age += dt_max_days;
 
                 if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
                     phytomer->phytomer_parameters.phytomer_callback_function(phytomer);
@@ -3547,6 +3587,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
             // breaking dormancy
             if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
+                shoot->phyllochron_counter = shoot->phyllochron_instantaneous;
                 shoot->breakDormancy();
             }
 
@@ -3569,15 +3610,15 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                 for (auto &petiole: phytomer->floral_buds) {
                     for (auto &fbud: petiole) {
                         if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
-                            fbud.time_counter += dt_max;
+                            fbud.time_counter += dt_max_days;
                         }
 
                         // -- Flowering -- //
                         if (shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function != nullptr) { //user defined a flower prototype function
                             // -- Flower initiation (closed flowers) -- //
                             if (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation >= 0.f) { //bud is active and flower initiation is enabled
-                                if ((!shoot->shoot_parameters.flowers_require_dormancy && plant_instance.current_age >= plant_instance.dd_to_flower_initiation) ||
-                                    (shoot->shoot_parameters.flowers_require_dormancy && phytomer->age >= plant_instance.dd_to_flower_initiation)) {
+                                if ((!shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation) ||
+                                    (shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation)) {
                                     fbud.time_counter = 0;
                                     if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val() ) {
                                         phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
@@ -3642,14 +3683,14 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             for (auto &phytomer: shoot->phytomers) {
                 //scale internode length
                 if (phytomer->current_internode_scale_factor < 1) {
-                    float dL_internode = dt_max * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
+                    float dL_internode = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
                     float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                      phytomer->setInternodeLengthScaleFraction(length_scale, false);
                 }
 
                 //scale internode girth
                 if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
-                    incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, false);
+                    incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
                 }
 
                 node_index++;
@@ -3661,7 +3702,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                 if (phytomer->hasLeaf() && phytomer->current_leaf_scale_factor <= 1) {
                     float tip_ind = ceil(float(phytomer->leaf_size_max.front().size()-1)/2.f);
                     float leaf_length = phytomer->current_leaf_scale_factor * phytomer->leaf_size_max.front().at(tip_ind);
-                    float dL_leaf = dt_max * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.front().at(tip_ind);
+                    float dL_leaf = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.front().at(tip_ind);
                     float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val() );
                     phytomer->phytomer_parameters.leaf.prototype_scale.resample();
                     phytomer->setLeafScaleFraction(scale);
@@ -3683,7 +3724,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                 for (auto &petiole: phytomer->axillary_vegetative_buds) {
                     for (auto &vbud: petiole) {
 
-                        if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
+                        if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
 
                             ShootParameters *new_shoot_parameters = &shoot_types.at(vbud.shoot_type_label);
                             int parent_node_count = shoot->current_node_number;
@@ -3790,14 +3831,13 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             }
 
             // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
-            shoot->phyllochron_counter += dt_max;
-            if (shoot->phyllochron_counter >= shoot->shoot_parameters.phyllochron_min.val() && !shoot->phytomers.back()->isdormant ) {
+            shoot->phyllochron_counter += dt_max_days;
+            if (shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant ) {
                 float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                 shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
                 float internode_length_max = shoot->internode_length_max_shoot_initial;
                 appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01); //\todo These factors should be set to be consistent with the shoot
-                shoot->shoot_parameters.phyllochron_min.resample();
-                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->shoot_parameters.phyllochron_min.val();
+                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->phyllochron_instantaneous;
             }
 
             // ****** EPICORMIC SHOOTS ****** //
@@ -3824,16 +3864,22 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
         // **** subtract maintenance carbon costs **** //
         if( carbon_model_enabled ){
-            subtractShootMaintenanceCarbon(time_step_days);
+            subtractShootMaintenanceCarbon(dt_max_days);
             subtractShootGrowthCarbon();
-            checkCarbonPool_adjustPhyllochron();
-            checkCarbonPool_abortOrgans();
-            checkCarbonPool_transferCarbon();
+            checkCarbonPool_transferCarbon(dt_max_days);
+            checkCarbonPool_adjustPhyllochron(dt_max_days);
+            checkCarbonPool_abortOrgans(dt_max_days);
         }
     }
 
     //update Context geometry
     shoot_tree->front()->updateShootNodes(true);
+
+    //Assign current volume as old volume for your next timestep
+    for( auto &shoot: *shoot_tree ){
+        float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume(); //Find current volume for each shoot in the plant
+        shoot->old_shoot_volume = shoot_volume; //Set old volume to the current volume for the next timestep
+    }
 
 }
 
@@ -3861,7 +3907,7 @@ bool PlantArchitecture::detectGroundCollision(uint objID) {
     return detectGroundCollision(objIDs);
 }
 
-bool PlantArchitecture::detectGroundCollision(const std::vector<uint> &objID) {
+bool PlantArchitecture::detectGroundCollision(const std::vector<uint> &objID) const {
     for (uint ID: objID) {
         if (context_ptr->doesObjectExist(ID)) {
             const std::vector<uint> &UUIDs = context_ptr->getObjectPrimitiveUUIDs(ID);

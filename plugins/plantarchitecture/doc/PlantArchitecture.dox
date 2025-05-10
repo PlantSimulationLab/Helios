@@ -307,6 +307,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
+| image_texture | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Image texture to map to the internode tube (overrides RGB color). |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||

@@ -3,6 +3,7 @@ var _plant_architecture_8h =
     [ "RandomParameter_float", "struct_random_parameter__float.html", "struct_random_parameter__float" ],
     [ "RandomParameter_int", "struct_random_parameter__int.html", null ],
     [ "AxisRotation", "struct_axis_rotation.html", null ],
+    [ "CarbohydrateParameters", "struct_carbohydrate_parameters.html", "struct_carbohydrate_parameters" ],
     [ "VegetativeBud", "struct_vegetative_bud.html", null ],
     [ "FloralBud", "struct_floral_bud.html", null ],
     [ "LeafPrototype", "struct_leaf_prototype.html", "struct_leaf_prototype" ],

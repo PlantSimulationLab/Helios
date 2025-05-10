@@ -637,7 +637,7 @@ void RadiationModel::setSourceSpectrum(const std::vector<uint> &source_ID, const
     }
 }
 
-void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
+void RadiationModel::setDiffuseSpectrum(const std::vector<std::string>& band_labels, const std::string &spectrum_label){
 
     std::vector<vec2> spectrum;
 
@@ -648,8 +648,12 @@ void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
         spectrum = loadSpectralData(spectrum_label);
     }
 
-    for( auto &band : radiation_bands ) {
-        band.second.diffuse_spectrum = spectrum;
+    for ( const auto& band : band_labels ) {
+        if( !doesBandExist(band) ){
+            helios_runtime_error( "ERROR (RadiationModel::setDiffuseSpectrum): Cannot set diffuse spectrum for band '" + band + "' because it is not a valid band.");
+        }
+
+        radiation_bands.at(band).diffuse_spectrum = spectrum;
     }
 
     radiativepropertiesneedupdate = true;
@@ -658,22 +662,7 @@ void RadiationModel::setDiffuseSpectrum( const std::string &spectrum_label ){
 
 void RadiationModel::setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label ){
 
-    if( !doesBandExist(band_label) ){
-        helios_runtime_error( "ERROR (RadiationModel::setDiffuseSpectrum): Cannot set diffuse spectrum for band '" + band_label + "' because it is not a valid band.");
-    }
-
-    std::vector<vec2> spectrum;
-
-    //standard solar spectrum
-    if( spectrum_label == "ASTMG173" ){
-        spectrum = loadSpectralData("solar_spectrum_diffuse_ASTMG173");
-    }else{
-        spectrum = loadSpectralData(spectrum_label);
-    }
-
-    radiation_bands.at(band_label).diffuse_spectrum = spectrum;
-
-    radiativepropertiesneedupdate = true;
+    setDiffuseSpectrum( {band_label}, spectrum_label );
 
 }
 
@@ -2593,7 +2582,7 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    //Pre-calculate all unique camera spectral responses for all cameras and bands
+    //Cache all unique camera spectral responses for all cameras and bands
     std::vector<std::vector<std::vector<helios::vec2> > > camera_response_unique;
     camera_response_unique.resize(Ncameras);
     if (Ncameras > 0) {
@@ -2634,7 +2623,7 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    //Pre-calculate all unique primitive reflectivity and transmissivity values before assigning to primitives
+    //Cache all unique primitive reflectivity and transmissivity spectra before assigning to primitives
 
     //first, figure out all of the spectra referenced by all primitives and store it in "surface_spectra" to avoid having to load it again
     std::map<std::string,std::vector<helios::vec2> > surface_spectra_rho;
@@ -2755,7 +2744,6 @@ void RadiationModel::updateRadiativeProperties() {
 
                         if( camera_response_unique.at(cam).at(b).empty() ){
                             rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = rho_unique.at(spectrum.first).at(b).at(s);
-
                         }else {
 
                             //integrate
@@ -3780,6 +3768,12 @@ void RadiationModel::runBand( const std::vector<std::string> &label ) {
     TBS_bottom=getOptiXbufferData( scatter_buff_bottom_RTbuffer );
 
     // Set variables in geometric objects
+
+    // std::vector<float> radiation_top_cam;
+    // radiation_top_cam=getOptiXbufferData( scatter_buff_top_cam_RTbuffer );
+    // std::vector<float> radiation_bottom_cam;
+    // radiation_bottom_cam=getOptiXbufferData( scatter_buff_bottom_cam_RTbuffer );
+    // std::vector<float> radiation_flux_data = radiation_top_cam+ radiation_bottom_cam;
 
     std::vector<float> radiation_flux_data;
     radiation_flux_data=getOptiXbufferData( radiation_in_RTbuffer );

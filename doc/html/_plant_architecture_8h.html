@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -158,7 +158,8 @@ $(function(){initNavTree('_plant_architecture_8h.html',''); initResizable(true);
   <div class="summary">
 <a href="#nested-classes">Data Structures</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">PlantArchitecture.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -176,6 +177,8 @@ Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_random_parameter__int.html">RandomParameter_int</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_axis_rotation.html">AxisRotation</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_carbohydrate_parameters.html">CarbohydrateParameters</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_vegetative_bud.html">VegetativeBud</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -217,6 +220,11 @@ Functions</h2></td></tr>
 <tr class="memitem:a90314e1f16ad76c838da858b9bf0ae86" id="r_a90314e1f16ad76c838da858b9bf0ae86"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a90314e1f16ad76c838da858b9bf0ae86">makeTubeFromCones</a> (uint radial_subdivisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;vertices, const std::vector&lt; float &gt; &amp;radii, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;colors, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="memdesc:a90314e1f16ad76c838da858b9bf0ae86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape.  <br /></td></tr>
 <tr class="separator:a90314e1f16ad76c838da858b9bf0ae86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a83c2a092b40d2178542b105efd2a070c" id="r_a83c2a092b40d2178542b105efd2a070c"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83c2a092b40d2178542b105efd2a070c">C_molecular_wt</a> = 12.01</td></tr>
+<tr class="separator:a83c2a092b40d2178542b105efd2a070c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Primary header file for plant architecture plug-in.</p>
@@ -238,7 +246,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00262">262</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00265">265</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -275,7 +283,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00250">250</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00253">253</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -325,6 +333,31 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of Object IDs of the cones forming the tube. </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="a83c2a092b40d2178542b105efd2a070c" name="a83c2a092b40d2178542b105efd2a070c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83c2a092b40d2178542b105efd2a070c">&#9670;&#160;</a></span>C_molecular_wt</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float C_molecular_wt = 12.01</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00024">24</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

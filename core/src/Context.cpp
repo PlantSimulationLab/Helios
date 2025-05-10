@@ -8284,16 +8284,16 @@ void Context::setObjectTransformationMatrix(const std::vector<uint> &ObjIDs, flo
     }
 }
 
-void Context::setObjectAverageNormal(uint objectID, const vec3& origin, const vec3& new_normal) {
+void Context::setObjectAverageNormal(uint ObjID, const vec3& origin, const vec3& new_normal) {
 
 #ifdef HELIOS_DEBUG
-    if (!doesObjectExist(objectID)) {
+    if (!doesObjectExist(ObjID)) {
         helios_runtime_error("setObjectAverageNormal: invalid objectID");
     }
 #endif
 
     // 1) Compute unit old & new normals
-    helios::vec3 oldN = normalize(getObjectAverageNormal(objectID));
+    helios::vec3 oldN = normalize(getObjectAverageNormal(ObjID));
     helios::vec3 newN = normalize(new_normal);
 
     // 2) Minimal‐angle axis & angle
@@ -8310,11 +8310,11 @@ void Context::setObjectAverageNormal(uint objectID, const vec3& origin, const ve
 
     // 3) Apply that minimal‐angle rotation to the compound (no pizza‐spin yet)
     //    NOTE: correct argument order is (objectID, angle, origin, axis)
-    rotateObject(objectID, angle, origin, axis);
+    rotateObject(ObjID, angle, origin, axis);
 
     // 4) Fetch the updated transform and extract the world‐space “forward” (local +X)
     float M_mid[16];
-    getObjectPointer_private(objectID)->getTransformationMatrix(M_mid);
+    getObjectPointer_private(ObjID)->getTransformationMatrix(M_mid);
 
     helios::vec3 localX{1,0,0};
     helios::vec3 t1;
@@ -8334,7 +8334,7 @@ void Context::setObjectAverageNormal(uint objectID, const vec3& origin, const ve
     );
 
     // 7) Apply that compensating twist about the same origin
-    rotateObject(objectID, twist, origin, newN);
+    rotateObject(ObjID, twist, origin, newN);
 
 }
 

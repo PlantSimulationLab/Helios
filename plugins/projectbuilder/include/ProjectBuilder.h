@@ -120,7 +120,10 @@ void toggle_button(const char* str_id, bool* v);
 std::string file_dialog();
 
 //! Function to open save as file dialog
-std::string save_as_file_dialog();
+/**
+ * \param[in] extensions List of possible extensions
+*/
+std::string save_as_file_dialog(std::vector<std::string> extensions);
 
 //! Function to get node labels for a given set of nodes
 /**
@@ -130,7 +133,7 @@ std::string save_as_file_dialog();
 */
 [[nodiscard]] std::vector<std::string> get_xml_node_values(const std::string &xml_file, const std::string& label_name, const std::string& node_name);
 
-//! Digit pointer object; union of int* and float*
+//! Digit pointer object; union of int* and float*.
 union digitPtr{
   int* i;
   float* f;
@@ -142,26 +145,38 @@ struct obj{
   bool isCanopy;
 };
 
-//! Struct to combine int* and float* objects
+//! Struct to combine int* and float* objects. Also contains a bool* which is used to indicate that the associated object needs to be updated.
 struct taggedPtr{
   digitPtr ptr;
   bool isInt;
-  obj object;
+  bool *dirty;
 };
 
 //! Function to create a tagged pointer object from an int pointer
 /**
  * \param[in] ptr Int pointer
- * \param[in] object Object of the associated pointer
+ * \param[in] dirty Bool used to determine if associated object needs update
 */
-[[nodiscard]] taggedPtr createTaggedPtr(int* ptr, const obj &object);
+[[nodiscard]] taggedPtr createTaggedPtr(int* ptr, bool* dirty);
 
 //! Function to create a tagged pointer object from a float pointer
 /**
  * \param[in] ptr Float pointer
- * \param[in] object Object associated with the pointer
+ * \param[in] dirty Bool used to determine if associated object needs update
 */
-[[nodiscard]] taggedPtr createTaggedPtr(float* ptr, const obj& object);
+[[nodiscard]] taggedPtr createTaggedPtr(float* ptr, bool* dirty);
+
+//! Function to create a tagged pointer object from an int pointer
+/**
+ * \param[in] ptr Int pointer
+*/
+[[nodiscard]] taggedPtr createTaggedPtr(int* ptr);
+
+//! Function to create a tagged pointer object from a float pointer
+/**
+ * \param[in] ptr Float pointer
+*/
+[[nodiscard]] taggedPtr createTaggedPtr(float* ptr);
 
 //! Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution
 union distUnion{
@@ -181,6 +196,7 @@ struct distribution{
 struct bandGroup{
  std::vector<std::string> bands;
  bool grayscale;
+ bool norm;
 };
 
 //! Canopy struct
@@ -196,8 +212,11 @@ struct canopy{
 
 //! Object struct
 struct object{
+ int index;
  std::string name;
+ std::string file;
  std::string data_group;
+ std::vector<uint> UUIDs;
  helios::vec3 position;
  helios::vec3 prev_position;
  helios::vec3 orientation;
@@ -205,6 +224,9 @@ struct object{
  helios::vec3 scale;
  helios::vec3 prev_scale;
  helios::RGBcolor color;
+ helios::RGBcolor prev_color;
+ bool use_texture_file;
+ bool is_dirty;
 };
 
 //! Rig struct
@@ -216,6 +238,8 @@ struct rig{
  helios::vec3 lookat;
  std::set<std::string> camera_labels;
  std::set<std::string> light_labels;
+ bool write_depth;
+ bool write_norm_depth;
 };
 
 bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
@@ -256,9 +280,6 @@ class ProjectBuilder {
     //! If true, the project has been built and `visualize()` can be run.
     bool built = false;
 
-    //! Dummy object used if a tagged pointer is not associated with an object or canopy
-    obj dummy_obj = obj{-1, false};
-
     //! Absorbed PAR value
     float PAR_absorbed;
 
@@ -274,6 +295,12 @@ class ProjectBuilder {
     //! Diffuse extinction coefficient
     float diffuse_extinction_coeff = 0.1;
 
+    //! Enforce periodic boundary x
+    bool enforce_periodic_boundary_x = true;
+
+    //! Enforce periodic boundary y
+    bool enforce_periodic_boundary_y = true;
+
     //! Sun ID
     uint sun_ID;
 
@@ -288,9 +315,6 @@ class ProjectBuilder {
 
     //! Current band group
     std::string current_band_group;
-
-    //! Is band group grayscale (true = 1 band; false = 3 bands)
-    bool is_grayscale = false;
 
     //! Band Labels set
     std::set<std::string> bandlabels_set;
@@ -465,6 +489,12 @@ class ProjectBuilder {
     //! Rig labels
     std::set<std::string> rig_labels_set;
 
+    //! Vector of bools representing whether to write depth images for each rig
+    std::vector<bool> write_depth;
+
+    //! Vector of bools representing whether to write norm depth images for each rig
+    std::vector<bool> write_norm_depth;
+
     //! Rig position
     helios::vec3 camera_position = {0,0,0};
 
@@ -595,8 +625,10 @@ class ProjectBuilder {
     //! Ground texture file
     std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
 
-    //! Use ground texture file
-    bool use_ground_texture_file = true;
+    //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
+    int ground_flag = 1;
+
+    bool use_ground_texture = true;
 
     //! Ground color
     float ground_color[3] = { 0.0, 0.0, 0.0 };
@@ -784,7 +816,7 @@ class ProjectBuilder {
                                                "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
 
     //! Possible spectra vector from spectral library files
-    std::vector<std::string> possible_spectra;
+    std::set<std::string> possible_spectra;
 
     //! Camera XML library files
     std::set<std::string> camera_xml_library_files = {"plugins/radiation/spectral_data/camera_spectral_library.xml"};
@@ -1037,9 +1069,15 @@ class ProjectBuilder {
 
     //! Function to delete the selected canopy
     /**
-     * \param[in] canopy Canopy to delete
+     * \param[in] canopy Canopy name to delete
     */
     void deleteCanopy(const std::string &canopy);
+
+    //! Function to delete the selected object
+    /**
+     * \param[in] obj Object name to delete
+    */
+    void deleteObject(const std::string &obj);
 
     //! Function to update the selected canopy
     /**
@@ -1058,6 +1096,9 @@ class ProjectBuilder {
 
     //! Function to delete camera models in visualization
     void deleteCameraModels();
+
+    //! Function to update data groups
+    void updateDataGroups();
 
     //! Function to update primitive types
     void updatePrimitiveTypes();
@@ -1090,7 +1131,7 @@ class ProjectBuilder {
     void saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, helios::vec3 position, std::string file_extension) const;
 
     //! Save plants in canopy individually to object file
-    void saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, helios::vec3 origin, std::vector<helios::vec3> positions, std::string file_extension) const;
+    void saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const;
 
     //! Determines whether plants are saved together (false) or individually to their own object file (true) when saving a canopy to file.
     bool save_plants_individually = false;
@@ -1145,6 +1186,12 @@ class ProjectBuilder {
 
     //! Number of recordings
     int num_recordings = 1;
+
+    //! Set of all object structs
+    std::map<std::string, object> objects_dict;
+
+    //! Object index, applies a unique index to each object
+    int obj_idx = 0;
 
     //! Indices of objects that need to be updated
     std::set<int> dirty_objects = {};
@@ -1639,6 +1686,9 @@ class ProjectBuilder {
 
     //! Update context
     void updateContext();
+
+    //! Shorten absolute path to file name
+    std::string shortenPath(std::string path_name);
 
     //! Constructor
     ProjectBuilder(){

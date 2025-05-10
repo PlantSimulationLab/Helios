@@ -68,7 +68,7 @@ var class_radiation_model =
     [ "setDiffuseRadiationFlux", "class_radiation_model.html#aa976502e7f722222399fbfe4f25dbe05", null ],
     [ "setDiffuseRayCount", "class_radiation_model.html#ab279259e3c925d3213d8bf097156fd02", null ],
     [ "setDiffuseSpectrum", "class_radiation_model.html#a1b1ae98cd2ba54fb8d1da8d434014e3d", null ],
-    [ "setDiffuseSpectrum", "class_radiation_model.html#af698122e4c9cb2855cca5e54037c985d", null ],
+    [ "setDiffuseSpectrum", "class_radiation_model.html#a4132dfa2910998d4952064d1e0c9e07b", null ],
     [ "setDiffuseSpectrumIntegral", "class_radiation_model.html#a5469495a0aee0e2d9f29100fa5d8683e", null ],
     [ "setDiffuseSpectrumIntegral", "class_radiation_model.html#a278b621362ef2fdb528f0669a6cd0224", null ],
     [ "setDiffuseSpectrumIntegral", "class_radiation_model.html#a6b733f931af8bed3bf13452d971d5c29", null ],

@@ -560,18 +560,19 @@ public:
     */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
 
-    //! Set the spectral distribution of diffuse ambient radiation FOR ALL BANDS based on global data of wavelength-intensity pairs.
-    /**
-      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
-    */
-    void setDiffuseSpectrum( const std::string &spectrum_label );
-
-    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BANDS based on global data of wavelength-intensity pairs.
+    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of wavelength-intensity pairs.
     /**
       * \param[in] band_label Label used to reference the band
       * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
     void setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label );
+
+    //! Set the spectral distribution of diffuse ambient radiation FOR MULTIPLE BANDS based on global data of wavelength-intensity pairs.
+    /**
+      * \param[in] band_labels List of labels used to reference the bands
+      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+    */
+    void setDiffuseSpectrum( const std::vector<std::string> &band_labels, const std::string &spectrum_label );
 
     //! Get the diffuse flux for a given band
     /**
