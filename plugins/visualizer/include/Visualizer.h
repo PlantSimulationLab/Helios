@@ -296,7 +296,7 @@ public:
   ~Visualizer();
 
   //! Visualizer self-test routine
-  int selfTest();
+  int selfTest() const;
 
   //! Enable standard output from this plug-in (default)
   void enableMessages();
@@ -879,7 +879,7 @@ public:
    * \param[in] depthMVP Depth MVP matrix.
    * \param[in] getKeystrokes If false, do not update visualization with input keystrokes.
   */
-  void plotOnce(glm::mat4 depthMVP, bool getKeystrokes);
+  void plotOnce(const glm::mat4 &depthMVP, bool getKeystrokes);
 
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap();
@@ -936,7 +936,7 @@ public:
   //! Close the graphics window
   void closeWindow();
 
- void* getWindow();
+ void* getWindow() const;
 
  std::vector<uint> getFrameBufferSize();
 

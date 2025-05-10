@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -616,12 +616,26 @@ $(function(){initNavTree('global_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span> </div>
 <div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>        <span class="keywordflow">return</span> lhs;</div>
 <div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    }</div>
-<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span></div>
-<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>;</div>
-<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>;</div>
-<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>}</div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span> </div>
+<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    <span class="keyword">inline</span> std::vector&lt;float&gt; operator+(<span class="keyword">const</span> std::vector&lt;float&gt;&amp; vector1, <span class="keyword">const</span> std::vector&lt;float&gt;&amp; vector2)</div>
+<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>    {</div>
+<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>        <span class="keywordflow">if</span> (vector1.size() != vector2.size()) {</div>
+<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>            <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">&quot;Vector sizes must match for element-wise addition&quot;</span>);</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>        }</div>
 <div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span> </div>
-<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>        std::vector&lt;float&gt; result(vector1.size());</div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>        <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; vector1.size(); ++i) {</div>
+<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span>            result[i] = vector1[i] + vector2[i];</div>
+<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>        }</div>
+<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>        <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>    }</div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span> </div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span></div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>;</div>
+<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>;</div>
+<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>}</div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span> </div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

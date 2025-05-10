@@ -74,7 +74,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"grapevine_8cpp.html"
+"globals_enum.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

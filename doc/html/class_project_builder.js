@@ -26,6 +26,7 @@ var class_project_builder =
     [ "sampleAll", "class_project_builder.html#a4eee2ac79ab4f260ff201a49d808a007", null ],
     [ "setKeypoints", "class_project_builder.html#a0bbe665f2526368a47636eedf4a5576f", null ],
     [ "setNodeLabels", "class_project_builder.html#acfbd3c93af6438566257190d3295d2e2", null ],
+    [ "shortenPath", "class_project_builder.html#a3d4b5e43c3a531daab0da6367629d91c", null ],
     [ "updateCameras", "class_project_builder.html#ac3b44eb4bce4266abfae2f70cfac18f2", null ],
     [ "updateColor", "class_project_builder.html#ae6ebbb2f454d5d0ed32dfea0d69a1c00", null ],
     [ "updateContext", "class_project_builder.html#a31199d61300d65f673703d5ffe427079", null ],

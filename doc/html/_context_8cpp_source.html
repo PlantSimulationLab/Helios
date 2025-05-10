@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -9068,16 +9068,16 @@ $(function(){initNavTree('_context_8cpp_source.html',''); initResizable(true); }
 </div>
 <div class="line"><a id="l08286" name="l08286"></a><span class="lineno"> 8286</span> </div>
 <div class="foldopen" id="foldopen08287" data-start="{" data-end="}">
-<div class="line"><a id="l08287" name="l08287"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#a72f0306a4635365ff8c63fe885649ec4"> 8287</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="classhelios_1_1_context.html#a72f0306a4635365ff8c63fe885649ec4" title="Sets the average normal of a given object in the context.">Context::setObjectAverageNormal</a>(uint objectID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>&amp; origin, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>&amp; new_normal) {</div>
+<div class="line"><a id="l08287" name="l08287"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#a47bbdc02fe2c829753f04d5e5b426884"> 8287</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="classhelios_1_1_context.html#a47bbdc02fe2c829753f04d5e5b426884" title="Sets the average normal of a given object in the context.">Context::setObjectAverageNormal</a>(uint ObjID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>&amp; origin, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>&amp; new_normal) {</div>
 <div class="line"><a id="l08288" name="l08288"></a><span class="lineno"> 8288</span> </div>
 <div class="line"><a id="l08289" name="l08289"></a><span class="lineno"> 8289</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l08290" name="l08290"></a><span class="lineno"> 8290</span>    <span class="keywordflow">if</span> (!<a class="code hl_function" href="classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541" title="Check whether Compound Object exists in the Context.">doesObjectExist</a>(objectID)) {</div>
+<div class="line"><a id="l08290" name="l08290"></a><span class="lineno"> 8290</span>    <span class="keywordflow">if</span> (!<a class="code hl_function" href="classhelios_1_1_context.html#a9b410e55075482b8cbc549f9bf571541" title="Check whether Compound Object exists in the Context.">doesObjectExist</a>(ObjID)) {</div>
 <div class="line"><a id="l08291" name="l08291"></a><span class="lineno"> 8291</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;setObjectAverageNormal: invalid objectID&quot;</span>);</div>
 <div class="line"><a id="l08292" name="l08292"></a><span class="lineno"> 8292</span>    }</div>
 <div class="line"><a id="l08293" name="l08293"></a><span class="lineno"> 8293</span><span class="preprocessor">#endif</span></div>
 <div class="line"><a id="l08294" name="l08294"></a><span class="lineno"> 8294</span> </div>
 <div class="line"><a id="l08295" name="l08295"></a><span class="lineno"> 8295</span>    <span class="comment">// 1) Compute unit old &amp; new normals</span></div>
-<div class="line"><a id="l08296" name="l08296"></a><span class="lineno"> 8296</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> oldN = normalize(<a class="code hl_function" href="classhelios_1_1_context.html#af924f35a21354c9b994ade0eb921217a" title="Method to return the average surface normal vector of an object.">getObjectAverageNormal</a>(objectID));</div>
+<div class="line"><a id="l08296" name="l08296"></a><span class="lineno"> 8296</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> oldN = normalize(<a class="code hl_function" href="classhelios_1_1_context.html#af924f35a21354c9b994ade0eb921217a" title="Method to return the average surface normal vector of an object.">getObjectAverageNormal</a>(ObjID));</div>
 <div class="line"><a id="l08297" name="l08297"></a><span class="lineno"> 8297</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> newN = normalize(new_normal);</div>
 <div class="line"><a id="l08298" name="l08298"></a><span class="lineno"> 8298</span> </div>
 <div class="line"><a id="l08299" name="l08299"></a><span class="lineno"> 8299</span>    <span class="comment">// 2) Minimal‐angle axis &amp; angle</span></div>
@@ -9094,11 +9094,11 @@ $(function(){initNavTree('_context_8cpp_source.html',''); initResizable(true); }
 <div class="line"><a id="l08310" name="l08310"></a><span class="lineno"> 8310</span> </div>
 <div class="line"><a id="l08311" name="l08311"></a><span class="lineno"> 8311</span>    <span class="comment">// 3) Apply that minimal‐angle rotation to the compound (no pizza‐spin yet)</span></div>
 <div class="line"><a id="l08312" name="l08312"></a><span class="lineno"> 8312</span>    <span class="comment">//    NOTE: correct argument order is (objectID, angle, origin, axis)</span></div>
-<div class="line"><a id="l08313" name="l08313"></a><span class="lineno"> 8313</span>    <a class="code hl_function" href="classhelios_1_1_context.html#a3b4ffa6ef56001319b2b63703b9f2acd" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>(objectID, angle, origin, axis);</div>
+<div class="line"><a id="l08313" name="l08313"></a><span class="lineno"> 8313</span>    <a class="code hl_function" href="classhelios_1_1_context.html#a3b4ffa6ef56001319b2b63703b9f2acd" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>(ObjID, angle, origin, axis);</div>
 <div class="line"><a id="l08314" name="l08314"></a><span class="lineno"> 8314</span> </div>
 <div class="line"><a id="l08315" name="l08315"></a><span class="lineno"> 8315</span>    <span class="comment">// 4) Fetch the updated transform and extract the world‐space “forward” (local +X)</span></div>
 <div class="line"><a id="l08316" name="l08316"></a><span class="lineno"> 8316</span>    <span class="keywordtype">float</span> M_mid[16];</div>
-<div class="line"><a id="l08317" name="l08317"></a><span class="lineno"> 8317</span>    getObjectPointer_private(objectID)-&gt;getTransformationMatrix(M_mid);</div>
+<div class="line"><a id="l08317" name="l08317"></a><span class="lineno"> 8317</span>    getObjectPointer_private(ObjID)-&gt;getTransformationMatrix(M_mid);</div>
 <div class="line"><a id="l08318" name="l08318"></a><span class="lineno"> 8318</span> </div>
 <div class="line"><a id="l08319" name="l08319"></a><span class="lineno"> 8319</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> localX{1,0,0};</div>
 <div class="line"><a id="l08320" name="l08320"></a><span class="lineno"> 8320</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> t1;</div>
@@ -9118,7 +9118,7 @@ $(function(){initNavTree('_context_8cpp_source.html',''); initResizable(true); }
 <div class="line"><a id="l08334" name="l08334"></a><span class="lineno"> 8334</span>    );</div>
 <div class="line"><a id="l08335" name="l08335"></a><span class="lineno"> 8335</span> </div>
 <div class="line"><a id="l08336" name="l08336"></a><span class="lineno"> 8336</span>    <span class="comment">// 7) Apply that compensating twist about the same origin</span></div>
-<div class="line"><a id="l08337" name="l08337"></a><span class="lineno"> 8337</span>    <a class="code hl_function" href="classhelios_1_1_context.html#a3b4ffa6ef56001319b2b63703b9f2acd" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>(objectID, twist, origin, newN);</div>
+<div class="line"><a id="l08337" name="l08337"></a><span class="lineno"> 8337</span>    <a class="code hl_function" href="classhelios_1_1_context.html#a3b4ffa6ef56001319b2b63703b9f2acd" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>(ObjID, twist, origin, newN);</div>
 <div class="line"><a id="l08338" name="l08338"></a><span class="lineno"> 8338</span> </div>
 <div class="line"><a id="l08339" name="l08339"></a><span class="lineno"> 8339</span>}</div>
 </div>

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.30</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -175,7 +175,7 @@ Data Structures</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to represent an object or canopy.  <a href="structobj.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtagged_ptr.html">taggedPtr</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to combine int* and float* objects.  <a href="structtagged_ptr.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to combine int* and float* objects. Also contains a bool* which is used to indicate that the associated object needs to be updated.  <a href="structtagged_ptr.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">union &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="uniondist_union.html">distUnion</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution.  <a href="uniondist_union.html#details">More...</a><br /></td></tr>
@@ -230,18 +230,24 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildGeometry</b> (co
 <tr class="memitem:a08a876d41e64daa8f53f1822c059e91b" id="r_a08a876d41e64daa8f53f1822c059e91b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08a876d41e64daa8f53f1822c059e91b">file_dialog</a> ()</td></tr>
 <tr class="memdesc:a08a876d41e64daa8f53f1822c059e91b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to open file dialog.  <br /></td></tr>
 <tr class="separator:a08a876d41e64daa8f53f1822c059e91b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a237a804feebd476b67f388427e3a00c1" id="r_a237a804feebd476b67f388427e3a00c1"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a237a804feebd476b67f388427e3a00c1">save_as_file_dialog</a> ()</td></tr>
-<tr class="memdesc:a237a804feebd476b67f388427e3a00c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to open save as file dialog.  <br /></td></tr>
-<tr class="separator:a237a804feebd476b67f388427e3a00c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e4bf09362721eb7291e25c049e9b263" id="r_a4e4bf09362721eb7291e25c049e9b263"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4e4bf09362721eb7291e25c049e9b263">save_as_file_dialog</a> (std::vector&lt; std::string &gt; extensions)</td></tr>
+<tr class="memdesc:a4e4bf09362721eb7291e25c049e9b263"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to open save as file dialog.  <br /></td></tr>
+<tr class="separator:a4e4bf09362721eb7291e25c049e9b263"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a37ea8aaac001a1f2eb0218c28a8e7c5a" id="r_a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37ea8aaac001a1f2eb0218c28a8e7c5a">get_xml_node_values</a> (const std::string &amp;xml_file, const std::string &amp;label_name, const std::string &amp;node_name)</td></tr>
 <tr class="memdesc:a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to get node labels for a given set of nodes.  <br /></td></tr>
 <tr class="separator:a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adf340fc90b4a360d7bf8fd4dc88c4fa0" id="r_adf340fc90b4a360d7bf8fd4dc88c4fa0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf340fc90b4a360d7bf8fd4dc88c4fa0">createTaggedPtr</a> (int *ptr, const <a class="el" href="structobj.html">obj</a> &amp;<a class="el" href="structobject.html">object</a>)</td></tr>
-<tr class="memdesc:adf340fc90b4a360d7bf8fd4dc88c4fa0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from an int pointer.  <br /></td></tr>
-<tr class="separator:adf340fc90b4a360d7bf8fd4dc88c4fa0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7356b21489ffdd9c04c80734454694d6" id="r_a7356b21489ffdd9c04c80734454694d6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7356b21489ffdd9c04c80734454694d6">createTaggedPtr</a> (float *ptr, const <a class="el" href="structobj.html">obj</a> &amp;<a class="el" href="structobject.html">object</a>)</td></tr>
-<tr class="memdesc:a7356b21489ffdd9c04c80734454694d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from a float pointer.  <br /></td></tr>
-<tr class="separator:a7356b21489ffdd9c04c80734454694d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad47910406a5f4d3b38e94520345768d4" id="r_ad47910406a5f4d3b38e94520345768d4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad47910406a5f4d3b38e94520345768d4">createTaggedPtr</a> (int *ptr, bool *dirty)</td></tr>
+<tr class="memdesc:ad47910406a5f4d3b38e94520345768d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from an int pointer.  <br /></td></tr>
+<tr class="separator:ad47910406a5f4d3b38e94520345768d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace18936d75ee6d77c89ca4a09d747ae3" id="r_ace18936d75ee6d77c89ca4a09d747ae3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace18936d75ee6d77c89ca4a09d747ae3">createTaggedPtr</a> (float *ptr, bool *dirty)</td></tr>
+<tr class="memdesc:ace18936d75ee6d77c89ca4a09d747ae3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from a float pointer.  <br /></td></tr>
+<tr class="separator:ace18936d75ee6d77c89ca4a09d747ae3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c6eaa7f47ba7313e82a72c329e5d495" id="r_a6c6eaa7f47ba7313e82a72c329e5d495"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c6eaa7f47ba7313e82a72c329e5d495">createTaggedPtr</a> (int *ptr)</td></tr>
+<tr class="memdesc:a6c6eaa7f47ba7313e82a72c329e5d495"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from an int pointer.  <br /></td></tr>
+<tr class="separator:a6c6eaa7f47ba7313e82a72c329e5d495"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd12c73e785153a07f61d6d8b56bddd6" id="r_afd12c73e785153a07f61d6d8b56bddd6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd12c73e785153a07f61d6d8b56bddd6">createTaggedPtr</a> (float *ptr)</td></tr>
+<tr class="memdesc:afd12c73e785153a07f61d6d8b56bddd6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from a float pointer.  <br /></td></tr>
+<tr class="separator:afd12c73e785153a07f61d6d8b56bddd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a53cbaff8568ea6dd2a7de5a6c5cbc14d" id="r_a53cbaff8568ea6dd2a7de5a6c5cbc14d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a53cbaff8568ea6dd2a7de5a6c5cbc14d">parse_distribution</a> (const std::string &amp;input_string, <a class="el" href="structdistribution.html">distribution</a> &amp;converted_distribution)</td></tr>
 <tr class="separator:a53cbaff8568ea6dd2a7de5a6c5cbc14d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a103dcbbdd88aa36e2e27b95ca83bc8b5" id="r_a103dcbbdd88aa36e2e27b95ca83bc8b5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structdistribution.html">distribution</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a103dcbbdd88aa36e2e27b95ca83bc8b5">createDistribution</a> (const std::normal_distribution&lt; float &gt; &amp;dist, bool randomize_repeat)</td></tr>
@@ -295,7 +301,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05120">5120</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05274">5274</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -327,7 +333,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05128">5128</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05282">5282</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -359,12 +365,47 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05136">5136</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05290">5290</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a7356b21489ffdd9c04c80734454694d6" name="a7356b21489ffdd9c04c80734454694d6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7356b21489ffdd9c04c80734454694d6">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[1/2]</span></h2>
+<a id="afd12c73e785153a07f61d6d8b56bddd6" name="afd12c73e785153a07f61d6d8b56bddd6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd12c73e785153a07f61d6d8b56bddd6">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from a float pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Float pointer </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05242">5242</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ace18936d75ee6d77c89ca4a09d747ae3" name="ace18936d75ee6d77c89ca4a09d747ae3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace18936d75ee6d77c89ca4a09d747ae3">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[2/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -380,7 +421,7 @@ GNU General Public License for more details.
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structobj.html">obj</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>object</em></span>&#160;)</td>
+          <td class="paramtype">bool *</td>          <td class="paramname"><span class="paramname"><em>dirty</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -394,17 +435,52 @@ GNU General Public License for more details.
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Float pointer </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">object</td><td>Object associated with the pointer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dirty</td><td>Bool used to determine if associated object needs update </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05106">5106</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05258">5258</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
-<a id="adf340fc90b4a360d7bf8fd4dc88c4fa0" name="adf340fc90b4a360d7bf8fd4dc88c4fa0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adf340fc90b4a360d7bf8fd4dc88c4fa0">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[2/2]</span></h2>
+<a id="a6c6eaa7f47ba7313e82a72c329e5d495" name="a6c6eaa7f47ba7313e82a72c329e5d495"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c6eaa7f47ba7313e82a72c329e5d495">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from an int pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Int pointer </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05250">5250</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad47910406a5f4d3b38e94520345768d4" name="ad47910406a5f4d3b38e94520345768d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad47910406a5f4d3b38e94520345768d4">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[4/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -420,7 +496,7 @@ GNU General Public License for more details.
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structobj.html">obj</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>object</em></span>&#160;)</td>
+          <td class="paramtype">bool *</td>          <td class="paramname"><span class="paramname"><em>dirty</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -434,12 +510,12 @@ GNU General Public License for more details.
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Int pointer </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">object</td><td>Object of the associated pointer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dirty</td><td>Bool used to determine if associated object needs update </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05113">5113</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05266">5266</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -460,7 +536,7 @@ GNU General Public License for more details.
 
 <p>Function to open file dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00156">156</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00154">154</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -506,7 +582,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00304">304</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00350">350</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -685,7 +761,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00078">78</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00076">76</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -708,12 +784,12 @@ GNU General Public License for more details.
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01198">1198</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01305">1305</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a237a804feebd476b67f388427e3a00c1" name="a237a804feebd476b67f388427e3a00c1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a237a804feebd476b67f388427e3a00c1">&#9670;&#160;</a></span>save_as_file_dialog()</h2>
+<a id="a4e4bf09362721eb7291e25c049e9b263" name="a4e4bf09362721eb7291e25c049e9b263"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e4bf09362721eb7291e25c049e9b263">&#9670;&#160;</a></span>save_as_file_dialog()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -721,15 +797,21 @@ GNU General Public License for more details.
         <tr>
           <td class="memname">std::string save_as_file_dialog </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">std::vector&lt; std::string &gt;</td>          <td class="paramname"><span class="paramname"><em>extensions</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Function to open save as file dialog. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">extensions</td><td>List of possible extensions </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00230">230</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00228">228</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -761,7 +843,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00122">122</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00120">120</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -788,7 +870,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00060">60</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00058">58</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -815,7 +897,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00066">66</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00064">64</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -842,7 +924,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00072">72</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00070">70</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>

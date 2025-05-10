@@ -1315,45 +1315,46 @@ template void helios::resize_vector<helios::int2>( std::vector<std::vector<std::
 template void helios::resize_vector<helios::int3>( std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &, uint, uint, uint, uint );
 template void helios::resize_vector<helios::int4>( std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &, uint, uint, uint, uint );
 
-Date helios::CalendarDay(int Julian_day, int year) {
-    // Input validation
+Date helios::CalendarDay(int Julian_day, int year)
+{
+    // -----------------------------  input checks  ----------------------------
+    if (Julian_day < 1 || Julian_day > 366)
+        helios_runtime_error("ERROR (CalendarDay): Julian day out of range [1–366].");
 
-    if (Julian_day < 1 || Julian_day > 366) {
-        helios_runtime_error("ERROR (CalendarDay): Julian day out of range.");
-    } else if (year < 1000) {
-        helios_runtime_error("ERROR (CalendarDay): Year should be specified in YYYY format.");
-    }
+    if (year < 1000)
+        helios_runtime_error("ERROR (CalendarDay): Year must be given in YYYY format.");
 
-    // Proper leap year calculation
-    bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    const bool leap =
+        (year % 4 == 0 && year % 100 != 0) ||  // divisible by 4 but not by 100
+        (year % 400 == 0);                     // or divisible by 400
 
-    // Validate Julian day 366 for non-leap years
-    if (Julian_day == 366 && !isLeapYear) {
-        helios_runtime_error("ERROR (CalendarDay): Day 366 only exists in leap years.");
-    }
+    if (!leap && Julian_day == 366)
+        helios_runtime_error("ERROR (CalendarDay): Day 366 occurs only in leap years.");
 
-    // Define arrays as static to ensure they exist for the duration of the function call
-    static const int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335, 366};
-    static const int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+    // -------------------  month lengths for the chosen year  -----------------
+    // Index 0 = January, …, 11 = December
+    int month_lengths[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (leap)            // adjust February
+        month_lengths[1] = 29;
 
-    // Choose the appropriate month boundaries
-    const int* skips = isLeapYear ? skips_leap : skips_nonleap;
+    // ---------------------------  computation  ------------------------------
+    int d_remaining = Julian_day;   // days still to account for
+    int month = 1;                  // 1‑based calendar month
 
-    // Find the month
-    int month = 1;
-    for (int i = 0; i < 12; i++) {
-        if (Julian_day > skips[i] && Julian_day <= skips[i+1]) {
-            month = i + 1;
-            // Calculate the day correctly (subtract the previous month's cumulative days)
-            int day = Julian_day - skips[i];
-            return make_Date(day, month, year);
+    // subtract complete months until the remainder lies in the current month
+    for (int i = 0; i < 12; ++i) {
+        if (d_remaining > month_lengths[i]) {
+            d_remaining -= month_lengths[i];
+            ++month;
+        } else {
+            break;
         }
     }
-    
-    // Should never reach here due to input validation
-    helios_runtime_error("ERROR (CalendarDay): Failed to calculate calendar date.");
-    return make_Date(0, 0, 0); // Placeholder return
+
+    // d_remaining is now the calendar day of the computed month
+    return make_Date(d_remaining, month, year);
 }
+
 
 int helios::JulianDay( int day, int month, int year ){
 
@@ -1507,7 +1508,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
   if (!fp){
       helios_runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading.");
   }
-  fread(header, 1, 8, fp);
+  size_t head = fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
   //   std::cerr << "ERROR (read_png_alpha): File " << filename << " is not recognized as a PNG file." << std::endl;
   //   exit(EXIT_FAILURE);

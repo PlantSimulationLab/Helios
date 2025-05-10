@@ -7,8 +7,6 @@
     #include <commdlg.h>
 #elif defined(__APPLE__)
     #include <nfd.h>
-    #include <stdio.h>
-    #include <stdlib.h>
 #elif defined(__linux__)
     #include <nfd.h>
     #include <stdio.h>
@@ -227,7 +225,7 @@ std::string file_dialog(){
 }
 
 
-std::string save_as_file_dialog(){
+std::string save_as_file_dialog(std::vector<std::string> extensions){
     std::string file_name;
     #ifdef _WIN32
         // save CWD
@@ -242,12 +240,24 @@ std::string save_as_file_dialog(){
         ofn.hwndOwner = nullptr;
         ofn.lpstrFile = szFile;
         ofn.nMaxFile = sizeof(szFile);
-        ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.txt\0";
+        std::string filterList = "";
+        for (std::string extension : extensions){
+            std::string ext_lower = extension;
+            std::string ext_upper = extension;
+            std::transform(ext_lower.begin(), ext_lower.end(), ext_lower.begin(), ::tolower);
+            std::transform(ext_upper.begin(), ext_upper.end(), ext_upper.begin(), ::toupper);
+            filterList += ext_upper + " Files (*." + ext_lower + ")";
+            filterList += '\0';
+            filterList += "*." + ext_lower;
+            filterList += '\0';
+        }
+        filterList += '\0';
+        ofn.lpstrFilter = filterList.c_str();
         ofn.nFilterIndex = 1;
         ofn.lpstrFileTitle = nullptr;
         ofn.nMaxFileTitle = 0;
         ofn.lpstrInitialDir = nullptr;
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        ofn.Flags = OFN_PATHMUSTEXIST;
 
         if (GetSaveFileName(&ofn)) {
             std::cout << "Selected file: " << ofn.lpstrFile << std::endl;
@@ -256,19 +266,42 @@ std::string save_as_file_dialog(){
             return "";
         }
 
+        std::string ext_ = extensions[ofn.nFilterIndex - 1];
+        std::transform(ext_.begin(), ext_.end(), ext_.begin(), ::tolower);
+        std::string ext = "." + ext_;
+
         // correct CWD
         SetCurrentDirectory(CWD);
 
         file_name = (std::string)ofn.lpstrFile;
+
+        std::filesystem::path file_path(file_name);
+        if (file_path.extension().empty()) {
+            file_path.replace_extension(ext);
+            file_name = file_path.string();
+        }
     #elif defined(__APPLE__)
         nfdchar_t *outPath = nullptr;
-        nfdresult_t result = NFD_SaveDialog( nullptr, nullptr, &outPath );
+        std::string filterList_ = "";
+        for (std::string extension : extensions){
+            std::string ext_lower = extension;
+            std::transform(ext_lower.begin(), ext_lower.end(), ext_lower.begin(), ::tolower);
+            filterList_ += ext_lower + ",";
+        }
+        if (!filterList_.empty() && filterList_.back() == ',') filterList_.pop_back();
+        const nfdchar_t *filterList = filterList_.c_str();
+        nfdresult_t result = NFD_SaveDialog( filterList, nullptr, &outPath );
 
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
             file_name = std::string(outPath);
             free(outPath);
+
+            std::string ext_ = extensions[0];
+            std::transform(ext_.begin(), ext_.end(), ext_.begin(), ::tolower);
+            std::string ext = "." + ext_;
+            if (file_name.find('.') == std::string::npos) file_name += ext;
         }
         else if ( result == NFD_CANCEL ) {
             puts("User pressed cancel.");
@@ -279,13 +312,26 @@ std::string save_as_file_dialog(){
         }
     #elif defined(__linux__)
         nfdchar_t *outPath = nullptr;
-        nfdresult_t result = NFD_SaveDialog( nullptr, nullptr, &outPath );
+        std::string filterList_ = "";
+        for (std::string extension : extensions){
+            std::string ext_lower = extension;
+            std::transform(ext_lower.begin(), ext_lower.end(), ext_lower.begin(), ::tolower);
+            filterList_ += ext_lower + ",";
+        }
+        if (!filterList_.empty() && filterList_.back() == ',') filterList_.pop_back();
+        const nfdchar_t *filterList = filterList_.c_str();
+        nfdresult_t result = NFD_SaveDialog( filterList, nullptr, &outPath );
 
         if ( result == NFD_OKAY ) {
             puts("Success!");
             puts(outPath);
             file_name = std::string(outPath);
             free(outPath);
+
+            std::string ext_ = extensions[0];
+            std::transform(ext_.begin(), ext_.end(), ext_.begin(), ::tolower);
+            std::string ext = "." + ext_;
+            if (file_name.find('.') == std::string::npos) file_name += ext;
         }
         else if ( result == NFD_CANCEL ) {
             puts("User pressed cancel.");
@@ -434,6 +480,32 @@ void ProjectBuilder::updatePrimitiveTypes(){
             primitive_UUIDs[default_value].push_back(primitive_UUID);
         }
         current_primitive = "All";
+    }
+}
+
+
+void ProjectBuilder::updateDataGroups(){
+    data_groups_set.clear();
+    data_groups_set.insert("All");
+    std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    for (uint UUID : all_UUIDs){
+        std::string curr_data_group = "";
+        if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
+        context->getPrimitiveData(UUID, "data_group", curr_data_group);
+        if (!curr_data_group.empty()){
+            data_groups_set.insert(curr_data_group);
+        }
+    }
+    for (std::string data_group : data_groups_set){ //initialize new data_groups if necessary
+        if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()){
+            primitive_continuous_dict[data_group] = primitive_continuous;
+        }
+        if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()){
+            primitive_spectra_dict[data_group] = primitive_spectra;
+        }
+        if (primitive_values_dict.find(data_group) == primitive_values_dict.end()){
+            primitive_values_dict[data_group] = primitive_values;
+        }
     }
 }
 
@@ -596,8 +668,13 @@ void ProjectBuilder::record(){
         // oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
         // std::string image_dir = "./saved-" + oss.str() + "/";
         // std::filesystem::create_directory("saved-" + oss.str());
-
         std::string image_dir = "./saved/";
+        std::string image_dir_base = "./saved_";
+        int image_dir_idx = 0;
+        while (std::filesystem::exists(image_dir)){
+            image_dir = image_dir_base + std::to_string(image_dir_idx) + "/";
+            image_dir_idx++;
+        }
         std::vector<uint> temp_lights{};
         for (std::string rig_label : rig_labels_set){
             int rig_index = rig_dict[rig_label];
@@ -660,9 +737,13 @@ void ProjectBuilder::record(){
                             band_group_vec = std::vector<std::string>{curr_band_group.bands[0]};
                         }
                         radiation->writeCameraImage( cameralabel, band_group_vec, band_group_name + std::to_string(i), image_dir + rig_label + '/');
-                        radiation->writeNormCameraImage( cameralabel, band_group_vec, band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                        if (band_group_lookup[band_group_name].norm){
+                            radiation->writeNormCameraImage( cameralabel, band_group_vec, band_group_name + "_norm" + std::to_string(i), image_dir + rig_label + '/');
+                        }
                     }
+                    if (write_depth[rig_dict[current_rig]])
                     radiation->writeDepthImageData( cameralabel, "depth" + std::to_string(i), image_dir + rig_label + '/');
+                    if (write_norm_depth[rig_dict[current_rig]])
                     radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
                     //
                     // Bounding boxes for all primitive types
@@ -670,6 +751,7 @@ void ProjectBuilder::record(){
                         if (!primitive_name.empty()){
                             primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                         }
+                        if (primitive_name != "all")
                         radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
                     }
                     //
@@ -889,6 +971,7 @@ void ProjectBuilder::buildFromXML(){
         }
         // OBJ BLOCK
         for (int i = 0; i < obj_files.size(); i++){
+            object new_object;
             std::vector<uint> new_UUIDs;
             std::string new_obj_file = obj_files[i];
             if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
@@ -898,13 +981,37 @@ void ProjectBuilder::buildFromXML(){
             } else {
                 std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
             }
-            SphericalCoord orientation_sph = cart2sphere(obj_orientations[i]);
-            context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
+            // check for MTL file
+            std::filesystem::path mtl_path(new_obj_file);
+            mtl_path.replace_extension("mtl");
+            if (std::filesystem::exists(mtl_path)){
+                new_object.use_texture_file = true;
+            } else{
+                new_object.use_texture_file = false;
+                context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
+            }
             context->scalePrimitive(new_UUIDs, obj_scales[i]);
-            context->rotatePrimitive(new_UUIDs, orientation_sph.elevation, "x");
-            context->rotatePrimitive(new_UUIDs, -orientation_sph.azimuth, "z");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].x), "x");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].y), "y");
+            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].z), "z");
             context->translatePrimitive(new_UUIDs, obj_positions[i]);
             obj_UUIDs.push_back(new_UUIDs);
+            new_object.index = obj_idx;
+            obj_idx++;
+            new_object.name = obj_names[i];
+            new_object.file = obj_files[i];
+            new_object.data_group = obj_data_groups[i];
+            new_object.UUIDs = new_UUIDs;
+            new_object.position = obj_positions[i];
+            new_object.prev_position = obj_positions[i];
+            new_object.orientation = obj_orientations[i];
+            new_object.prev_orientation = obj_orientations[i];
+            new_object.scale = obj_scales[i];
+            new_object.prev_scale = obj_scales[i];
+            new_object.color = obj_colors[i];
+            new_object.prev_color = obj_colors[i];
+            new_object.is_dirty = false;
+            objects_dict[new_object.name] = new_object;
         }
         // RIG BLOCK
         // *** Loading any XML files needed for cameras *** //
@@ -937,7 +1044,7 @@ void ProjectBuilder::buildFromXML(){
             radiation->copyRadiationBand("red", "green");
             radiation->copyRadiationBand("red", "blue");
 
-            radiation->enforcePeriodicBoundary("xy");
+            radiation->enforcePeriodicBoundary("xy"); // TODO: make this a user setting
         // } //SOLARPOSITION && RADIATION_MODEL
         #endif //SOLARPOSITION && RADIATION_MODEL
     }
@@ -1934,6 +2041,7 @@ void ProjectBuilder::visualize(){
                 // if (!disable_dragging && currently_dragging == current_label){
                 //     ImGui::SetNextWindowPos(mouse_pos);
                 // } else{
+                ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
                 ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, //&my_tool_active,
@@ -1966,6 +2074,7 @@ void ProjectBuilder::visualize(){
                 // if (!disable_dragging && currently_dragging == current_label){
                 //     ImGui::SetNextWindowPos(mouse_pos);
                 // } else{
+                ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
                 ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, // &my_tool_active,
@@ -1977,12 +2086,9 @@ void ProjectBuilder::visualize(){
                 ImGui::End();
                 object_window_count++;
             }
-            for (int n = 0; n < obj_names.size(); n++){
-                if (obj_names_set.find(obj_names[n]) == obj_names_set.end()){
-                    continue;
-                }
-                current_label = obj_names[n];
-                vec3 obj_position_ = obj_positions[obj_names_dict[current_label]];
+            for (std::string obj_name : obj_names_set){
+                current_label = obj_name;
+                vec3 obj_position_ = objects_dict[current_label].position;
                 origin_position = glm::vec4(obj_position_.x, obj_position_.y, obj_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
                 // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
@@ -2002,6 +2108,7 @@ void ProjectBuilder::visualize(){
                 // if (!disable_dragging && currently_dragging == current_label){
                 //     ImGui::SetNextWindowPos(mouse_pos);
                 // } else{
+                ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
                 ImGui::SetNextWindowPos(next_window_pos);
                 // }
                 ImGui::Begin((current_label + "###" + std::to_string(object_window_count)).c_str(), nullptr, // &my_tool_active,
@@ -2014,6 +2121,7 @@ void ProjectBuilder::visualize(){
                 object_window_count++;
             }
             //
+            ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
             ImGui::Begin("Editor", nullptr, window_flags2);  // Begin editor window
             // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always); // flag -> can't move window with mouse
             // ImGui::SetNextWindowPos(ImVec2(windowSize.x - 400.0f, 0), ImGuiCond_Always);
@@ -2036,7 +2144,7 @@ void ProjectBuilder::visualize(){
                         xmlSetValues();
                     }
                     if (ImGui::MenuItem("Save As", "Ctrl+S")){
-                        std::string new_xml_file = save_as_file_dialog();
+                        std::string new_xml_file = save_as_file_dialog(std::vector<std::string>{"XML"});
                         if (!new_xml_file.empty()){
                             std::string file_extension = new_xml_file;
                             size_t last_obj_file = file_extension.rfind('.');
@@ -2046,7 +2154,7 @@ void ProjectBuilder::visualize(){
                             if (file_extension == "xml"){
                                 if (!std::filesystem::exists(new_xml_file)){
                                     // Create file
-                                    std::ofstream outFile(new_xml_file);
+                                    std::filesystem::copy(xml_input_file, new_xml_file, std::filesystem::copy_options::overwrite_existing);
                                 }
                                 // Change XML input file
                                 std::string xml_input_file_ = xml_input_file;
@@ -2213,38 +2321,38 @@ void ProjectBuilder::visualize(){
                     // ####### LATITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Latitude", &latitude);
-                    randomizePopup("latitude", createTaggedPtr(&latitude, dummy_obj));
+                    randomizePopup("latitude", createTaggedPtr(&latitude));
                     randomizerParams("latitude");
                     ImGui::OpenPopupOnItemClick("randomize_latitude", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     // ####### LONGITUDE ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputFloat("Longitude", &longitude);
-                    randomizePopup("longitude", createTaggedPtr(&longitude, dummy_obj));
+                    randomizePopup("longitude", createTaggedPtr(&longitude));
                     randomizerParams("longitude");
                     ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
                     // ####### UTC OFFSET ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("UTC Offset", &UTC_offset);
-                    randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset, dummy_obj));
+                    randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
                     randomizerParams("UTC_offset");
                     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
                     // ####### DOMAIN ORIGIN ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x, dummy_obj));
+                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
                     randomizerParams("domain_origin_x");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y, dummy_obj));
+                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
                     randomizerParams("domain_origin_y");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(60);
                     ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z, dummy_obj));
+                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
                     randomizerParams("domain_origin_z");
                     ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -2252,23 +2360,24 @@ void ProjectBuilder::visualize(){
                     // ####### DOMAIN EXTENT ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x, dummy_obj));
+                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
                     randomizerParams("domain_extent_x");
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y, dummy_obj));
+                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
                     randomizerParams("domain_extent_y");
                     ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Domain Extent");
                      // ####### Weather File ####### //
                     ImGui::SetNextItemWidth(60);
-                    toggle_button("##is_weather_file_csv", &is_weather_file_csv);
+                    ImGui::RadioButton("CSV", is_weather_file_csv); if (ImGui::IsItemClicked()) is_weather_file_csv = true;
+                    ImGui::SameLine();
+                    ImGui::RadioButton("CIMIS", !is_weather_file_csv); if (ImGui::IsItemClicked()) is_weather_file_csv = false;
                     std::string prev_weather_file;
                     std::string *weather_file;
-                    ImGui::SameLine();
                     if (is_weather_file_csv){
                         ImGui::Text("CSV");
                         weather_file = &csv_weather_file;
@@ -2318,9 +2427,15 @@ void ProjectBuilder::visualize(){
                         updateSpectra();
                         refreshVisualization();
                     }
-                    toggle_button("##use_ground_texture_file", &use_ground_texture_file);
+                    // ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
+                    // ImGui::SameLine();
+                    ImGui::RadioButton("Use Texture File", ground_flag == 1); if (ImGui::IsItemClicked()) ground_flag = 1;
                     ImGui::SameLine();
-                    if (use_ground_texture_file){
+                    ImGui::RadioButton("Use Model File", ground_flag == 2); if (ImGui::IsItemClicked()) ground_flag = 2;
+                    if (ground_flag == 0) {
+                        // ####### GROUND COLOR ####### //
+                        ImGui::ColorEdit3("##ground_color_edit", ground_color);
+                    } else if (ground_flag == 1){
                         // ####### GROUND TEXTURE File ####### //
                         ImGui::SetNextItemWidth(60);
                         if (ImGui::Button("Ground Texture File")){
@@ -2341,7 +2456,7 @@ void ProjectBuilder::visualize(){
                             shorten = shorten.substr(last + 1);
                         }
                         ImGui::Text("%s", shorten.c_str());
-                    } else{
+                    } else if (ground_flag == 2){
                         // ####### GROUND Model File ####### //
                         ImGui::SetNextItemWidth(60);
                         if (ImGui::Button("Ground Model File")){
@@ -2351,30 +2466,29 @@ void ProjectBuilder::visualize(){
                             }
                         }
                         ImGui::SameLine();
-                        std::string shorten_ground_model_file = ground_model_file;
-                        for (char &c : shorten_ground_model_file){
-                            if (c == '\\'){
-                                c = '/';
-                            }
-                        }
-                        size_t last_ground_model_file = shorten_ground_model_file.rfind('/');
-                        if (last_ground_model_file != std::string::npos){
-                            shorten_ground_model_file = shorten_ground_model_file.substr(last_ground_model_file + 1);
-                        }
-                        ImGui::Text("%s", shorten_ground_model_file.c_str());
+                        ImGui::Text("%s", shortenPath(ground_model_file).c_str());
                     }
+                    toggle_button("##use_ground_texture_color", &use_ground_texture);
                     // ####### GROUND COLOR ####### //
-                    ImGui::ColorEdit3("##ground_color_edit", ground_color);
+                    if (use_ground_texture){
+                        ImGui::SameLine();
+                        ImGui::Text("Use Ground Texture Color");
+                    } else{
+                        ImGui::SameLine();
+                        ImGui::ColorEdit3("##ground_color_edit", ground_color);
+                        ImGui::SameLine();
+                        ImGui::Text("Manually Set Ground Color");
+                    }
                     // ####### GROUND RESOLUTION ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
-                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x, dummy_obj));
+                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
                     randomizerParams("ground_resolution_x");
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
-                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y, dummy_obj));
+                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
                     randomizerParams("ground_resolution_y");
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -2382,6 +2496,7 @@ void ProjectBuilder::visualize(){
 
                     ImGui::EndTabItem();
                 }
+                // OBJECT TAB
                 if (ImGui::BeginTabItem("Object")){
                     current_tab = "Object";
                     if (ImGui::Button("Load Object File")){
@@ -2389,60 +2504,49 @@ void ProjectBuilder::visualize(){
                         if ( !new_obj_file.empty() && std::filesystem::exists(new_obj_file) ){
                             if( std::filesystem::path(new_obj_file).extension() != ".obj" && std::filesystem::path(new_obj_file).extension() != ".ply" ){
                                 std::cout << "Object file must have .obj or .ply extension." << std::endl;
-                            }
-                            else{
+                            } else{
+                                object new_obj;
                                 std::vector<uint> new_UUIDs;
                                 if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
                                     new_UUIDs = context->loadOBJ(new_obj_file.c_str());
                                 } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
                                     new_UUIDs = context->loadPLY(new_obj_file.c_str());
                                 }
-                                // const char* font_name = "LCD";
-                                // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                                //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                                // visualizer->clearColor();
+                                // check for MTL file
+                                std::filesystem::path mtl_path(new_obj_file);
+                                mtl_path.replace_extension("mtl");
+                                if (std::filesystem::exists(mtl_path)){
+                                    new_obj.use_texture_file = true;
+                                } else{
+                                    new_obj.use_texture_file = false;
+                                }
                                 visualizer->buildContextGeometry(context);
                                 visualizer->plotUpdate();
                                 std::string default_object_label = "object";
                                 std::string new_obj_label = "object_0";
                                 int count = 0;
-                                while (obj_names_dict.find(new_obj_label) != obj_names_dict.end()){
+                                while (objects_dict.find(new_obj_label) != objects_dict.end()){
                                     count++;
                                     new_obj_label = default_object_label + "_" + std::to_string(count);
                                 }
-                                obj_names_dict.insert({new_obj_label, obj_files.size()});
                                 obj_names_set.insert(new_obj_label);
-                                obj_names.push_back(new_obj_label);
-                                obj_files.push_back(new_obj_file);
-                                obj_UUIDs.push_back(new_UUIDs);
-                                // if (!current_obj.empty()){
-                                //     obj_positions.push_back(obj_positions[obj_names_dict[current_obj]]);
-                                //     obj_orientations.push_back(obj_orientations[obj_names_dict[current_obj]]);
-                                //     obj_scales.push_back(obj_scales[obj_names_dict[current_obj]]);
-                                //     // obj_colors.push_back(obj_colors[obj_names_dict[current_obj]]);
-                                //     obj_data_groups.push_back(obj_data_groups[obj_names_dict[current_obj]]);
-                                //     std::string parent = "object";
-                                //     pugi::xml_node obj_block = helios.child(parent.c_str());
-                                //     pugi::xml_node new_obj_node = helios.append_copy(obj_block);
-                                //     std::string name = "label";
-                                //     pugi::xml_attribute node_label = new_obj_node.attribute(name.c_str());
-                                //     node_label.set_value(new_obj_label.c_str());
-                                // }
-                                obj_positions.push_back(vec3(0, 0, 0));
-                                obj_orientations.push_back(vec3(0, 0, 0));
-                                obj_scales.push_back(vec3(0, 0, 0));
-                                obj_colors.push_back(RGBcolor(0, 0, 1));
-                                obj_data_groups.push_back("");
-                                std::string parent = "object";
-                                pugi::xml_node new_obj_node = helios.append_child(parent.c_str());
-                                std::string name = "label";
-                                new_obj_node.append_attribute(name.c_str()).set_value(new_obj_label.c_str());
-                                new_obj_node.append_child("file").text().set(new_obj_file.c_str());
-                                new_obj_node.append_child("position").text().set(vec_to_string(obj_positions[0]).c_str());
-                                new_obj_node.append_child("orientation").text().set(vec_to_string(obj_orientations[0]).c_str());
-                                new_obj_node.append_child("scale").text().set(vec_to_string(obj_scales[0]).c_str());
-                                new_obj_node.append_child("data_group").text().set(obj_data_groups[0].c_str());
+                                new_obj.index = obj_idx;
+                                obj_idx++;
+                                new_obj.name = new_obj_label;
+                                new_obj.file = new_obj_file;
+                                new_obj.UUIDs = new_UUIDs;
+                                new_obj.position = vec3(0,0,0);
+                                new_obj.prev_position = vec3(0,0,0);
+                                new_obj.orientation = vec3(0,0,0);
+                                new_obj.prev_orientation = vec3(0,0,0);
+                                new_obj.scale = vec3(1,1,1);
+                                new_obj.prev_scale = vec3(1,1,1);
+                                new_obj.color = RGBcolor(0, 0, 1);
+                                new_obj.prev_color = RGBcolor(0, 0, 1);
+                                new_obj.data_group = "";
+                                new_obj.is_dirty = false;
                                 current_obj = new_obj_label;
+                                objects_dict[new_obj_label] = new_obj;
                             }
                         }
                     }
@@ -2465,135 +2569,137 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Object")){
-                            int delete_idx = obj_names_dict[current_obj];
-                            context->deletePrimitive(obj_UUIDs[delete_idx]);
-                            refreshVisualization();
-                            obj_names_dict.erase(current_obj);
-                            obj_names_set.erase(current_obj);
-                            if (!obj_names_set.empty()){
-                                current_obj = *obj_names_set.begin();
-                            } else{
-                                current_obj = "";
-                            }
+                            deleteObject(current_obj);
+                        }
+                        if (objects_dict[current_obj].is_dirty){
+                            ImGui::SameLine();
+                            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // Red text
+                            ImGui::Text("update required");
+                            ImGui::PopStyleColor();
                         }
                         ImGui::SetNextItemWidth(100);
-                        std::string prev_obj_name = obj_names[obj_names_dict[current_obj]];
-                        ImGui::InputText("##obj_name", &obj_names[obj_names_dict[current_obj]]);
-                        if (obj_names[obj_names_dict[current_obj]] != prev_obj_name && !obj_names[obj_names_dict[current_obj]].empty() && obj_names_dict.find(obj_names[obj_names_dict[current_obj]]) == obj_names_dict.end()){
-                            int idx = obj_names_dict[current_obj];
-                            current_obj = obj_names[obj_names_dict[current_obj]];
-                            std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
-                            if (current_obj_iter != obj_names_dict.end()){
-                                obj_names_dict.erase(current_obj_iter);
+                        std::string prev_obj_name = objects_dict[current_obj].name;
+                        ImGui::InputText("##obj_name", &objects_dict[current_obj].name);
+                        if (objects_dict[current_obj].name != prev_obj_name && !objects_dict[current_obj].name.empty() && obj_names_set.find(objects_dict[current_obj].name) == obj_names_set.end()){
+                            object temp_obj = objects_dict[prev_obj_name];
+                            current_obj = objects_dict[current_obj].name;
+                            std::map<std::string, object>::iterator delete_obj_iter = objects_dict.find(prev_obj_name);
+                            if (delete_obj_iter != objects_dict.end()){
+                                objects_dict.erase(delete_obj_iter);
                             }
-                            obj_names_dict[current_obj] = idx;
+                            objects_dict[current_obj] = temp_obj;
                             obj_names_set.erase(prev_obj_name);
                             obj_names_set.insert(current_obj);
                         } else {
-                            obj_names[obj_names_dict[current_obj]] = prev_obj_name;
+                            objects_dict[current_obj].name = prev_obj_name;
                         }
                         ImGui::SameLine();
                         ImGui::Text("Object Name");
                         if (!current_obj.empty()){
                             // ####### OBJECT DATA GROUP ####### //
                             ImGui::SetNextItemWidth(100);
-                            std::string prev_obj_data_group = obj_data_groups[obj_names_dict[current_obj]];
-                            ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[current_obj]]);
-                            if (obj_data_groups[obj_names_dict[current_obj]] == "All" || obj_data_groups[obj_names_dict[current_obj]].empty()){
-                                obj_data_groups[obj_names_dict[current_obj]] = prev_obj_data_group;
+                            std::string prev_obj_data_group = objects_dict[current_obj].data_group;
+                            ImGui::InputText("##obj_data_group", &objects_dict[current_obj].data_group);
+                            if (objects_dict[current_obj].data_group == "All" || objects_dict[current_obj].data_group.empty()){
+                                objects_dict[current_obj].data_group = prev_obj_data_group;
                             }
-                            if (!obj_data_groups[obj_names_dict[current_obj]].empty() && prev_obj_data_group != obj_data_groups[obj_names_dict[current_obj]]){
-                                std::string new_data_group = obj_data_groups[obj_names_dict[current_obj]];
-                                context->setPrimitiveData(obj_UUIDs[obj_names_dict[current_obj]], "data_group", new_data_group);
+                            if (!objects_dict[current_obj].data_group.empty() && prev_obj_data_group != objects_dict[current_obj].data_group){
+                                std::string new_data_group = objects_dict[current_obj].data_group;
+                                context->setPrimitiveData(objects_dict[current_obj].UUIDs, "data_group", new_data_group);
                             }
                             ImGui::SameLine();
                             ImGui::Text("Data Group");
-                            // ####### OBJECT COLOR ####### //
-                            float col[3];
-                            col[0] = obj_colors[obj_names_dict[current_obj]].r;
-                            col[1] = obj_colors[obj_names_dict[current_obj]].g;
-                            col[2] = obj_colors[obj_names_dict[current_obj]].b;
-                            ImGui::ColorEdit3("##obj_color_edit", col);
-                            updateColor(current_obj, "obj", col);
-                            // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
-                            //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
-                            //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
-                            //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
-                            // }
+                            bool use_obj_texture = objects_dict[current_obj].use_texture_file;
+                            toggle_button("##use_texture_file", &use_obj_texture);
+                            if (use_obj_texture != objects_dict[current_obj].use_texture_file){
+                                objects_dict[current_obj].use_texture_file = use_obj_texture;
+                                objects_dict[current_obj].is_dirty = true;
+                            }
                             ImGui::SameLine();
-                            ImGui::Text("Object Color");
+                            if (!use_obj_texture){
+                                // ####### OBJECT COLOR ####### //
+                                float col[3];
+                                col[0] = objects_dict[current_obj].color.r;
+                                col[1] = objects_dict[current_obj].color.g;
+                                col[2] = objects_dict[current_obj].color.b;
+                                ImGui::ColorEdit3("##obj_color_edit", col);
+                                if (objects_dict[current_obj].color.r != col[0] ||
+                                    objects_dict[current_obj].color.g != col[1] ||
+                                    objects_dict[current_obj].color.b != col[2]){
+                                    updateColor(current_obj, "obj", col);
+                                }
+                                ImGui::SameLine();
+                                ImGui::Text("Object Color");
+                            } else{
+                                // ####### OBJECT TEXTURE FILE ####### //
+                                ImGui::Text("Use Object Texture File");
+                            }
                             // ####### OBJECT SCALE ####### //
-                            obj curr_obj = obj{obj_names_dict[current_obj], false};
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_scale_x", &obj_scales[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].x, curr_obj));
-                            randomizerParams("obj_scale_x_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_scale_x", &objects_dict[current_obj].scale.x);
+                            randomizePopup("obj_scale_x_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].scale.x, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_scale_x_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_scale_y", &obj_scales[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].y, curr_obj));
-                            randomizerParams("obj_scale_y_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_scale_y", &objects_dict[current_obj].scale.y);
+                            randomizePopup("obj_scale_y_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].scale.y, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_scale_y_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_scale_z", &obj_scales[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_scales[obj_names_dict[current_obj]].z, curr_obj));
-                            randomizerParams("obj_scale_z_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_scale_z", &objects_dict[current_obj].scale.z);
+                            randomizePopup("obj_scale_z_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].scale.z, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_scale_z_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::Text("Object Scale");
                             // ####### OBJECT POSITION ####### //
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_position_x", &obj_positions[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].x, curr_obj));
-                            randomizerParams("obj_position_x_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_position_x", &objects_dict[current_obj].position.x);
+                            randomizePopup("obj_position_x_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].position.x, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_position_x_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_position_y", &obj_positions[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].y, curr_obj));
-                            randomizerParams("obj_position_y_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_position_y", &objects_dict[current_obj].position.y);
+                            randomizePopup("obj_position_y_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].position.y, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_position_y_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_position_z", &obj_positions[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_positions[obj_names_dict[current_obj]].z, curr_obj));
-                            randomizerParams("obj_position_z_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_position_z", &objects_dict[current_obj].position.z);
+                            randomizePopup("obj_position_z_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].position.z, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_position_z_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::Text("Object Position");
                             // ####### OBJECT ORIENTATION ####### //
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_orientation_x", &obj_orientations[obj_names_dict[current_obj]].x);
-                            randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].x, curr_obj));
-                            randomizerParams("obj_orientation_x_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_orientation_x", &objects_dict[current_obj].orientation.x);
+                            randomizePopup("obj_orientation_x_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].orientation.x, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_orientation_x_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_orientation_y", &obj_orientations[obj_names_dict[current_obj]].y);
-                            randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].y, curr_obj));
-                            randomizerParams("obj_orientation_y_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_orientation_y", &objects_dict[current_obj].orientation.y);
+                            randomizePopup("obj_orientation_y_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].orientation.y, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_orientation_y_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(60);
-                            ImGui::InputFloat("##obj_orientation_z", &obj_orientations[obj_names_dict[current_obj]].z);
-                            randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[current_obj]), createTaggedPtr(&obj_orientations[obj_names_dict[current_obj]].z, curr_obj));
-                            randomizerParams("obj_orientation_z_" + std::to_string(obj_names_dict[current_obj]));
-                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(obj_names_dict[current_obj])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                            ImGui::InputFloat("##obj_orientation_z", &objects_dict[current_obj].orientation.z);
+                            randomizePopup("obj_orientation_z_" + std::to_string(objects_dict[current_obj].index), createTaggedPtr(&objects_dict[current_obj].orientation.z, &objects_dict[current_obj].is_dirty));
+                            randomizerParams("obj_orientation_z_" + std::to_string(objects_dict[current_obj].index));
+                            ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::Text("Object Orientation");
-                            // ####### OBJECT COLOR ####### //
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_r", &obj_colors[obj_names_dict[current_obj]].r);
-                            // ImGui::SameLine();
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_g", &obj_colors[obj_names_dict[current_obj]].g);
-                            // ImGui::SameLine();
-                            // ImGui::SetNextItemWidth(60);
-                            // ImGui::InputFloat("##obj_color_b", &obj_colors[obj_names_dict[current_obj]].b);
-                            // ImGui::SameLine();
-                            // ImGui::Text("Object Color");
+                        }
+                        if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position ||
+                            objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
+                            objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale ||
+                            objects_dict[current_obj].color != objects_dict[current_obj].prev_color){
+                            objects_dict[current_obj].is_dirty = true;
                         }
                     }
                     ImGui::EndTabItem();
@@ -2626,6 +2732,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         if (ImGui::Button("Delete Canopy")){
                             deleteCanopy(current_canopy);
+                            updatePrimitiveTypes();
                             refreshVisualization();
                         }
                         ImGui::SetNextItemWidth(100);
@@ -2674,19 +2781,19 @@ void ProjectBuilder::visualize(){
                         obj curr_plant = obj{canopy_labels_dict[current_canopy], true};
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[current_canopy]].x);
-                        randomizePopup("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizePopup("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].x));
                         randomizerParams("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels_dict[current_canopy]].y);
-                        randomizePopup("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizePopup("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].y));
                         randomizerParams("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels_dict[current_canopy]].z);
-                        randomizePopup("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].z, curr_plant));
+                        randomizePopup("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].z));
                         randomizerParams("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -2695,14 +2802,14 @@ void ProjectBuilder::visualize(){
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels_dict[current_canopy]].x);
                         plant_counts[canopy_labels_dict[current_canopy]].x = std::max(plant_counts[canopy_labels_dict[current_canopy]].x, 1);
-                        randomizePopup("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizePopup("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].x));
                         randomizerParams("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels_dict[current_canopy]].y);
                         plant_counts[canopy_labels_dict[current_canopy]].y = std::max(plant_counts[canopy_labels_dict[current_canopy]].y, 1);
-                        randomizePopup("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizePopup("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].y));
                         randomizerParams("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -2710,13 +2817,13 @@ void ProjectBuilder::visualize(){
                         // ####### PLANT SPACING ####### //
                         ImGui::SetNextItemWidth(50);
                         ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels_dict[current_canopy]].x);
-                        randomizePopup("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].x, curr_plant));
+                        randomizePopup("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].x));
                         randomizerParams("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(50);
                         ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels_dict[current_canopy]].y);
-                        randomizePopup("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].y, curr_plant));
+                        randomizePopup("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].y));
                         randomizerParams("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -2724,17 +2831,17 @@ void ProjectBuilder::visualize(){
                         // ####### PLANT AGE ####### //
                         ImGui::SetNextItemWidth(80);
                         ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels_dict[current_canopy]]);
-                        randomizePopup("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_ages[canopy_labels_dict[current_canopy]], curr_plant));
+                        randomizePopup("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_ages[canopy_labels_dict[current_canopy]]));
                         randomizerParams("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         // ####### GROUND CLIPPING HEIGHT ####### //
                         ImGui::SetNextItemWidth(80);
                         ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels_dict[current_canopy]]);
-                        randomizePopup("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&ground_clipping_heights[canopy_labels_dict[current_canopy]], curr_plant));
+                        randomizePopup("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&ground_clipping_heights[canopy_labels_dict[current_canopy]]));
                         randomizerParams("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]));
                         ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (ImGui::Button("Save Canopy to OBJ/PLY File")){
-                            std::string new_obj_file = save_as_file_dialog();
+                            std::string new_obj_file = save_as_file_dialog(std::vector<std::string>{"OBJ", "PLY"});
                             if (!new_obj_file.empty()){
                                 std::string file_extension = new_obj_file;
                                 size_t last_obj_file = file_extension.rfind('.');
@@ -2751,7 +2858,6 @@ void ProjectBuilder::visualize(){
                                                     canopy_origins[canopy_labels_dict[current_canopy]], file_extension);
                                     } else{
                                         saveCanopy(new_obj_file, canopy_IDs[canopy_labels_dict[current_canopy]],
-                                                    canopy_origins[canopy_labels_dict[current_canopy]],
                                                     individual_plant_locations[canopy_labels_dict[current_canopy]], file_extension);
                                     }
                                 } else{
@@ -2782,7 +2888,9 @@ void ProjectBuilder::visualize(){
                             if ( xml_library_files.find(new_xml_library_file) == xml_library_files.end() ){
                                 xml_library_files.insert(new_xml_library_file);
                                 std::vector<std::string> current_spectra_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
-                                possible_spectra.insert(possible_spectra.end(), current_spectra_file.begin(), current_spectra_file.end());
+                                for (int i = 0; i < current_spectra_file.size(); i++){
+                                    possible_spectra.insert(current_spectra_file[i]);
+                                }
                             }
                             context->loadXML( new_xml_library_file.c_str() );
                         }
@@ -2791,6 +2899,24 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.25f);
                     ImGui::Text("Global Properties:");
                     ImGui::SetWindowFontScale(1.0f);
+                    // ####### ENFORCE PERIODIC BOUNDARY CONDITION ####### //
+                    ImGui::Text("Enforce Periodic Boundary Condition:");
+                    ImGui::SameLine();
+                    bool prev_cond_x = enforce_periodic_boundary_x;
+                    ImGui::Checkbox("x###periodic_boundary_x", &enforce_periodic_boundary_x);
+                    ImGui::SameLine();
+                    bool prev_cond_y = enforce_periodic_boundary_y;
+                    ImGui::Checkbox("y###periodic_boundary_y", &enforce_periodic_boundary_y);
+                    if (prev_cond_x != enforce_periodic_boundary_x || prev_cond_y != enforce_periodic_boundary_y){
+                        if (enforce_periodic_boundary_x && enforce_periodic_boundary_y)
+                            radiation->enforcePeriodicBoundary("xy");
+                        else if (enforce_periodic_boundary_x)
+                            radiation->enforcePeriodicBoundary("x");
+                        else if (enforce_periodic_boundary_y)
+                            radiation->enforcePeriodicBoundary("y");
+                        else
+                            radiation->enforcePeriodicBoundary("");
+                    }
                     // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
                     ImGui::SetNextItemWidth(60);
                     float prev_value = diffuse_extinction_coeff;
@@ -2798,7 +2924,7 @@ void ProjectBuilder::visualize(){
                     if (prev_value != diffuse_extinction_coeff){
                         context->setGlobalData( "diffuse_extinction_coeff", diffuse_extinction_coeff );
                     }
-                    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff, dummy_obj));
+                    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff));
                     randomizerParams("diffuse_extinction_coeff");
                     ImGui::OpenPopupOnItemClick("randomize_diffuse_extinction_coeff", ImGuiPopupFlags_MouseButtonRight);
                     // ####### AIR TURBIDITY ####### //
@@ -2817,17 +2943,17 @@ void ProjectBuilder::visualize(){
                             }
                         }
                     }
-                    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity, dummy_obj));
+                    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity));
                     randomizerParams("air_turbidity");
                     ImGui::OpenPopupOnItemClick("randomize_air_turbidity", ImGuiPopupFlags_MouseButtonRight);
                     // ####### SOLAR DIRECT SPECTRUM ####### //
                     ImGui::SetNextItemWidth(250);
                     // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
                     if (ImGui::BeginCombo("##combo_solar_direct_spectrum", solar_direct_spectrum.c_str())){
-                        for (int n = 0; n < possible_spectra.size(); n++){
-                            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == possible_spectra[n]);
-                            if (ImGui::Selectable(possible_spectra[n].c_str(), is_solar_direct_spectrum_selected))
-                                solar_direct_spectrum = possible_spectra[n];
+                        for (auto &spectra : possible_spectra){
+                            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == spectra);
+                            if (ImGui::Selectable(spectra.c_str(), is_solar_direct_spectrum_selected))
+                                solar_direct_spectrum = spectra;
                             if (is_solar_direct_spectrum_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -2896,7 +3022,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_direct_ray_count = direct_ray_count;
                         ImGui::InputInt("Direct Ray Count", &direct_ray_count);
-                        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count, dummy_obj));
+                        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count));
                         randomizerParams("direct_ray_count");
                         ImGui::OpenPopupOnItemClick("randomize_direct_ray_count", ImGuiPopupFlags_MouseButtonRight);
                         if (direct_ray_count != prev_direct_ray_count){
@@ -2908,7 +3034,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_direct_ray_count = direct_ray_count_dict[current_band];
                         ImGui::InputInt("Direct Ray Count", &direct_ray_count_dict[current_band]);
-                        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band], dummy_obj));
+                        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band]));
                         randomizerParams("direct_ray_count_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_direct_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (direct_ray_count_dict[current_band] != prev_direct_ray_count){
@@ -2921,7 +3047,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_diffuse_ray_count = diffuse_ray_count;
                         ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
-                        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count, dummy_obj));
+                        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count));
                         randomizerParams("diffuse_ray_count");
                         ImGui::OpenPopupOnItemClick("randomize_diffuse_ray_count", ImGuiPopupFlags_MouseButtonRight);
                         if (diffuse_ray_count != prev_diffuse_ray_count){
@@ -2933,7 +3059,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_diffuse_ray_count = diffuse_ray_count_dict[current_band];
                         ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count_dict[current_band]);
-                        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band], dummy_obj));
+                        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band]));
                         randomizerParams("diffuse_ray_count_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_diffuse_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (diffuse_ray_count_dict[current_band] != prev_diffuse_ray_count){
@@ -2946,7 +3072,7 @@ void ProjectBuilder::visualize(){
                     if (current_band == "All"){
                         prev_scattering_depth = scattering_depth;
                         ImGui::InputInt("Scattering Depth", &scattering_depth);
-                        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth, dummy_obj));
+                        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth));
                         randomizerParams("scattering_depth");
                         ImGui::OpenPopupOnItemClick("randomize_scattering_depth", ImGuiPopupFlags_MouseButtonRight);
                         if (scattering_depth <= 0){
@@ -2961,7 +3087,7 @@ void ProjectBuilder::visualize(){
                     } else{
                         prev_scattering_depth = scattering_depth_dict[current_band];
                         ImGui::InputInt("Scattering Depth", &scattering_depth_dict[current_band]);
-                        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band], dummy_obj));
+                        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band]));
                         randomizerParams("scattering_depth_" + current_band);
                         ImGui::OpenPopupOnItemClick(("randomize_scattering_depth_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         if (scattering_depth_dict[current_band] <= 0){ // scattering depth must be >0
@@ -2978,28 +3104,8 @@ void ProjectBuilder::visualize(){
                     ImGui::SetNextItemWidth(100);
                     // ######### SELECT DATA GROUP ############//
                     if (ImGui::Button("Refresh###data_groups_refresh")){
-                        data_groups_set.clear();
-                        data_groups_set.insert("All");
-                        std::vector<uint> all_UUIDs = context->getAllUUIDs();
-                        for (uint UUID : all_UUIDs){
-                            std::string curr_data_group = "";
-                            if (!context->doesPrimitiveDataExist(UUID, "data_group")) continue;
-                            context->getPrimitiveData(UUID, "data_group", curr_data_group);
-                            if (!curr_data_group.empty()){
-                                data_groups_set.insert(curr_data_group);
-                            }
-                        }
-                        for (std::string data_group : data_groups_set){ //initialize new data_groups if necessary
-                            if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()){
-                                primitive_continuous_dict[data_group] = primitive_continuous;
-                            }
-                            if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()){
-                                primitive_spectra_dict[data_group] = primitive_spectra;
-                            }
-                            if (primitive_values_dict.find(data_group) == primitive_values_dict.end()){
-                                primitive_values_dict[data_group] = primitive_values;
-                            }
-                        }
+                        updatePrimitiveTypes();
+                        updateDataGroups();
                     }
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(150);
@@ -3020,6 +3126,7 @@ void ProjectBuilder::visualize(){
                     // ######### SELECT PRIMITIVE ############//
                     if (ImGui::Button("Refresh")){
                         updatePrimitiveTypes();
+                        updateDataGroups();
                     }
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(150);
@@ -3086,11 +3193,11 @@ void ProjectBuilder::visualize(){
                             }
                         }else{
                             std::string reflectivity_prev = primitive_spectra[current_primitive][0];
-                            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][0] = possible_spectra[n];
+                            if (ImGui::BeginCombo("##reflectivity_combo_all", reflectivity_prev.c_str())){
+                                for (auto& spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][0] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3103,7 +3210,7 @@ void ProjectBuilder::visualize(){
                             }
                         }
                         ImGui::SameLine();
-                        ImGui::Text(toggle_display_reflectivity.c_str());
+                        ImGui::Text("%s",toggle_display_reflectivity.c_str());
                         // TRANSMISSIVITY
                         ImGui::Text("Transmissivity:");
                         std::string toggle_display_transmissivity = "Manual Entry";
@@ -3154,10 +3261,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string transmissivity_prev = primitive_spectra[current_primitive][1];
                             if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][1] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra[current_primitive][1] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3170,7 +3277,7 @@ void ProjectBuilder::visualize(){
                             }
                         }
                         ImGui::SameLine();
-                        ImGui::Text(toggle_display_transmissivity.c_str());
+                        ImGui::Text("%s",toggle_display_transmissivity.c_str());
                         // EMISSIVITY
                         ImGui::Text("Emissivity:");
                         // ImGui::SetNextItemWidth(250);
@@ -3258,10 +3365,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string reflectivity_prev = primitive_spectra_dict[current_data_group][current_primitive][0];
                             if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][0] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][0] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3274,7 +3381,7 @@ void ProjectBuilder::visualize(){
                             }
                         }
                         ImGui::SameLine();
-                        ImGui::Text(toggle_display_reflectivity.c_str());
+                        ImGui::TextUnformatted("%s",toggle_display_reflectivity.c_str());
                         // TRANSMISSIVITY
                         ImGui::Text("Transmissivity:");
                         std::string toggle_display_transmissivity = "Manual Entry";
@@ -3325,10 +3432,10 @@ void ProjectBuilder::visualize(){
                         }else{
                             std::string transmissivity_prev = primitive_spectra_dict[current_data_group][current_primitive][1];
                             if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())){
-                                for (int n = 0; n < possible_spectra.size(); n++){
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == possible_spectra[n]);
-                                    if (ImGui::Selectable(possible_spectra[n].c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][1] = possible_spectra[n];
+                                for (auto &spectra : possible_spectra){
+                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == spectra);
+                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                                        primitive_spectra_dict[current_data_group][current_primitive][1] = spectra;
                                     if (is_spectra_selected)
                                         ImGui::SetItemDefaultFocus();
                                 }
@@ -3341,7 +3448,7 @@ void ProjectBuilder::visualize(){
                             }
                         }
                         ImGui::SameLine();
-                        ImGui::Text(toggle_display_transmissivity.c_str());
+                        ImGui::TextUnformatted("%s",toggle_display_transmissivity.c_str());
                         // EMISSIVITY
                         ImGui::Text("Emissivity:");
                         // ImGui::SetNextItemWidth(250);
@@ -3460,6 +3567,14 @@ void ProjectBuilder::visualize(){
                         }
                         ImGui::SameLine();
                         ImGui::Text("Rig Name");
+                        // ####### WRITE DEPTH ####### //
+                        bool write_depth_ = write_depth[rig_dict[current_rig]];
+                        ImGui::Checkbox("Write Depth Images", &write_depth_);
+                        write_depth[rig_dict[current_rig]] = write_depth_;
+                        ImGui::SameLine();
+                        bool write_norm_depth_ = write_norm_depth[rig_dict[current_rig]];
+                        ImGui::Checkbox("Write Norm Depth Images", &write_norm_depth_);
+                        write_norm_depth[rig_dict[current_rig]] = write_norm_depth_;
                         // ####### RIG COLOR ####### //
                         float col[3];
                         col[0] = rig_colors[rig_dict[current_rig]].r;
@@ -3467,13 +3582,8 @@ void ProjectBuilder::visualize(){
                         col[2] = rig_colors[rig_dict[current_rig]].b;
                         ImGui::ColorEdit3("##rig_color_edit", col);
                         updateColor(current_rig, "rig", col);
-                        // if (obj_prev_color.r != obj_colors[obj_names_dict[current_obj]].r ||
-                        //     obj_prev_color.g != obj_colors[obj_names_dict[current_obj]].g ||
-                        //     obj_prev_color.b != obj_colors[obj_names_dict[current_obj]].b){
-                        //     context->setPrimitiveColor(obj_UUIDs[obj_names_dict[current_obj]], obj_colors[obj_names_dict[current_obj]]);
-                        // }
                         ImGui::SameLine();
-                        ImGui::Text("Object Color");
+                        ImGui::Text("Rig Color");
                         // ####### CAMERA LABEL ####### //
                         /* SINGLE CAMERA VERSION
                         ImGui::SetNextItemWidth(60);
@@ -3573,19 +3683,19 @@ void ProjectBuilder::visualize(){
                         // ####### CAMERA POSITION ####### //
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
-                        randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x, dummy_obj));
+                        randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x));
                         randomizerParams("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
-                        randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y, dummy_obj));
+                        randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y));
                         randomizerParams("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
-                        randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z, dummy_obj));
+                        randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z));
                         randomizerParams("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3597,19 +3707,19 @@ void ProjectBuilder::visualize(){
                         // ####### CAMERA LOOKAT ####### //
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
-                        randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x, dummy_obj));
+                        randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x));
                         randomizerParams("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
-                        randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y, dummy_obj));
+                        randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y));
                         randomizerParams("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(60);
                         ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
-                        randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z, dummy_obj));
+                        randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z));
                         randomizerParams("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
                         ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3660,7 +3770,7 @@ void ProjectBuilder::visualize(){
                         new_band_group_vector.push_back("red");
                         new_band_group_vector.push_back("green");
                         new_band_group_vector.push_back("blue");
-                        bandGroup new_band_group{new_band_group_vector, is_grayscale};
+                        bandGroup new_band_group{new_band_group_vector, false, false};
                         band_group_lookup[new_band_group_label] = new_band_group;
                         band_group_names.insert(new_band_group_label);
                         current_band_group = new_band_group_label;
@@ -3688,11 +3798,13 @@ void ProjectBuilder::visualize(){
                             band_group_lookup.erase(current_band_group);
                             current_band_group = "";
                         }
-                        ImGui::Checkbox("Grayscale", &is_grayscale);
+                        ImGui::Checkbox("Grayscale", &band_group_lookup[current_band_group].grayscale);
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Norm", &band_group_lookup[current_band_group].norm);
                         // Band 1
                         ImGui::SetNextItemWidth(100);
                         dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
-                        if (!is_grayscale){
+                        if (!band_group_lookup[current_band_group].grayscale){
                             // Band 2
                             ImGui::SameLine();
                             ImGui::SetNextItemWidth(100);
@@ -3787,13 +3899,13 @@ void ProjectBuilder::visualize(){
                     // ####### CAMERA RESOLUTION ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
-                    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x, dummy_obj));
+                    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x));
                     randomizerParams("camera_resolution_x_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_x_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[current_cam]].y);
-                    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y, dummy_obj));
+                    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y));
                     randomizerParams("camera_resolution_y_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_y_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -3801,25 +3913,25 @@ void ProjectBuilder::visualize(){
                     // ####### FOCAL PLANE DISTANCE ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[current_cam]]);
-                    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]], dummy_obj));
+                    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]]));
                     randomizerParams("focal_plane_distance_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_focal_plane_distance_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### LENS DIAMETER ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[current_cam]]);
-                    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]], dummy_obj));
+                    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]]));
                     randomizerParams("lens_diameter_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_lens_diameter_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### FOV ASPECT RATIO ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[current_cam]]);
-                    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]], dummy_obj));
+                    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]]));
                     randomizerParams("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("randomize_FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     // ####### HFOV ####### //
                     ImGui::SetNextItemWidth(50);
                     ImGui::InputFloat("HFOV", &HFOVs[camera_dict[current_cam]]);
-                    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]], dummy_obj));
+                    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]]));
                     randomizerParams("HFOV_" + std::to_string(camera_dict[current_cam]));
                     ImGui::OpenPopupOnItemClick(("HFOV_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     //
@@ -3930,19 +4042,19 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[(std::string) current_light]] == "sunsphere"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[current_light]].x);
-                        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x, dummy_obj));
+                        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x));
                         randomizerParams("light_direction_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[current_light]].y);
-                        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y, dummy_obj));
+                        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y));
                         randomizerParams("light_direction_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[current_light]].z);
-                        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z, dummy_obj));
+                        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z));
                         randomizerParams("light_direction_z_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_direction_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3951,7 +4063,7 @@ void ProjectBuilder::visualize(){
                     // ####### LIGHT SOURCE FLUX ####### //
                     ImGui::SetNextItemWidth(90);
                     ImGui::InputFloat("##source_flux", &light_flux_vec[light_dict[current_light]]);
-                    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]], dummy_obj));
+                    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]]));
                     randomizerParams("source_flux_" + std::to_string(light_dict[current_light]));
                     ImGui::OpenPopupOnItemClick(("source_flux_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
@@ -3962,19 +4074,19 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[current_light]] == "rectangle"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[current_light]].x);
-                        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x, dummy_obj));
+                        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x));
                         randomizerParams("light_rotation_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[current_light]].y);
-                        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y, dummy_obj));
+                        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y));
                         randomizerParams("light_rotation_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[current_light]].z);
-                        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z, dummy_obj));
+                        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z));
                         randomizerParams("light_rotation_z_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_rotation_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -3984,13 +4096,13 @@ void ProjectBuilder::visualize(){
                     if (light_types[light_dict[current_light]] == "rectangle"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[current_light]].x);
-                        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x, dummy_obj));
+                        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x));
                         randomizerParams("light_size_x_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_size_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[current_light]].y);
-                        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y, dummy_obj));
+                        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y));
                         randomizerParams("light_size_y_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_size_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -4001,7 +4113,7 @@ void ProjectBuilder::visualize(){
                         light_types[light_dict[current_light]] == "sphere"){
                         ImGui::SetNextItemWidth(90);
                         ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[current_light]]);
-                        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]], dummy_obj));
+                        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]]));
                         randomizerParams("light_radius_" + std::to_string(light_dict[current_light]));
                         ImGui::OpenPopupOnItemClick(("light_radius_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
@@ -4100,6 +4212,24 @@ void ProjectBuilder::xmlSetValues(){
     if (node){
         node.parent().remove_child(node);
     }
+    // Refresh lists
+    obj_names.clear();
+    obj_files.clear();
+    obj_positions.clear();
+    obj_orientations.clear();
+    obj_scales.clear();
+    obj_colors.clear();
+    obj_data_groups.clear();
+    for (std::string obj_name : obj_names_set){
+        object curr_obj = objects_dict[obj_name];
+        obj_names.push_back(curr_obj.name);
+        obj_files.push_back(curr_obj.file);
+        obj_positions.push_back(curr_obj.position);
+        obj_orientations.push_back(curr_obj.orientation);
+        obj_scales.push_back(curr_obj.scale);
+        obj_colors.push_back(curr_obj.color);
+        obj_data_groups.push_back(curr_obj.data_group);
+    }
     setNodeLabels("label", "object", obj_names_set);
     xmlSetValues("file", "object", obj_files, obj_names_dict);
     xmlSetValues("position", "object", obj_positions, obj_names_dict);
@@ -4148,6 +4278,22 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("camera_label", "rig", rig_camera_labels, rig_dict);
     setKeypoints("keypoint", "camera_position", keypoint_frames);
     xmlSetValues("images", "rig", num_images_vec, rig_dict);
+    std::vector<int> write_depth_{};
+    std::vector<int> write_norm_depth_{};
+    for (int i = 0; i < write_depth.size(); i++){
+        if (write_depth[i]){
+            write_depth_.push_back(1);
+        } else{
+            write_depth_.push_back(0);
+        }
+        if (write_norm_depth[i]){
+            write_norm_depth_.push_back(1);
+        } else{
+            write_norm_depth_.push_back(0);
+        }
+    }
+    xmlSetValues("depth", "rig", write_depth_, rig_dict);
+    xmlSetValues("normdepth", "rig", write_norm_depth_, rig_dict);
     // CAMERA BLOCK
     setNodeLabels("label", "camera", camera_names_set);
     xmlSetValue("camera_resolution", "camera", camera_resolution);
@@ -4228,46 +4374,46 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValue("latitude", "helios", latitude);
     curr_distribution = distribution{};
     xmlGetDistribution("latitude_dist", "helios", curr_distribution);
-    applyDistribution("latitude", curr_distribution, createTaggedPtr(&latitude, dummy_obj));
+    applyDistribution("latitude", curr_distribution, createTaggedPtr(&latitude));
     // *** Longitude *** //
     xmlGetValue("longitude", "helios", longitude);
     curr_distribution = distribution{};
     xmlGetDistribution("longitude_dist", "helios", curr_distribution);
-    applyDistribution("longitude", curr_distribution, createTaggedPtr(&longitude, dummy_obj));
+    applyDistribution("longitude", curr_distribution, createTaggedPtr(&longitude));
     // *** UTC Offset *** //
     xmlGetValue("UTC_offset", "helios", UTC_offset);
     curr_distribution = distribution{};
     xmlGetDistribution("UTC_offset_dist", "helios", curr_distribution);
-    applyDistribution("UTC_offset", curr_distribution, createTaggedPtr(&UTC_offset, dummy_obj));
+    applyDistribution("UTC_offset", curr_distribution, createTaggedPtr(&UTC_offset));
     // *** CSV Weather File *** //
     xmlGetValue("csv_weather_file", "helios", csv_weather_file);
     // *** Domain Origin *** //
     xmlGetValue("domain_origin", "helios", domain_origin);
     curr_distribution = distribution{};
     xmlGetDistribution("domain_origin_x_dist", "helios", curr_distribution);
-    applyDistribution("domain_origin_x", curr_distribution, createTaggedPtr(&domain_origin.x, dummy_obj));
+    applyDistribution("domain_origin_x", curr_distribution, createTaggedPtr(&domain_origin.x));
     curr_distribution = distribution{};
     xmlGetDistribution("domain_origin_y_dist", "helios", curr_distribution);
-    applyDistribution("domain_origin_y", curr_distribution, createTaggedPtr(&domain_origin.y, dummy_obj));
+    applyDistribution("domain_origin_y", curr_distribution, createTaggedPtr(&domain_origin.y));
     curr_distribution = distribution{};
     xmlGetDistribution("domain_origin_z_dist", "helios", curr_distribution);
-    applyDistribution("domain_origin_z", curr_distribution, createTaggedPtr(&domain_origin.z, dummy_obj));
+    applyDistribution("domain_origin_z", curr_distribution, createTaggedPtr(&domain_origin.z));
     // *** Domain Extent *** //
     xmlGetValue("domain_extent", "helios", domain_extent);
     curr_distribution = distribution{};
     xmlGetDistribution("domain_extent_x_dist", "helios", curr_distribution);
-    applyDistribution("domain_extent_x", curr_distribution, createTaggedPtr(&domain_extent.x, dummy_obj));
+    applyDistribution("domain_extent_x", curr_distribution, createTaggedPtr(&domain_extent.x));
     curr_distribution = distribution{};
     xmlGetDistribution("domain_extent_y_dist", "helios", curr_distribution);
-    applyDistribution("domain_extent_y", curr_distribution, createTaggedPtr(&domain_extent.y, dummy_obj));
+    applyDistribution("domain_extent_y", curr_distribution, createTaggedPtr(&domain_extent.y));
     // *** Ground Resolution *** //
     xmlGetValue("ground_resolution", "helios", ground_resolution);
     curr_distribution = distribution{};
     xmlGetDistribution("ground_resolution_x_dist", "helios", curr_distribution);
-    applyDistribution("ground_resolution_x", curr_distribution, createTaggedPtr(&ground_resolution.x, dummy_obj));
+    applyDistribution("ground_resolution_x", curr_distribution, createTaggedPtr(&ground_resolution.x));
     curr_distribution = distribution{};
     xmlGetDistribution("ground_resolution_y_dist", "helios", curr_distribution);
-    applyDistribution("ground_resolution_y", curr_distribution, createTaggedPtr(&ground_resolution.y, dummy_obj));
+    applyDistribution("ground_resolution_y", curr_distribution, createTaggedPtr(&ground_resolution.y));
     // *** Ground Texture File *** //
     xmlGetValue("ground_texture_file", "helios", ground_texture_file);
     // *** Camera XML Library Files *** //
@@ -4302,7 +4448,6 @@ void ProjectBuilder::xmlGetValues(){
     prev_obj_positions = obj_positions;
     prev_obj_orientations = obj_orientations;
     prev_obj_scales = obj_scales;
-    // xmlGetValues("color", "object", obj_colors);
     obj_data_groups.clear();
     xmlGetValues("data_group", "object", obj_data_groups);
     obj_colors.clear();
@@ -4369,6 +4514,24 @@ void ProjectBuilder::xmlGetValues(){
     current_keypoint = std::to_string(keypoint_frames[0][0]);
     num_images_vec.clear();
     xmlGetValues("images", "rig", num_images_vec);
+    write_depth.clear();
+    write_norm_depth.clear();
+    std::vector<int> write_depth_{};
+    std::vector<int> write_norm_depth_{};
+    xmlGetValues("depth", "rig", write_depth_);
+    xmlGetValues("depth", "rig", write_norm_depth_);
+    for (int i = 0; i < write_depth_.size(); i++){
+        if (write_depth_[i] == 1){
+            write_depth.push_back(true);
+        } else{
+            write_depth.push_back(false);
+        }
+        if (write_norm_depth_[i] == 1){
+            write_norm_depth.push_back(true);
+        } else{
+            write_norm_depth.push_back(false);
+        }
+    }
     // CAMERA BLOCK
     camera_names.clear();
     camera_names_set.clear();
@@ -4438,7 +4601,9 @@ void ProjectBuilder::xmlGetValues(){
             continue;
         }
         std::vector<std::string> current_spectra_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
-        possible_spectra.insert(possible_spectra.end(), current_spectra_file.begin(), current_spectra_file.end());
+        for (int i = 0; i < current_spectra_file.size(); i++){
+            possible_spectra.insert(current_spectra_file[i]);
+        }
     }
     xmlGetValue("solar_direct_spectrum", "radiation", solar_direct_spectrum);
     xmlGetValue("leaf_reflectivity_spectrum", "radiation", leaf_reflectivity_spectrum);
@@ -4508,119 +4673,86 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete Object")){
-        int delete_idx = obj_names_dict[current_obj];
-        context->deletePrimitive(obj_UUIDs[delete_idx]);
-        visualizer->clearGeometry();
-        visualizer->buildContextGeometry(context);
-        visualizer->plotUpdate();
-        obj_names_dict.erase(current_obj);
-        obj_names_set.erase(current_obj);
-        if (!obj_names_set.empty()){
-            current_obj = *obj_names_set.begin();
-        } else{
-            current_obj = "";
-        }
+        deleteObject(curr_obj_name);
     }
     ImGui::SetNextItemWidth(100);
-    std::string prev_obj_name = obj_names[obj_names_dict[curr_obj_name]];
-    ImGui::InputText(("##obj_name_" + std::to_string(id)).c_str(), &obj_names[obj_names_dict[curr_obj_name]]);
-    if (obj_names[obj_names_dict[curr_obj_name]] != prev_obj_name && obj_names_dict.find(obj_names[obj_names_dict[curr_obj_name]]) == obj_names_dict.end() && !obj_names[obj_names_dict[curr_obj_name]].empty()){
-        int idx = obj_names_dict[curr_obj_name];
-        curr_obj_name = obj_names[obj_names_dict[curr_obj_name]];
-        std::map<std::string, int>::iterator current_obj_iter = obj_names_dict.find(prev_obj_name);
-        if (current_obj_iter != obj_names_dict.end()){
-            obj_names_dict.erase(current_obj_iter);
+    std::string prev_obj_name = objects_dict[curr_obj_name].name;
+    ImGui::InputText(("##obj_name_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].name);
+    if (objects_dict[curr_obj_name].name != prev_obj_name && objects_dict.find(curr_obj_name) == objects_dict.end() && !objects_dict[curr_obj_name].name.empty()){
+        object temp_obj = objects_dict[curr_obj_name];
+        curr_obj_name = objects_dict[curr_obj_name].name;
+        std::map<std::string, object>::iterator delete_obj_iter = objects_dict.find(prev_obj_name);
+        if (delete_obj_iter != objects_dict.end()){
+            objects_dict.erase(delete_obj_iter);
         }
-        obj_names_dict[curr_obj_name] = idx;
+
+        objects_dict[objects_dict[curr_obj_name].name] = temp_obj;
 
         obj_names_set.erase(prev_obj_name);
-        obj_names_set.insert(obj_names[obj_names_dict[curr_obj_name]]);
+        obj_names_set.insert(objects_dict[curr_obj_name].name);
     } else{
-        obj_names[obj_names_dict[curr_obj_name]] = prev_obj_name;
+        objects_dict[curr_obj_name].name = prev_obj_name;
     }
     ImGui::SameLine();
     ImGui::Text("Object Name");
-    // ####### OBJECT DATA GROUP ####### //
-    // ImGui::SetNextItemWidth(100);
-    // std::string prev_obj_data_group = obj_data_groups[obj_names_dict[curr_obj_name]];
-    // ImGui::InputText("##obj_data_group", &obj_data_groups[obj_names_dict[curr_obj_name]]);
-    // if (obj_data_groups[obj_names_dict[curr_obj_name]] == "All" || obj_data_groups[obj_names_dict[curr_obj_name]].empty()){
-    //     obj_data_groups[obj_names_dict[curr_obj_name]] = prev_obj_data_group;
-    // }
-    // if (!obj_data_groups[obj_names_dict[curr_obj_name]].empty() && prev_obj_data_group != obj_data_groups[obj_names_dict[curr_obj_name]]){
-    //     std::string new_data_group = obj_data_groups[obj_names_dict[curr_obj_name]];
-    //     context->setPrimitiveData(obj_UUIDs[obj_names_dict[curr_obj_name]], "data_group", new_data_group);
-    // }
-    // ImGui::SameLine();
-    // ImGui::Text("Data Group");
-    // ####### OBJECT COLOR ####### //
-    // float col[3];
-    // col[0] = obj_colors[obj_names_dict[current_obj]].r;
-    // col[1] = obj_colors[obj_names_dict[current_obj]].g;
-    // col[2] = obj_colors[obj_names_dict[current_obj]].b;
-    // ImGui::ColorEdit3("##obj_color_edit", col);
-    // updateColor(current_obj, "obj", col);
-    // ImGui::SameLine();
-    // ImGui::Text("Object Color");
     // ####### OBJECT SCALE ####### //
-    obj curr_obj = obj{obj_names_dict[current_obj], false};
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].x, curr_obj));
-    randomizerParams("obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_scale_x_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].scale.x);
+    randomizePopup("obj_scale_x_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].scale.x, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_scale_x_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_x_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_scale_y_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].y, curr_obj));
-    randomizerParams("obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_scale_y_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].scale.y);
+    randomizePopup("obj_scale_y_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].scale.y, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_scale_y_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_y_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_scale_z_" + std::to_string(id)).c_str(), &obj_scales[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_scales[obj_names_dict[curr_obj_name]].z, curr_obj));
-    randomizerParams("obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_scale_z_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].scale.z);
+    randomizePopup("obj_scale_z_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].scale.z, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_scale_z_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_scale_z_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Scale");
     // ####### OBJECT POSITION ####### //
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_position_x_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].x, curr_obj));
-    randomizerParams("obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_position_x_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].position.x);
+    randomizePopup("obj_position_x_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].position.x, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_position_x_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_x_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_position_y_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].y, curr_obj));
-    randomizerParams("obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_position_y_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].position.y);
+    randomizePopup("obj_position_y_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].position.y, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_position_y_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_y_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_position_z_" + std::to_string(id)).c_str(), &obj_positions[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_positions[obj_names_dict[curr_obj_name]].z, curr_obj));
-    randomizerParams("obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_position_z_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].position.z);
+    randomizePopup("obj_position_z_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].position.z, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_position_z_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_position_z_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Position");
     // ####### OBJECT ORIENTATION ####### //
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_orientation_x_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].x);
-    randomizePopup("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].x, curr_obj));
-    randomizerParams("obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_orientation_x_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].orientation.x);
+    randomizePopup("obj_orientation_x_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].orientation.x, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_orientation_x_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_x_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_orientation_y_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].y);
-    randomizePopup("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].y, curr_obj));
-    randomizerParams("obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_orientation_y_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].orientation.y);
+    randomizePopup("obj_orientation_y_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].orientation.y, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_orientation_y_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_y_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat(("##obj_orientation_z_" + std::to_string(id)).c_str(), &obj_orientations[obj_names_dict[curr_obj_name]].z);
-    randomizePopup("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]), createTaggedPtr(&obj_orientations[obj_names_dict[curr_obj_name]].z, curr_obj));
-    randomizerParams("obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name]));
-    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(obj_names_dict[curr_obj_name])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::InputFloat(("##obj_orientation_z_" + std::to_string(id)).c_str(), &objects_dict[curr_obj_name].orientation.z);
+    randomizePopup("obj_orientation_z_" + std::to_string(objects_dict[curr_obj_name].index), createTaggedPtr(&objects_dict[curr_obj_name].orientation.z, &objects_dict[curr_obj_name].is_dirty));
+    randomizerParams("obj_orientation_z_" + std::to_string(objects_dict[curr_obj_name].index));
+    ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[curr_obj_name].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
     ImGui::SameLine();
     ImGui::Text("Object Orientation");
 }
@@ -4762,7 +4894,7 @@ void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_
     }
 }
 
-void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, helios::vec3 origin, std::vector<helios::vec3> positions, std::string file_extension) const{
+void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const{
     std::vector<std::string> primitive_data_vec = {"object_label"};
     std::vector<std::vector<uint>> canopy_primID_vec;
     std::vector<std::vector<uint>> canopy_objID_vec;
@@ -4775,19 +4907,23 @@ void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> ca
     }
     for (int i = 0; i < canopy_objID_vec.size(); i++){
         for (uint objID : canopy_objID_vec[i]){
-            context->translateObject(objID, -(origin + positions[i]));
+            context->translateObject(objID, -positions[i]);
         }
     }
+    std::filesystem::path file_path(file_name_base);
+    std::string ext = file_path.extension().string();
+    file_path.replace_extension("");
+    std::string file_name = file_path.string();
     if (file_extension == "obj"){
         for (int i = 0; i < canopy_primID_vec.size(); i++){
-            context->writeOBJ(file_name_base + "_" + std::to_string(i), canopy_primID_vec[i], primitive_data_vec, true);
+            context->writeOBJ(file_name + "_" + std::to_string(i) + ext, canopy_primID_vec[i], primitive_data_vec, true);
         }
     } else if (file_extension == "ply"){
         // context->writePLY(file_name, obj_UUID_vec, primitive_data_vec);
     }
     for (int i = 0; i < canopy_objID_vec.size(); i++){
         for (uint objID : canopy_objID_vec[i]){
-            context->translateObject(objID, (origin + positions[i]));
+            context->translateObject(objID, positions[i]);
         }
     }
 }
@@ -5103,19 +5239,37 @@ void ProjectBuilder::randomize(bool randomize_all){
 }
 
 
-taggedPtr createTaggedPtr(float* ptr, const obj& object){
+taggedPtr createTaggedPtr(float* ptr){
     digitPtr p;
     p.f = ptr;
-    taggedPtr t{p, false, object};
+    taggedPtr t{p, false};
     return t;
 }
 
-taggedPtr createTaggedPtr(int* ptr, const obj &object){
+
+taggedPtr createTaggedPtr(int* ptr){
     digitPtr p;
     p.i = ptr;
-    taggedPtr t{p, true, object};
+    taggedPtr t{p, true};
     return t;
 }
+
+
+taggedPtr createTaggedPtr(float* ptr, bool* dirty){
+    digitPtr p;
+    p.f = ptr;
+    taggedPtr t{p, false, dirty};
+    return t;
+}
+
+
+taggedPtr createTaggedPtr(int* ptr, bool* dirty){
+    digitPtr p;
+    p.i = ptr;
+    taggedPtr t{p, true, dirty};
+    return t;
+}
+
 
 distribution createDistribution(const std::normal_distribution<float> &dist, bool randomize_repeat){
     distUnion u;
@@ -5191,13 +5345,13 @@ void ProjectBuilder::sample(std::string var_name){
             *t.ptr.f = sampled_value;
         }
     }
-    if (t.object.idx != -1){
-        if (t.object.isCanopy){
-            dirty_canopies.insert(t.object.idx);
-        } else{
-            dirty_objects.insert(t.object.idx);
-        }
-    }
+    // if (t.object.idx != -1){
+    //     if (t.object.isCanopy){
+    //         dirty_canopies.insert(t.object.idx);
+    //     } else{
+    //         dirty_objects.insert(t.object.idx);
+    //     }
+    // }
 }
 
 
@@ -5230,7 +5384,7 @@ void ProjectBuilder::outputConsole(){
 void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, float* new_color){
     helios::RGBcolor *curr_color = nullptr;
     if (obj_type == "obj"){
-        curr_color = &obj_colors[obj_names_dict[curr_obj]];
+        curr_color = &objects_dict[curr_obj].color;
     }
     if (obj_type == "rig" || obj_type == "arrow" || obj_type == "camera"){
         curr_color = &rig_colors[rig_dict[curr_obj]];
@@ -5242,7 +5396,7 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
     curr_color->g = new_color[1];
     curr_color->b = new_color[2];
     if (obj_type == "obj"){
-        context->setPrimitiveColor(obj_UUIDs[obj_names_dict[curr_obj]], *curr_color);
+        context->setPrimitiveColor(objects_dict[curr_obj].UUIDs, *curr_color);
     }
     if (obj_type == "rig"){
         if (arrow_dict.find(curr_obj) != arrow_dict.end()){
@@ -5271,34 +5425,55 @@ void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, flo
 
 void ProjectBuilder::updateObject(std::string curr_obj){
     // Scale, rotate, and translate object
-    int obj_idx = obj_names_dict[curr_obj];
-    if (obj_scales[obj_idx] != prev_obj_scales[obj_idx]){
-        SphericalCoord orientation_sph_ = cart2sphere(prev_obj_orientations[obj_idx]);
+    if (objects_dict[curr_obj].use_texture_file && objects_dict[curr_obj].is_dirty){
+        context->deletePrimitive(objects_dict[curr_obj].UUIDs);
+        if( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".obj" ){
+            objects_dict[curr_obj].UUIDs = context->loadOBJ(objects_dict[curr_obj].file.c_str());
+        } else if ( std::filesystem::path(objects_dict[curr_obj].file).extension() == ".ply" ){
+            objects_dict[curr_obj].UUIDs = context->loadPLY(objects_dict[curr_obj].file.c_str());
+        }
+        context->scalePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].scale);
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z), "z");
+        context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position);
+
+        objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
+        objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
+        objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
+    }
+    if (objects_dict[curr_obj].scale != objects_dict[curr_obj].prev_scale){
         vec3 obj_scale_;
-        obj_scale_.x = obj_scales[obj_idx].x / prev_obj_scales[obj_idx].x;
-        obj_scale_.y = obj_scales[obj_idx].y / prev_obj_scales[obj_idx].y;
-        obj_scale_.z = obj_scales[obj_idx].z / prev_obj_scales[obj_idx].z;
-        context->translatePrimitive(obj_UUIDs[obj_idx], -prev_obj_positions[obj_idx]); // translate back to origin
-        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph_.elevation, "x");
-        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph_.azimuth, "z");
-        context->scalePrimitive(obj_UUIDs[obj_idx], obj_scale_);
-        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph_.elevation, "x");
-        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph_.azimuth, "z");
-        context->translatePrimitive(obj_UUIDs[obj_idx], prev_obj_positions[obj_idx]); // restore translation
-        prev_obj_scales = obj_scales;
+        obj_scale_.x = objects_dict[curr_obj].scale.x / objects_dict[curr_obj].prev_scale.x;
+        obj_scale_.y = objects_dict[curr_obj].scale.y / objects_dict[curr_obj].prev_scale.y;
+        obj_scale_.z = objects_dict[curr_obj].scale.z / objects_dict[curr_obj].prev_scale.z;
+        // context->scalePrimitiveAboutPoint();
+        context->translatePrimitive(objects_dict[curr_obj].UUIDs, -objects_dict[curr_obj].prev_position); // translate back to origin
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, -deg2rad(objects_dict[curr_obj].prev_orientation.z), "z");
+
+        context->scalePrimitive(objects_dict[curr_obj].UUIDs, obj_scale_);
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.x), "x");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.y), "y");
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].prev_orientation.z), "z");
+        context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].prev_position); // restore translation
+        objects_dict[curr_obj].prev_scale = objects_dict[curr_obj].scale;
     }
-    if (obj_orientations[obj_idx] != prev_obj_orientations[obj_idx]){
-        SphericalCoord orientation_sph = cart2sphere(obj_orientations[obj_idx] - prev_obj_orientations[obj_idx]);
-        context->translatePrimitive(obj_UUIDs[obj_idx], -prev_obj_positions[obj_idx]); // translate back to origin
-        context->rotatePrimitive(obj_UUIDs[obj_idx], orientation_sph.elevation, "x");
-        context->rotatePrimitive(obj_UUIDs[obj_idx], -orientation_sph.azimuth, "z");
-        context->translatePrimitive(obj_UUIDs[obj_idx], prev_obj_positions[obj_idx]); // restore translation
-        prev_obj_orientations = obj_orientations;
+    if (objects_dict[curr_obj].orientation != objects_dict[curr_obj].prev_orientation){
+        // context->rotatePrimitive(origin = prev_position, axis = (1,0,0));
+        //rotate about x
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.x - objects_dict[curr_obj].prev_orientation.x), objects_dict[curr_obj].prev_position, make_vec3(1, 0, 0));
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.y - objects_dict[curr_obj].prev_orientation.y), objects_dict[curr_obj].prev_position, make_vec3(0, 1, 0));
+        context->rotatePrimitive(objects_dict[curr_obj].UUIDs, deg2rad(objects_dict[curr_obj].orientation.z - objects_dict[curr_obj].prev_orientation.z), objects_dict[curr_obj].prev_position, make_vec3(0, 0, 1));
+        objects_dict[curr_obj].prev_orientation = objects_dict[curr_obj].orientation;
     }
-    if (obj_positions[obj_idx] != prev_obj_positions[obj_idx]){
-        context->translatePrimitive(obj_UUIDs[obj_idx], obj_positions[obj_idx] - prev_obj_positions[obj_idx]);
-        prev_obj_positions = obj_positions;
+    if (objects_dict[curr_obj].position != objects_dict[curr_obj].prev_position){
+        context->translatePrimitive(objects_dict[curr_obj].UUIDs, objects_dict[curr_obj].position - objects_dict[curr_obj].prev_position);
+        objects_dict[curr_obj].prev_position = objects_dict[curr_obj].position;
     }
+    objects_dict[curr_obj].prev_color = objects_dict[curr_obj].color;
+    objects_dict[curr_obj].is_dirty = false;
 }
 
 
@@ -5368,6 +5543,20 @@ void ProjectBuilder::deleteCanopy(const std::string &canopy){
         current_canopy = "";
     }
 }
+
+
+void ProjectBuilder::deleteObject(const std::string& obj){
+    context->deletePrimitive(objects_dict[obj].UUIDs);
+    refreshVisualization();
+    objects_dict.erase(obj);
+    obj_names_set.erase(obj);
+    if (!obj_names_set.empty()){
+        current_obj = *obj_names_set.begin();
+    } else{
+        current_obj = "";
+    }
+}
+
 
 
 void ProjectBuilder::updateCanopy(const std::string &canopy){
@@ -5468,23 +5657,32 @@ void ProjectBuilder::updateGround(){
     context->deletePrimitive(primitive_UUIDs["ground"]);
     // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullptr, ground_resolution, ground_texture_file.c_str() );
     uint ground_objID;
-    if( !ground_model_file.empty() && !use_ground_texture_file ) {
+    if( !ground_model_file.empty() && ground_flag == 2 && use_ground_texture ) {
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
         ground_objID = context->addPolymeshObject( ground_UUIDs );
-    }else if( !ground_texture_file.empty() && use_ground_texture_file ){
+    }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-    }else if( ground_color[0] || ground_color[1] || ground_color[2] ){
+    }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-    }else {
-        ground_objID = context->addTileObject(domain_origin, domain_extent, nullrotation, ground_resolution);
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    }else if( ground_flag == 2  && !use_ground_texture ){
+        RGBcolor ground_color_;
+        ground_color_.r = ground_color[0];
+        ground_color_.g = ground_color[1];
+        ground_color_.b = ground_color[2];
+        ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
+        ground_objID = context->addPolymeshObject( ground_UUIDs );
+        context->setObjectColor(ground_objID, ground_color_);
     }
+    // else {
+    //     ground_objID = context->addTileObject(domain_origin, domain_extent, nullrotation, ground_resolution);
+    //     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    // }
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
@@ -5501,5 +5699,20 @@ void ProjectBuilder::refreshVisualizationTypes(){
             visualization_types.insert(data);
         }
     }
+}
+
+
+std::string ProjectBuilder::shortenPath(std::string path_name){
+    std::string shorten_path = path_name;
+    for (char &c : shorten_path){
+        if (c == '\\'){
+            c = '/';
+        }
+    }
+    size_t last_file = shorten_path.rfind('/');
+    if (last_file != std::string::npos){
+        shorten_path = shorten_path.substr(last_file + 1);
+    }
+    return shorten_path;
 }
 

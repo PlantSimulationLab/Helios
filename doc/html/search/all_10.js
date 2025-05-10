@@ -283,7 +283,7 @@ var searchData=
   ['getwindowpixelsrgb_280',['getWindowPixelsRGB',['../class_visualizer.html#a15828ea9966b9729b56c9ddfccd4c117',1,'Visualizer']]],
   ['getwindowsize_281',['getWindowSize',['../class_visualizer.html#ae6b83402c798f56334851f77b898de52',1,'Visualizer']]],
   ['gimp_282',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['girth_5farea_5ffactor_283',['girth_area_factor',['../_plant_architecture_doc.html#ShootParam_girth_area_factor',1,'']]],
+  ['girth_5farea_5ffactor_283',['girth_area_factor',['../struct_shoot_parameters.html#ad2ab1efbad95344deeea66b8aece950b',1,'ShootParameters::girth_area_factor'],['../_plant_architecture_doc.html#ShootParam_girth_area_factor',1,'girth_area_factor']]],
   ['git_20github_20integration_284',['Git/GitHub integration',['../_c_lion_i_d_e.html#CLionGit',1,'']]],
   ['github_20integration_285',['Git/GitHub integration',['../_c_lion_i_d_e.html#CLionGit',1,'']]],
   ['given_20in_20buckley_20turnbull_20and_20adams_202012_286',['Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnbull, and Adams 2012)',['../_stomatal_doc.html#BMFTheory',1,'']]],
@@ -313,7 +313,7 @@ var searchData=
   ['grapevineunilateral_310',['grapevineUnilateral',['../class_canopy_generator.html#aac9104d7c6565e860737310de06981f8',1,'CanopyGenerator']]],
   ['grapevinevsp_311',['grapevineVSP',['../class_canopy_generator.html#aaffe5cdb82a779785bc6d5e35e622812',1,'CanopyGenerator']]],
   ['graphics_20driver_20timeout_312',['Increasing graphics driver timeout',['../_p_c_g_p_u_timeout.html',1,'']]],
-  ['gravitropic_5fcurvature_313',['gravitropic_curvature',['../_plant_architecture_doc.html#ShootParam_gravitropic',1,'']]],
+  ['gravitropic_5fcurvature_313',['gravitropic_curvature',['../struct_shoot_parameters.html#a0c6730cd4779996e142fd955cc5c8feb',1,'ShootParameters::gravitropic_curvature'],['../_plant_architecture_doc.html#ShootParam_gravitropic',1,'gravitropic_curvature']]],
   ['grid_20cell_314',['Calculating leaf area for each grid cell',['../_li_d_a_r_doc.html#LiDARleafarea',1,'']]],
   ['grid_20cells_315',['grid cells',['../_aerial_li_d_a_r_doc.html#AerialLiDARgrid',1,'Establishing grid cells'],['../_li_d_a_r_doc.html#LiDARgrid',1,'Establishing grid cells']]],
   ['gridcell_316',['GridCell',['../struct_grid_cell.html',1,'']]],
@@ -327,5 +327,7 @@ var searchData=
   ['growing_20the_20model_20over_20time_324',['Growing the Model over Time',['../_plant_architecture_doc.html#PlantArchGrowth',1,'']]],
   ['growth_20parameters_20of_20the_20shoot_325',['Growth Parameters of the Shoot',['../_plant_architecture_doc.html#ShootParametersGrowth',1,'']]],
   ['growth_20phenology_326',['Growth Phenology',['../_plant_architecture_doc.html#PlantArchPheno',1,'']]],
-  ['guide_327',['User/API Guide',['../_a_p_i.html',1,'']]]
+  ['growth_5frequires_5fdormancy_327',['growth_requires_dormancy',['../struct_shoot_parameters.html#a8bbe95d907caaa7a2b4456e2b97ec7c2',1,'ShootParameters']]],
+  ['growth_5frespiration_5ffraction_328',['growth_respiration_fraction',['../struct_carbohydrate_parameters.html#a03c67c88de5e82bad3efae32e1d10317',1,'CarbohydrateParameters']]],
+  ['guide_329',['User/API Guide',['../_a_p_i.html',1,'']]]
 ];

@@ -4,6 +4,8 @@
 
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index);
 
+uint GeneralSphericalFruitPrototype( helios::Context* context_ptr, uint subdivisions );
+
 uint AlmondFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 uint AlmondFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
@@ -25,6 +27,7 @@ void BeanPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoo
 
 uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 
+uint CapsicumFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 void CapsicumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
 
 uint CheeseweedLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index );
@@ -81,6 +84,9 @@ void StrawberryPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uin
 uint TomatoFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 uint TomatoFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+
+void CherryTomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age );
+void CherryTomatoPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
 
 uint WalnutFruitPrototype( helios::Context* context_ptr, uint subdivisions );
 uint WalnutFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );

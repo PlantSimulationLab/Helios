@@ -993,6 +993,20 @@ namespace helios {
         return lhs;
     }
 
+    inline std::vector<float> operator+(const std::vector<float>& vector1, const std::vector<float>& vector2)
+    {
+        if (vector1.size() != vector2.size()) {
+            throw std::invalid_argument("Vector sizes must match for element-wise addition");
+        }
+
+        std::vector<float> result(vector1.size());
+        for (std::size_t i = 0; i < vector1.size(); ++i) {
+            result[i] = vector1[i] + vector2[i];
+        }
+        return result;
+    }
+
+
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;
     //! Default null vec3 that gives the origin (0,0,0)

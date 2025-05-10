@@ -20,6 +20,9 @@
 #include <utility>
 #include "Hungarian.h"
 
+//Constants
+constexpr float C_molecular_wt = 12.01; //g C mol^-1
+
 //forward declarations of classes/structs
 class PlantArchitecture;
 struct Shoot;
@@ -268,6 +271,61 @@ enum BudState{
     BUD_DEAD = 5
 };
 
+struct CarbohydrateParameters {
+
+    // -- Stem Growth Parameters -- //
+    //! internode (wood/stem) density (g m^-3)
+    float stem_density = 540000;
+    //! fraction of the dry weight of internode made up by carbon
+    float stem_carbon_percentage = 0.4559;
+    //! ratio of shoot internode dry weight to root dry weight
+    float shoot_root_ratio = 3;
+
+    // -- Leaf Growth Parameters -- //
+    //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
+    float SLA = 2.5e-2;
+    //! fraction of leaf dry weight made up by carbon
+    float leaf_carbon_percentage = 0.444;
+
+    // -- Flower Growth Parameters -- //
+    //! carbon cost to produce a flower (mol C flower^-1)
+    float total_flower_cost = 8.33e-4;
+
+    // -- Fruit Growth Parameters -- //
+    //! density of fruit (g m^-3)
+    float fruit_density = 525000;
+    //! fraction of the dry weight of fruit made up by carbon
+    float fruit_carbon_percentage = 0.4786;
+
+    // -- Respiration Parameters -- //
+    //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
+    float stem_maintainance_respiration_rate = 3.5024e-05;
+    //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
+    float root_maintainance_respiration_rate = 3.5024e-05;
+    //! growth respiration cost as a fraction of [what?]
+    float growth_respiration_fraction = 0.28;
+
+    // -- Organ Abortion Thresholds -- //
+    //! carbohydrate concentration threshold to abort a shoot as a fraction of the molar density of the stem
+    float carbohydrate_abortion_threshold = 0.05;
+    //! threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
+    float bud_death_threshold_days = 2;
+    //! threshold time (days) to abort a shoot (shoot is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
+    float branch_death_threshold_days = 5;
+
+    // -- Phyllochron Adjustment Parameters -- //
+    //! carbohydrate concentration threshold to reduce phyllochron as a fraction of the molar density of the stem
+    float carbohydrate_phyllochron_threshold = 0.1;
+    //! carbohydrate concentration threshold [what?] as a fraction of the molar density of the stem
+    float carbohydrate_phyllochron_threshold_low = 0.05;
+
+    // -- Carbon Transfer Parameters -- //
+    //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of the molar density of the stem
+    float carbohydrate_transfer_threshold = 0.1;
+    //! [what?]
+    float carbon_conductance = 0.8;
+};
+
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
 /**
  * \param[in] radial_subdivisions Number of subdivisions around the circumference of each cone (must be be >= 3).
@@ -373,13 +431,13 @@ public:
     helios::vec3 leaf_offset;
 
     //! Leaf subdivision count in each direction
-    uint subdivisions;
+    uint subdivisions = 1;
 
     //! Number of unique prototypes to generate
-    uint unique_prototypes;
+    uint unique_prototypes = 1;
 
     //! Add a petiolule to the base of the leaflet
-    bool build_petiolule;
+    bool build_petiolule = false;
 
     uint unique_prototype_identifier = 0;
 
@@ -449,7 +507,7 @@ public:
 
 private:
 
-    std::minstd_rand0 *generator;
+    std::minstd_rand0 *generator{};
 
 };
 
@@ -457,14 +515,24 @@ struct PhytomerParameters{
 private:
 
     struct InternodeParameters{
+
+        //! Angular deviation (in degrees) of this internode’s axis relative to the previous internode along the shoot.  Values other than 0° make the stem zig-zag.
         RandomParameter_float pitch;
+        //! Phyllotactic (azimuthal) angle in degrees between the petioles/buds of two successive phytomers.  Typical settings: 180 ° (opposite), 137.5 ° (spiral), 90 ° (decussate).
         RandomParameter_float phyllotactic_angle;
+        //! Outside radius (meters) assigned to the internode when it is first created.
         RandomParameter_float radius_initial;
+        //! Maximum number of vegetative buds that can form on each petiole; actual bud emergence also depends on vegetative-bud break probability.
         RandomParameter_int max_vegetative_buds_per_petiole;
+        //! Maximum number of floral buds (potential flowers/fruit) per petiole; actual emergence also depends on flower-bud break probability.
         RandomParameter_int max_floral_buds_per_petiole;
+        //! Diffuse RGB color applied to the internode tube mesh.
         helios::RGBcolor color;
+        //! Image texture to map to the internode tube (overrides RGB color).
         std::string image_texture;
+        //! Longitudinal tessellation count of the internode tube.
         uint length_segments;
+        //! Number of radial subdivisions around the internode circumference  (4 = square, 5 = pentagon, ≥ 8 ≈ circular).
         uint radial_subdivisions;
 
         InternodeParameters& operator=(const InternodeParameters &a){
@@ -489,14 +557,24 @@ private:
     };
 
     struct PetioleParameters{
+
+        //! Number of petioles emerging from a single internode (e.g., 2 for an opposite pattern)
         uint petioles_per_internode;
+        //! Angle in degrees of the petiole base axis relative to its parent phytomer axis
         RandomParameter_float pitch;
+        //! Radius in meters of the petiole cross-section; a value of 0 suppresses petiole creation
         RandomParameter_float radius;
+        //! Length in meters of the petiole tube; a value of 0 suppresses petiole creation
         RandomParameter_float length;
+        //! Curvature in degrees per meter applied along the petiole length (positive bends upward, negative downward)
         RandomParameter_float curvature;
+        //! Ratio of tip radius to base radius for the petiole (1 = no taper, 0 = pointed tip)
         RandomParameter_float taper;
+        //! Diffuse RGB color applied to the petiole mesh
         helios::RGBcolor color;
+        //! Number of longitudinal segments used to tessellate the petiole tube
         uint length_segments;
+        //! Number of radial subdivisions around the petiole circumference (4 = square, 5 = pentagon, etc.)
         uint radial_subdivisions;
 
         PetioleParameters& operator=(const PetioleParameters &a){
@@ -521,13 +599,21 @@ private:
     };
 
     struct LeafParameters{
+        //! Number of leaves attached to each petiole; values greater than 1 create a compound leaf
         RandomParameter_int leaves_per_petiole;
+        //! Angle in degrees of the leaf axis relative to its parent petiole axis
         RandomParameter_float pitch;
+        //! Rotation angle in degrees of the leaf about its base within the plane of the lamina
         RandomParameter_float yaw;
+        //! Rotation angle in degrees of the leaf about its own midrib axis
         RandomParameter_float roll;
+        //! Spacing between adjacent leaflets along the petiole as a fraction of petiole length when leaves_per_petiole>1; the first two leaflets are offset from the tip by half this value
         RandomParameter_float leaflet_offset;
+        //! Scale multiplier applied successively to each leaflet along a compound petiole (<1 shrinks, >1 enlarges)
         RandomParameter_float leaflet_scale;
+        //! Overall scaling factor applied to the leaf prototype to set its physical size
         RandomParameter_float prototype_scale;
+        //! Prototype definition holding geometric and texture information used to instantiate individual leaves
         LeafPrototype prototype;
 
         LeafParameters& operator=(const LeafParameters &a){
@@ -553,13 +639,21 @@ private:
     };
 
     struct PeduncleParameters {
+        //! Length in meters of the peduncle (inflorescence supporting structure)
         RandomParameter_float length;
+        //! Radius in meters of the peduncle
         RandomParameter_float radius;
+        //! Angle in degrees of the peduncle axis relative to its parent internode axis
         RandomParameter_float pitch;
+        //! Rotation angle in degrees of the peduncle about its own axis
         RandomParameter_float roll;
+        //! Curvature in degrees per meter along the peduncle (positive bends upward, negative downward)
         RandomParameter_float curvature;
+        //! Diffuse RGB color applied to the peduncle mesh
         helios::RGBcolor color;
+        //! Number of longitudinal segments used to tessellate the peduncle tube
         uint length_segments;
+        //! Number of radial subdivisions around the peduncle circumference (4 = square, 5 = pentagon, etc.)
         uint radial_subdivisions;
 
         PeduncleParameters &operator=(const PeduncleParameters &a) {
@@ -583,15 +677,26 @@ private:
     };
 
     struct InflorescenceParameters {
+
+        //! Number of flowers generated on each peduncle
         RandomParameter_int flowers_per_peduncle;
+        //! Normalised distance (0‒1) between successive flowers along the peduncle axis
         RandomParameter_float flower_offset;
+        //! Angular deviation in degrees of the inflorescence axis relative to its parent peduncle axis
         RandomParameter_float pitch;
+        //! Rotation angle in degrees of the inflorescence about its own axis
         RandomParameter_float roll;
+        //! Uniform scale factor applied to the flower prototype geometry
         RandomParameter_float flower_prototype_scale;
+        //! Pointer to user-supplied function that returns a flower prototype mesh ID (Context*, subdivisions, flower_is_open)
         uint (*flower_prototype_function)(helios::Context *, uint subdivisions, bool flower_is_open) = nullptr;
+        //! Uniform scale factor applied to the fruit prototype geometry
         RandomParameter_float fruit_prototype_scale;
+        //! Pointer to user-supplied function that returns a fruit prototype mesh ID (Context*, subdivisions)
         uint (*fruit_prototype_function)(helios::Context *, uint subdivisions) = nullptr;
+        //! Fraction (0‒1) of gravitational influence used to bend peduncles under fruit load
         RandomParameter_float fruit_gravity_factor_fraction;
+        //! Number of distinct prototype meshes to cache for this inflorescence; FLAG: confirm intended meaning
         uint unique_prototypes;
 
         InflorescenceParameters &operator=(const InflorescenceParameters &a) {
@@ -619,15 +724,48 @@ private:
     };
 
 public:
-
+    /**
+     * \brief Parameters defining the characteristics of an internode.
+     *
+     * This variable encapsulates all parameters related to the physical and structural attributes
+     * of an internode, including geometrical properties (e.g., length, radius, pitch, phyllotaxis)
+     * and appearance parameters (e.g., color, texture).
+     */
     InternodeParameters internode;
 
+    /**
+     * \brief Parameters defining the characteristics of the petiole.
+     *
+     * This variable encapsulates all parameters related to the morphological and structural traits
+     * of a petiole, such as its length, radius, curvature, taper, and other geometrical and visual attributes.
+     */
     PetioleParameters petiole;
 
+    /**
+     * \brief Parameters defining the characteristics of a leaf.
+     *
+     * This variable encapsulates all parameters related to the structure and geometry
+     * of a leaf, such as its attachment configuration, angles, scaling factors, spacing,
+     * and prototype definition for appearance and texture.
+     */
     LeafParameters leaf;
 
+    /**
+     * \brief Parameters defining the characteristics of the peduncle (inflorescence supporting structure).
+     *
+     * Encapsulates all the geometrical, structural, and visual attributes of the peduncle,
+     * including its length, radius, curvature, and appearance details.
+     */
     PeduncleParameters peduncle;
 
+    /**
+     * \brief Parameters defining the characteristics of the inflorescence.
+     *
+     * Encapsulates all morphological, structural, and functional attributes associated
+     * with the inflorescence, such as the number of flowers per peduncle, spacing,
+     * angular orientation, scaling factors for both flowers and fruits,
+     * and user-defined prototype functions for flower and fruit mesh generation.
+     */
     InflorescenceParameters inflorescence;
 
     //Custom user-defined function that is called when a phytomer is created
@@ -667,66 +805,75 @@ struct ShootParameters{
     //! Constructor - sets random number generator
     explicit ShootParameters( std::minstd_rand0 *generator );
 
+    /**
+     * \brief Stores parameters related to a phytomer in the shoot.
+     *
+     * \note This variable encapsulates properties and behaviors specific to the phytomers of a plant’s shoot system.
+     */
     PhytomerParameters phytomer_parameters;
 
     // ---- Geometric Parameters ---- //
 
-    // Maximum number of nodes along the shoot before the terminal vegetative bud dies
+    //! Maximum number of nodes/phytomers along a shoot
     RandomParameter_int max_nodes;
-
-    // Maximum number of nodes that can be produced by a shoot in a single season. By default, this is equal to max_nodes.
+    //! Maximum number of nodes/phytomers that a shoot can produce in a single season (≤ max_nodes)
     RandomParameter_int max_nodes_per_season;
-
-    RandomParameter_float girth_area_factor; //cm^2 branch area / m^2 downstream leaf area
-
-    // Insertion angle of the most apical child shoot bud at the time it breaks
+    //! Cross-sectional area of internode in cm² branch area per m² downstream leaf area; set 0 to disable girth scaling
+    RandomParameter_float girth_area_factor;
+    //! Angle (deg) of the child shoot with respect to the parent shoot at the tip of the parent shoot
     RandomParameter_float insertion_angle_tip;
+    //! Rate (deg/node) at which the child insertion angle increases moving down the parent shoot
     RandomParameter_float insertion_angle_decay_rate;
-
+    //! Maximum internode length (m) of a child shoot
     RandomParameter_float internode_length_max;
+    //! Minimum internode length (m) of a child shoot
     RandomParameter_float internode_length_min;
+    //! Rate (m/node) at which internode length decreases moving down the parent shoot
     RandomParameter_float internode_length_decay_rate;
-
+    //! Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent shoot
     RandomParameter_float base_roll;
+    //! Yaw angle (deg) of the shoot relative to the parent shoot
     RandomParameter_float base_yaw;
+    //! Gravitropic curvature (deg/m); positive values curve the shoot upward toward vertical
+    RandomParameter_float gravitropic_curvature;
+    //! Standard deviation (deg · m⁻⁰·⁵) controlling random wiggle (tortuosity) along the shoot
+    RandomParameter_float tortuosity;
+    //! Minimum time (days) between the emergence of successive phytomers along the shoot
 
-    RandomParameter_float gravitropic_curvature;  //degrees/length
+    // --- Growth Parameters --- //
 
-    RandomParameter_float tortuosity; //degrees/length (standard deviation of random curvature perturbation)
-
-    // ---- Growth Parameters ---- //
-
-    RandomParameter_float phyllochron_min; //days/phytomer
-
-    RandomParameter_float elongation_rate_max; //length/day
-
-    // Minimum probability that bud with this shoot type will break and form a new shoot
+    RandomParameter_float phyllochron_min;
+    //! Maximum relative elongation rate (m · m⁻¹ · day⁻¹) of the shoot internode; actual rate may be reduced dynamically
+    RandomParameter_float elongation_rate_max;
+    //! Minimum probability that a bud will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability_min;
-
-    // Decay rate of the probability that a bud will break and form a new shoot
-    /**
-     * If this value is negative, the vegetative bud break probability starts at 1 at the shoot base and decreases at a rate of vegetative_bud_break_probability_decay_rate per phytomer until it reaches vegetative_bud_break_probability_min. If this value is positive, the reverse is true starting from the shoot tip.
-     */
+    //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
-
-    // Maximum number of floral buds at the shoot apex
+    //! FLAG: description not found in specification table – please advise
     RandomParameter_int max_terminal_floral_buds;
-
-    // Probability that a phytomer will flower
+    //! Probability that a phytomer will flower
     RandomParameter_float flower_bud_break_probability;
-
-    // Probability that a flower will set fruit
+    //! Probability that a flower will set fruit
     RandomParameter_float fruit_set_probability;
-
-    RandomParameter_float vegetative_bud_break_time;  //days
-
+    //! Time (days) after bud creation or dormancy release before a vegetative bud breaks
+    RandomParameter_float vegetative_bud_break_time;
+    //! Flag indicating whether flower buds require a winter dormancy period to emerge
     bool flowers_require_dormancy;
+    //! Flag indicating whether vegetative buds require a winter dormancy period to emerge
     bool growth_requires_dormancy;
-
-    bool determinate_shoot_growth;  //true=determinate, false=indeterminate
+    //! Flag indicating determinate shoot growth: true = stop after flowering, false = continue growth
+    bool determinate_shoot_growth;
 
     // ---- Custom Functions ---- //
 
+    /**
+     * \brief Defines shoot types for child shoots with their associated probabilities.
+     *
+     * \param[in] child_shoot_type_labels Vector of labels for child shoot types.
+     * \param[in] child_shoot_type_probabilities Vector of probabilities for each child shoot type. Probabilities must sum to 1.
+     *
+     * \note The sizes of the input vectors must match, and neither input vector can be empty.
+     */
     void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
 
     ShootParameters& operator=(const ShootParameters &a) {
@@ -798,9 +945,7 @@ protected:
 struct Phytomer {
 public:
 
-    float phytomer_carbohydrate_cost_molC = 0;
-
-    // Constructor
+    //! Constructor
     Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
              const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, PlantArchitecture *plantarchitecture_ptr,
              helios::Context *context_ptr);
@@ -945,28 +1090,109 @@ public:
      */
     void setLeafPrototypeScale( float leaf_prototype_scale );
 
+    /**
+     * \brief Scales the leaf prototype by the given scale factor.
+     *
+     * For a compound leaf, all leaves are scaled by the same factor.
+     *
+     * \param[in] scale_factor Factor by which to scale the leaf prototype. Values less than 0 are clamped to 0.
+     */
     void scaleLeafPrototypeScale( float scale_factor );
 
+    /**
+     * \brief Sets the scaling fraction for the inflorescence of a floral bud.
+     *
+     * \param[in] fbud Reference to the floral bud object whose inflorescence scaling will be updated.
+     * \param[in] inflorescence_scale_factor_fraction Fractional value (between 0 and 1) representing the new scale factor for the inflorescence.
+     */
     void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction) const;
 
+    /**
+     * \brief Sets the base position of the petiole to the specified position.
+     *
+     * Updates the position of the petiole, leaf bases, and floral buds, ensuring
+     * all associated geometry and objects are translated accordingly.
+     *
+     * \param[in] base_position New base position for the petiole
+     */
     void setPetioleBase( const helios::vec3 &base_position );
 
+    /**
+     * \brief Rotates a specified leaf around its base using the given rotation parameters.
+     *
+     * This function adjusts the leaf's orientation based on the specified petiole and leaf indices
+     * and applies the provided axis rotation values.
+     *
+     * \param[in] petiole_index Index identifying the petiole to which the leaf belongs
+     * \param[in] leaf_index Index of the specific leaf within the petiole
+     * \param[in] rotation AxisRotation object containing pitch, roll, and yaw values for the rotation
+     */
     void rotateLeaf( uint petiole_index, uint leaf_index, const AxisRotation &rotation );
 
+    /**
+     * \brief Sets the vegetative bud state for all axillary vegetative buds in the phytomer.
+     *
+     * \param[in] state The new state to apply to the vegetative buds.
+     */
     void setVegetativeBudState( BudState state );
 
+    /**
+     * \brief Sets the state of a vegetative bud at the specified petiole and bud indices.
+     *
+     * \param[in] state The desired vegetative bud state.
+     * \param[in] petiole_index Index of the petiole where the bud is located.
+     * \param[in] bud_index Index of the bud within the specified petiole.
+     */
     void setVegetativeBudState(BudState state, uint petiole_index, uint bud_index);
 
+    /**
+     * \brief Sets the vegetative bud's state to the specified state.
+     *
+     * \param[in] state The desired state to set for the vegetative bud.
+     * \param[in,out] vbud Reference to the vegetative bud whose state will be modified.
+     */
     void setVegetativeBudState( BudState state, VegetativeBud &vbud ) const;
 
+    /**
+     * \brief Sets the floral bud state for all non-terminal buds.
+     *
+     * \param[in] state New BudState to apply to all non-terminal buds.
+     */
     void setFloralBudState(BudState state );
 
+    /**
+     * \brief Sets the state of a specific floral bud.
+     *
+     * \param[in] state The new state to set for the floral bud.
+     * \param[in] petiole_index The index of the petiole containing the target bud.
+     * \param[in] bud_index The index of the bud within the specified petiole.
+     */
     void setFloralBudState(BudState state, uint petiole_index, uint bud_index);
 
+    /**
+     * \brief Sets the state of a floral bud.
+     *
+     * \param[in] state New state to set for the floral bud.
+     * \param[in,out] fbud Reference to the FloralBud object whose state is to be updated.
+     */
     void setFloralBudState(BudState state, FloralBud &fbud);
 
+    /**
+     * \brief Removes the leaf and its associated properties from the phytomer.
+     *
+     * This function resets the phytomer's leaf-related attributes, such as petiole
+     * radii, vertices, colors, length, and other geometric properties. It also
+     * removes associated objects from the context.
+     */
     void removeLeaf();
 
+    /**
+     * \brief Deletes the phytomer and its associated components.
+     *
+     * This method handles the cleanup and deletion of all parts associated with
+     * the phytomer, including internode, leaves, inflorescence structures, and
+     * any child or subsequent phytomers within the shoot.
+     */
     void deletePhytomer();
 
     // ---- phytomer data ---- //
@@ -1028,9 +1254,9 @@ protected:
 
     void updateInflorescence(FloralBud &fbud);
 
-    [[nodiscard]] float calculatePhytomerConstructionCosts();
-    [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud);
-    [[nodiscard]] float calculateFruitConstructionCosts(const FloralBud &fbud);
+    [[nodiscard]] float calculatePhytomerConstructionCosts() const;
+    [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud) const;
+    [[nodiscard]] float calculateFruitConstructionCosts(const FloralBud &fbud) const;
 
     friend struct Shoot;
     friend class PlantArchitecture;
@@ -1039,9 +1265,18 @@ protected:
 
 struct Shoot {
 
+    //! Constructor
     Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const helios::vec3 &shoot_base_position, const AxisRotation &shoot_base_rotation, uint current_node_number,
           float internode_length_shoot_initial, ShootParameters &shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr);
 
+    //! Constructs and appends shoot phytomers to the shoot structure.
+    /**
+     * \param[in] internode_radius Initial radius of the phytomer internode.
+     * \param[in] internode_length Length of the internode for each phytomer.
+     * \param[in] internode_length_scale_factor_fraction Fraction to scale the internode length.
+     * \param[in] leaf_scale_factor_fraction Fraction to scale the leaf size.
+     * \param[in] radius_taper Degree of tapering applied to reduce the internode radius along the shoot.
+     */
     void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper);
 
     //! Append a phytomer at the shoot apex
@@ -1073,7 +1308,7 @@ struct Shoot {
      * \param[out] epicormic_positions_fraction Vector of fractions of the shoot's length where epicormic shoots will be produced
      * \return Number of epicormic shoots to be produced; position of the epicormic shoot as a fraction of the shoot's length
      */
-    uint sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction );
+    uint sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction ) const;
 
     /**
      * \brief Terminates the apical bud of the shoot.
@@ -1162,12 +1397,9 @@ struct Shoot {
     float old_shoot_volume = 0;
 
     float phyllochron_increase = 2;
-    float phyllochron_recovery = phyllochron_increase * 1.5;
+    float phyllochron_recovery = phyllochron_increase * 1.5f;
 
-    float elongation_decay = 0.5;
-    float elongation_recovery = elongation_decay /1.5 ;
-
-    uint days_with_negative_carbon_balance = 0;
+    float days_with_negative_carbon_balance = 0;
 
     void breakDormancy();
     void makeDormant();
@@ -1178,8 +1410,8 @@ struct Shoot {
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
-    float phyllochron_min = 6;
-    float elongation_max = .25;
+    float phyllochron_min = 6.f;
+    float elongation_max = 0.25;
 
     float curvature_perturbation = 0;
     float yaw_perturbation = 0;
@@ -1235,6 +1467,52 @@ struct PlantInstance{
     bool is_evergreen = false;
 
     float max_age = 999;
+
+    CarbohydrateParameters carb_parameters;
+
+    //Stem Growth
+    // float stem_density = 540000; //Almond wood density (g m^-3) - Grossman 1993
+    // float stem_carbon_percentage = .4559; //portion of the dry weight of almond wood made up by carbon - Grossman 1993
+    // float shoot_root_ratio = 3;
+    //
+    // //Leaf Growth
+    // float SLA = 2.5e-2; //ratio of leaf area to leaf dry mass m^2 / g DW
+    // float leaf_carbon_percentage = .444; //portion of the dry weight of the leaf made up by carbon - Penning de Vries et al. 1989
+    //
+    // //Flower Growth
+    // float total_flower_cost = 8.33e-4; //mol C flower^-1  (Bustan & Goldschmidt 2002)
+    // //float flower_production_cost = total_flower_cost*.69; //mol C flower^-1  (Bustan & Goldschmidt 2002)
+    // //float flower_growth_respiration = total_flower_cost*.31; //mol C flower^-1  (Bustan & Goldschmidt 2002)
+    //
+    // //Fruit Growth
+    // float fruit_density = 525000; //g m^-3
+    // float percent_kernel = .27; //portion of the nut made up by the kernel
+    // float percent_shell = .19;  //portion of the nut made up by the shell
+    // float percent_hull = .54;  //portion of the nut made up by the hull
+    // float kernel_carbon_percentage = .454; //portion of the kernel made up by carbon by dry weight
+    // float shell_carbon_percentage = .470;  //portion of the shell made up by caron by dry weight
+    // float hull_carbon_percentage = .494;  //portion of the hull made up by carbon by dry weight
+    // float fruit_carbon_percentage = percent_kernel*kernel_carbon_percentage + percent_shell*shell_carbon_percentage + percent_hull*hull_carbon_percentage; //overall portion of the nut made up by carbon by dry weight
+    //
+    //
+    // //Respiration
+    // float stem_maintainance_respiration_rate = 1.9458e-05 * pow(1.8, ((25. - 15.) / 10)); //mol C respired/mol C in pool/day
+    // float root_maintainance_respiration_rate = 1.9458e-05 * pow(1.8, ((25. - 15.) / 10)) / shoot_root_ratio; //mol C respired/mol C in pool/day
+    // float growth_respiration_fraction = 0.28; //Accounting for the growth carbon lost to respiration (assumed 28%)
+    //
+    // //Abortion of Organs
+    // float C_molecular_wt = 12.01; //g C mol^-1
+    // float carbohydrate_abortion_threshold = 50*stem_density/(1000*C_molecular_wt); //mol C/m3
+    // float bud_death_threshold = 2; //days
+    // float branch_death_threshold = 5; //days
+    //
+    // //Phyllochron Adjustment
+    // float carbohydrate_phyllochron_threshold = 100*stem_density/(1000*C_molecular_wt); //mol C/m3
+    // float carbohydrate_phyllochron_threshold_low = 50*stem_density/(1000*C_molecular_wt); //mol C/m3
+    //
+    // //Carbon Transfer
+    // float carbohydrate_transfer_threshold = 100*stem_density/(1000*C_molecular_wt); //mol C/m3
+    // float carbon_conductance = 0.8;
 
 };
 
@@ -1328,7 +1606,6 @@ public:
 
     //! Update the parameters of all shoot types in the current plant model
     /**
-     * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
      * \param[in] params Updated parameters structure for the shoot type.
      * \note This will overwrite any existing shoot parameter definitions.
      */
@@ -1348,6 +1625,7 @@ public:
     /**
      * \param[in] plantID ID of the existing plant instance to be duplicated.
      * \param[in] base_position Cartesian coordinates of the base of the new plant copy.
+     * \param[in] base_rotation Rotation of the new plant copy.
      * \param[in] current_age Age of the new plant copy in days.
      * \return ID of the new plant instance.
      */
@@ -1380,6 +1658,25 @@ public:
      */
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy, float max_leaf_lifespan = 1e6, bool is_evergreen= false);
 
+    //! Sets the carbohydrate model parameters for a specific plant.
+    /**
+     * \param[in] plantID Identifier for the plant whose parameters are being set.
+     * \param[in] carb_parameters Reference to the carbohydrate parameters to assign to the plant.
+     */
+    void setPlantCarbohydrateModelParameters( uint plantID, const CarbohydrateParameters &carb_parameters );
+
+    //! Sets carbohydrate model parameters for specified plants.
+    /**
+     * \param[in] plantIDs A vector of plant IDs for which the parameters will be set.
+     * \param[in] carb_parameters The carbohydrate model parameters to apply.
+     */
+    void setPlantCarbohydrateModelParameters( const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters );
+
+    /**
+     * \brief Disables the phenological progression of a specified plant instance.
+     *
+     * \param[in] plantID Identifier of the plant whose phenology is to be disabled.
+     */
     void disablePlantPhenology( uint plantID );
 
     //! Advance plant growth by a specified time interval for all plants
@@ -1387,8 +1684,6 @@ public:
      * \param[in] time_step_days Time interval in days.
      */
     void advanceTime(float time_step_days);
-
-    void accumulateHourlyLeafPhotosynthesis();
 
     //! Advance plant growth by a specified time interval for all plants
     /**
@@ -1403,6 +1698,16 @@ public:
      * \param[in] time_step_days Time interval in days.
      */
     void advanceTime(uint plantID, float time_step_days);
+
+    //! Accumulates hourly net photosynthesis for each leaf in the plant architecture
+    /**
+     * This function iterates through all the plants in the architecture, handling both dormant and active shoots.
+     * It retrieves and processes the net hourly photosynthesis values for each leaf, calculates the hourly contribution in moles of carbon,
+     * and updates the cumulative net photosynthesis data.
+     *
+     * \note This function performs area-based calculations and updates context-specific data for each leaf primitive.
+     */
+    void accumulateHourlyLeafPhotosynthesis() const;
 
     // -- plant building methods -- //
 
@@ -1526,7 +1831,7 @@ public:
      * \brief Initializes the carbohydrate pool for all shoots of all plant instances
      * \param[in] carbohydrate_concentration_molC_m3 Concentration of carbohydrates in molC per cubic meter
      */
-    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3);
+    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3) const;
 
     /**
      * \brief Initializes the carbohydrate pool for a specific plant.
@@ -1651,6 +1956,7 @@ public:
      */
     void setPlantLeafAngleDistribution(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees) const;
 
+    //! Don't use this
     void setPlantAge(uint plantID, float current_age);
 
     /**
@@ -1827,6 +2133,13 @@ public:
      * \return Vector of base positions of all leaves on the plants.
      */
     [[nodiscard]] std::vector<helios::vec3> getPlantLeafBases(const std::vector<uint> &plantIDs) const;
+
+    //! Checks if the plant with the given ID is dormant
+    /**
+     * \param[in] plantID The ID of the plant to check.
+     * \return True if all shoots on the plant are dormant, false otherwise.
+     */
+    [[nodiscard]] bool isPlantDormant( uint plantID ) const;
 
     //! Write all vertices in the plant to a file for external processing (e.g., bounding volume, convex hull)
     /**
@@ -2064,13 +2377,11 @@ protected:
 
     void parseLeafArgument(const std::string& leaf_argument, PhytomerParameters &phytomer_parameters );
 
-//    void shiftDownstreamShoots(uint plantID, std::vector<std::shared_ptr<Shoot>> &shoot_tree, std::shared_ptr<Shoot> parent_shoot_ptr, const helios::vec3 &base_position );
-
     void initializeDefaultShoots( const std::string &plant_label );
 
-    bool detectGroundCollision(uint objID);
+    [[nodiscard]] bool detectGroundCollision(uint objID);
 
-    bool detectGroundCollision(const std::vector<uint> &objID);
+    [[nodiscard]] bool detectGroundCollision(const std::vector<uint> &objID) const;
 
     void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float
                                                ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
@@ -2080,18 +2391,18 @@ protected:
 
     // --- Plant Growth --- //
 
-    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, bool update_context_geometry);
+    void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
     // --- Carbohydrate Model --- //
 
-    void accumulateShootPhotosynthesis();
+    void accumulateShootPhotosynthesis() const;
 
-    void subtractShootMaintenanceCarbon(float dt );
+    void subtractShootMaintenanceCarbon(float dt ) const;
     void subtractShootGrowthCarbon();
 
-    void checkCarbonPool_abortOrgans();
-    void checkCarbonPool_adjustPhyllochron();
-    void checkCarbonPool_transferCarbon();
+    void checkCarbonPool_abortOrgans(float dt);
+    void checkCarbonPool_adjustPhyllochron(float dt);
+    void checkCarbonPool_transferCarbon(float dt);
 
     bool carbon_model_enabled = false;
 
@@ -2184,6 +2495,10 @@ protected:
     void initializeTomatoShoots();
 
     uint buildTomatoPlant( const helios::vec3 &base_position );
+
+    void initializeCherryTomatoShoots();
+
+    uint buildCherryTomatoPlant( const helios::vec3 &base_position );
 
     void initializeWalnutTreeShoots();
 
