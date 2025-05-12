@@ -9,6 +9,9 @@
 		<BaseSplitsV> 2 </BaseSplitsV>
 		<BaseSplitSize> 0.4 </BaseSplitSize>
 		<BaseSplitSizeV> 0.1 </BaseSplitSizeV>
+		<BaseTilt> 0 0 </BaseTilt>
+		<BaseTiltV> 0.05 0.05 </BaseTiltV>
+		<BaseAlignmentV> 0.05 0.05 </BaseAlignmentV>
 		<Scale> 2 </Scale>
 		<ScaleV> 0.5 </ScaleV>
 		<ZScale> 2 </ZScale>
