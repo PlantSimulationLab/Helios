@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Compound Objects</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -189,9 +202,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gac244937b4bb6a2e57e6c2b25e59a741f" id="r_gac244937b4bb6a2e57e6c2b25e59a741f"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac244937b4bb6a2e57e6c2b25e59a741f">helios::Context::addTubeObject</a> (uint radial_subdivisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;nodes, const std::vector&lt; float &gt; &amp;radius, const char *texturefile)</td></tr>
 <tr class="memdesc:gac244937b4bb6a2e57e6c2b25e59a741f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a 3D tube compound object to the Context that is texture-mapped. Texture is mapped to span the entire tube.  <br /></td></tr>
 <tr class="separator:gac244937b4bb6a2e57e6c2b25e59a741f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gad109dcdc4ae24e03945a8d39c0dc7cc5" id="r_gad109dcdc4ae24e03945a8d39c0dc7cc5"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gad109dcdc4ae24e03945a8d39c0dc7cc5">helios::Context::addTubeObject</a> (uint radial_subdivisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;nodes, const std::vector&lt; float &gt; &amp;radius, const char *texturefile, const std::vector&lt; float &gt; &amp;textureuv_vfrac)</td></tr>
-<tr class="memdesc:gad109dcdc4ae24e03945a8d39c0dc7cc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a 3D tube compound object to the Context that is texture-mapped.  <br /></td></tr>
-<tr class="separator:gad109dcdc4ae24e03945a8d39c0dc7cc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8aefc696234b20fc200898a115405750" id="r_ga8aefc696234b20fc200898a115405750"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8aefc696234b20fc200898a115405750">helios::Context::addTubeObject</a> (uint radial_subdivisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;nodes, const std::vector&lt; float &gt; &amp;radius, const char *texturefile, const std::vector&lt; float &gt; &amp;textureuv_ufrac)</td></tr>
+<tr class="memdesc:ga8aefc696234b20fc200898a115405750"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a 3D tube compound object to the Context that is texture-mapped.  <br /></td></tr>
+<tr class="separator:ga8aefc696234b20fc200898a115405750"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab2549ca65442372287b30c874b0c2b1c" id="r_gab2549ca65442372287b30c874b0c2b1c"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab2549ca65442372287b30c874b0c2b1c">helios::Context::addBoxObject</a> (const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;center, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;size, const <a class="el" href="structhelios_1_1int3.html">int3</a> &amp;subdiv)</td></tr>
 <tr class="memdesc:gab2549ca65442372287b30c874b0c2b1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a rectangular prism tessellated with Patch primitives.  <br /></td></tr>
 <tr class="separator:gab2549ca65442372287b30c874b0c2b1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -360,7 +373,7 @@ Functions</h2></td></tr>
 <dd>
 This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06213">6213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06456">6456</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -406,7 +419,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06224">6224</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06467">6467</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -451,13 +464,14 @@ This version of addBox assumes that all surface normal vectors point away from t
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>Size of the box in the x-, y-, and z-directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">subdiv</td><td>Number of subdivisions in x-, y-, and z-directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">texturefile</td><td>Name of image file for texture map </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">reverse_normals</td><td>Flip all surface normals so that patch normals point inside the box </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06322">6322</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06565">6565</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -503,7 +517,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06220">6220</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06463">6463</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -555,7 +569,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06228">6228</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06471">6471</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -597,7 +611,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dd>
 This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05066">5066</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05321">5321</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -643,7 +657,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05077">5077</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05332">5332</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -689,7 +703,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05073">5073</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05328">5328</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -741,7 +755,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05081">5081</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05336">5336</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -786,13 +800,14 @@ This version of addBox assumes that all surface normal vectors point away from t
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>Size of the box in the x-, y-, and z-directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">subdiv</td><td>Number of subdivisions in x-, y-, and z-directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">texturefile</td><td>Name of image file for texture map </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">reverse_normals</td><td>Flip all surface normals so that patch normals point inside the box </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05202">5202</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05458">5458</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -847,7 +862,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06525">6525</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06766">6766</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -904,7 +919,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06622">6622</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06863">6863</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -961,7 +976,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06534">6534</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06775">6775</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1017,7 +1032,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05492">5492</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05745">5745</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1075,7 +1090,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05594">5594</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05847">5847</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1133,7 +1148,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05499">5499</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05752">5752</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1174,7 +1189,7 @@ Sample image of a Tube compound object.</div></div>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1185,7 +1200,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06483">6483</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06725">6725</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1226,7 +1241,7 @@ Sample image of a Tube compound object.</div></div>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1236,7 +1251,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06446">6446</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06689">6689</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1277,7 +1292,7 @@ Sample image of a Tube compound object.</div></div>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1287,7 +1302,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06442">6442</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06685">6685</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1318,7 +1333,7 @@ Sample image of a Tube compound object.</div></div>
 <p>Add new Disk geometric primitive to the Context given its center, and size. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
   </table>
@@ -1329,7 +1344,7 @@ Sample image of a Tube compound object.</div></div>
 <dd>
 Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06422">6422</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06665">6665</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1365,7 +1380,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, and spherical rotation. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1375,7 +1390,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06426">6426</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06669">6669</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1416,7 +1431,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1427,7 +1442,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06438">6438</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06681">6681</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1468,7 +1483,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1478,7 +1493,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06434">6434</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06677">6677</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1519,7 +1534,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk geometric primitive. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1529,7 +1544,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06430">6430</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06673">6673</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1570,7 +1585,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1581,7 +1596,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05404">5404</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05659">5659</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1622,7 +1637,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1632,7 +1647,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05346">5346</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05602">5602</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1673,7 +1688,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1683,7 +1698,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05342">5342</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05598">5598</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1714,7 +1729,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk geometric primitive to the Context given its center, and size. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
   </table>
@@ -1725,7 +1740,7 @@ Assumes a default color of black. </dd></dl>
 <dd>
 Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05322">5322</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05578">5578</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1761,7 +1776,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, and spherical rotation. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1771,7 +1786,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05326">5326</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05582">5582</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1812,7 +1827,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1823,7 +1838,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05338">5338</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05594">5594</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1864,7 +1879,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1874,7 +1889,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05334">5334</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05590">5590</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1915,7 +1930,7 @@ Assumes a default color of black. </dd></dl>
 <p>Add new Disk Compound Object. </p>
 <p>Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ndiv</td><td>Number to triangles used to form disk </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ndivs</td><td>Number to triangles used to form disk </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">center</td><td>3D coordinates of Disk center </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>length of Disk semi-major and semi-minor radii </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rotation</td><td>spherical rotation angle (elevation,azimuth) in radians of Disk </td></tr>
@@ -1925,7 +1940,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05330">5330</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05586">5586</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1953,7 +1968,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new Polymesh </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05465">5465</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05718">5718</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1993,7 +2008,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05712">5712</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05965">5965</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2038,7 +2053,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05770">5770</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06023">6023</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2083,7 +2098,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05720">5720</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05973">5973</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2123,7 +2138,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04388">4388</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04640">4640</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2168,7 +2183,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04479">4479</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04732">4732</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2213,7 +2228,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04394">4394</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04646">4646</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2253,7 +2268,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04376">4376</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04628">4628</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2298,7 +2313,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04384">4384</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04636">4636</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2343,7 +2358,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04380">4380</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04632">4632</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2389,7 +2404,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05875">5875</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06128">6128</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2440,7 +2455,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05919">5919</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06170">6170</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2491,7 +2506,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05882">5882</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06135">6135</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2537,7 +2552,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04616">4616</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04870">4870</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2588,7 +2603,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04688">4688</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04943">4943</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2639,7 +2654,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04623">4623</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04877">4877</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2683,7 +2698,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05996">5996</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06246">6246</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2729,7 +2744,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06103">6103</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06346">6346</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2775,7 +2790,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06011">6011</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06254">6254</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2819,7 +2834,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tube object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04794">4794</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05050">5050</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2867,12 +2882,12 @@ Sample image of a Tube compound object.</div></div>
 <dd>
 The tube is textured such that the x/u direction of the image runs longitudinally along the tube. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04923">4923</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05178">5178</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
-<a id="gad109dcdc4ae24e03945a8d39c0dc7cc5" name="gad109dcdc4ae24e03945a8d39c0dc7cc5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gad109dcdc4ae24e03945a8d39c0dc7cc5">&#9670;&#160;</a></span>addTubeObject() <span class="overload">[3/4]</span></h2>
+<a id="ga8aefc696234b20fc200898a115405750" name="ga8aefc696234b20fc200898a115405750"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8aefc696234b20fc200898a115405750">&#9670;&#160;</a></span>addTubeObject() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2900,7 +2915,7 @@ The tube is textured such that the x/u direction of the image runs longitudinall
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>textureuv_vfrac</em></span>&#160;)</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>textureuv_ufrac</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -2921,7 +2936,7 @@ The tube is textured such that the x/u direction of the image runs longitudinall
 <dd>
 The tube is textured such that the x/u direction of the image runs longitudinally along the tube. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04933">4933</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05188">5188</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2967,7 +2982,7 @@ The tube is textured such that the x/u direction of the image runs longitudinall
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tube object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04809">4809</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05064">5064</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

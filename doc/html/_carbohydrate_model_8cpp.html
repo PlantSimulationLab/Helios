@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/plantarchitecture/src/CarbohydrateModel.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -142,52 +155,12 @@ $(function(){initNavTree('_carbohydrate_model_8cpp.html',''); initResizable(true
 </div>
 
 <div class="header">
-  <div class="summary">
-<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">CarbohydrateModel.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>&quot;</code><br />
 </div>
 <p><a href="_carbohydrate_model_8cpp_source.html">Go to the source code of this file.</a></p>
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:aeb9ca2b5bdd50a7f2b2a73f49cd72b5b" id="r_aeb9ca2b5bdd50a7f2b2a73f49cd72b5b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb9ca2b5bdd50a7f2b2a73f49cd72b5b">C_molecular_wt</a> = 12.01</td></tr>
-<tr class="separator:aeb9ca2b5bdd50a7f2b2a73f49cd72b5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a86374249ce23ddcb27a251b6780e6fca" id="r_a86374249ce23ddcb27a251b6780e6fca"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86374249ce23ddcb27a251b6780e6fca">rho_w</a> = 650000</td></tr>
-<tr class="separator:a86374249ce23ddcb27a251b6780e6fca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87f154d0d3e9a27b96ac9d680ce54e19" id="r_a87f154d0d3e9a27b96ac9d680ce54e19"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a87f154d0d3e9a27b96ac9d680ce54e19">wood_carbon_percentage</a> = .475</td></tr>
-<tr class="separator:a87f154d0d3e9a27b96ac9d680ce54e19"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0fff3e0c51c5189805be9b70bbbd1cd8" id="r_a0fff3e0c51c5189805be9b70bbbd1cd8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0fff3e0c51c5189805be9b70bbbd1cd8">shoot_root_ratio</a> = 10</td></tr>
-<tr class="separator:a0fff3e0c51c5189805be9b70bbbd1cd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4d2515e6a52a5528f981426984183a2a" id="r_a4d2515e6a52a5528f981426984183a2a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d2515e6a52a5528f981426984183a2a">SLA</a> = 1.75e-2</td></tr>
-<tr class="separator:a4d2515e6a52a5528f981426984183a2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae3884778ac0dc411474a2f9e05ee5b8f" id="r_ae3884778ac0dc411474a2f9e05ee5b8f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3884778ac0dc411474a2f9e05ee5b8f">leaf_carbon_percentage</a> = .4444</td></tr>
-<tr class="separator:ae3884778ac0dc411474a2f9e05ee5b8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c1f4e921d639b9af45deb5eea965cdc" id="r_a4c1f4e921d639b9af45deb5eea965cdc"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c1f4e921d639b9af45deb5eea965cdc">total_flower_cost</a> = 8.33e-4</td></tr>
-<tr class="separator:a4c1f4e921d639b9af45deb5eea965cdc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fda7a427a882684e42f7c1d30e51033" id="r_a3fda7a427a882684e42f7c1d30e51033"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fda7a427a882684e42f7c1d30e51033">flower_production_cost</a> = total_flower_cost*.69</td></tr>
-<tr class="separator:a3fda7a427a882684e42f7c1d30e51033"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acd490a30b79bdad03918fe9bbabb7322" id="r_acd490a30b79bdad03918fe9bbabb7322"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd490a30b79bdad03918fe9bbabb7322">flower_growth_respiration</a> = total_flower_cost*.31</td></tr>
-<tr class="separator:acd490a30b79bdad03918fe9bbabb7322"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a33ad9dc525e145793b19ee5874d926f9" id="r_a33ad9dc525e145793b19ee5874d926f9"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a33ad9dc525e145793b19ee5874d926f9">nut_density</a> = 525000</td></tr>
-<tr class="separator:a33ad9dc525e145793b19ee5874d926f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad64b453a0b995ae5e6d6e09a96cd6658" id="r_ad64b453a0b995ae5e6d6e09a96cd6658"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad64b453a0b995ae5e6d6e09a96cd6658">percent_kernel</a> = .27</td></tr>
-<tr class="separator:ad64b453a0b995ae5e6d6e09a96cd6658"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a952473d6b3fcec972518b63f21b57f90" id="r_a952473d6b3fcec972518b63f21b57f90"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a952473d6b3fcec972518b63f21b57f90">percent_shell</a> = .19</td></tr>
-<tr class="separator:a952473d6b3fcec972518b63f21b57f90"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3147a2566033494c02c528f429a6d010" id="r_a3147a2566033494c02c528f429a6d010"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3147a2566033494c02c528f429a6d010">percent_hull</a> = .54</td></tr>
-<tr class="separator:a3147a2566033494c02c528f429a6d010"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac4d619d981038de875f520743b02b073" id="r_ac4d619d981038de875f520743b02b073"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac4d619d981038de875f520743b02b073">kernel_carbon_percentage</a> = .454</td></tr>
-<tr class="separator:ac4d619d981038de875f520743b02b073"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08e14672fea07c03f7b232b623201055" id="r_a08e14672fea07c03f7b232b623201055"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08e14672fea07c03f7b232b623201055">shell_carbon_percentage</a> = .470</td></tr>
-<tr class="separator:a08e14672fea07c03f7b232b623201055"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac9ccc5b0b42e5d45dc4ae2674a1f1406" id="r_ac9ccc5b0b42e5d45dc4ae2674a1f1406"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac9ccc5b0b42e5d45dc4ae2674a1f1406">hull_carbon_percentage</a> = .494</td></tr>
-<tr class="separator:ac9ccc5b0b42e5d45dc4ae2674a1f1406"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae2732a5af06f155c4d67366ff4fad9e1" id="r_ae2732a5af06f155c4d67366ff4fad9e1"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2732a5af06f155c4d67366ff4fad9e1">nut_carbon_percentage</a> = percent_kernel*kernel_carbon_percentage + percent_shell*shell_carbon_percentage + percent_hull*hull_carbon_percentage</td></tr>
-<tr class="separator:ae2732a5af06f155c4d67366ff4fad9e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Definitions related to carbohydrate model calculations in the plant architecture plug-in.</p>
 <p>Copyright (C) 2016-2024 Brian Bailey</p>
@@ -195,280 +168,7 @@ Variables</h2></td></tr>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
 <p class="definition">Definition in file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-</div><h2 class="groupheader">Variable Documentation</h2>
-<a id="aeb9ca2b5bdd50a7f2b2a73f49cd72b5b" name="aeb9ca2b5bdd50a7f2b2a73f49cd72b5b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb9ca2b5bdd50a7f2b2a73f49cd72b5b">&#9670;&#160;</a></span>C_molecular_wt</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float C_molecular_wt = 12.01</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00022">22</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="acd490a30b79bdad03918fe9bbabb7322" name="acd490a30b79bdad03918fe9bbabb7322"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acd490a30b79bdad03918fe9bbabb7322">&#9670;&#160;</a></span>flower_growth_respiration</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float flower_growth_respiration = total_flower_cost*.31</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00037">37</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a3fda7a427a882684e42f7c1d30e51033" name="a3fda7a427a882684e42f7c1d30e51033"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fda7a427a882684e42f7c1d30e51033">&#9670;&#160;</a></span>flower_production_cost</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float flower_production_cost = total_flower_cost*.69</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00036">36</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ac9ccc5b0b42e5d45dc4ae2674a1f1406" name="ac9ccc5b0b42e5d45dc4ae2674a1f1406"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac9ccc5b0b42e5d45dc4ae2674a1f1406">&#9670;&#160;</a></span>hull_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float hull_carbon_percentage = .494</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00046">46</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ac4d619d981038de875f520743b02b073" name="ac4d619d981038de875f520743b02b073"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac4d619d981038de875f520743b02b073">&#9670;&#160;</a></span>kernel_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float kernel_carbon_percentage = .454</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00044">44</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ae3884778ac0dc411474a2f9e05ee5b8f" name="ae3884778ac0dc411474a2f9e05ee5b8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae3884778ac0dc411474a2f9e05ee5b8f">&#9670;&#160;</a></span>leaf_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float leaf_carbon_percentage = .4444</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00032">32</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ae2732a5af06f155c4d67366ff4fad9e1" name="ae2732a5af06f155c4d67366ff4fad9e1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae2732a5af06f155c4d67366ff4fad9e1">&#9670;&#160;</a></span>nut_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float nut_carbon_percentage = percent_kernel*kernel_carbon_percentage + percent_shell*shell_carbon_percentage + percent_hull*hull_carbon_percentage</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00047">47</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a33ad9dc525e145793b19ee5874d926f9" name="a33ad9dc525e145793b19ee5874d926f9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a33ad9dc525e145793b19ee5874d926f9">&#9670;&#160;</a></span>nut_density</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float nut_density = 525000</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00040">40</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a3147a2566033494c02c528f429a6d010" name="a3147a2566033494c02c528f429a6d010"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3147a2566033494c02c528f429a6d010">&#9670;&#160;</a></span>percent_hull</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float percent_hull = .54</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00043">43</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ad64b453a0b995ae5e6d6e09a96cd6658" name="ad64b453a0b995ae5e6d6e09a96cd6658"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad64b453a0b995ae5e6d6e09a96cd6658">&#9670;&#160;</a></span>percent_kernel</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float percent_kernel = .27</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00041">41</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a952473d6b3fcec972518b63f21b57f90" name="a952473d6b3fcec972518b63f21b57f90"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a952473d6b3fcec972518b63f21b57f90">&#9670;&#160;</a></span>percent_shell</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float percent_shell = .19</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00042">42</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a86374249ce23ddcb27a251b6780e6fca" name="a86374249ce23ddcb27a251b6780e6fca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a86374249ce23ddcb27a251b6780e6fca">&#9670;&#160;</a></span>rho_w</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float rho_w = 650000</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00025">25</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a08e14672fea07c03f7b232b623201055" name="a08e14672fea07c03f7b232b623201055"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a08e14672fea07c03f7b232b623201055">&#9670;&#160;</a></span>shell_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float shell_carbon_percentage = .470</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00045">45</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a0fff3e0c51c5189805be9b70bbbd1cd8" name="a0fff3e0c51c5189805be9b70bbbd1cd8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0fff3e0c51c5189805be9b70bbbd1cd8">&#9670;&#160;</a></span>shoot_root_ratio</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float shoot_root_ratio = 10</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00028">28</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a4d2515e6a52a5528f981426984183a2a" name="a4d2515e6a52a5528f981426984183a2a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4d2515e6a52a5528f981426984183a2a">&#9670;&#160;</a></span>SLA</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float SLA = 1.75e-2</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00031">31</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a4c1f4e921d639b9af45deb5eea965cdc" name="a4c1f4e921d639b9af45deb5eea965cdc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4c1f4e921d639b9af45deb5eea965cdc">&#9670;&#160;</a></span>total_flower_cost</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float total_flower_cost = 8.33e-4</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00035">35</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a87f154d0d3e9a27b96ac9d680ce54e19" name="a87f154d0d3e9a27b96ac9d680ce54e19"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a87f154d0d3e9a27b96ac9d680ce54e19">&#9670;&#160;</a></span>wood_carbon_percentage</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float wood_carbon_percentage = .475</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_carbohydrate_model_8cpp_source.html#l00026">26</a> of file <a class="el" href="_carbohydrate_model_8cpp_source.html">CarbohydrateModel.cpp</a>.</p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

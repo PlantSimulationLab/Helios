@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Shader Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -233,13 +246,13 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">Shader::~Shader </td>
           <td>(</td>
-          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04283">4283</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04241">4241</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -261,7 +274,7 @@ Data Fields</h2></td></tr>
 
 <p>Disable texture maps and color fragments by interpolating vertex colors. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04288">4288</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04246">4246</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -282,7 +295,7 @@ Data Fields</h2></td></tr>
 
 <p>Enable texture maps and color fragments using an RGB texture map. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04372">4372</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04329">4329</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -303,7 +316,7 @@ Data Fields</h2></td></tr>
 
 <p>Enable texture masks and color fragments by interpolating vertex colors. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04448">4448</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -335,7 +348,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04132">4132</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04090">4090</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -356,7 +369,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the depth bias matrix for shadows. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04511">4511</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04467">4467</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -377,7 +390,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the direction of the light (sun) </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04515">4515</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04471">4471</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -398,7 +411,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the lighting model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04519">4519</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04475">4475</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -419,7 +432,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the intensity of the light source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04523">4523</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04479">4479</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -457,7 +470,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04293">4293</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04251">4251</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -495,7 +508,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04432">4432</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04389">4389</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -527,7 +540,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04388">4388</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04345">4345</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -548,7 +561,7 @@ Data Fields</h2></td></tr>
 
 <p>Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04507">4507</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04463">4463</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -569,7 +582,7 @@ Data Fields</h2></td></tr>
 
 <p>Set shader as current. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04527">4527</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04483">4483</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

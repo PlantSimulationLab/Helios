@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: FloralBud Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -179,7 +192,7 @@ Data Fields</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00292">292</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00351">351</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a2e0bb1be7fa4b40111021198d66b02ef" name="a2e0bb1be7fa4b40111021198d66b02ef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2e0bb1be7fa4b40111021198d66b02ef">&#9670;&#160;</a></span>base_position</h2>
@@ -193,7 +206,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00311">311</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00370">370</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -209,7 +222,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00312">312</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00371">371</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -225,7 +238,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00313">313</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00372">372</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -241,7 +254,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00304">304</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00363">363</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -257,7 +270,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00306">306</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00365">365</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -273,7 +286,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00315">315</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00374">374</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -289,7 +302,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00317">317</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00376">376</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -305,7 +318,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00299">299</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00358">358</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -321,7 +334,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00302">302</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00361">361</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -337,7 +350,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00316">316</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00375">375</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -353,7 +366,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00307">307</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00366">366</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -369,7 +382,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00295">295</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00354">354</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -385,7 +398,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00297">297</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00356">356</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

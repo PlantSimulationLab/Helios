@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: File List</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,6 +184,7 @@ $(function(){initNavTree('files.html',''); initResizable(true); });
 <tr id="row_2_0_1_0_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_aerial_li_d_a_r_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_aerial_li_d_a_r_8cpp.html" target="_self">AerialLiDAR.cpp</a></td><td class="desc"></td></tr>
 <tr id="row_2_0_1_1_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_aerial_li_d_a_r_8cu_source.html"><span class="icondoc"></span></a><a class="el" href="_aerial_li_d_a_r_8cu.html" target="_self">AerialLiDAR.cu</a></td><td class="desc"></td></tr>
 <tr id="row_2_0_1_2_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="aeriallidar_2src_2file_i_o_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="aeriallidar_2src_2file_i_o_8cpp.html" target="_self">fileIO.cpp</a></td><td class="desc"></td></tr>
+<tr id="row_2_0_1_3_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="plugins_2aeriallidar_2src_2self_test_8cpp_source.html"><span class="icondoc"></span></a><b>selfTest.cpp</b></td><td class="desc"></td></tr>
 <tr id="row_2_1_" class="even"><td class="entry"><span style="width:16px;display:inline-block;">&#160;</span><span id="arr_2_1_" class="arrow" onclick="dynsection.toggleFolder('2_1_')">&#9660;</span><span id="img_2_1_" class="iconfopen" onclick="dynsection.toggleFolder('2_1_')">&#160;</span><a class="el" href="dir_bc56ed6b0b97565306d951dc61815da9.html" target="_self">boundarylayerconductance</a></td><td class="desc"></td></tr>
 <tr id="row_2_1_0_" class="odd"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_1_0_" class="arrow" onclick="dynsection.toggleFolder('2_1_0_')">&#9658;</span><span id="img_2_1_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_1_0_')">&#160;</span><a class="el" href="dir_9018c8dc5d181eb1cb047286a97fa87b.html" target="_self">include</a></td><td class="desc"></td></tr>
 <tr id="row_2_1_0_0_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_boundary_layer_conductance_model_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_boundary_layer_conductance_model_8h.html" target="_self">BoundaryLayerConductanceModel.h</a></td><td class="desc"></td></tr>
@@ -220,14 +234,16 @@ $(function(){initNavTree('files.html',''); initResizable(true); });
 <tr id="row_2_7_" class="even"><td class="entry"><span style="width:16px;display:inline-block;">&#160;</span><span id="arr_2_7_" class="arrow" onclick="dynsection.toggleFolder('2_7_')">&#9660;</span><span id="img_2_7_" class="iconfopen" onclick="dynsection.toggleFolder('2_7_')">&#160;</span><a class="el" href="dir_6d823072f66bbcb32b0d3acc588685b0.html" target="_self">plantarchitecture</a></td><td class="desc"></td></tr>
 <tr id="row_2_7_0_" class="odd"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_7_0_" class="arrow" onclick="dynsection.toggleFolder('2_7_0_')">&#9658;</span><span id="img_2_7_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_7_0_')">&#160;</span><a class="el" href="dir_10651e710c37b90bb60afaa4d2c6a975.html" target="_self">include</a></td><td class="desc"></td></tr>
 <tr id="row_2_7_0_0_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_assets_8h_source.html"><span class="icondoc"></span></a><b>Assets.h</b></td><td class="desc"></td></tr>
-<tr id="row_2_7_0_1_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_architecture_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_architecture_8h.html" target="_self">PlantArchitecture.h</a></td><td class="desc"></td></tr>
+<tr id="row_2_7_0_1_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_hungarian_8h_source.html"><span class="icondoc"></span></a><b>Hungarian.h</b></td><td class="desc"></td></tr>
+<tr id="row_2_7_0_2_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_architecture_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_architecture_8h.html" target="_self">PlantArchitecture.h</a></td><td class="desc"></td></tr>
 <tr id="row_2_7_1_" class="even"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_7_1_" class="arrow" onclick="dynsection.toggleFolder('2_7_1_')">&#9658;</span><span id="img_2_7_1_" class="iconfclosed" onclick="dynsection.toggleFolder('2_7_1_')">&#160;</span><a class="el" href="dir_1f4a8e9b5fbfec7b9342d55d1c70b0d3.html" target="_self">src</a></td><td class="desc"></td></tr>
 <tr id="row_2_7_1_0_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_assets_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_assets_8cpp.html" target="_self">Assets.cpp</a></td><td class="desc"></td></tr>
 <tr id="row_2_7_1_1_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_carbohydrate_model_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_carbohydrate_model_8cpp.html" target="_self">CarbohydrateModel.cpp</a></td><td class="desc"></td></tr>
-<tr id="row_2_7_1_2_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_input_output_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_input_output_8cpp.html" target="_self">InputOutput.cpp</a></td><td class="desc"></td></tr>
-<tr id="row_2_7_1_3_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_architecture_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_architecture_8cpp.html" target="_self">PlantArchitecture.cpp</a></td><td class="desc"></td></tr>
-<tr id="row_2_7_1_4_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_library_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_library_8cpp.html" target="_self">PlantLibrary.cpp</a></td><td class="desc"></td></tr>
-<tr id="row_2_7_1_5_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="plugins_2plantarchitecture_2src_2self_test_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="plugins_2plantarchitecture_2src_2self_test_8cpp.html" target="_self">selfTest.cpp</a></td><td class="desc"></td></tr>
+<tr id="row_2_7_1_2_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_hungarian_8cpp_source.html"><span class="icondoc"></span></a><b>Hungarian.cpp</b></td><td class="desc"></td></tr>
+<tr id="row_2_7_1_3_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_input_output_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_input_output_8cpp.html" target="_self">InputOutput.cpp</a></td><td class="desc"></td></tr>
+<tr id="row_2_7_1_4_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_architecture_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_architecture_8cpp.html" target="_self">PlantArchitecture.cpp</a></td><td class="desc"></td></tr>
+<tr id="row_2_7_1_5_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_plant_library_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_plant_library_8cpp.html" target="_self">PlantLibrary.cpp</a></td><td class="desc"></td></tr>
+<tr id="row_2_7_1_6_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="plugins_2plantarchitecture_2src_2self_test_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="plugins_2plantarchitecture_2src_2self_test_8cpp.html" target="_self">selfTest.cpp</a></td><td class="desc"></td></tr>
 <tr id="row_2_8_" class="odd"><td class="entry"><span style="width:16px;display:inline-block;">&#160;</span><span id="arr_2_8_" class="arrow" onclick="dynsection.toggleFolder('2_8_')">&#9660;</span><span id="img_2_8_" class="iconfopen" onclick="dynsection.toggleFolder('2_8_')">&#160;</span><a class="el" href="dir_6238f94295213c9c38cd4fb25d633604.html" target="_self">projectbuilder</a></td><td class="desc"></td></tr>
 <tr id="row_2_8_0_" class="even"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_8_0_" class="arrow" onclick="dynsection.toggleFolder('2_8_0_')">&#9658;</span><span id="img_2_8_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_8_0_')">&#160;</span><a class="el" href="dir_4408108e26b3ac23a061fec0c507822b.html" target="_self">include</a></td><td class="desc"></td></tr>
 <tr id="row_2_8_0_0_" class="odd" style="display:none;"><td class="entry"><span style="width:48px;display:inline-block;">&#160;</span><span id="arr_2_8_0_0_" class="arrow" onclick="dynsection.toggleFolder('2_8_0_0_')">&#9658;</span><span id="img_2_8_0_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_8_0_0_')">&#160;</span><a class="el" href="dir_acad1f5f180c8d60c9ec19d26d20cf8f.html" target="_self">BuildGeometry</a></td><td class="desc"></td></tr>
@@ -249,8 +265,6 @@ $(function(){initNavTree('files.html',''); initResizable(true); });
 <tr id="row_2_9_0_" class="odd"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_9_0_" class="arrow" onclick="dynsection.toggleFolder('2_9_0_')">&#9658;</span><span id="img_2_9_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_9_0_')">&#160;</span><a class="el" href="dir_40ea2a4aa4adfc7dc77aa13d0834001b.html" target="_self">include</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_0_0_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_camera_calibration_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_camera_calibration_8h.html" target="_self">CameraCalibration.h</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_0_1_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_radiation_model_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_radiation_model_8h.html" target="_self">RadiationModel.h</a></td><td class="desc"></td></tr>
-<tr id="row_2_9_0_2_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="radiation_2include_2random_8h_source.html"><span class="icondoc"></span></a><b>random.h</b></td><td class="desc"></td></tr>
-<tr id="row_2_9_0_3_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_ray_tracing_8cu_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_ray_tracing_8cu_8h.html" target="_self">RayTracing.cu.h</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_1_" class="even"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_9_1_" class="arrow" onclick="dynsection.toggleFolder('2_9_1_')">&#9658;</span><span id="img_2_9_1_" class="iconfclosed" onclick="dynsection.toggleFolder('2_9_1_')">&#160;</span><a class="el" href="dir_1736472fec890ec3b25c5f707a1ad41b.html" target="_self">src</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_1_0_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_camera_calibration_8cpp_source.html"><span class="icondoc"></span></a><a class="el" href="_camera_calibration_8cpp.html" target="_self">CameraCalibration.cpp</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_1_1_" class="odd" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="primitive_intersection_8cu_source.html"><span class="icondoc"></span></a><a class="el" href="primitive_intersection_8cu.html" target="_self">primitiveIntersection.cu</a></td><td class="desc"></td></tr>

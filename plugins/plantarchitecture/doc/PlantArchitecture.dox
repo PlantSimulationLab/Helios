@@ -307,6 +307,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
+| image_texture | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Image texture to map to the internode tube (overrides RGB color). |
 | length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
 | radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||
@@ -568,6 +569,8 @@ When the shoot is created, the internode radius is set to the value of the phyto
 Building a plant from the library with modified parameters is similar to above, except that the parameters are modified before calling the \ref PlantArchitecture::buildPlantInstanceFromLibrary() method. After calling \ref PlantArchitecture::loadPlantModelFromLibrary(), the parameters can be queried (at the shoot level), modified, and then set.
 
 Parameters are queried based on shoot type (the names of which are given in the table above). The user can either query the \ref ShootParameters structure for a single shoot type based on its label, or for all shoot types in the particular model.
+
+The default parameters for each shoot type and species from the library are not listed exhaustively in this documentation, but can be found in the file \ref PlantLibrary.cpp.
 
 Below is an example of modifying the parameters of a single shoot type:
 

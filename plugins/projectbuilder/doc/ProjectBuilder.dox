@@ -2,13 +2,109 @@
 
 	\tableofcontents
 
+	<table>
+       <tr>
+          <th>Dependencies</th>
+          <td>Zenity (Linux)</td>
+       </tr>
+       <tr>
+          <th>CMakeLists.txt</th>
+          <td>set( PLUGINS "projectbuilder" )</td>
+       </tr>
+       <tr>
+          <th>Header File</th>
+          <td>#include "ProjectBuilder.h"</td>
+       </tr>
+       <tr>
+          <th>Class</th>
+          <td>\ref ProjectBuilder</td>
+       </tr>
+    </table>
+
+    \section ProjectBuilderDepends Dependencies
+
+     <table>
+     <caption>Installing dependent packages</caption>
+       <tr>
+          <th>Package</th>
+          <td>\image html apple-logo.png</td>
+          <td>\image html unix-logo.png</td>
+          <td>\image html windows-logo.png</td>
+       </tr>
+       <tr>
+          <td>Zenity</td>
+          <td>None</td>
+          <td>Debian/Ubuntu:<br>```$ sudo apt-get install zenity```</td>
+          <td>None</td>
+       </tr>
+     </table>
+
+     \section ProjectBuilderClass Class Constructor(s)
+
+      <table>
+        <tr>
+           <th>Constructors</th>
+        </tr>
+        <tr>
+           <td>\ref ProjectBuilder::ProjectBuilder( ) "ProjectBuilder( )"</td>
+        </tr>
+      </table>
+
+      \section ProjectBuilderIssues Known Issues
+
+      - This plug-in is under active development and changes much more frequently than other plug-ins, and backward compatability is not necessarily maintained. Please check the release notes for each version to see what has changed and how to modify your code to accommodate changes that break backward compatability.
+
 	\section ProjectBuilderIntro Introduction
 
-	This is the ProjectBuilder plugin which saves and builds simulations to and from an XML file. This plugin also allows scenes to be visualized with an interactive GUI.
+	This is the ProjectBuilder plugin which saves and builds simulations to and from an XML file. This plugin also allows scenes to be visualized with an interactive GUI. This plug-in includes optional features that require other plug-ins including Plant Architecture, Radiation, Visualizer, Boundary Layer Conductance, Energy Balance, and Solar Position. In particular, the Visualizer plug-in is required to run the interactive GUI.
 
-	\section ProjectBuilderDepends Dependencies
+    \section ProjectBuilderUse Using the ProjectBuilder Plug-in
 
-	This plugin has no dependencies.
+    \subsection setup Setting Up ProjectBuilder
+
+    To work on a new project using the ProjectBuilder GUI, run the following code (Note: the GUI requires the Visualizer plugin). This will build a new project from the default XML inputs file.
+    ~~~~~~
+    #include "ProjectBuilder.h"
+
+    int main(){
+
+        ProjectBuilder builder;
+
+        builder.buildAndVisualize();
+
+        return 0;
+    }
+    ~~~~~~
+    Alternatively, to work on an existing project using the ProjectBuilder GUI, enter the XML input file path as an argument to the \ref ProjectBuilder::buildAndVisualize() method.
+    ~~~~~~
+    #include "ProjectBuilder.h"
+
+    int main(){
+
+        ProjectBuilder builder;
+
+        builder.buildAndVisualize("inputs.xml");
+
+        return 0;
+    }
+    ~~~~~~
+    It is also possible to build a project from an input XML file without opening the GUI using the \ref ProjectBuilder::build() method. The GUI can be opened later in the code after the project is built using the \ref ProjectBuilder::visualize() method.
+    ~~~~~~
+    #include "ProjectBuilder.h"
+
+    int main(){
+
+        ProjectBuilder builder;
+
+        builder.build("inputs.xml");
+
+        ...
+
+        builder.visualize();
+
+        return 0;
+    }
+    ~~~~~~
 
 	\section ProjectBuilderAcknowledgements Acknowledgements
 

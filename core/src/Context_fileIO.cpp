@@ -3676,11 +3676,32 @@ std::vector<uint> Context::loadPLY(const char* filename, const vec3 &origin, flo
 }
 
 void Context::writePLY( const char* filename ) const{
+  writePLY( filename, getAllUUIDs() );
+}
 
+void Context::writePLY( const char* filename, const std::vector<uint> &UUIDs ) const{
+  //Validate file name / extension
+  std::string fname{filename ? filename : ""};
+
+  const auto dotPos = fname.find_last_of('.');
+  const std::string ext = (dotPos != std::string::npos) ? fname.substr(dotPos) : "";
+
+  auto ciEqual = [](const char a, const char b) { return std::tolower(a) == std::tolower(b); };
+  bool isPly = (ext.size() == 4) && ciEqual(ext[1], 'p') && ciEqual(ext[2], 'l') && ciEqual(ext[3], 'y');
+
+  if (!isPly) {
+    helios_runtime_error("ERROR (Context::writePLY) Invalid file extension for " + fname + ". Expected a file ending in '.ply'.");
+  }
+
+  //Try to open the output file
   std::ofstream PLYfile;
-  PLYfile.open(filename);
+  PLYfile.open(fname, std::ios::out | std::ios::trunc);
 
-  PLYfile << "ply" << std::endl << "format ascii 1.0" << std::endl << "comment HELIOS generated" << std::endl;
+  if (!PLYfile.is_open()){
+    helios_runtime_error("ERROR (Context::writePLY) Unable to open " + fname + " for writing.");
+  }
+
+  PLYfile << "ply" << std::endl << "format ascii 1.0" << std::endl << "comment Helios generated" << std::endl;
 
   std::vector<int3> faces;
   std::vector<vec3> verts;
@@ -3688,13 +3709,11 @@ void Context::writePLY( const char* filename ) const{
 
   size_t vertex_count = 0;
 
-  for(auto primitive : primitives){
+  for( auto UUID : UUIDs ){
 
-    uint p = primitive.first;
-
-    std::vector<vec3> vertices = getPrimitivePointer_private(p)->getVertices();
-    PrimitiveType type = getPrimitivePointer_private(p)->getType();
-    RGBcolor C = getPrimitivePointer_private(p)->getColor();
+    std::vector<vec3> vertices = getPrimitivePointer_private(UUID)->getVertices();
+    PrimitiveType type = getPrimitivePointer_private(UUID)->getType();
+    RGBcolor C = getPrimitivePointer_private(UUID)->getColor();
     C.scale(255.f);
 
     if( type==PRIMITIVE_TYPE_TRIANGLE ){
@@ -3735,7 +3754,6 @@ void Context::writePLY( const char* filename ) const{
   }
 
   PLYfile.close();
-
 
 }
 
@@ -4058,9 +4076,11 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
 
       while( line!="newmtl" && inputMTL.good() ){
 
-        if( line=="map_a" ){
-          getline(inputMTL, line);
-        }else if( line=="map_Ka" ){
+        inputMTL>>line;
+
+        if( line=="newmtl" ) {
+            break;
+        }else if( line=="map_a" || line=="map_Ka" || line=="Ks"  || line=="Ka" || line=="map_Ks" ){
           getline(inputMTL, line);
         }else if( line=="map_Kd" || line=="map_d" ){
           std::string maptype = line;
@@ -4098,23 +4118,18 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
               }
             }
           }
-
-        }else if( line=="map_Ks" ){
-          getline(inputMTL, line);
-
         }else if( line=="Kd" ){
           getline(inputMTL, line);
           std::string color_str = trim_whitespace(line );
           RGBAcolor color = string2RGBcolor(color_str.c_str());
           materials.at(material_name).color = make_RGBcolor(color.r,color.g,color.b);
         }else{
-          getline(inputMTL, line);
-        }
+           getline(inputMTL, line);
+         }
 
-        inputMTL>>line;
       }
 
-      if( map_Kd.empty() && !map_d.empty() ){
+       if( map_Kd.empty() && !map_d.empty() ){
         materials.at(material_name).textureColorIsOverridden=true;
       }
 

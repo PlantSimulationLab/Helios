@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: ProjectBuilder Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -148,23 +161,114 @@ $(function(){initNavTree('_project_builder_doc.html',''); initResizable(true); }
 <div class="toc"><h3>Table of Contents</h3>
 <ul>
   <li class="level1">
+    <a href="#ProjectBuilderDepends">Dependencies</a>
+  </li>
+  <li class="level1">
+    <a href="#ProjectBuilderClass">Class Constructor(s)</a>
+  </li>
+  <li class="level1">
+    <a href="#ProjectBuilderIssues">Known Issues</a>
+  </li>
+  <li class="level1">
     <a href="#ProjectBuilderIntro">Introduction</a>
   </li>
   <li class="level1">
-    <a href="#ProjectBuilderDepends">Dependencies</a>
+    <a href="#ProjectBuilderUse">Using the ProjectBuilder Plug-in</a>
+    <ul>
+      <li class="level2">
+        <a href="#setup">Setting Up ProjectBuilder</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
     <a href="#ProjectBuilderAcknowledgements">Acknowledgements</a>
   </li>
 </ul>
 </div>
-<div class="textblock"><h1><a class="anchor" id="ProjectBuilderIntro"></a>
-Introduction</h1>
-<p>This is the ProjectBuilder plugin which saves and builds simulations to and from an XML file. This plugin also allows scenes to be visualized with an interactive GUI.</p>
+<div class="textblock"><table class="doxtable">
+<tr>
+<th>Dependencies </th><td>Zenity (Linux)  </td></tr>
+<tr>
+<th>CMakeLists.txt </th><td>set( PLUGINS "projectbuilder" )  </td></tr>
+<tr>
+<th>Header File </th><td>include "ProjectBuilder.h"  </td></tr>
+<tr>
+<th>Class </th><td><a class="el" href="class_project_builder.html">ProjectBuilder</a>  </td></tr>
+</table>
 <h1><a class="anchor" id="ProjectBuilderDepends"></a>
 Dependencies</h1>
-<p>This plugin has no dependencies.</p>
-<h1><a class="anchor" id="ProjectBuilderAcknowledgements"></a>
+<table class="doxtable">
+<caption>Installing dependent packages</caption>
+<tr>
+<th>Package </th><td><div class="image">
+<img src="apple-logo.png" alt=""/>
+</div>
+ </td><td><div class="image">
+<img src="unix-logo.png" alt=""/>
+</div>
+ </td><td><div class="image">
+<img src="windows-logo.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>Zenity </td><td>None </td><td>Debian/Ubuntu:<br  />
+<code>$ sudo apt-get install zenity</code> </td><td>None  </td></tr>
+</table>
+<h1><a class="anchor" id="ProjectBuilderClass"></a>
+Class Constructor(s)</h1>
+<table class="doxtable">
+<tr>
+<th>Constructors  </th></tr>
+<tr>
+<td><a class="el" href="class_project_builder.html#a59b09aad1714505a387f57d7596abff0">ProjectBuilder( )</a>  </td></tr>
+</table>
+<h1><a class="anchor" id="ProjectBuilderIssues"></a>
+Known Issues</h1>
+<ul>
+<li>This plug-in is under active development and changes much more frequently than other plug-ins, and backward compatability is not necessarily maintained. Please check the release notes for each version to see what has changed and how to modify your code to accommodate changes that break backward compatability.</li>
+</ul>
+<h1><a class="anchor" id="ProjectBuilderIntro"></a>
+Introduction</h1>
+<p>This is the ProjectBuilder plugin which saves and builds simulations to and from an XML file. This plugin also allows scenes to be visualized with an interactive GUI. This plug-in includes optional features that require other plug-ins including Plant Architecture, Radiation, Visualizer, Boundary Layer Conductance, Energy Balance, and Solar Position. In particular, the Visualizer plug-in is required to run the interactive GUI.</p>
+<h1><a class="anchor" id="ProjectBuilderUse"></a>
+Using the ProjectBuilder Plug-in</h1>
+<h2><a class="anchor" id="setup"></a>
+Setting Up ProjectBuilder</h2>
+<p>To work on a new project using the ProjectBuilder GUI, run the following code (Note: the GUI requires the Visualizer plugin). This will build a new project from the default XML inputs file. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_project_builder_8h.html">ProjectBuilder.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_project_builder.html">ProjectBuilder</a> builder;</div>
+<div class="line"> </div>
+<div class="line">    builder.<a class="code hl_function" href="class_project_builder.html#a5ba996aa815c72facc29e9eec3717203" title="Function to build and visualize XML simulation.">buildAndVisualize</a>();</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+</div><!-- fragment --><p> Alternatively, to work on an existing project using the ProjectBuilder GUI, enter the XML input file path as an argument to the <a class="el" href="class_project_builder.html#a5ba996aa815c72facc29e9eec3717203">ProjectBuilder::buildAndVisualize()</a> method. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_project_builder_8h.html">ProjectBuilder.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_project_builder.html">ProjectBuilder</a> builder;</div>
+<div class="line"> </div>
+<div class="line">    builder.<a class="code hl_function" href="class_project_builder.html#a5ba996aa815c72facc29e9eec3717203" title="Function to build and visualize XML simulation.">buildAndVisualize</a>(<span class="stringliteral">&quot;inputs.xml&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+</div><!-- fragment --><p> It is also possible to build a project from an input XML file without opening the GUI using the ProjectBuilder::build() method. The GUI can be opened later in the code after the project is built using the <a class="el" href="class_project_builder.html#a4d3008230c86ee12257d23c6c55e8e97">ProjectBuilder::visualize()</a> method. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_project_builder_8h.html">ProjectBuilder.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_project_builder.html">ProjectBuilder</a> builder;</div>
+<div class="line"> </div>
+<div class="line">    builder.build(<span class="stringliteral">&quot;inputs.xml&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">    ...</div>
+<div class="line"> </div>
+<div class="line">    builder.<a class="code hl_function" href="class_project_builder.html#a4d3008230c86ee12257d23c6c55e8e97" title="Function to visualize XML plot.">visualize</a>();</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h1><a class="anchor" id="ProjectBuilderAcknowledgements"></a>
 Acknowledgements</h1>
 <p>This plug-in uses all or parts of the following open-sourced software libraries:</p>
 <p>The OpenGL Extension Wrangler Library: Copyright (C) 2008-2016, Nigel Stewart &lt;nigels[]users sourceforge net&gt; Copyright (C) 2002-2008, Milan Ikits &lt;milan ikits[]ieee org&gt; Copyright (C) 2002-2008, Marcelo E. Magallon &lt;mmagallo[]debian org&gt; Copyright (C) 2002, Lev Povalahev All rights reserved.</p>

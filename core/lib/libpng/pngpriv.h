@@ -454,7 +454,7 @@
     * <fp.h> if possible.
     */
 #    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
-#      include <fp.h>
+#      include <math.h> //BNB 4/11/2025
 #    endif
 #  else
 #    include <math.h>

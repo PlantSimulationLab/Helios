@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/boundarylayerconductance/src/BoundaryLayerConductanceModel.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -183,14 +196,14 @@ $(function(){initNavTree('_boundary_layer_conductance_model_8cpp_source.html',''
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  std::vector&lt;uint&gt; UUID_1;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  UUID_1.push_back( context_1.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.2*M_PI,0) ) );</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;air_temperature&quot;</span>, Ta );</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;temperature&quot;</span>, TL );</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;wind_speed&quot;</span>, U );</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;air_temperature&quot;</span>, Ta );</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;temperature&quot;</span>, TL );</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID_1, <span class="stringliteral">&quot;wind_speed&quot;</span>, U );</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  <a class="code hl_function" href="class_b_l_conductance_model.html#af507e5b75f21372ec225d5e5c0c8c97a" title="Constructor.">BLConductanceModel</a> blc_1(&amp;context_1);</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>  blc_1.<a class="code hl_function" href="class_b_l_conductance_model.html#a11bd8193606442d8393bf22131fa0720" title="Disable standard output from this plug-in.">disableMessages</a>();</div>

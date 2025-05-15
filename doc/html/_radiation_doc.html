@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Radiation Model Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -655,9 +668,9 @@ Integrating with the SolarPosition Plug-in</h2>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize Context</span></div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// add some geometry</span></div>
-<div class="line">   context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(10,10), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(500,500) );</div>
+<div class="line">   context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(10,10), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,0), <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(500,500) );</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="group__compoundobjects.html#gac5df0d862dd8d6783edc037804c452bf" title="Add a spherical compound object to the Context.">addSphere</a>( 50, <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,2), 1 );</div>
+<div class="line">   context.<a class="code hl_function" href="group__compoundobjects.html#gac5df0d862dd8d6783edc037804c452bf" title="Add a spherical compound object to the Context.">addSphere</a>( 50, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,2), 1 );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// --- 2. Initialize the solar position model --- //</span></div>
 <div class="line"> </div>
@@ -777,16 +790,16 @@ Writing Camera Images to File</h3>
 <div class="line"> </div>
 <div class="line">   std::vector&lt;uint&gt; UUIDs_bunny = context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;../../../PLY/StanfordBunny.ply&quot;</span>, <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 1.f );</div>
 <div class="line"> </div>
-<div class="line">   std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(3,3), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, <a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(200,200) );</div>
+<div class="line">   std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3,3), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(200,200) );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Set labels that we&#39;ll use to label pixels</span></div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;bunny&quot;</span>, 1 );</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;bunny&quot;</span>, 0 );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;bunny&quot;</span>, 1 );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;bunny&quot;</span>, 0 );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil</span></div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;plugins/radiation/spectral_data/surface_spectral_library.xml&quot;</span>);</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;soil_reflectivity_0000&quot;</span> );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;soil_reflectivity_0000&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel(&amp;context);</div>
 <div class="line"> </div>

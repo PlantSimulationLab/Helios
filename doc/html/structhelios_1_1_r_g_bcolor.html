@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: helios::RGBcolor Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -157,9 +170,9 @@ $(function(){initNavTree('structhelios_1_1_r_g_bcolor.html',''); initResizable(t
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a030dae08fe8c38ad9bb7c735254ac53e" id="r_a030dae08fe8c38ad9bb7c735254ac53e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a030dae08fe8c38ad9bb7c735254ac53e">RGBcolor</a> ()</td></tr>
-<tr class="memdesc:a030dae08fe8c38ad9bb7c735254ac53e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor - initializes color to black.  <br /></td></tr>
-<tr class="separator:a030dae08fe8c38ad9bb7c735254ac53e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a671c269548106bc11adbb26fcd209695" id="r_a671c269548106bc11adbb26fcd209695"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a671c269548106bc11adbb26fcd209695">RGBcolor</a> ()</td></tr>
+<tr class="memdesc:a671c269548106bc11adbb26fcd209695"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor - initializes color to black.  <br /></td></tr>
+<tr class="separator:a671c269548106bc11adbb26fcd209695"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e99268f14b8cdff29d50230585fad36" id="r_a3e99268f14b8cdff29d50230585fad36"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e99268f14b8cdff29d50230585fad36">RGBcolor</a> (float <a class="el" href="#a3e16659a90c69e6043c33c113b2fffe8">r</a>, float <a class="el" href="#ae002d220d8695538760eee2a6c4e9023">g</a>, float <a class="el" href="#a1b3ba3f5b77ef3082088eff853d4c335">b</a>)</td></tr>
 <tr class="memdesc:a3e99268f14b8cdff29d50230585fad36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor given three floats denoting R-G-B components.  <br /></td></tr>
 <tr class="separator:a3e99268f14b8cdff29d50230585fad36"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -175,12 +188,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5b7b7b5734588bcf49444997b091f8b6" id="r_a5b7b7b5734588bcf49444997b091f8b6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b7b7b5734588bcf49444997b091f8b6">scale</a> (float scale_factor)</td></tr>
 <tr class="memdesc:a5b7b7b5734588bcf49444997b091f8b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale RGBcolor by some factor.  <br /></td></tr>
 <tr class="separator:a5b7b7b5734588bcf49444997b091f8b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3cfc4c0f132c841f3a18ff9bdae21e22" id="r_a3cfc4c0f132c841f3a18ff9bdae21e22"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cfc4c0f132c841f3a18ff9bdae21e22">operator==</a> (const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;c) const</td></tr>
-<tr class="memdesc:a3cfc4c0f132c841f3a18ff9bdae21e22"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two RGB colors  <br /></td></tr>
-<tr class="separator:a3cfc4c0f132c841f3a18ff9bdae21e22"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac0fa9361ccd323b9f6be61c51523a3ce" id="r_ac0fa9361ccd323b9f6be61c51523a3ce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac0fa9361ccd323b9f6be61c51523a3ce">operator!=</a> (const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;c) const</td></tr>
-<tr class="memdesc:ac0fa9361ccd323b9f6be61c51523a3ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for inequality of two RGB colors  <br /></td></tr>
-<tr class="separator:ac0fa9361ccd323b9f6be61c51523a3ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af31213b1540d86e47f4a6413a251ebee" id="r_af31213b1540d86e47f4a6413a251ebee"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af31213b1540d86e47f4a6413a251ebee">operator==</a> (const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;c) const noexcept</td></tr>
+<tr class="memdesc:af31213b1540d86e47f4a6413a251ebee"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two RGB colors  <br /></td></tr>
+<tr class="separator:af31213b1540d86e47f4a6413a251ebee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abcf65ffb901c5a047d4437b62724e3e5" id="r_abcf65ffb901c5a047d4437b62724e3e5"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abcf65ffb901c5a047d4437b62724e3e5">operator!=</a> (const <a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a> &amp;c) const noexcept</td></tr>
+<tr class="memdesc:abcf65ffb901c5a047d4437b62724e3e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for inequality of two RGB colors  <br /></td></tr>
+<tr class="separator:abcf65ffb901c5a047d4437b62724e3e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -203,10 +216,10 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>R-G-B color vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00844">844</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00873">873</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a030dae08fe8c38ad9bb7c735254ac53e" name="a030dae08fe8c38ad9bb7c735254ac53e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a030dae08fe8c38ad9bb7c735254ac53e">&#9670;&#160;</a></span>RGBcolor() <span class="overload">[1/5]</span></h2>
+<a id="a671c269548106bc11adbb26fcd209695" name="a671c269548106bc11adbb26fcd209695"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a671c269548106bc11adbb26fcd209695">&#9670;&#160;</a></span>RGBcolor() <span class="overload">[1/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -223,14 +236,14 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Default constructor - initializes color to black. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00858">858</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00887">887</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -277,7 +290,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If arguments are outside of the range 0 to 1, values are clamped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00867">867</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00896">896</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -313,7 +326,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If arguments are outside of the range 0 to 1, values are clamped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00877">877</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00903">903</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -349,7 +362,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If arguments are outside of the range 0 to 1, values are clamped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00887">887</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00910">910</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -385,13 +398,13 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If arguments are outside of the range 0 to 1, values are clamped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00900">900</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00923">923</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ac0fa9361ccd323b9f6be61c51523a3ce" name="ac0fa9361ccd323b9f6be61c51523a3ce"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac0fa9361ccd323b9f6be61c51523a3ce">&#9670;&#160;</a></span>operator!=()</h2>
+<a id="abcf65ffb901c5a047d4437b62724e3e5" name="abcf65ffb901c5a047d4437b62724e3e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abcf65ffb901c5a047d4437b62724e3e5">&#9670;&#160;</a></span>operator!=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -408,19 +421,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for inequality of two RGB colors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00970">970</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00989">989</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="a3cfc4c0f132c841f3a18ff9bdae21e22" name="a3cfc4c0f132c841f3a18ff9bdae21e22"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3cfc4c0f132c841f3a18ff9bdae21e22">&#9670;&#160;</a></span>operator==()</h2>
+<a id="af31213b1540d86e47f4a6413a251ebee" name="af31213b1540d86e47f4a6413a251ebee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af31213b1540d86e47f4a6413a251ebee">&#9670;&#160;</a></span>operator==()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -437,14 +450,14 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for equality of two RGB colors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00966">966</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00985">985</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -479,7 +492,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00910">910</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00929">929</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -513,7 +526,7 @@ Friends</h2></td></tr>
 
 <p>write RGBcolor to output stream </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00920">920</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00939">939</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -533,7 +546,7 @@ Friends</h2></td></tr>
 <p>Blue color component. </p>
 <p>Takes a value between 0 and 1. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00855">855</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00884">884</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -552,7 +565,7 @@ Friends</h2></td></tr>
 <p>Green color component. </p>
 <p>Takes a value between 0 and 1. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00852">852</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00881">881</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -571,7 +584,7 @@ Friends</h2></td></tr>
 <p>Red color component. </p>
 <p>Takes a value between 0 and 1. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00849">849</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00878">878</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

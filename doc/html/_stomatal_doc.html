@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Stomatal Conductance Model Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -424,7 +437,7 @@ Running the Model (steady-state mode)</h2>
 <div class="line">   <span class="comment">//Initialize the Context and add some geometry</span></div>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(1,1) );</div>
+<div class="line">   context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1) );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Initialize the stomatal conductance model</span></div>
 <div class="line">   <a class="code hl_class" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> stomatalmodel( &amp;context );</div>
@@ -485,7 +498,7 @@ Running the Model in Dynamic Mode</h2>
 <div class="line"> </div>
 <div class="line">  <span class="comment">//Set the initial stomatal conductance value</span></div>
 <div class="line">  <span class="keywordtype">float</span> gs_initial = 0.2f;</div>
-<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_initial );</div>
+<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_initial );</div>
 <div class="line"> </div>
 <div class="line">  <span class="keywordtype">float</span> dt = 1; <span class="comment">//timestep (seconds)</span></div>
 <div class="line">  <span class="keywordtype">int</span> Nsteps = 50; <span class="comment">//number of timesteps to run</span></div>

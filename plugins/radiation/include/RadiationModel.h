@@ -560,18 +560,19 @@ public:
     */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
 
-    //! Set the spectral distribution of diffuse ambient radiation FOR ALL BANDS based on global data of wavelength-intensity pairs.
-    /**
-      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
-    */
-    void setDiffuseSpectrum( const std::string &spectrum_label );
-
-    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BANDS based on global data of wavelength-intensity pairs.
+    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of wavelength-intensity pairs.
     /**
       * \param[in] band_label Label used to reference the band
       * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
     void setDiffuseSpectrum( const std::string &band_label, const std::string &spectrum_label );
+
+    //! Set the spectral distribution of diffuse ambient radiation FOR MULTIPLE BANDS based on global data of wavelength-intensity pairs.
+    /**
+      * \param[in] band_labels List of labels used to reference the bands
+      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+    */
+    void setDiffuseSpectrum( const std::vector<std::string> &band_labels, const std::string &spectrum_label );
 
     //! Get the diffuse flux for a given band
     /**
@@ -1123,9 +1124,6 @@ protected:
     //! Steffan Boltzmann Constant
     float sigma = 5.6703744E-8;
 
-    //! Radius of a sphere encapsulating the entire scene/domain
-    float scene_radius;
-
     //! Default primitive reflectivity
     float rho_default;
 
@@ -1375,11 +1373,16 @@ protected:
 
     /* Variables */
 
+    RTgeometrygroup base_geometry_group;
+
     //! Random number generator seed
     RTvariable random_seed_RTvariable;
 
     //! Primitive offset used for tiling ray launches
     RTvariable launch_offset_RTvariable;
+
+    //! Flag designating which face of the primitive the launch is for
+    RTvariable launch_face_RTvariable;
 
     //! Maximum scattering depth
     RTvariable max_scatters_RTvariable;
@@ -1418,11 +1421,6 @@ protected:
     RTvariable emission_flag_RTvariable;
     RTbuffer emission_flag_RTbuffer;
 
-    //! Bounding sphere radius
-    RTvariable bound_sphere_radius_RTvariable;
-    //! Bounding sphere center
-    RTvariable bound_sphere_center_RTvariable;
-
     //! Periodic boundary condition
     helios::vec2 periodic_flag;
     RTvariable periodic_flag_RTvariable;
@@ -1454,9 +1452,9 @@ protected:
     RTvariable primitive_type_RTvariable;
 
     //! Primitive area - RTbuffer object
-    RTbuffer primitive_area_RTbuffer;
+    RTbuffer primitive_solid_fraction_RTbuffer;
     //! Primitive area - RTvariable
-    RTvariable primitive_area_RTvariable;
+    RTvariable primitive_solid_fraction_RTvariable;
 
     //! Primitive UUIDs - RTbuffer object
     RTbuffer patch_UUID_RTbuffer;

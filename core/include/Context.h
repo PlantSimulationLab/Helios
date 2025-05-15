@@ -71,24 +71,24 @@ public:
     
     //! Constructor - initialize with given texture file
     /**
-     * \param[in] "texture_file" Path to texture file. Note that file paths can be absolute, or relative to the directory in which the program is being run.
+     * \param[in] texture_file Path to texture file. Note that file paths can be absolute, or relative to the directory in which the program is being run.
      */
     explicit Texture( const char* texture_file );
     
     //! Get the name/path of the texture map file
-    std::string getTextureFile() const;
+    [[nodiscard]] std::string getTextureFile() const;
     
     //! Get the size of the texture in pixels (horizontal x vertical)
-    helios::int2 getImageResolution() const;
+    [[nodiscard]] helios::int2 getImageResolution() const;
     
     //! Check whether the texture has a transparency channel
-    bool hasTransparencyChannel() const;
+    [[nodiscard]] bool hasTransparencyChannel() const;
     
     //! Get the data in the texture transparency channel (if it exists)
-    const std::vector<std::vector<bool> >* getTransparencyData() const;
+    [[nodiscard]] const std::vector<std::vector<bool> >* getTransparencyData() const;
     
     //! Get the solid fraction of the texture transparency channel (if it exists)
-    float getSolidFraction() const;
+    [[nodiscard]] float getSolidFraction() const;
     
 private:
     std::string filename;
@@ -144,38 +144,43 @@ enum ObjectType{
 
 class CompoundObject{
 public:
-    
-    virtual ~CompoundObject()= default;
+
+    //! Destructor
+    /**
+     * Declare as pure virtual to force this as an abstract base class (can not be directly instantiated)
+     */
+    virtual ~CompoundObject() = 0;
     
     //! Get the unique identifier for the object
-    uint getObjectID() const;
+    [[nodiscard]] uint getObjectID() const;
     
     //! Get an enumeration specifying the type of the object
-    helios::ObjectType getObjectType() const;
+    [[nodiscard]] helios::ObjectType getObjectType() const;
     
     //! Return the number of primitives contained in the object
-    uint getPrimitiveCount() const;
+    [[nodiscard]] uint getPrimitiveCount() const;
     
     //! Get the UUIDs for all primitives contained in the object
-    std::vector<uint> getPrimitiveUUIDs() const;
+    [[nodiscard]] std::vector<uint> getPrimitiveUUIDs() const;
     
     //! Check whether a primitive is a member of the object based on its UUID
-    bool doesObjectContainPrimitive( uint UUID );
+    [[nodiscard]] bool doesObjectContainPrimitive( uint UUID );
     
     //! Calculate the Cartesian (x,y,z) point of the center of a bounding box for the Compound Object
-    helios::vec3 getObjectCenter() const;
+    [[nodiscard]] helios::vec3 getObjectCenter() const;
     
     //! Calculate the total one-sided surface area of the Compound Object
-    float getArea() const;
+    [[nodiscard]] float getArea() const;
     
     //! Method to set the diffuse color for all primitives in the Compound Object
-    /** /param[in] "color" New color of primitives
+    /**
+     * \param[in] color New color of primitives
      */
     void setColor( const helios::RGBcolor& color );
     
     //! Method to set the diffuse color (with transparency) for all primitives in the Compound Object
     /**
-     * /param[in] "color" New color of primitives
+     * \param[in] color New color of primitives
      */
     void setColor( const helios::RGBAcolor& color );
     
@@ -186,10 +191,10 @@ public:
     void useTextureColor();
     
     //! Method to check whether this object has texture data
-    bool hasTexture( ) const;
+    [[nodiscard]] bool hasTexture( ) const;
     
     //! Method to return the texture map file of an Object
-    std::string getTextureFile( ) const;
+    [[nodiscard]] std::string getTextureFile( ) const;
     
     //! Method to translate/shift a Compound Object
     /**
@@ -268,11 +273,11 @@ public:
      */
     void deleteChildPrimitive( const std::vector<uint> &UUIDs );
     
-    //! Method to query whether all object primitives are in tact
+    //! Method to query whether all object primitives are intact
     /**
      * \return False if any primitives have been deleted from the object since creation; True otherwise.
      */
-    bool arePrimitivesComplete() const;
+    [[nodiscard]] bool arePrimitivesComplete() const;
     
     //-------- Object Data Methods ---------- //
     
@@ -281,28 +286,28 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
-    void setObjectData( const char* label, const int& data );
+    void setObjectData(const char* label, int data);
     
     //! Add data value (uint) associated with a object element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
-    void setObjectData( const char* label, const uint& data );
+    void setObjectData(const char* label, uint data);
     
     //! Add data value (float) associated with a object element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
-    void setObjectData( const char* label, const float& data );
+    void setObjectData(const char* label, float data);
     
     //! Add data value (double) associated with a object element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
-    void setObjectData( const char* label, const double& data );
+    void setObjectData(const char* label, double data);
     
     //! Add data value (vec2) associated with a object element
     /**
@@ -434,6 +439,10 @@ public:
     void getObjectData( const char* label, std::vector<vec2>& data ) const;
     
     //! Get data associated with a object element (vec3 scalar)
+    /**
+     * \param[in] label Name/label associated with data
+     * \param[out] data Object data structure
+     */
     void getObjectData( const char* label, vec3& data ) const;
     
     //! Get data associated with a object element (vector of vec3's)
@@ -532,9 +541,7 @@ public:
     void clearObjectData( const char* label );
     
     //! Return labels for all object data for this particular object
-    std::vector<std::string> listObjectData() const;
-
-    friend class Context;
+    [[nodiscard]] std::vector<std::string> listObjectData() const;
     
 protected:
     
@@ -574,27 +581,26 @@ protected:
     std::map<std::string, std::vector<bool> > object_data_bool;
 
     bool ishidden = false;
-    
+
+    friend class Context;
+
 };
 
 //! Tile compound object class
-class Tile : public CompoundObject {
+class Tile final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Tile destructor
     ~Tile() override = default;
     
     //! Get the dimensions of the entire tile object
-    helios::vec2 getSize() const;
+    [[nodiscard]] helios::vec2 getSize() const;
     
     //! Get the Cartesian coordinates of the center of the tile object
-    vec3 getCenter() const;
+    [[nodiscard]] helios::vec3 getCenter() const;
     
     //! Get the number of sub-patch divisions of the tile
-    helios::int2 getSubdivisionCount() const;
+    [[nodiscard]] helios::int2 getSubdivisionCount() const;
     
     //! Set the number of tile sub-patch divisions
     /**
@@ -604,40 +610,44 @@ public:
     void setSubdivisionCount( const helios::int2 &subdiv );
     
     //! Get the Cartesian coordinates of each of the four corners of the tile object
-    std::vector<helios::vec3> getVertices() const;
+    [[nodiscard]] std::vector<helios::vec3> getVertices() const;
     
     //! Get a unit vector normal to the tile object surface
-    vec3 getNormal() const;
+    [[nodiscard]] helios::vec3 getNormal() const;
     
     //! Get the normalized (u,v) coordinates of the texture at each of the four corners of the tile object
-    std::vector<helios::vec2> getTextureUV() const;
+    [[nodiscard]] std::vector<helios::vec2> getTextureUV() const;
     
 protected:
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     helios::int2 subdiv;
 
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Sphere compound object class
-class Sphere : public CompoundObject {
+class Sphere final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Sphere destructor
     ~Sphere() override = default;
     
     //! Get the radius of the sphere
-    helios::vec3 getRadius() const;
+    [[nodiscard]] helios::vec3 getRadius() const;
     
     //! Get the Cartesian coordinates of the center of the sphere object
-    vec3 getCenter() const;
+    [[nodiscard]] helios::vec3 getCenter() const;
     
     //! Get the number of sub-patch divisions of the sphere object
-    uint getSubdivisionCount() const;
+    [[nodiscard]] uint getSubdivisionCount() const;
     
     //! Set the number of sphere tesselation divisions
     /**
@@ -646,53 +656,56 @@ public:
     void setSubdivisionCount(uint subdiv );
 
     //! Get the volume of the sphere object
-    float getVolume() const;
+    [[nodiscard]] float getVolume() const;
     
 protected:
-    
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
+
     uint subdiv;
 
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Tube compound object class
-class Tube : public CompoundObject {
+class Tube final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
-         uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     //! Tube destructor
     ~Tube() override = default;
     
     //! Get the Cartesian coordinates of each of the tube object nodes
-    std::vector<helios::vec3> getNodes() const;
+    [[nodiscard]] std::vector<helios::vec3> getNodes() const;
     
     //! Get the radius at each of the tube object nodes
-    std::vector<float> getNodeRadii() const;
+    [[nodiscard]] std::vector<float> getNodeRadii() const;
     
     //! Get the colors at each of the tube object nodes
-    std::vector<helios::RGBcolor> getNodeColors() const;
+    [[nodiscard]] std::vector<helios::RGBcolor> getNodeColors() const;
 
     //! Get positions of triangle vertices comprising the tube object
-    std::vector<std::vector<helios::vec3>> getTriangleVertices() const;
+    [[nodiscard]] std::vector<std::vector<helios::vec3>> getTriangleVertices() const;
     
     //! Get the number of sub-triangle divisions of the tube object
-    uint getSubdivisionCount() const;
+    [[nodiscard]] uint getSubdivisionCount() const;
 
     //! Get the length of the tube object
-    float getLength() const;
+    [[nodiscard]] float getLength() const;
 
     //! Get the volume of the tube object
-    float getVolume() const;
+    [[nodiscard]] float getVolume() const;
 
     //! Get the volume of a segment within the tube object
     /**
      * \param[in] segment_index Index of the tube segment
      */
-    float getSegmentVolume( uint segment_index ) const;
+    [[nodiscard]] float getSegmentVolume( uint segment_index ) const;
 
     //! Append an additional segment to the existing tube object
     /**
@@ -742,6 +755,13 @@ public:
     void pruneTubeNodes( uint node_index );
 
 protected:
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
+         uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     std::vector<helios::vec3> nodes;
 
@@ -755,30 +775,26 @@ protected:
 
     void updateTriangleVertices();
 
-
-
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Box compound object class
-class Box : public CompoundObject {
+class Box final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Box destructor
     ~Box() override = default;
     
     //! Get the dimensions of the box object in each Cartesian direction
-    vec3 getSize() const;
+    [[nodiscard]] helios::vec3 getSize() const;
     
     //! Get the Cartesian coordinates of the center of the box object
-    vec3 getCenter() const;
+    [[nodiscard]] helios::vec3 getCenter() const;
     
     //! Get the number of sub-patch divisions of the box object in each Cartesian direction
-    helios::int3 getSubdivisionCount() const;
+    [[nodiscard]] helios::int3 getSubdivisionCount() const;
     
     //! Set the number of box sub-patch divisions
     /**
@@ -787,75 +803,87 @@ public:
     void setSubdivisionCount( const helios::int3 &subdiv );
 
     //! Get the volume of the box object
-    float getVolume() const;
+    [[nodiscard]] float getVolume() const;
     
 protected:
-    
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile, helios::Context *a_context);
+
     helios::int3 subdiv;
 
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Disk compound object class
-class Disk : public CompoundObject {
+class Disk final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Disk destructor
     ~Disk() override = default;
     
     //! Get the lateral dimensions of the disk object
-    vec2 getSize() const;
+    [[nodiscard]] helios::vec2 getSize() const;
     
     //! Get the Cartesian coordinates of the center of the disk object
-    vec3 getCenter() const;
+    [[nodiscard]] helios::vec3 getCenter() const;
     
     //! Get the number of sub-triangle divisions of the disk object
-    int2 getSubdivisionCount() const;
+    [[nodiscard]] helios::int2 getSubdivisionCount() const;
     
     //! Set the number of disk sub-triangle divisions
     /**
      * \param[in] subdiv Number of triangle subdivisions.
      */
-    void setSubdivisionCount(int2 subdiv );
+    void setSubdivisionCount(const helios::int2 &subdiv);
     
 protected:
-    
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const char *a_texturefile, helios::Context *a_context);
+
     int2 subdiv;
 
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Polymesh compound object class
-class Polymesh : public CompoundObject {
+class Polymesh final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Polymesh destructor
     ~Polymesh() override = default;
 
     //! Get the volume of the polymesh object
-    float getVolume() const;
+    [[nodiscard]] float getVolume() const;
     
 protected:
 
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile, helios::Context *a_context);
+
     friend class CompoundObject;
+    friend class Context;
     
 };
 
 //! Cone compound object class
-class Cone : public CompoundObject {
+class Cone final : public CompoundObject {
 public:
-    
-    //! Default constructor
-    Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
-    
+
     //! Cone destructor
     ~Cone() override = default;
     
@@ -863,30 +891,30 @@ public:
     /**
      * \return Vector of Cartesian coordinates of cone object nodes (length = 2).
      */
-    std::vector<helios::vec3> getNodeCoordinates() const;
+    [[nodiscard]] std::vector<helios::vec3> getNodeCoordinates() const;
     
     //! Get the Cartesian coordinates of a cone object node
     /**
      * \param[in] node_index Index of the cone node. Either 0 for the cone base, or 1 for the cone apex.
      * \return Cartesian coordinate of the cone node center.
      */
-    helios::vec3 getNodeCoordinate(int node_index) const;
+    [[nodiscard]] helios::vec3 getNodeCoordinate(int node_index) const;
     
     //! Get the radius at each of the cone object nodes
     /**
      * \return Vector of radii at cone object nodes (length = 2).
      */
-    std::vector<float> getNodeRadii() const;
+    [[nodiscard]] std::vector<float> getNodeRadii() const;
     
     //! Get the radius of a cone object node
     /**
      * \param[in] node_index Index of the cone node. Either 0 for the cone base, or 1 for the cone apex.
      * \return Radius of the cone node.
      */
-    float getNodeRadius(int node_index) const;
+    [[nodiscard]] float getNodeRadius(int node_index) const;
     
     //! Get the number of sub-triangle divisions of the cone object
-    uint getSubdivisionCount() const;
+    [[nodiscard]] uint getSubdivisionCount() const;
     
     //! Set the number of radial sub-triangle divisions
     /**
@@ -895,10 +923,10 @@ public:
     void setSubdivisionCount( uint subdiv );
     
     //! Get a unit vector pointing in the direction of the cone central axis
-    helios::vec3 getAxisUnitVector() const;
+    [[nodiscard]] helios::vec3 getAxisUnitVector() const;
     
     //! Get the length of the cone along the axial direction
-    float getLength() const;
+    [[nodiscard]] float getLength() const;
     
     //! Method to scale the length of the cone
     /**
@@ -913,9 +941,15 @@ public:
     void scaleGirth( float S );
 
     //! Get the volume of the cone object
-    float getVolume() const;
+    [[nodiscard]] float getVolume() const;
     
 protected:
+
+    //! Default constructor
+    /**
+     * \note This constructor is private and should not be used.
+     */
+    Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context);
     
     std::vector<helios::vec3> nodes;
     std::vector<float> radii;
@@ -923,6 +957,7 @@ protected:
     uint subdiv;
 
     friend class CompoundObject;
+    friend class Context;
     
 };
 
@@ -934,21 +969,24 @@ protected:
  */
 class Primitive{
 public:
-    
+
     //! Virtual destructor
-    virtual ~Primitive()= default;
+    /**
+     * Make this a pure virtual destructor so that this class cannot be instantiated.
+     */
+    virtual ~Primitive() = 0;
     
     //! Method to get the Primitive universal unique identifier (UUID)
     /**
      * \return UUID of primitive
      */
-    uint getUUID() const;
+    [[nodiscard]] uint getUUID() const;
     
     //! Method to get the Primitive type
     /**
      * \sa PrimitiveType
      */
-    PrimitiveType getType() const;
+    [[nodiscard]] PrimitiveType getType() const;
     
     //! Method to set the ID of the parent object the primitive belongs to (default is object 0)
     /**
@@ -957,13 +995,13 @@ public:
     void setParentObjectID( uint objID );
     
     //! Method to return the ID of the parent object the primitive belongs to (default is object 0)
-    uint getParentObjectID()const;
+    [[nodiscard]] uint getParentObjectID()const;
     
     //! Method to return the surface area of a Primitive
-    virtual float getArea() const = 0;
+    [[nodiscard]] virtual float getArea() const = 0;
     
     //! Method to return the normal vector of a Primitive
-    virtual helios::vec3 getNormal() const = 0;
+    [[nodiscard]] virtual helios::vec3 getNormal() const = 0;
     
     //! Method to return the Affine transformation matrix of a Primitive
     /**
@@ -978,37 +1016,37 @@ public:
     void setTransformationMatrix( float (&T)[16] );
     
     //! Method to return the (x,y,z) coordinates of the vertices of a Primitve
-    virtual std::vector<helios::vec3> getVertices( ) const = 0;
+    [[nodiscard]] virtual std::vector<helios::vec3> getVertices( ) const = 0;
     
     //! Method to return the (x,y,z) coordinates of the Primitive centroid
-    virtual helios::vec3 getCenter() const = 0;
+    [[nodiscard]] virtual helios::vec3 getCenter() const = 0;
     
     //! Method to return the diffuse color of a Primitive
-    helios::RGBcolor getColor() const;
+    [[nodiscard]] helios::RGBcolor getColor() const;
     
     //! Method to return the diffuse color of a Primitive
-    helios::RGBcolor getColorRGB() const;
+    [[nodiscard]] helios::RGBcolor getColorRGB() const;
     
     //! Method to return the diffuse color of a Primitive with transparency
-    helios::RGBAcolor getColorRGBA() const;
+    [[nodiscard]] helios::RGBAcolor getColorRGBA() const;
     
     //! Method to set the diffuse color of a Primitive
     /**
-     * /param[in] color New color of primitive
+     * \param[in] color New color of primitive
      */
     void setColor( const helios::RGBcolor& color );
     
     //! Method to set the diffuse color of a Primitive with transparency
     /**
-     * /param[in] color New color of primitive
+     * \param[in] color New color of primitive
      */
     void setColor( const helios::RGBAcolor& color );
     
     //! Method to check whether this primitive has texture data
-    bool hasTexture( ) const;
+    [[nodiscard]] bool hasTexture( ) const;
     
     //! Method to return the texture map file of a Primitive
-    std::string getTextureFile( ) const;
+    [[nodiscard]] std::string getTextureFile( ) const;
 
     //! Method to set the texture map file of a Primitive
     /**
@@ -1020,12 +1058,12 @@ public:
     /**
      *\return 2D vector of u-v texture coordinates
      */
-    std::vector<vec2> getTextureUV( );
+    [[nodiscard]] std::vector<vec2> getTextureUV( );
 
 
     //! Set u-v texture coordinates at primitive vertices
     /**
-     *\param[in] vector of u-v texture coordinates
+     *\param[in] uv vector of u-v texture coordinates
      */
     void setTextureUV( const std::vector<vec2> &uv );
     
@@ -1036,13 +1074,13 @@ public:
     void useTextureColor( );
     
     //! Check if color of texture map is overridden by the diffuse R-G-B color of the primitive
-    bool isTextureColorOverridden( ) const;
+    [[nodiscard]] bool isTextureColorOverridden( ) const;
     
     //! Get fraction of primitive surface area that is non-transparent
     /**
      * \return Fraction of non-transparent area (=1 if primitive does not have a transparent texture).
      */
-    float getSolidFraction() const;
+    [[nodiscard]] float getSolidFraction() const;
 
     //! Get fraction of primitive surface area that is non-transparent
     /**
@@ -1104,28 +1142,28 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( const char* label, const int& data );
+    void setPrimitiveData(const char* label, int data);
     
     //! Add data value (uint) associated with a primitive element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( const char* label, const uint& data );
+    void setPrimitiveData(const char* label, uint data);
     
     //! Add data value (float) associated with a primitive element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( const char* label, const float& data );
+    void setPrimitiveData(const char* label, float data);
     
     //! Add data value (double) associated with a primitive element
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( const char* label, const double& data );
+    void setPrimitiveData(const char* label, double data);
     
     //! Add data value (vec2) associated with a primitive element
     /**
@@ -1175,6 +1213,7 @@ public:
      * \param[in] data Primitive data value (scalar)
      */
     void setPrimitiveData( const char* label, const std::string& data );
+
     //! Add (array) data associated with a primitive element
     /**
      * \param[in] label Name/label associated with data
@@ -1184,132 +1223,154 @@ public:
      * \note While this method still works for scalar data, it is typically preferable to use the scalar versions of this method.
      */
     void setPrimitiveData( const char* label, HeliosDataType type, uint size, void* data );
+
     //! Get data associated with a primitive element (integer scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, int& data ) const;
+
     //! Get data associated with a primitive element (vector of integers)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<int>& data ) const;
+
     //! Get data associated with a primitive element (unsigned integer scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, uint& data ) const;
+
     //! Get data associated with a primitive element (vector of unsigned integers)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<uint>& data ) const;
+
     //! Get data associated with a primitive element (float scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, float& data ) const;
+
     //! Get data associated with a primitive element (vector of floats)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<float>& data ) const;
+
     //! Get data associated with a primitive element (double scalar)
     /**
      *  \param[in] label Name/label associated with data
      *  \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, double& data ) const;
+
     //! Get data associated with a primitive element (vector of doubles)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<double>& data ) const;
+
     //! Get data associated with a primitive element (vec2 scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, vec2& data ) const;
+
     //! Get data associated with a primitive element (vector of vec2's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<vec2>& data ) const;
+
     //! Get data associated with a primitive element (vec3 scalar)
     /**
      *  \param[in] label Name/label associated with data
      *  \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, vec3& data ) const;
+
     //! Get data associated with a primitive element (vector of vec3's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<vec3>& data ) const;
+
     //! Get data associated with a primitive element (vec4 scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, vec4& data ) const;
+
     //! Get data associated with a primitive element (vector of vec4's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<vec4>& data ) const;
+
     //! Get data associated with a primitive element (int2 scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, int2& data ) const;
+
     //! Get data associated with a primitive element (vector of int2's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<int2>& data ) const;
+
     //! Get data associated with a primitive element (int3 scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, int3& data ) const;
+
     //! Get data associated with a primitive element (vector of int3's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<int3>& data ) const;
+
     //! Get data associated with a primitive element (int4 scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, int4& data ) const;
+
     //! Get data associated with a primitive element (vector of int4's)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::vector<int4>& data ) const;
+
     //! Get data associated with a primitive element (string scalar)
     /**
      * \param[in] label Name/label associated with data
      * \param[out] data Primitive data structure
      */
     void getPrimitiveData( const char* label, std::string& data ) const;
+
     //! Get data associated with a primitive element (vector of strings)
     /**
      * \param[in] label Name/label associated with data
@@ -1346,11 +1407,9 @@ public:
     void clearPrimitiveData( const char* label );
     
     //! Return labels for all primitive data for this particular primitive
-    std::vector<std::string> listPrimitiveData() const;
+    [[nodiscard]] std::vector<std::string> listPrimitiveData() const;
 
     virtual void calculateSolidFraction( const std::map<std::string,Texture> &textures ) = 0;
-
-    friend class Context;
     
 protected:
     
@@ -1394,7 +1453,9 @@ protected:
     bool texturecoloroverridden = false;
 
     bool ishidden = false;
-    
+
+    friend class Context;
+
 };
 
 
@@ -1406,32 +1467,7 @@ protected:
  */
 class Patch : public Primitive{
 public:
-    
-    //! Patch constructor - colored by RGBcolor
-    /**
-     * \param[in] color RGB color of the Patch.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Patch( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
-    
-    //! Patch constructor - colored by texture map
-    /**
-     * \param[in] texturefile Path to texture image.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Patch( const char* texturefile, float solid_fraction, uint parent_objID, uint UUID );
-    
-    //! Patch constructor - colored by texture map with custom (u,v) coordinates
-    /**
-     * \param[in] texturefile Path to texture image.
-     * \param[in] uv Vector of (u,v) texture coordinates.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Patch( const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
-    
+
     //! Patch destructor
     ~Patch() override= default;
     
@@ -1439,31 +1475,31 @@ public:
     /**
      * \return Surface area of the Patch.
      */
-    float getArea() const override;
+    [[nodiscard]] float getArea() const override;
     
     //! Get a unit vector normal to the primitive surface
     /**
      * \return Unit vector normal to the surface of the Patch.
      */
-    helios::vec3 getNormal() const override;
+    [[nodiscard]] helios::vec3 getNormal() const override;
     
     //! Method to return the (x,y,z) coordinates of the vertices of a Primitive
     /**
      * \return Vector containing four sets of the (x,y,z) coordinates of each vertex.
      */
-    std::vector<helios::vec3> getVertices() const override;
+    [[nodiscard]] std::vector<helios::vec3> getVertices() const override;
     
     //! Get the size of the Patch in x- and y-directions
     /**
      * \return vec2 describing the length and width of the Patch.
      */
-    helios::vec2 getSize() const;
+    [[nodiscard]] helios::vec2 getSize() const;
     
     //! Get the (x,y,z) coordinates of the Patch center point
     /**
      * \return vec3 describing (x,y,z) coordinate of Patch center.
      */
-    helios::vec3 getCenter() const override;
+    [[nodiscard]] helios::vec3 getCenter() const override;
     
     //! Method to rotate a Primitive about the x-, y-, or z-axis
     /**
@@ -1489,7 +1525,43 @@ public:
 
     //! Calculate the fraction of the Patch surface area that is solid (non-transparent)
     void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
-    
+
+protected:
+
+    //! Patch constructor - colored by RGBcolor
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] color RGB color of the Patch.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Patch( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
+
+    //! Patch constructor - colored by texture map
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] texturefile Path to texture image.
+     * \param[in] solid_fraction Fraction of the Patch surface area that is solid material.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Patch( const char* texturefile, float solid_fraction, uint parent_objID, uint UUID );
+
+    //! Patch constructor - colored by texture map with custom (u,v) coordinates
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] texturefile Path to texture image.
+     * \param[in] uv Vector of (u,v) texture coordinates.
+     * \param[in] textures Map of texture objects.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Patch( const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
+
+
+    friend class Primitive;
+    friend class Context;
+
 };
 
 //! Triangular geometric primitive object
@@ -1500,43 +1572,7 @@ public:
  */
 class Triangle : public Primitive{
 public:
-    
-    //! Triangle constructor - constant color
-    /**
-     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
-     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
-     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
-     * \param[in] color RGB color of the Triangle.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint parent_objID, uint UUID );
 
-    //! Triangle constructor - texture map with known solid fraction
-    /**
-     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
-     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
-     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
-     * \param[in] texturefile Path to texture image.
-     * \param[in] solid_fraction Fraction of the Triangle surface area that is solid material.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint parent_objID, uint UUID );
-
-    //! Triangle constructor - texture map with solid fraction to be computed
-    /**
-     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
-     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
-     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
-     * \param[in] texturefile Path to texture image.
-     * \param[in] uv Vector of (u,v) texture coordinates.
-     * \param[in] textures Map of texture objects.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
-    
     //! Triangle destructor
     ~Triangle() override= default;
     
@@ -1544,32 +1580,32 @@ public:
     /**
      * \return Surface area of the Triangle.
      */
-    float getArea() const override;
+    [[nodiscard]] float getArea() const override;
     
     //! Get a unit vector normal to the primitive surface
     /**
      * \return Unit vector normal to the surface of the Triangle.
      */
-    helios::vec3 getNormal() const override;
+    [[nodiscard]] helios::vec3 getNormal() const override;
     
-    //! Method to return the (x,y,z) coordinates of the vertices of a Primitve
+    //! Method to return the (x,y,z) coordinates of the vertices of a Primitive
     /**
      * \return Vector containing three sets of the (x,y,z) coordinates of each vertex.
      */
-    std::vector<helios::vec3> getVertices() const override;
+    [[nodiscard]] std::vector<helios::vec3> getVertices() const override;
     
     //! Method to return the (x,y,z) coordinates of a given Triangle vertex
     /**
      * \param[in] vertex_index Triangle vertex (0, 1, or 2)
      * \return (x,y,z) coordinates of triangle vertex
      */
-    helios::vec3 getVertex( int vertex_index );
+    [[nodiscard]] helios::vec3 getVertex( int vertex_index );
     
     //! Method to return the (x,y,z) coordinates of a given Triangle's center (centroid)
     /**
      * \return (x,y,z) coordinates of triangle centroid
      */
-    helios::vec3 getCenter() const override;
+    [[nodiscard]] helios::vec3 getCenter() const override;
     
     //! Method to rotate a Primitive about the x-, y-, or z-axis
     /**
@@ -1605,20 +1641,54 @@ public:
     void setVertices(const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
     
 private:
-    
-//    //!(x,y,z) coordinates of triangle vertex #0
-//    helios::vec3 vertex0;
-//
-//    //!(x,y,z) coordinates of triangle vertex #1
-//    helios::vec3 vertex1;
-//
-//    //!(x,y,z) coordinates of triangle vertex #2
-//    helios::vec3 vertex2;
+
+    //! Triangle constructor - constant color
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
+     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
+     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
+     * \param[in] color RGB color of the Triangle.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const helios::RGBAcolor& color, uint parent_objID, uint UUID );
+
+    //! Triangle constructor - texture map with known solid fraction
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
+     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
+     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
+     * \param[in] uv Vector of (u,v) texture coordinates.
+     * \param[in] texturefile Path to texture image.
+     * \param[in] solid_fraction Fraction of the Triangle surface area that is solid material.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, float solid_fraction, uint parent_objID, uint UUID );
+
+    //! Triangle constructor - texture map with solid fraction to be computed
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] vertex0 Cartesian coordinate of triangle vertex 0.
+     * \param[in] vertex1 Cartesian coordinate of triangle vertex 1.
+     * \param[in] vertex2 Cartesian coordinate of triangle vertex 2.
+     * \param[in] texturefile Path to texture image.
+     * \param[in] uv Vector of (u,v) texture coordinates.
+     * \param[in] textures Map of texture objects.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Triangle( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2, const char* texturefile, const std::vector<helios::vec2>& uv, const std::map<std::string,Texture> &textures, uint parent_objID, uint UUID );
     
     void makeTransformationMatrix( const helios::vec3& vertex0, const helios::vec3& vertex1, const helios::vec3& vertex2 );
 
     bool edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c);
-    
+
+    friend class Primitive;
+    friend class Context;
+
 };
 
 //! Parallelpiped geometric object filled with a participating medium
@@ -1627,15 +1697,7 @@ private:
  */
 class Voxel : public Primitive{
 public:
-    
-    //! Voxel constructors
-    /**
-     * \param[in] color RGB color of the Voxel.
-     * \param[in] parent_objID Identifier of the parent compound object.
-     * \param[in] UUID Unique universal identifier.
-     */
-    Voxel( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
-    
+
     //! Voxel destructor
     ~Voxel() override= default;
     
@@ -1643,16 +1705,16 @@ public:
     /**
      * \return Surface area of the Voxel.
      */
-    float getArea() const override;
+    [[nodiscard]] float getArea() const override;
     
     //! This method is not used for a Voxel
-    helios::vec3 getNormal() const override;
+    [[nodiscard]] helios::vec3 getNormal() const override;
     
     //! Method to return the (x,y,z) coordinates of the vertices of a Primitve
     /**
      * \return Vector containing eight sets of the (x,y,z) coordinates of each vertex.
      */
-    std::vector<helios::vec3> getVertices() const override;
+    [[nodiscard]] std::vector<helios::vec3> getVertices() const override;
     
     //! Method to return the Volume of a Voxel
     /**
@@ -1664,13 +1726,13 @@ public:
     /**
      * \return vec3 describing (x,y,z) coordinate of Voxel center.
      */
-    helios::vec3 getCenter() const override;
+    [[nodiscard]] helios::vec3 getCenter() const override;
     
     //! Get the size of the Voxel in x-, y-, and z-directions
     /**
      * \return vec3 describing the length, width and depth of the Voxel.
      */
-    helios::vec3 getSize();
+    [[nodiscard]] helios::vec3 getSize();
     
     //! Method to rotate a Primitive about the x-, y-, or z-axis
     /**
@@ -1697,7 +1759,21 @@ public:
 
     //! Calculate the fraction of the Voxel surface area that is solid (non-transparent)
     void calculateSolidFraction( const std::map<std::string,Texture> &textures ) override;
-    
+
+protected:
+
+    //! Voxel constructors
+    /**
+     * \note This constructor is private and should not be used.
+     * \param[in] color RGB color of the Voxel.
+     * \param[in] parent_objID Identifier of the parent compound object.
+     * \param[in] UUID Unique universal identifier.
+     */
+    Voxel( const helios::RGBAcolor& color, uint parent_objID, uint UUID );
+
+    friend class Primitive;
+    friend class Context;
+
 };
 
 //! Class for parsing XML input files
@@ -1895,14 +1971,14 @@ private:
      * \param[in] UUID Unique universal identifier (UUID) of primitive element
      * @private
      */
-    Primitive* getPrimitivePointer_private( uint UUID ) const;
+    [[nodiscard]] Primitive* getPrimitivePointer_private( uint UUID ) const;
     
     //!Get a pointer to a Patch from the Context
     /**
      * \param[in] UUID Unique universal identifier (UUID) of Patch
      * @private
      */
-    Patch* getPatchPointer_private( uint UUID ) const;
+    [[nodiscard]] Patch* getPatchPointer_private( uint UUID ) const;
     
     
     //!Get a pointer to a Triangle from the Context
@@ -1910,79 +1986,77 @@ private:
      * \param[in] UUID Unique universal identifier (UUID) of Triangle
      * @private
      */
-    Triangle* getTrianglePointer_private( uint UUID ) const;
-    
-    
+    [[nodiscard]] Triangle* getTrianglePointer_private( uint UUID ) const;
+
     //!Get a pointer to a Voxel from the Context
     /**
      * \param[in] UUID Unique universal identifier (UUID) of Voxel
      * @private
      */
-    Voxel* getVoxelPointer_private( uint UUID ) const;
+    [[nodiscard]] Voxel* getVoxelPointer_private( uint UUID ) const;
     
     //!Get a pointer to an Object from the Context
     /**
      * \param[in] ObjID ID of Object
      * @private
      */
-    CompoundObject* getObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] CompoundObject* getObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Tile Object from the Context
     /**
      * \param[in] ObjID ID of Tile Object
      * @private
      */
-    Tile* getTileObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Tile* getTileObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Sphere Object from the Context
     /**
      * \param[in] ObjID ID of Sphere Object
      * @private
      */
-    Sphere* getSphereObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Sphere* getSphereObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Tube Object from the Context
     /**
      * \param[in] ObjID ID of Tube Object
      * @private
      */
-    Tube* getTubeObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Tube* getTubeObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Box Object from the Context
     /**
      * \param[in] ObjID ID of Box Object
      * @private
      */
-    Box* getBoxObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Box* getBoxObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Disk Object from the Context
     /**
      * \param[in] ObjID ID of Disk Object
      * @private
      */
-    Disk* getDiskObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Disk* getDiskObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Polymesh Object from the Context
     /**
      * \param[in] ObjID ID of Polymesh Object
      * @private
      */
-    Polymesh* getPolymeshObjectPointer_private( uint ObjID ) const;
+    [[nodiscard]] Polymesh* getPolymeshObjectPointer_private( uint ObjID ) const;
     
     //!Get a pointer to a Cone Object from the Context
     /**
      * \param[in] ObjID ID of Cone Object
      * @private
      */
-    Cone* getConeObjectPointer_private( uint ObjID ) const;
-    
+    [[nodiscard]] Cone* getConeObjectPointer_private( uint ObjID ) const;
     
     //! Map containing a pointer to each primitive
     /** \note A Primitive's index in this map is its \ref UUID */
-    std::map<uint,Primitive*> primitives;
+    std::unordered_map<uint,Primitive*> primitives;
     
     //! Map containing a pointer to each compound object
-    std::map<uint,CompoundObject*> objects;
+    std::unordered_map<uint,CompoundObject*> objects;
     
     //! Map containing data values for timeseries
     std::map<std::string, std::vector<float> > timeseries_data;
@@ -2124,7 +2198,7 @@ public:
      * \sa markGeometryClean()
      * \sa markGeometryDirty()
      */
-    bool isGeometryDirty() const;
+    [[nodiscard]] bool isGeometryDirty() const;
     
     //! Add new default Patch geometric primitive, which is centered at the origin (0,0,0), has unit length and width, horizontal orientation, and black color
     /** Method to add a new default Patch to the Context
@@ -2293,7 +2367,7 @@ public:
     
     //! Translate a group of primitives using a vector of UUIDs
     /**
-     * \param[in] UUID Vector of unique universal identifiers (UUIDs) of primitives to be translated
+     * \param[in] UUIDs Vector of unique universal identifiers (UUIDs) of primitives to be translated
      * \param[in] shift Distance to translate in (x,y,z) directions
      */
     void translatePrimitive( const std::vector<uint>& UUIDs, const vec3& shift );
@@ -2301,52 +2375,84 @@ public:
     //! Rotate a primitive about the x, y, or z axis using its UUID
     /**
      * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] axis Axis about which to rotate (must be one of x, y, z )
      */
-    void rotatePrimitive( uint UUID, float rot, const char* axis );
+    void rotatePrimitive(uint UUID, float rotation_rad, const char* axis);
     
     //! Rotate a group of primitives about the x, y, or z axis using a vector of UUIDs
     /**
-     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] UUIDs Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] axis Axis about which to rotate (must be one of x, y, z )
      */
-    void rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis );
+    void rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const char* axis);
     
     //! Rotate a primitive about an arbitrary axis passing through the origin using its UUID
     /**
      * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] axis Vector describing axis about which to rotate
      */
-    void rotatePrimitive( uint UUID, float rot, const helios::vec3& axis );
+    void rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3& axis);
     
     //! Rotate a group of primitives about an arbitrary axis passing through the origin using a vector of UUIDs
     /**
-     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] UUIDs Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] axis Vector describing axis about which to rotate
      */
-    void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis );
+    void rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const vec3 &axis);
     
     //! Rotate a primitive about an arbitrary line (not necessarily passing through the origin) using its UUID
     /**
      * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
      * \param[in] axis Vector describing axis about which to rotate
      */
-    void rotatePrimitive( uint UUID, float rot, const helios::vec3& origin, const helios::vec3& axis );
+    void rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3& origin, const helios::vec3& axis);
     
     //! Rotate a group of primitives about an arbitrary line (not necessarily passing through the origin) using a vector of UUIDs
     /**
-     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
-     * \param[in] rot Rotation angle in radians
+     * \param[in] UUIDs Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] rotation_rad Rotation angle in radians
      * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
      * \param[in] axis Vector describing axis about which to (rotate)
      */
-    void rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis );
+    void rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const helios::vec3& origin, const vec3 &axis);
+
+    //! Rotate the primitive such that it has a specified normal vector based on its UUID
+    /**
+     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
+     * \param[in] new_normal New primitive normal vector after rotation
+     */
+    void setPrimitiveNormal(uint UUID, const helios::vec3& origin, const helios::vec3& new_normal);
+
+    //! Rotate the primitive such that it has a specified normal vector using a vector of UUIDs
+    /**
+     * \param[in] UUIDs Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
+    * \param[in] new_normal New primitive normal vector after rotation
+     */
+    void setPrimitiveNormal(const std::vector<uint>& UUIDs, const helios::vec3& origin, const vec3 &new_normal);
+
+    //! Rotate the primitive based on its UUID such that it has a the specified elevation angle but maintains the same azimuth angle
+    /**
+     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
+     * \param[in] new_elevation New primitive elevation angle after rotation
+     */
+    void setPrimitiveElevation(uint UUID, const helios::vec3& origin, float new_elevation);
+
+    //! Rotate the primitive based on its UUID such that it has a the specified azimuth angle but maintains the same elevation angle
+    /**
+     * \param[in] UUID Unique universal identifier (UUID) of primitive to be translated
+     * \param[in] origin Cartesian coordinate of the base/origin of rotation axis
+     * \param[in] new_azimuth New primitive azimuth angle after rotation
+     */
+    void setPrimitiveAzimuth(uint UUID, const helios::vec3& origin, float new_azimuth);
     
     //! Scale a primitive using its UUID relative to the origin (0,0,0)
     /**
@@ -2357,7 +2463,7 @@ public:
     
     //! Scale a group of primitives using a vector of UUIDs relative to the origin (0,0,0)
     /**
-     * \param[in] UUID Vector of unique universal identifiers (UUIDs) of primitives to be scaled
+     * \param[in] UUIDs Vector of unique universal identifiers (UUIDs) of primitives to be scaled
      * \param[in] S Scaling factor
      */
     void scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3& S );
@@ -2368,15 +2474,15 @@ public:
      * \param[in] S Scaling factor
      * \param[in] point Cartesian (x,y,z) coordinates of point about which to scale
      */
-    void scalePrimitiveAboutPoint( uint UUID, const helios::vec3& S, const helios::vec3 point );
+    void scalePrimitiveAboutPoint(uint UUID, const helios::vec3& S, const helios::vec3 &point);
 
     //! Scale a group of primitives using a vector of UUIDs about an arbitrary point in space
     /**
-     * \param[in] UUID Vector of unique universal identifiers (UUIDs) of primitives to be scaled
+     * \param[in] UUIDs Vector of unique universal identifiers (UUIDs) of primitives to be scaled
      * \param[in] S Scaling factor
      * \param[in] point Cartesian (x,y,z) coordinates of point about which to scale
      */
-    void scalePrimitiveAboutPoint( const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 point );
+    void scalePrimitiveAboutPoint(const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 &point);
     
     //! Delete a single primitive from the context
     /**
@@ -2431,14 +2537,14 @@ public:
     /**
      * \param[in] UUID Unique universal identifier of primitive element
      */
-    bool doesPrimitiveExist( uint UUID ) const;
+    [[nodiscard]] bool doesPrimitiveExist( uint UUID ) const;
 
     //! Check if ALL primitives exists for a vector UUIDs
     /**
      * \param[in] UUIDs Vector of unique universal identifiers of primitive elements
      * \return true if all primitives exist, false if any do not exist
      */
-    bool doesPrimitiveExist( const std::vector<uint> &UUIDs ) const;
+    [[nodiscard]] bool doesPrimitiveExist( const std::vector<uint> &UUIDs ) const;
     
     //! Get the size of a patch element
     /**
@@ -2446,7 +2552,7 @@ public:
      * \return Length x width of Patch element.
      * \note If the UUID passed to this method does not correspond to a Patch, an error will be thrown.
      */
-    helios::vec2 getPatchSize( uint UUID ) const;
+    [[nodiscard]] helios::vec2 getPatchSize(uint UUID) const;
     
     //! Get the Cartesian (x,y,z) center position of a patch element
     /**
@@ -2454,7 +2560,7 @@ public:
      * \return Center position of Patch element.
      * \note If the UUID passed to this method does not correspond to a Patch, an error will be thrown.
      */
-    helios::vec3 getPatchCenter( uint UUID ) const;
+    [[nodiscard]] helios::vec3 getPatchCenter( uint UUID ) const;
     
     //! Get a single vertex of a Triangle based on an index
     /**
@@ -2463,7 +2569,7 @@ public:
      * \return Cartesian (x,y,z) coordinate of triangle vertices indexed at "vertex"
      * \note If the UUID passed to this method does not correspond to a Triangle, an error will be thrown.
      */
-    helios::vec3 getTriangleVertex( uint UUID, uint number ) const;
+    [[nodiscard]] helios::vec3 getTriangleVertex( uint UUID, uint number ) const;
 
     //! //! Manually set the Triangle vertices
     /**
@@ -2480,7 +2586,7 @@ public:
      * \return Center position of voxel element.
      * \note If the UUID passed to this method does not correspond to a voxel, an error will be thrown.
      */
-    helios::vec3 getVoxelCenter( uint UUID ) const;
+    [[nodiscard]] helios::vec3 getVoxelCenter( uint UUID ) const;
     
     //! Get the size of a voxel element
     /**
@@ -2488,17 +2594,17 @@ public:
      * \return Length x width x height of voxel element.
      * \note If the UUID passed to this method does not correspond to a voxel, an error will be thrown.
      */
-    helios::vec3 getVoxelSize( uint UUID ) const;
+    [[nodiscard]] helios::vec3 getVoxelSize( uint UUID ) const;
     
     //!Get the total number of Primitives in the Context
     /**
      * \note This includes hidden primitives
      * \ingroup primitives
      */
-    uint getPrimitiveCount() const;
+    [[nodiscard]] uint getPrimitiveCount() const;
     
     //!Get all primitive UUIDs currently in the Context
-    std::vector<uint> getAllUUIDs() const;
+    [[nodiscard]] std::vector<uint> getAllUUIDs() const;
 
     //! Hide primitives in the Context such that their UUIDs are not returned in Context::getAllUUIDs()
     /**
@@ -2511,7 +2617,7 @@ public:
      * \param[in] UUID Unique universal identifier of primitive element
      * \return true if primitive is hidden, false if not
      */
-    bool isPrimitiveHidden( uint UUID ) const;
+    [[nodiscard]] bool isPrimitiveHidden( uint UUID ) const;
 
     //! Delete UUIDs from vector if primitives no longer exist (1D vector)
     /**
@@ -2539,7 +2645,7 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( uint UUID, const char* label, const int& data );
+    void setPrimitiveData(uint UUID, const char* label, int data);
 
     //! Add data value (int) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
     /**
@@ -2556,7 +2662,7 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( uint UUID, const char* label, const uint& data );
+    void setPrimitiveData(uint UUID, const char* label, uint data);
 
     //! Add data value (uint) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
     /**
@@ -2573,7 +2679,7 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( uint UUID, const char* label, const float& data );
+    void setPrimitiveData(uint UUID, const char* label, float data);
 
     //! Add data value (float) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
     /**
@@ -2586,10 +2692,11 @@ public:
     
     //! Add data value (double) associated with a primitive element
     /**
+     * \param[in] UUID Unique universal identifier of Primitive element
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
-    void setPrimitiveData( uint UUID, const char* label, const double& data );
+    void setPrimitiveData(uint UUID, const char* label, double data);
 
     //! Add data value (double) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
     /**
@@ -2739,7 +2846,7 @@ public:
     
     //! Add data value (uint) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2747,7 +2854,7 @@ public:
     
     //! Add data value (float) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2755,6 +2862,7 @@ public:
     
     //! Add data value (double) associated with a primitive element
     /**
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2762,7 +2870,7 @@ public:
     
     //! Add data value (vec2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2770,7 +2878,7 @@ public:
     
     //! Add data value (vec3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2778,7 +2886,7 @@ public:
     
     //! Add data value (vec4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2786,7 +2894,7 @@ public:
     
     //! Add data value (int2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2794,7 +2902,7 @@ public:
     
     //! Add data value (int3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2802,7 +2910,7 @@ public:
     
     //! Add data value (int4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2810,7 +2918,7 @@ public:
     
     //! Add data value (string) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2826,7 +2934,7 @@ public:
     
     //! Add data value (uint) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2834,7 +2942,7 @@ public:
     
     //! Add data value (float) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2842,6 +2950,7 @@ public:
     
     //! Add data value (double) associated with a primitive element
     /**
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2849,7 +2958,7 @@ public:
     
     //! Add data value (vec2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2857,7 +2966,7 @@ public:
     
     //! Add data value (vec3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2865,7 +2974,7 @@ public:
     
     //! Add data value (vec4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2873,7 +2982,7 @@ public:
     
     //! Add data value (int2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2881,7 +2990,7 @@ public:
     
     //! Add data value (int3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2889,7 +2998,7 @@ public:
     
     //! Add data value (int4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2897,7 +3006,7 @@ public:
     
     //! Add data value (string) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2913,7 +3022,7 @@ public:
     
     //! Add data value (uint) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2921,7 +3030,7 @@ public:
     
     //! Add data value (float) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2929,6 +3038,7 @@ public:
     
     //! Add data value (double) associated with a primitive element
     /**
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2936,7 +3046,7 @@ public:
     
     //! Add data value (vec2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2944,7 +3054,7 @@ public:
     
     //! Add data value (vec3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2952,7 +3062,7 @@ public:
     
     //! Add data value (vec4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2960,7 +3070,7 @@ public:
     
     //! Add data value (int2) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2968,7 +3078,7 @@ public:
     
     //! Add data value (int3) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2976,7 +3086,7 @@ public:
     
     //! Add data value (int4) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -2984,7 +3094,7 @@ public:
     
     //! Add data value (string) associated with a primitive element
     /**
-     * \param[in] UUID Vector of unique universal identifiers of Primitive elements
+     * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
      * \param[in] label Name/label associated with data
      * \param[in] data Primitive data value (scalar)
      */
@@ -3210,7 +3320,7 @@ public:
      * \param[in] UUID Universal unique identifier of primitive.
      * sa \ref PrimitiveType
      */
-    PrimitiveType getPrimitiveType( uint UUID ) const;
+    [[nodiscard]] PrimitiveType getPrimitiveType( uint UUID ) const;
     
     //! Method to set the ID of the parent object the primitive belongs to (default is object 0)
     /**
@@ -3230,25 +3340,32 @@ public:
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    uint getPrimitiveParentObjectID( uint UUID  )const;
+    [[nodiscard]] uint getPrimitiveParentObjectID( uint UUID  )const;
+
+    //! Method to return the ID of the parent object the primitive belongs to (default is object 0)
+    /**
+     * \param[in] UUIDs Vector of universal unique identifiers of primitives.
+     */
+    [[nodiscard]] std::vector<uint> getPrimitiveParentObjectID( const std::vector<uint> &UUIDs  )const;
     
     //! Method to return unique parent object IDs for a vector of primitive UUIDs
     /**
      * \param[in] UUIDs Vector of universal unique identifiers of primitives.
      */
-    std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const;
+    [[nodiscard]] std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const;
     
     //! Method to return unique parent object IDs for a vector of primitive UUIDs
     /**
      * \param[in] UUIDs Vector of universal unique identifiers of primitives.
+     * \param[in] include_ObjID_zero Include object ID 0 in the list of unique parent object IDs.
      */
-    std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs, bool include_ObjID_zero) const;
+    [[nodiscard]] std::vector<uint> getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs, bool include_ObjID_zero) const;
     
     //! Method to return the surface area of a Primitive
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    float getPrimitiveArea( uint UUID ) const;
+    [[nodiscard]] float getPrimitiveArea( uint UUID ) const;
 
     //! Get the axis-aligned bounding box for a single primitive
     /**
@@ -3264,11 +3381,11 @@ public:
      * \param[out] min_corner (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
      * \param[out] max_corner (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
      */
-    void getPrimitiveBoundingBox( const std::vector<uint> &UUID, vec3 &min_corner, vec3 &max_corner ) const;
+    void getPrimitiveBoundingBox( const std::vector<uint> &UUIDs, vec3 &min_corner, vec3 &max_corner ) const;
 
     //! Hide compound objects in the Context such that their object IDs are not returned in Context::getAllObjectIDs(), and are not counted in Context::getObjectCount()
     /**
-     * \param[in] ObjID Identifier of the object.
+     * \param[in] ObjIDs Identifier of the object.
      */
     void hideObject( const std::vector<uint> &ObjIDs );
 
@@ -3277,59 +3394,65 @@ public:
      * \param[in] ObjID Identifier of the object.
      * \return True if the object is hidden, false otherwise.
      */
-    bool isObjectHidden( uint ObjID ) const;
+    [[nodiscard]] bool isObjectHidden( uint ObjID ) const;
     
     //! Method to return the one-sided surface area of an object
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    float getObjectArea( uint ObjID ) const;
+    [[nodiscard]] float getObjectArea( uint ObjID ) const;
+
+    //! Method to return the average surface normal vector of an object
+    /**
+     * \param[in] ObjID Identifier of the object.
+     */
+    [[nodiscard]] helios::vec3 getObjectAverageNormal( uint ObjID ) const;
     
     //! Method to return the number of primitives contained in the object
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    uint getObjectPrimitiveCount( uint ObjID ) const;
+    [[nodiscard]] uint getObjectPrimitiveCount( uint ObjID ) const;
     
     //! Method to return the Cartesian (x,y,z) point of the center of a bounding box for the object
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    helios::vec3 getObjectCenter( uint ObjID ) const;
+    [[nodiscard]] helios::vec3 getObjectCenter( uint ObjID ) const;
 
     //! Method to set the diffuse color of an Object
     /**
      * \param[in] ObjID Universal unique identifier of object.
      * \param[in] color New color of object
      */
-    void setObjectColor( uint ObjID, const helios::RGBcolor& color );
+    void setObjectColor( uint ObjID, const helios::RGBcolor& color ) const;
 
     //! Method to set the diffuse color of an Object for a vector of ObjIDs
     /**
      * \param[in] ObjIDs Vector of identifiers of object.
      * \param[in] color New color of object
      */
-    void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBcolor& color );
+    void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBcolor& color ) const;
 
     //! Method to set the diffuse color of an Object with transparency
     /**
      * \param[in] ObjID Identifier of object.
-     * \param[in] color New color of object
+     * \param[in] color New color of object.
      */
     void setObjectColor( uint ObjID, const helios::RGBAcolor& color );
 
     //! Method to set the diffuse color of an Object with transparency for a vector of ObjIDs
     /**
      * \param[in] ObjIDs Vector of identifiers of objects.
-     * \param[in] color New color of object
+     * \param[in] color New color of object.
      */
-    void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBAcolor& color );
+    void setObjectColor( const std::vector<uint> &ObjIDs, const helios::RGBAcolor& color ) const;
     
     //! Method to return the texture map file of an Object
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    std::string getObjectTextureFile( uint ObjID ) const;
+    [[nodiscard]] std::string getObjectTextureFile( uint ObjID ) const;
     
     //! Method to return the Affine transformation matrix of an Object
     /**
@@ -3343,45 +3466,56 @@ public:
      * \param[in] ObjID Identifier of the object.
      * \param[in] T 1D vector corresponding to Primitive transformation matrix
      */
-    void setObjectTransformationMatrix( uint ObjID, float (&T)[16] );
+    void setObjectTransformationMatrix( uint ObjID, float (&T)[16] ) const;
     
     //! Method to set the Affine transformation matrix of an Object for a vector Object IDs
     /**
      * \param[in] ObjIDs Vector of identifiers of the objects.
      * \param[in] T 1D vector corresponding to Primitive transformation matrix
      */
-    void setObjectTransformationMatrix( const std::vector<uint> &ObjIDs, float (&T)[16] );
+    void setObjectTransformationMatrix( const std::vector<uint> &ObjIDs, float (&T)[16] ) const;
+
+    //! Sets the average normal of a given object in the context
+    /**
+     * This function adjusts the transformation matrix of the specified object to align
+     * its average normal with a given direction, while maintaining its forward direction
+     * in world space.
+     * \param[in] ObjID The unique identifier of the object whose average normal is being set.
+     * \param[in] origin The origin point about which the rotation is applied.
+     * \param[in] new_normal The desired new average normal direction for the object.
+     */
+    void setObjectAverageNormal(uint ObjID, const vec3& origin, const vec3& new_normal);
     
     //! Method to check whether an Object has texture data
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    bool objectHasTexture( uint ObjID ) const;
+    [[nodiscard]] bool objectHasTexture( uint ObjID ) const;
     
     //! Method to check if an Object contains a Primitive
     /**
      * \param[in] ObjID Identifier of the object.
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    bool doesObjectContainPrimitive(uint ObjID, uint UUID );
+    [[nodiscard]] bool doesObjectContainPrimitive(uint ObjID, uint UUID ) const;
     
     //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    void overrideObjectTextureColor( uint ObjID );
+    void overrideObjectTextureColor( uint ObjID ) const;
 
     //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     /**
      * \param[in] ObjIDs Vector of object identifiers.
      */
-    void overrideObjectTextureColor( const std::vector<uint> &ObjIDs );
+    void overrideObjectTextureColor( const std::vector<uint> &ObjIDs ) const;
 
     //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     /**
      * \param[in] ObjID Identifier of the object.
      */
-    void useObjectTextureColor( uint ObjID );
+    void useObjectTextureColor( uint ObjID ) const;
 
     //! For all primitives in the Compound Object, use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
     /**
@@ -3403,7 +3537,7 @@ public:
      * \param[out] min_corner (x,y,z) coordinate of the bounding box corner in the -x, -y and -z direction.
      * \param[out] max_corner (x,y,z) coordinate of the bounding box corner in the +x, +y and +z direction.
      */
-    void getObjectBoundingBox( const std::vector<uint> &ObjID, vec3 &min_corner, vec3 &max_corner ) const;
+    void getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_corner, vec3 &max_corner ) const;
     
     //! Prints object properties to console (useful for debugging purposes)
     /**
@@ -3412,23 +3546,23 @@ public:
     void printObjectInfo(uint ObjID) const;
     
     //! Return labels for all object data for this particular object
-    std::vector<std::string> listObjectData(uint ObjID) const;
+    [[nodiscard]] std::vector<std::string> listObjectData(uint ObjID) const;
     
     //! Return labels for all primitive data for this particular primitive
-    std::vector<std::string> listPrimitiveData(uint UUID) const;
+    [[nodiscard]] std::vector<std::string> listPrimitiveData(uint UUID) const;
     
     //! Get fraction of primitive surface area that is non-transparent
     /**
      * \param[in] UUID Universal unique identifier for primitive.
      * \return Fraction of non-transparent area (=1 if primitive does not have a semi-transparent texture).
      */
-    float getPrimitiveSolidFraction( uint UUID ) const;
+    [[nodiscard]] float getPrimitiveSolidFraction( uint UUID ) const;
     
     //! Method to return the normal vector of a Primitive
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    helios::vec3 getPrimitiveNormal( uint UUID ) const;
+    [[nodiscard]] helios::vec3 getPrimitiveNormal( uint UUID ) const;
     
     //! Method to return the Affine transformation matrix of a Primitive
     /**
@@ -3455,25 +3589,25 @@ public:
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    std::vector<helios::vec3> getPrimitiveVertices( uint UUID ) const;
+    [[nodiscard]] std::vector<helios::vec3> getPrimitiveVertices( uint UUID ) const;
     
     //! Method to return the diffuse color of a Primitive
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    helios::RGBcolor getPrimitiveColor( uint UUID ) const;
+    [[nodiscard]] helios::RGBcolor getPrimitiveColor( uint UUID ) const;
     
     //! Method to return the diffuse color of a Primitive
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    helios::RGBcolor getPrimitiveColorRGB( uint UUID ) const;
+    [[nodiscard]] helios::RGBcolor getPrimitiveColorRGB( uint UUID ) const;
     
     //! Method to return the diffuse color of a Primitive with transparency
     /**
      * \param[in] UUID Universal unique identifier of primitive.
      */
-    helios::RGBAcolor getPrimitiveColorRGBA( uint UUID ) const;
+    [[nodiscard]] helios::RGBAcolor getPrimitiveColorRGBA( uint UUID ) const;
     
     //! Method to set the diffuse color of a Primitive
     /**
@@ -3508,8 +3642,7 @@ public:
      * \param[in] UUID Unique universal identifier of primitive to be queried
      * @return Path to texture map file.
      */
-    std::string getPrimitiveTextureFile( uint UUID ) const;
-
+    [[nodiscard]] std::string getPrimitiveTextureFile( uint UUID ) const;
 
     //! Set the texture map file for a primitive
     /**
@@ -3523,27 +3656,27 @@ public:
      * \param[in] UUID Unique universal identifier of primitive to be queried
      * @return Texture image resolution (columns x rows).
      */
-    helios::int2 getPrimitiveTextureSize( uint UUID ) const;
+    [[nodiscard]] helios::int2 getPrimitiveTextureSize( uint UUID ) const;
     
     //! Get u-v texture coordinates at primitive vertices
     /**
      * \param[in] UUID Unique universal identifier of primitive to be queried
      */
-    std::vector<vec2> getPrimitiveTextureUV( uint UUID ) const;
+    [[nodiscard]] std::vector<vec2> getPrimitiveTextureUV( uint UUID ) const;
     
     //! Check if primitive texture map has a transparency channel
     /**
      * \param[in] UUID Unique universal identifier of primitive to be queried
      * \return True if transparency channel data exists, false otherwise
      */
-    bool primitiveTextureHasTransparencyChannel(uint UUID ) const;
+    [[nodiscard]] bool primitiveTextureHasTransparencyChannel(uint UUID ) const;
     
     //! Get the transparency channel pixel data from primitive texture map. If transparency channel does not exist, an error will be thrown.
     /**
      * \param[in] UUID Unique universal identifier of primitive to be queried
      * \return Transparency value (0 or 1) for each pixel in primitive texture map.
      */
-    const std::vector<std::vector<bool>> * getPrimitiveTextureTransparencyData(uint UUID) const;
+    [[nodiscard]] const std::vector<std::vector<bool>> * getPrimitiveTextureTransparencyData(uint UUID) const;
     
     //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
     /**
@@ -3573,7 +3706,7 @@ public:
     /**
      * \param[in] UUID Unique universal identifier of primitive to be queried
      */
-    bool isPrimitiveTextureColorOverridden( uint UUID ) const;
+    [[nodiscard]] bool isPrimitiveTextureColorOverridden( uint UUID ) const;
     
     //! Prints primitive properties to console (useful for debugging purposes)
     /**
@@ -3609,6 +3742,7 @@ public:
     
     //! Add data value (double) associated with a compound object
     /**
+     * \param[in] objID Unique universal identifier of compound object
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3678,7 +3812,7 @@ public:
      * \param[in] size Number of data elements
      * \param[in] data Pointer to primitive data
      */
-    void setObjectData( uint objIDs, const char* label, HeliosDataType type, uint size, void* data );
+    void setObjectData( uint objID, const char* label, HeliosDataType type, uint size, void* data );
     
     //! Add data value (int) associated with a compound object
     /**
@@ -3690,7 +3824,7 @@ public:
     
     //! Add data value (uint) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3698,7 +3832,7 @@ public:
     
     //! Add data value (float) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3706,6 +3840,7 @@ public:
     
     //! Add data value (double) associated with a compound object
     /**
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3713,7 +3848,7 @@ public:
     
     //! Add data value (vec2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3721,7 +3856,7 @@ public:
     
     //! Add data value (vec3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3729,7 +3864,7 @@ public:
     
     //! Add data value (vec4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3737,7 +3872,7 @@ public:
     
     //! Add data value (int2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3745,7 +3880,7 @@ public:
     
     //! Add data value (int3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3753,7 +3888,7 @@ public:
     
     //! Add data value (int4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3761,7 +3896,7 @@ public:
     
     //! Add data value (string) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3777,7 +3912,7 @@ public:
     
     //! Add data value (uint) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3785,7 +3920,7 @@ public:
     
     //! Add data value (float) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3793,6 +3928,7 @@ public:
     
     //! Add data value (double) associated with a compound object
     /**
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3800,7 +3936,7 @@ public:
     
     //! Add data value (vec2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3808,7 +3944,7 @@ public:
     
     //! Add data value (vec3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3816,7 +3952,7 @@ public:
     
     //! Add data value (vec4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3824,7 +3960,7 @@ public:
     
     //! Add data value (int2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3832,7 +3968,7 @@ public:
     
     //! Add data value (int3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3840,7 +3976,7 @@ public:
     
     //! Add data value (int4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3848,7 +3984,7 @@ public:
     
     //! Add data value (string) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3863,7 +3999,7 @@ public:
     
     //! Add data value (uint) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3871,7 +4007,7 @@ public:
     
     //! Add data value (float) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3879,6 +4015,7 @@ public:
     
     //! Add data value (double) associated with a compound object
     /**
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3886,7 +4023,7 @@ public:
     
     //! Add data value (vec2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3894,7 +4031,7 @@ public:
     
     //! Add data value (vec3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3902,7 +4039,7 @@ public:
     
     //! Add data value (vec4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3910,7 +4047,7 @@ public:
     
     //! Add data value (int2) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3918,7 +4055,7 @@ public:
     
     //! Add data value (int3) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3926,7 +4063,7 @@ public:
     
     //! Add data value (int4) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -3934,7 +4071,7 @@ public:
     
     //! Add data value (string) associated with a compound object
     /**
-     * \param[in] objID Vector of unique universal identifiers of compound objects
+     * \param[in] objIDs Vector of unique universal identifiers of compound objects
      * \param[in] label Name/label associated with data
      * \param[in] data Object data value (scalar)
      */
@@ -4120,8 +4257,8 @@ public:
     /**
      * \param[in] objID Unique universal identifier of compound object
      * \param[in] label Name/label associated with data
-     \return Helios data type of primitive data
-     \sa HeliosDataType
+     * \return Helios data type of primitive data
+     * \sa HeliosDataType
      */
     HeliosDataType getObjectDataType( uint objID, const char* label ) const;
     
@@ -4129,7 +4266,7 @@ public:
     /**
      * \param[in] objID Unique universal identifier of compound object
      * \param[in] label Name/label associated with data
-     \return Size/length of primitive data array
+     * \return Size/length of primitive data array
      */
     uint getObjectDataSize( uint objID, const char* label ) const;
     
@@ -4137,7 +4274,7 @@ public:
     /**
      * \param[in] objID Unique universal identifier of compound object
      * \param[in] label Name/label associated with data
-     \return True/false
+     * \return True/false
      */
     bool doesObjectDataExist( uint objID, const char* label ) const;
     
@@ -4160,7 +4297,7 @@ public:
      * * \param[in] objID Object ID for object to be queried.
      * \return False if any primitives have been deleted from the object since creation; True otherwise.
      */
-    bool areObjectPrimitivesComplete( uint objID ) const;
+    [[nodiscard]] bool areObjectPrimitivesComplete( uint objID ) const;
 
     //! Delete Object IDs from vector if objects no longer exist (1D vector)
     /**
@@ -4187,28 +4324,28 @@ public:
      * \param[in] label Name/label associated with data
      * \param[in] data Global data value (scalar)
      */
-    void setGlobalData( const char* label, const int& data );
+    void setGlobalData(const char* label, int data);
     
     //! Add global data value (uint)
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Global data value (scalar)
      */
-    void setGlobalData( const char* label, const uint& data );
+    void setGlobalData(const char* label, uint data);
     
     //! Add global data value (float)
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Global data value (scalar)
      */
-    void setGlobalData( const char* label, const float& data );
+    void setGlobalData(const char* label, float data);
     
     //! Add global data value (double)
     /**
      * \param[in] label Name/label associated with data
      * \param[in] data Global data value (scalar)
      */
-    void setGlobalData( const char* label, const double& data );
+    void setGlobalData(const char* label, double data);
     
     //! Add global data value (vec2)
     /**
@@ -4263,6 +4400,7 @@ public:
     //! Add global data value (any type)
     /**
      * \param[in] label Name/label associated with data
+     * \param[in] type Helios data type of primitive data
      * \param[in] size Number of elements in global data
      * \param[in] data Global data value (scalar)
      */
@@ -4375,7 +4513,7 @@ public:
     //! Get global data value (scalar vec4)
     /**
      * \param[in] label Name/label associated with data
-     * \param[out] data' Global data value (scalar vec4)
+     * \param[out] data Global data value (scalar vec4)
      */
     void getGlobalData( const char* label, helios::vec4& data ) const;
     
@@ -4460,7 +4598,7 @@ public:
     /**
      * \return Vector of labels for all global data
      */
-    std::vector<std::string> listGlobalData() const;
+    [[nodiscard]] std::vector<std::string> listGlobalData() const;
     
     //! Check if global data 'label' exists
     /**
@@ -4507,25 +4645,25 @@ public:
     /**
      * \param[in] ObjID Identifier for Compound Object.
      */
-    CompoundObject* getObjectPointer( uint ObjID ) const;
+    [[nodiscard]] CompoundObject* getObjectPointer( uint ObjID ) const;
     
     //! Get the total number of objects that have been created in the Context
     /**
      * \return Total number of objects that have been created in the Context
      */
-    uint getObjectCount() const;
+    [[nodiscard]] uint getObjectCount() const;
     
     //! Check whether Compound Object exists in the Context
     /**
      * \param[in] ObjID Identifier for Compound Object.
      */
-    bool doesObjectExist( uint ObjID ) const;
+    [[nodiscard]] bool doesObjectExist( uint ObjID ) const;
     
     //! Get the IDs for all Compound Objects in the Context
     /**
      * \return Vector of IDs for all objects.
      */
-    std::vector<uint> getAllObjectIDs() const;
+    [[nodiscard]] std::vector<uint> getAllObjectIDs() const;
     
     //! Delete a single Compound Object from the context
     /**
@@ -4535,7 +4673,7 @@ public:
     
     //! Delete a group of Compound Objects from the context
     /**
-     * \param[in] ObjID Identifier for Compound Object.
+     * \param[in] ObjIDs Identifier for Compound Object.
      */
     void deleteObject(const std::vector<uint> &ObjIDs );
     
@@ -4548,7 +4686,7 @@ public:
     
     //! Make a copy of a group of Compound Objects from the context
     /**
-     * \param[in] ObjID Identifier for Compound Object.
+     * \param[in] ObjIDs Identifier for Compound Object.
      * \return ID for copied object.
      */
     std::vector<uint> copyObject(const std::vector<uint> &ObjIDs );
@@ -4562,6 +4700,7 @@ public:
 
     //! Duplicate/copy existing object data
     /**
+     * \param[in] objID Object ID for object to be queried.
      * \param[in] old_label Name/label associated with data
      * \param[in] new_label Name/label associated with data
      */
@@ -4569,6 +4708,7 @@ public:
 
     //! Rename existing object data
     /**
+     * \param[in] objID Object ID for object to be queried.
      * \param[in] old_label Name/label associated with data
      * \param[in] new_label Name/label associated with data
      */
@@ -4656,7 +4796,7 @@ public:
 
     //! Method to scale a compound object in the x-, y- and z-directions
     /**
-     * \param[in] ObjID Vector of object IDs to scale
+     * \param[in] ObjIDs Vector of object IDs to scale
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
      */
     void scaleObject( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
@@ -4670,7 +4810,7 @@ public:
 
     //! Method to scale a compound object in the x-, y- and z-directions
     /**
-     * \param[in] ObjID Vector of object IDs to scale
+     * \param[in] ObjIDs Vector of object IDs to scale
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
      */
     void scaleObjectAboutCenter( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact );
@@ -4685,7 +4825,7 @@ public:
 
     //! Method to scale a compound object in the x-, y- and z-directions
     /**
-     * \param[in] ObjID Vector of object IDs to scale
+     * \param[in] ObjIDs Vector of object IDs to scale
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
      * \param[in] point Cartesian coordinate of the point about which to scale
      */
@@ -4695,57 +4835,57 @@ public:
     /**
      * \param[in] ObjID object ID to retrieve primitive UUIDs for
      */
-    std::vector<uint> getObjectPrimitiveUUIDs( uint ObjID ) const;
+    [[nodiscard]] std::vector<uint> getObjectPrimitiveUUIDs( uint ObjID ) const;
 
     //! Get primitive UUIDs associated with compound objects (1D vector of object IDs input)
     /**
      * \param[in] ObjIDs vector of object IDs to retrieve primitive UUIDs for
      */
-    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs) const;
+    [[nodiscard]] std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs) const;
 
     //! Get primitive UUIDs associated with compound objects (2D vector of object IDs input)
     /**
      * \param[in] ObjIDs vector of object IDs to retrieve primitive UUIDs for
      */
-    std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<std::vector<uint> > &ObjIDs) const;
+    [[nodiscard]] std::vector<uint> getObjectPrimitiveUUIDs( const std::vector<std::vector<uint> > &ObjIDs) const;
     
     //! Get an enumeration specifying the type of the object
     /**
      * \param[in] ObjID Object ID for which object type will be retrieved
      */
-    helios::ObjectType getObjectType( uint ObjID ) const;
+    [[nodiscard]] helios::ObjectType getObjectType( uint ObjID ) const;
     
     //! Get a pointer to a Tile Compound Object
     /**
      * \param[in] ObjID Identifier for Tile Compound Object.
      */
-    Tile* getTileObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Tile* getTileObjectPointer(uint ObjID ) const;
     
     //! Get the area ratio of a tile object (total object area / sub-patch area)
     /**
      * \param[in] ObjID Identifier for Tile Compound Object.
      */
-    float getTileObjectAreaRatio(uint ObjectID) const;
+    [[nodiscard]] float getTileObjectAreaRatio(uint ObjID) const;
     
     //! Get the area ratio of a multiple tile objects (total object area / sub-patch area)
     /**
-     * \param[in] ObjID Vector of identifiers for Tile Compound Object.
+     * \param[in] ObjIDs Vector of identifiers for Tile Compound Object.
      */
-    std::vector<float> getTileObjectAreaRatio(const std::vector<uint> &ObjectID) const;
+    [[nodiscard]] std::vector<float> getTileObjectAreaRatio(const std::vector<uint> &ObjIDs) const;
     
     //! Change the subdivision count of a tile object
     /**
-     * \param[in] ObjectIDs object IDs of the tile objects to change
+     * \param[in] ObjIDs object IDs of the tile objects to change
      * \param[in] new_subdiv the new subdivisions desired
      */
-    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, const int2 &new_subdiv);
+    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, const int2 &new_subdiv);
     
     //! change the subdivisions of a tile object
     /**
-     * \param[in] ObjectIDs object IDs of the tile objects to change
+     * \param[in] ObjIDs object IDs of the tile objects to change
      * \param[in] area_ratio the approximate ratio between individual tile object area and individual subpatch area desired
      */
-    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, float area_ratio);
+    void setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, float area_ratio);
     
     //! Get the Cartesian (x,y,z) center position of a tile object
     /**
@@ -4753,110 +4893,110 @@ public:
      * \return Center position of a Tile Object.
      * \note If the ObjID passed to this method does not correspond to a Tile Object, an error will be thrown.
      */
-    helios::vec3 getTileObjectCenter(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getTileObjectCenter(uint ObjID) const;
     
     //! get the size of a tile object from the context
     /**
      * \param[in] ObjID object ID of the tile object
      */
-    helios::vec2 getTileObjectSize(uint ObjID) const;
+    [[nodiscard]] helios::vec2 getTileObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a tile object from the context
     /**
      * \param[in] ObjID object ID of the tile object
      */
-    helios::int2 getTileObjectSubdivisionCount(uint ObjID) const;
+    [[nodiscard]] helios::int2 getTileObjectSubdivisionCount(uint ObjID) const;
     
     //! get the normal of a tile object from the context
     /**
      * \param[in] ObjID object ID of the tile object
      */
-    helios::vec3 getTileObjectNormal(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getTileObjectNormal(uint ObjID) const;
     
     //! get the texture UV coordinates of a tile object from the context
     /**
      * \param[in] ObjID object ID of the tile object
      */
-    std::vector<helios::vec2> getTileObjectTextureUV(uint ObjID) const;
+    [[nodiscard]] std::vector<helios::vec2> getTileObjectTextureUV(uint ObjID) const;
     
     //! get the vertices of a tile object from the context
     /**
      * \param[in] ObjID object ID of the tile object
      */
-    std::vector<helios::vec3> getTileObjectVertices(uint ObjID) const;
+    [[nodiscard]] std::vector<helios::vec3> getTileObjectVertices(uint ObjID) const;
     
     //! Get a pointer to a Sphere Compound Object
     /**
      * \param[in] ObjID Identifier for Sphere Compound Object.
      */
-    Sphere* getSphereObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Sphere* getSphereObjectPointer(uint ObjID ) const;
     
     //! get the center of a Sphere object from the context
     /**
      * \param[in] ObjID object ID of the Sphere object
      */
-    helios::vec3 getSphereObjectCenter(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getSphereObjectCenter(uint ObjID) const;
     
     //! get the radius of a Sphere object from the context
     /**
-     * \param[in] ObjectID object ID of the Sphere object
+     * \param[in] ObjID object ID of the Sphere object
      */
-    helios::vec3 getSphereObjectRadius(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getSphereObjectRadius(uint ObjID) const;
     
     //! get the subdivision count of a Sphere object from the context
     /**
      * \param[in] ObjID object ID of the Sphere object
      */
-    uint getSphereObjectSubdivisionCount(uint ObjID) const;
+    [[nodiscard]] uint getSphereObjectSubdivisionCount(uint ObjID) const;
 
     //! get the volume of a Sphere object from the context
     /**
      * \param[in] ObjID object ID of the Sphere object
      */
-    float getSphereObjectVolume( uint ObjID ) const;
+    [[nodiscard]] float getSphereObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Tube Compound Object
     /**
      * \param[in] ObjID Identifier for Tube Compound Object.
      */
-    Tube* getTubeObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Tube* getTubeObjectPointer(uint ObjID ) const;
     
     //! get the subdivision count of a Tube object from the context
     /**
-     * \param[in] ObjectID object ID of the Tube object
+     * \param[in] ObjID object ID of the Tube object
      */
-    uint getTubeObjectSubdivisionCount(uint ObjectID) const;
+    [[nodiscard]] uint getTubeObjectSubdivisionCount(uint ObjID) const;
     
     //! get the nodes of a Tube object from the context
     /**
      * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<helios::vec3> getTubeObjectNodes(uint ObjID) const;
+    [[nodiscard]] std::vector<helios::vec3> getTubeObjectNodes(uint ObjID) const;
     
     //! get the node radii of a Tube object from the context
     /**
      * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<float> getTubeObjectNodeRadii(uint ObjID) const;
+    [[nodiscard]] std::vector<float> getTubeObjectNodeRadii(uint ObjID) const;
     
     //! get the node colors of a Tube object from the context
     /**
      * \param[in] ObjID object ID of the Tube object
      */
-    std::vector<RGBcolor> getTubeObjectNodeColors(uint ObjID) const;
+    [[nodiscard]] std::vector<RGBcolor> getTubeObjectNodeColors(uint ObjID) const;
 
     //! get the volume of a Tube object from the context
     /**
      * \param[in] ObjID object ID of the Tube object
      */
-    float getTubeObjectVolume( uint ObjID ) const;
+    [[nodiscard]] float getTubeObjectVolume( uint ObjID ) const;
 
     //! get the volume of a segment within a Tube object
     /**
      * \param[in] ObjID object ID of the Tube object
      * \param[in] segment_index Index of the segment within the Tube object
      */
-    float getTubeObjectSegmentVolume( uint ObjID, uint segment_index ) const;
+    [[nodiscard]] float getTubeObjectSegmentVolume( uint ObjID, uint segment_index ) const;
 
     //! Append a tube segment to an existing tube object
     /**
@@ -4916,122 +5056,124 @@ public:
     /**
      * \param[in] ObjID Identifier for Box Compound Object.
      */
-    Box* getBoxObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Box* getBoxObjectPointer(uint ObjID ) const;
     
     //! get the center of a Box object from the context
     /**
      * \param[in] ObjID object ID of the Box object
      */
-    helios::vec3 getBoxObjectCenter(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getBoxObjectCenter(uint ObjID) const;
     
     //! get the size of a Box object from the context
     /**
      * \param[in] ObjID object ID of the Box object
      */
-    helios::vec3 getBoxObjectSize(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getBoxObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a Box object from the context
     /**
      * \param[in] ObjID object ID of the Box object
      */
-    helios::int3 getBoxObjectSubdivisionCount(uint ObjID) const;
+    [[nodiscard]] helios::int3 getBoxObjectSubdivisionCount(uint ObjID) const;
 
     //! get the volume of a Box object from the context
     /**
      * \param[in] ObjID object ID of the Box object
      */
-    float getBoxObjectVolume( uint ObjID ) const;
+    [[nodiscard]] float getBoxObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Disk Compound Object
     /**
      * \param[in] ObjID Identifier for Disk Compound Object.
      */
-    Disk* getDiskObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Disk* getDiskObjectPointer(uint ObjID ) const;
     
     //! get the center of a Disk object from the context
     /**
      * \param[in] ObjID object ID of the Disk object
      */
-    helios::vec3 getDiskObjectCenter(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getDiskObjectCenter(uint ObjID) const;
     
     //! get the size of a Disk object from the context
     /**
      * \param[in] ObjID object ID of the Disk object
      */
-    helios::vec2 getDiskObjectSize(uint ObjID) const;
+    [[nodiscard]] helios::vec2 getDiskObjectSize(uint ObjID) const;
     
     //! get the subdivision count of a Disk object from the context
     /**
      * \param[in] ObjID object ID of the Disk object
      */
-    uint getDiskObjectSubdivisionCount(uint ObjID) const;
+    [[nodiscard]] uint getDiskObjectSubdivisionCount(uint ObjID) const;
     
     //! Get a pointer to a Polygon Mesh Compound Object
     /**
      * \param[in] ObjID Identifier for Polygon Mesh Compound Object.
      */
-    Polymesh* getPolymeshObjectPointer(uint ObjID ) const;
+    [[nodiscard]] Polymesh* getPolymeshObjectPointer(uint ObjID ) const;
 
     //! Get the volume of a Polygon Mesh object from the context
     /**
      * \param[in] ObjID object ID of the Polygon Mesh object
      */
-    float getPolymeshObjectVolume( uint ObjID ) const;
+    [[nodiscard]] float getPolymeshObjectVolume( uint ObjID ) const;
     
     //! Get a pointer to a Cone Compound Object
     /**
      * \param[in] ObjID Identifier for Cone Compound Object.
      */
-    Cone* getConeObjectPointer( uint ObjID ) const;
+    [[nodiscard]] Cone* getConeObjectPointer( uint ObjID ) const;
     
     //! get the subdivision count of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      */
-    uint getConeObjectSubdivisionCount(uint ObjID) const;
+    [[nodiscard]] uint getConeObjectSubdivisionCount(uint ObjID) const;
     
     //! get the nodes of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      */
-    std::vector<helios::vec3> getConeObjectNodes(uint ObjID) const;
+    [[nodiscard]] std::vector<helios::vec3> getConeObjectNodes(uint ObjID) const;
     
     //! get the node radii of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      */
-    std::vector<float> getConeObjectNodeRadii(uint ObjID) const;
+    [[nodiscard]] std::vector<float> getConeObjectNodeRadii(uint ObjID) const;
     
     //! get a node of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
+     * \param[in] number index of the node (0 = base, 1 = tip)
      */
-    helios::vec3 getConeObjectNode(uint ObjID, int number) const;
+    [[nodiscard]] helios::vec3 getConeObjectNode(uint ObjID, int number) const;
     
     //! get a node radius of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
+     * \param[in] number index of the node (0 = base, 1 = tip)
      */
-    float getConeObjectNodeRadius(uint ObjID, int number) const;
+    [[nodiscard]] float getConeObjectNodeRadius(uint ObjID, int number) const;
     
     //! get the axis unit vector of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      */
-    helios::vec3 getConeObjectAxisUnitVector(uint ObjID) const;
+    [[nodiscard]] helios::vec3 getConeObjectAxisUnitVector(uint ObjID) const;
     
     //! get the length of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      * \return Dimension of cone object in the axial direction
      */
-    float getConeObjectLength(uint ObjID) const;
+    [[nodiscard]] float getConeObjectLength(uint ObjID) const;
 
     //! get the volume of a Cone object from the context
     /**
      * \param[in] ObjID object ID of the Cone object
      */
-    float getConeObjectVolume( uint ObjID ) const;
+    [[nodiscard]] float getConeObjectVolume( uint ObjID ) const;
     
     //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
     /**
@@ -5184,7 +5326,7 @@ public:
      * \note The tube is textured such that the x/u direction of the image runs longitudinally along the tube.
      * \ingroup compoundobjects
      */
-    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile, const std::vector<float> &textureuv_vfrac );
+    uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char* texturefile, const std::vector<float> &textureuv_ufrac );
     
     //! Add a rectangular prism tessellated with Patch primitives
     /**
@@ -5241,6 +5383,7 @@ public:
      * \param[in] size Size of the box in the x-, y-, and z-directions
      * \param[in] subdiv Number of subdivisions in x-, y-, and z-directions
      * \param[in] texturefile Name of image file for texture map
+     * \param[in] reverse_normals Flip all surface normals so that patch normals point inside the box
      * \return Object ID of new box object
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
@@ -5249,7 +5392,7 @@ public:
     
     //! Add new Disk geometric primitive to the Context given its center, and size.
     /**
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \return Object ID of new disk object
@@ -5261,7 +5404,7 @@ public:
     
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, and spherical rotation.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5273,7 +5416,7 @@ public:
     
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5285,7 +5428,7 @@ public:
     
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5297,7 +5440,7 @@ public:
     
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5310,7 +5453,7 @@ public:
 
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5322,7 +5465,7 @@ public:
 
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5334,7 +5477,7 @@ public:
 
     //! Add new Disk Compound Object
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5555,6 +5698,7 @@ public:
      * \param[in] size Size of the box in the x-, y-, and z-directions
      * \param[in] subdiv Number of subdivisions in x-, y-, and z-directions
      * \param[in] texturefile Name of image file for texture map
+     * \param[in] reverse_normals Flip all surface normals so that patch normals point inside the box
      * \return Vector of UUIDs for each sub-patch
      * \note This version of addBox assumes that all surface normal vectors point away from the box
      * \ingroup compoundobjects
@@ -5563,7 +5707,7 @@ public:
     
     //! Add new Disk geometric primitive to the Context given its center, and size.
     /**
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \return Vector of UUIDs for each sub-triangle
@@ -5575,7 +5719,7 @@ public:
     
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, and spherical rotation.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5587,7 +5731,7 @@ public:
     
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5599,7 +5743,7 @@ public:
     
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5611,7 +5755,7 @@ public:
     
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     * \param[in] Ndiv Number to triangles used to form disk
+     * \param[in] Ndivs Number to triangles used to form disk
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5624,7 +5768,7 @@ public:
 
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBcolor.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5636,7 +5780,7 @@ public:
 
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and diffuse RGBAcolor.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5648,7 +5792,7 @@ public:
 
     //! Add new Disk geometric primitive
     /** Method to add a new Disk to the Context given its center, size, spherical rotation, and a texture map handle.
-     * \param[in] Ndiv Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
+     * \param[in] Ndivs Number of subdivisions for triangulation in the polar (.x) and radial (.y) directions
      * \param[in] center 3D coordinates of Disk center
      * \param[in] size length of Disk semi-major and semi-minor radii
      * \param[in] rotation spherical rotation angle (elevation,azimuth) in radians of Disk
@@ -5776,9 +5920,16 @@ public:
     bool doesTimeseriesVariableExist( const char* label ) const;
 
     //! List all existing timeseries variables
-    std::vector<std::string> listTimeseriesVariables() const;
+    [[nodiscard]] std::vector<std::string> listTimeseriesVariables() const;
 
     //! Load tabular weather data from text file into timeseries
+    /**
+     * \param[in] data_file Path to the text file containing the tabular weather data.
+     * \param[in] column_labels Vector of strings indicating which columns to extract.
+     * \param[in] delimiter Character or string that separates values in each row.
+     * \param[in] date_string_format [optional] Format of date strings. Default: "YYYYMMDD".
+     * \param[in] headerlines [optional] Number of lines to skip at the beginning. Default: 0.
+     */
     void loadTabularTimeseriesData( const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format="YYYYMMDD", uint headerlines=0 );
     
     //! Get a box that bounds all primitives in the domain
@@ -5871,7 +6022,7 @@ public:
     //! Load inputs specified in an XML file.
     /**
      * \param[in] filename name of XML file.
-     * \param[in] quiet If set to true, command line output will be disabled. Optional argument - default value is false.
+     * \param[in] quiet [optional] If set to true, command line output will be disabled. Optional argument - default value is false.
      * \return Vector of UUIDs for each primitive loaded from the XML file
      * \note This method is based on the pugi xml parser.  See <a href="www.pugixml.org">pugixml.org</a>
      */
@@ -5881,13 +6032,13 @@ public:
     /**
      * \return Vector of XML files.
      */
-    std::vector<std::string> getLoadedXMLFiles();
+    [[nodiscard]] std::vector<std::string> getLoadedXMLFiles();
 
     //! Scan a Helios XML file to check if a tag exists
     /**
      * \param[in] filename name of XML file.
      * \param[in] tag Tag to search for in XML file.
-     * \param[in] label (optional) Label to search for within the tag.
+     * \param[in] label [optional] Label to search for within the tag.
      * \return True if tag exists in XML file, false otherwise.
      */
     static bool scanXMLForTag( const std::string &filename, const std::string &tag, const std::string &label="" );
@@ -5895,7 +6046,7 @@ public:
     //! Write Context geometry and data to XML file for all UUIDs in the context
     /**
      * \param[in] filename name of XML file.
-     * \param[in] quiet output messages are disabled if quiet is set to 'true' (default is quiet='false')
+     * \param[in] quiet [optional] output messages are disabled if quiet is set to 'true' (default is quiet='false')
      */
     void writeXML( const char* filename, bool quiet = false ) const;
 
@@ -5903,15 +6054,15 @@ public:
     /**
      * \param[in] filename name of XML file.
      * \param[in] UUIDs Universal unique identifiers of primitives that should be written to XML file.
-     * \param[in] quiet output messages are disabled if quiet is set to 'true' (default is quiet='false').
+     * \param[in] quiet [optional] output messages are disabled if quiet is set to 'true' (default is quiet='false').
      */
     void writeXML( const char* filename, const std::vector<uint> &UUIDs, bool quiet = false ) const;
 
     //! Write Context geometry and data to XML file for a subset of compound object IDs in the context
     /**
      * \param[in] filename name of XML file.
-     * \param[in] objIDs Identifiers for compound objects that should be written to XML file.
-     * \param[in] quiet output messages are disabled if quiet is set to 'true' (default is quiet='false').
+     * \param[in] UUIDs Identifiers for compound objects that should be written to XML file.
+     * \param[in] quiet [optional] output messages are disabled if quiet is set to 'true' (default is quiet='false').
      */
     void writeXML_byobject( const char* filename, const std::vector<uint> &UUIDs, bool quiet = false ) const;
     
@@ -5919,7 +6070,7 @@ public:
     /**
      * \param[in] filename Path to file that will be written.
      * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
-     * \param[in] print_header Flag specifying whether to print the name of the primitive data in the column header.
+     * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
      */
     void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, bool print_header = false ) const;
     
@@ -5928,14 +6079,14 @@ public:
      * \param[in] filename Path to file that will be written.
      * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
      * \param[in] UUIDs Unique universal identifiers for primitives to include when writing data to file.
-     * \param[in] print_header Flag specifying whether to print the name of the primitive data in the column header.
+     * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
      */
     void writePrimitiveData( std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false ) const;
 
     //! Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no scaling or rotation applied.
     /**
      * \param[in] filename name of ply file.
-     * \param[in] silent (optional) If set to true, output messaged will be disabled.
+     * \param[in] silent [optional] If set to true, output messaged will be disabled.
      * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
@@ -5946,8 +6097,8 @@ public:
      * \param[in] filename name of ply file.
      * \param[in] origin (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] height Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
-     * \param[in] upaxis (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
-     * \param[in] silent (optional) If set to true, output messaged will be disabled.
+     * \param[in] upaxis [optional] Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
+     * \param[in] silent [optional] If set to true, output messaged will be disabled.
      * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
@@ -5959,8 +6110,8 @@ public:
      * \param[in] origin (x,y,z) coordinate of PLY object origin (i.e., coordinate shift).
      * \param[in] height Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] rotation Spherical rotation of PLY object about origin
-     * \param[in] upaxis (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] upaxis [optional] Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the PLY model
      * \note Assumes default color of blue if no colors are specified in the .ply file
      */
@@ -5972,8 +6123,8 @@ public:
      * \param[in] origin (x,y,z) coordinate of PLY object origin (i.e., coordinate shift)
      * \param[in] height Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] default_color Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] upaxis (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] upaxis [optional] Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
@@ -5985,8 +6136,8 @@ public:
      * \param[in] height Scaling factor to be applied to give model an overall height of "height" (setting height=0 applies no scaling)
      * \param[in] rotation Spherical rotation of PLY object about origin
      * \param[in] default_color Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] upaxis (optional) Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] upaxis [optional] Axis defining upward direction used in the PLY file ("XUP", "YUP", or "ZUP"). Default is "YUP".
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadPLY(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const std::string &upaxis="YUP", bool silent=false );
@@ -5997,10 +6148,17 @@ public:
     */
     void writePLY( const char* filename ) const;
 
+    //! Write a subset of geometry in the Context to a Stanford polygon file (.ply)
+    /**
+     * \param[in] filename name of ply file
+     * \param[in] UUIDs Vector of UUIDs for which geometry should be written
+    */
+    void writePLY( const char* filename, const std::vector<uint> &UUIDs ) const;
+
     //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
     /**
      * \param[in] filename name of OBJ file
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      */
     std::vector<uint> loadOBJ(const char* filename, bool silent=false );
     
@@ -6011,7 +6169,7 @@ public:
      * \param[in] height A z-scaling factor is applied to make the model 'height' tall. If height=0, no scaling is applied
      * \param[in] rotation Spherical rotation of PLY object about origin
      * \param[in] default_color Color to be used if no r-g-b color values are given for PLY nodes
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the OBJ model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, bool silent=false );
@@ -6024,7 +6182,7 @@ public:
      * \param[in] rotation Spherical rotation of PLY object about origin
      * \param[in] default_color Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] upaxis Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, float height, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
@@ -6038,7 +6196,7 @@ public:
      * \param[in] rotation Spherical rotation of PLY object about origin
      * \param[in] default_color Color to be used if no r-g-b color values are given for PLY nodes
      * \param[in] upaxis Direction of "up" vector used when creating OBJ file (one of "XUP", "YUP", or "ZUP" - "ZUP" is default).
-     * \param[in] silent (optional) If set to true, output messaged will be disabled
+     * \param[in] silent [optional] If set to true, output messaged will be disabled
      * \return Vector of UUIDs for each primitive generated from the PLY model
      */
     std::vector<uint> loadOBJ(const char* filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char* upaxis, bool silent=false );
@@ -6046,7 +6204,7 @@ public:
     //! Write geometry in the Context to a Wavefront file (.obj)
     /**
      * \param[in] filename Base filename of .obj and .mtl file
-     * \param[in] write_normals true if we should write the normal vectors
+     * \param[in] write_normals [optional] true if we should write the normal vectors
      */
     void writeOBJ( const std::string &filename, bool write_normals = false ) const;
 
@@ -6054,7 +6212,7 @@ public:
     /**
      * \param[in] filename Base filename of .obj and .mtl file
      * \param[in] UUIDs Vector of UUIDs for which geometry should be written
-     * \param[in] write_normals true if we should write the normal vectors
+     * \param[in] write_normals [optional] true if we should write the normal vectors
      */
     void writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals = false ) const;
 
@@ -6063,7 +6221,7 @@ public:
      * \param[in] filename Base filename of .obj and .mtl file
      * \param[in] UUIDs Vector of UUIDs for which geometry should be written
      * \param[in] primitive_dat_fields A .dat file will be written containing primitive data given in this vector (for Unity visualization)
-     * \param[in] write_normals true if we should write the normal vectors
+     * \param[in] write_normals [optional] true if we should write the normal vectors
      */
     void writeOBJ( const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false ) const;
     
@@ -6096,21 +6254,21 @@ public:
      * \return Date vector
      * \sa setDate(), getJulianDate()
      */
-    helios::Date getDate() const;
+    [[nodiscard]] helios::Date getDate() const;
     
     //! Get a string corresponding to the month of the simulation date
     /**
      * \return Month string (e.g., Jan, Feb, Mar, etc)
      * \sa setDate(), \ref getJulianDate()
      */
-    const char* getMonthString() const;
+    [[nodiscard]] const char* getMonthString() const;
     
     //! Get simulation date by Julian day
     /**
      * \return Julian day of year (1-366)
      * \sa setDate(), getDate()
      */
-    int getJulianDate() const;
+    [[nodiscard]] int getJulianDate() const;
     
     //! Set simulation time
     /**
@@ -6144,7 +6302,7 @@ public:
      * \return Time vector
      * \sa setTime()
      */
-    helios::Time getTime() const;
+    [[nodiscard]] helios::Time getTime() const;
 
     //! Set the location of the simulation (latitude, longitude, and UTC offset)
     /**
@@ -6156,7 +6314,7 @@ public:
     /**
      * \return Location vector
      */
-    helios::Location getLocation() const;
+    [[nodiscard]] helios::Location getLocation() const;
     
     //! Draw a random number from a uniform distribution between 0 and 1
     /**
@@ -6333,7 +6491,7 @@ public:
   /**
   * \param[in] UUIDs Universal unique identifiers of primitives
   * \param[in] label Primitive data label
-  * \param[out] awt_sum Sum of primitive data
+  * \param[out] sum Sum of primitive data
    */
   void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, double &sum ) const;
 
@@ -6341,7 +6499,7 @@ public:
   /**
   * \param[in] UUIDs Universal unique identifiers of primitives
   * \param[in] label Primitive data label
-  * \param[out] awt_sum Sum of primitive data
+  * \param[out] sum Sum of primitive data
    */
   void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &sum ) const;
 
@@ -6349,7 +6507,7 @@ public:
   /**
   * \param[in] UUIDs Universal unique identifiers of primitives
   * \param[in] label Primitive data label
-  * \param[out] awt_sum Sum of primitive data
+  * \param[out] sum Sum of primitive data
    */
   void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &sum ) const;
 
@@ -6357,7 +6515,7 @@ public:
   /**
   * \param[in] UUIDs Universal unique identifiers of primitives
   * \param[in] label Primitive data label
-  * \param[out] awt_sum Sum of primitive data
+  * \param[out] sum Sum of primitive data
    */
   void calculatePrimitiveDataAreaWeightedSum( const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum ) const;
 
@@ -6437,7 +6595,7 @@ public:
    * \param[in] UUIDs Universal unique identifiers of primitives
    * \return Sum of primitive area
    */
-  float sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const;
+  [[nodiscard]] float sumPrimitiveSurfaceArea( const std::vector<uint> &UUIDs ) const;
 
   //! Filter a set of primitives based on their primitive data and a condition and float value
   /**
@@ -6448,7 +6606,7 @@ public:
    * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
    * \note If primitive data does not exist, or primitive data does not have type of 'float', the primitive is excluded.
    */
-  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator );
+  [[nodiscard]] std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator );
 
   //! Filter a set of primitives based on their primitive data and a condition and double value
   /**
@@ -6459,7 +6617,7 @@ public:
    * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
    * \note If primitive data does not exist, or primitive data does not have type of 'double', the primitive is excluded.
    */
-  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, double filter_value, const std::string &comparator );
+  [[nodiscard]] std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, double filter_value, const std::string &comparator );
 
   //! Filter a set of primitives based on their primitive data and a condition and int value
   /**
@@ -6470,7 +6628,7 @@ public:
    * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
    * \note If primitive data does not exist, or primitive data does not have type of 'int', the primitive is excluded.
    */
-  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, int filter_value, const std::string &comparator );
+  [[nodiscard]] std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, int filter_value, const std::string &comparator );
 
   //! Filter a set of primitives based on their primitive data and a condition and uint value
   /**
@@ -6481,7 +6639,7 @@ public:
    * \return Set of UUIDs for primitives with primitive data meeting the condition of 'primitive_data' 'comparator' 'filter_value'.
    * \note If primitive data does not exist, or primitive data does not have type of 'uint', the primitive is excluded.
    */
-  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, uint filter_value, const std::string &comparator );
+  [[nodiscard]] std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, uint filter_value, const std::string &comparator );
 
   //! Get set of primitives whose primitive data matches a given string
   /**
@@ -6491,7 +6649,7 @@ public:
    * \return Set of UUIDs for primitives with primitive data matching the string 'filter_value'.
    * \note If primitive data does not exist, or primitive data does not have type of 'std::string', the primitive is excluded.
    */
-  std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, const std::string &filter_value );
+  [[nodiscard]] std::vector<uint> filterPrimitivesByData( const std::vector<uint> &UUIDs, const std::string &primitive_data_label, const std::string &filter_value );
 
     //! Filter a set of compound objects based on their object data and a condition and float value
     /**
@@ -6502,7 +6660,7 @@ public:
      * \return Set of objIDs for objects with object data meeting the condition of 'object_data' 'comparator' 'filter_value'.
      * \note If object data does not exist, or object data does not have type of 'float', the object is excluded.
      */
-    std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, float filter_value, const std::string &comparator );
+    [[nodiscard]] std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, float filter_value, const std::string &comparator );
 
     //! Filter a set of compound objects based on their object data and a condition and double value
     /**
@@ -6513,7 +6671,7 @@ public:
      * \return Set of objIDs for objects with object data meeting the condition of 'object_data' 'comparator' 'filter_value'.
      * \note If object data does not exist, or object data does not have type of 'double', the object is excluded.
      */
-    std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, double filter_value, const std::string &comparator );
+    [[nodiscard]] std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, double filter_value, const std::string &comparator );
 
     //! Filter a set of compound objects based on their object data and a condition and int value
     /**
@@ -6524,7 +6682,7 @@ public:
      * \return Set of objIDs for objects with object data meeting the condition of 'object_data' 'comparator' 'filter_value'.
      * \note If object data does not exist, or object data does not have type of 'int', the object is excluded.
      */
-    std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, int filter_value, const std::string &comparator );
+    [[nodiscard]] std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, int filter_value, const std::string &comparator );
 
     //! Filter a set of compound objects based on their object data and a condition and uint value
     /**
@@ -6535,7 +6693,7 @@ public:
      * \return Set of objIDs for objects with object data meeting the condition of 'object_data' 'comparator' 'filter_value'.
      * \note If object data does not exist, or object data does not have type of 'uint', the object is excluded.
      */
-    std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, uint filter_value, const std::string &comparator );
+    [[nodiscard]] std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, uint filter_value, const std::string &comparator );
 
     //! Get set of compound objects whose object data matches a given string
     /**
@@ -6545,7 +6703,7 @@ public:
      * \return Set of objIDs for objects with object data matching the string 'filter_value'.
      * \note If object data does not exist, or object data does not have type of 'std::string', the object is excluded.
      */
-    std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value );
+    [[nodiscard]] std::vector<uint> filterObjectsByData( const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value );
     
 };
 

@@ -37,7 +37,7 @@ $ git pull
   You can always check which version you are on by typing:
 
   ~~~~~~
-  $ git log
+  $ git describe --tags
   ~~~~~~
 
  <p> <br><br><br><br> </p>

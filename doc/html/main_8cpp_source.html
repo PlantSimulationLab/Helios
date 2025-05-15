@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: doc/TutorialVideos/RadiationModelPt2/main.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -158,9 +171,9 @@ $(function(){initNavTree('main_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    std::vector&lt;uint&gt; UUIDs_tree = context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;../../../PLY/Tree.ply&quot;</span>, <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 4, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a> </div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>); </div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga7e3752eb5ff9909862380d188d2b3f24" title="Make a vec2 from two floats.">make_vec2</a>(7,7), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><a class="code hl_function" href="group__vectors.html#ga39457188bb8c3aba1fdc9217ecc16f74" title="Make an int2 vector from two ints.">make_int2</a>(50,50)); </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a7043a299c25ea667c4e802fb8eda47f4" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0)); </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(7,7), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, </div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(50,50)); </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0)); </div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>( <span class="stringliteral">&quot;../RadiationSampleData.csv&quot;</span>, {}, <span class="stringliteral">&quot;,&quot;</span>); </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>

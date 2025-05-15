@@ -236,7 +236,6 @@ public:
             color_ind=std::round( (x-minval)/(maxval-minval) * float(cmapsize-1) );
         }
 
-        if(color_ind<0){color_ind=0;}
         if(color_ind>cmapsize-1){color_ind=int(cmapsize-1);}
         color.r=cmap.at(color_ind).r;
         color.g=cmap.at(color_ind).g;
@@ -297,7 +296,7 @@ public:
   ~Visualizer();
 
   //! Visualizer self-test routine
-  int selfTest();
+  int selfTest() const;
 
   //! Enable standard output from this plug-in (default)
   void enableMessages();
@@ -880,7 +879,7 @@ public:
    * \param[in] depthMVP Depth MVP matrix.
    * \param[in] getKeystrokes If false, do not update visualization with input keystrokes.
   */
-  void plotOnce(glm::mat4 depthMVP, bool getKeystrokes);
+  void plotOnce(const glm::mat4 &depthMVP, bool getKeystrokes);
 
   //! Plot the depth map (distance from camera to nearest object)
   void plotDepthMap();
@@ -937,7 +936,7 @@ public:
   //! Close the graphics window
   void closeWindow();
 
- void* getWindow();
+ void* getWindow() const;
 
  std::vector<uint> getFrameBufferSize();
 
@@ -950,6 +949,8 @@ public:
  std::vector<helios::vec3> getCameraPosition();
 
  glm::mat4 getPerspectiveTransformationMatrix();
+
+ glm::mat4 getViewMatrix() const;
 
  std::vector<LightingModel> getPrimaryLightingModel();
 

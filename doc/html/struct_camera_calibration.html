@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: CameraCalibration Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -174,7 +187,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad1c0a4605b3b3ea355b9f3dee1706ec9" id="r_ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1c0a4605b3b3ea355b9f3dee1706ec9">addColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad, const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &gt; &amp;colorassignment={}, const std::vector&lt; std::vector&lt; std::string &gt; &gt; &amp;spectrumassignment={})</td></tr>
 <tr class="memdesc:ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add color board geometry into context.  <br /></td></tr>
 <tr class="separator:ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4b1c43adcd27bc075327a239f31f03b8" id="r_a4b1c43adcd27bc075327a239f31f03b8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4b1c43adcd27bc075327a239f31f03b8">addDefaultColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a>(0, 0, 0))</td></tr>
+<tr class="memitem:a4b1c43adcd27bc075327a239f31f03b8" id="r_a4b1c43adcd27bc075327a239f31f03b8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4b1c43adcd27bc075327a239f31f03b8">addDefaultColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0, 0, 0))</td></tr>
 <tr class="memdesc:a4b1c43adcd27bc075327a239f31f03b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set reflectivity for a specific UUID.  <br /></td></tr>
 <tr class="separator:a4b1c43adcd27bc075327a239f31f03b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad70c4585fbaef6ffb459838bd170f64" id="r_aad70c4585fbaef6ffb459838bd170f64"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad70c4585fbaef6ffb459838bd170f64">getColorBoardUUIDs</a> ()</td></tr>
@@ -398,7 +411,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#aa19986ef06f067d450534135735bc36b">helios::make_vec3</a>(0,0,0)</span>&#160;)</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0,0,0)</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

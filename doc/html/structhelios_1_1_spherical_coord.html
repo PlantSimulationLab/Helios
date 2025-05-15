@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: helios::SphericalCoord Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -166,15 +179,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aada6ce13523a731118c7a603a8d7c4d2" id="r_aada6ce13523a731118c7a603a8d7c4d2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aada6ce13523a731118c7a603a8d7c4d2">SphericalCoord</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;c)</td></tr>
 <tr class="memdesc:aada6ce13523a731118c7a603a8d7c4d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy constructor.  <br /></td></tr>
 <tr class="separator:aada6ce13523a731118c7a603a8d7c4d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe4ef2437aad9bca5863eeb387b1eee5" id="r_afe4ef2437aad9bca5863eeb387b1eee5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe4ef2437aad9bca5863eeb387b1eee5">operator=</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;c)</td></tr>
-<tr class="memdesc:afe4ef2437aad9bca5863eeb387b1eee5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Assignment operator.  <br /></td></tr>
-<tr class="separator:afe4ef2437aad9bca5863eeb387b1eee5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa6791361ed489019d0689a52cac5621" id="r_afa6791361ed489019d0689a52cac5621"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa6791361ed489019d0689a52cac5621">operator==</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;c) const</td></tr>
-<tr class="memdesc:afa6791361ed489019d0689a52cac5621"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two spherical coordinates  <br /></td></tr>
-<tr class="separator:afa6791361ed489019d0689a52cac5621"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a145cb6d467be654bc647c15e4fd9646a" id="r_a145cb6d467be654bc647c15e4fd9646a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a145cb6d467be654bc647c15e4fd9646a">operator!=</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;c) const</td></tr>
-<tr class="memdesc:a145cb6d467be654bc647c15e4fd9646a"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for inequality of two spherical coordinates  <br /></td></tr>
-<tr class="separator:a145cb6d467be654bc647c15e4fd9646a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c6cde19d35d9de8c7f314865d87653e" id="r_a2c6cde19d35d9de8c7f314865d87653e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c6cde19d35d9de8c7f314865d87653e">operator=</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;c) noexcept</td></tr>
+<tr class="memdesc:a2c6cde19d35d9de8c7f314865d87653e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Assignment operator.  <br /></td></tr>
+<tr class="separator:a2c6cde19d35d9de8c7f314865d87653e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a69f800b038b3a8a30155692035d24793" id="r_a69f800b038b3a8a30155692035d24793"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a69f800b038b3a8a30155692035d24793">operator==</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;c) const noexcept</td></tr>
+<tr class="memdesc:a69f800b038b3a8a30155692035d24793"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for equality of two spherical coordinates  <br /></td></tr>
+<tr class="separator:a69f800b038b3a8a30155692035d24793"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8abec3030e97d4d46f4d4d0e589f050" id="r_aa8abec3030e97d4d46f4d4d0e589f050"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8abec3030e97d4d46f4d4d0e589f050">operator!=</a> (const <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a> &amp;c) const noexcept</td></tr>
+<tr class="memdesc:aa8abec3030e97d4d46f4d4d0e589f050"><td class="mdescLeft">&#160;</td><td class="mdescRight">check for inequality of two spherical coordinates  <br /></td></tr>
+<tr class="separator:aa8abec3030e97d4d46f4d4d0e589f050"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -200,7 +213,7 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Vector of spherical coordinates (elevation,azimuth) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01534">1534</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01525">1525</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a93171497b8c90975366e1945e6993dcd" name="a93171497b8c90975366e1945e6993dcd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a93171497b8c90975366e1945e6993dcd">&#9670;&#160;</a></span>SphericalCoord() <span class="overload">[1/3]</span></h2>
@@ -228,7 +241,7 @@ Friends</h2></td></tr>
 <p>Default constructor. </p>
 <p>initializes to vertical unit vector </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01559">1559</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01550">1550</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -274,7 +287,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01569">1569</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01560">1560</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -303,13 +316,13 @@ Friends</h2></td></tr>
 
 <p>Copy constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01572">1572</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01563">1563</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a145cb6d467be654bc647c15e4fd9646a" name="a145cb6d467be654bc647c15e4fd9646a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a145cb6d467be654bc647c15e4fd9646a">&#9670;&#160;</a></span>operator!=()</h2>
+<a id="aa8abec3030e97d4d46f4d4d0e589f050" name="aa8abec3030e97d4d46f4d4d0e589f050"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8abec3030e97d4d46f4d4d0e589f050">&#9670;&#160;</a></span>operator!=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -326,19 +339,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for inequality of two spherical coordinates </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01620">1620</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01611">1611</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="afe4ef2437aad9bca5863eeb387b1eee5" name="afe4ef2437aad9bca5863eeb387b1eee5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afe4ef2437aad9bca5863eeb387b1eee5">&#9670;&#160;</a></span>operator=()</h2>
+<a id="a2c6cde19d35d9de8c7f314865d87653e" name="a2c6cde19d35d9de8c7f314865d87653e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c6cde19d35d9de8c7f314865d87653e">&#9670;&#160;</a></span>operator=()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -355,19 +368,19 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>Assignment operator. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01575">1575</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01566">1566</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
-<a id="afa6791361ed489019d0689a52cac5621" name="afa6791361ed489019d0689a52cac5621"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa6791361ed489019d0689a52cac5621">&#9670;&#160;</a></span>operator==()</h2>
+<a id="a69f800b038b3a8a30155692035d24793" name="a69f800b038b3a8a30155692035d24793"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a69f800b038b3a8a30155692035d24793">&#9670;&#160;</a></span>operator==()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -384,14 +397,14 @@ Friends</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 <p>check for equality of two spherical coordinates </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01616">1616</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01607">1607</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -425,7 +438,7 @@ Friends</h2></td></tr>
 
 <p>Write SphericalCoord to output stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01591">1591</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01582">1582</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -444,7 +457,7 @@ Friends</h2></td></tr>
 
 <p>Azimuthal angle (radians) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01555">1555</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01546">1546</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -462,7 +475,7 @@ Friends</h2></td></tr>
 
 <p>Elevation angle (radians) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01548">1548</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01539">1539</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -480,7 +493,7 @@ Friends</h2></td></tr>
 
 <p>Radius. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01543">1543</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01534">1534</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +511,7 @@ Friends</h2></td></tr>
 
 <p>Zenithal angle (radians) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01553">1553</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01544">1544</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

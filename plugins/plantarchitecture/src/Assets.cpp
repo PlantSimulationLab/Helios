@@ -147,6 +147,10 @@ uint GenericLeafPrototype(helios::Context * context_ptr, LeafPrototype* prototyp
 
 }
 
+uint GeneralSphericalFruitPrototype( helios::Context* context_ptr, uint subdivisions ){
+    return context_ptr->addSphereObject( 5, make_vec3(0.5f,0,0), 0.5f, RGB::red );
+}
+
 uint AlmondFruitPrototype( helios::Context* context_ptr, uint subdivisions ){
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/AlmondHull.obj", make_vec3(0.,0,0), 0,nullrotation, RGB::black, "ZUP", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
@@ -308,6 +312,43 @@ uint BindweedFlowerPrototype( helios::Context* context_ptr, uint subdivisions, b
     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/BindweedFlower.obj", true );
     uint objID = context_ptr->addPolymeshObject( UUIDs );
     return objID;
+}
+
+uint CapsicumFruitPrototype( helios::Context* context_ptr, uint subdivisions ){
+    std::string OBJ_file;
+    if ( context_ptr->randn()<0.4 ) {
+        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_green.obj";
+    }else {
+        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_red.obj";
+    }
+
+    std::vector<uint> UUIDs = context_ptr->loadOBJ( OBJ_file.c_str(), make_vec3(0.,0,0), 0, nullrotation, RGB::black, "ZUP", true );
+    return context_ptr->addPolymeshObject( UUIDs );
+}
+
+void CapsicumPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    if( shoot_node_index<6 && phytomer->rank==0 ){
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+        phytomer->removeLeaf();
+    }
+
+    if( phytomer->rank>=2 ){
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = std::min(1.f, 0.6f + 0.4f * shoot_node_index / 5.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    if ( phytomer->rank == 0 ) {
+        float inode_scale = std::min(1.f, 0.05f + 0.95f * plant_age / 15.f);
+        phytomer->scaleInternodeMaxLength(inode_scale);
+    }
+
 }
 
 uint CheeseweedLeafPrototype( helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index ){
@@ -846,6 +887,10 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     if( shoot_node_index<8 && phytomer->rank==0 ){
         phytomer->setFloralBudState(BUD_DEAD);
     }
+    if ( phytomer->rank > 1 ) {
+        phytomer->setFloralBudState(BUD_DEAD);
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
 
     //set leaf and internode scale based on position along the shoot
     float leaf_scale = fmin(1.f, 0.5 + 0.5 * plant_age / 10.f);
@@ -854,6 +899,39 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     //set internode length based on position along the shoot
     float inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);
     phytomer->scaleInternodeMaxLength(inode_scale);
+
+}
+
+void CherryTomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
+
+    if( shoot_node_index<8 || phytomer->rank>1 ){
+        phytomer->setFloralBudState(BUD_DEAD);
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+
+    //set leaf and internode scale based on position along the shoot
+    float leaf_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 15.f);
+    phytomer->scaleLeafPrototypeScale(leaf_scale);
+
+    //set internode length based on position along the shoot
+    float inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);
+    phytomer->scaleInternodeMaxLength(inode_scale);
+
+}
+
+void CherryTomatoPhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+
+    float pruning_height = 1.f;
+    float pruning_day = 101.f;
+
+    float plant_age = phytomer->parent_shoot_ptr->plantarchitecture_ptr->getPlantAge(phytomer->plantID);
+
+    if( phytomer->hasLeaf() && plant_age >= pruning_day  ) {
+        float height = phytomer->getInternodeNodePositions().at(0).z;
+        if ( height< pruning_height ) {
+            phytomer->removeLeaf();
+        }
+    }
 
 }
 

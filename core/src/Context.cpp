@@ -62,8 +62,7 @@ void Context::addTexture( const char* texture_file ){
             helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
         }
 
-        Texture text( texture_file );
-        textures[ texture_file ] = text;
+        textures.emplace(texture_file, Texture(texture_file));
     }
 }
 
@@ -158,6 +157,8 @@ bool Context::isGeometryDirty() const{
     return isgeometrydirty;
 }
 
+Primitive::~Primitive() = default;
+
 uint Primitive::getUUID() const{
     return UUID;
 }
@@ -194,7 +195,8 @@ float Triangle::getArea() const{
 
     const std::vector<vec3> &vertices = getVertices();
 
-    float area = calculateTriangleArea( vertices.at(0), vertices.at(1), vertices.at(2) );
+    float area = calculateTriangleArea( vertices[0], vertices[1], vertices[2] );
+
     return area*solid_fraction;
 
 }
@@ -203,25 +205,19 @@ float Voxel::getArea() const{
 
     const vec3 size(transform[0],transform[5],transform[10]);
 
-    return 2.f*size.x*size.y+2*size.x*size.z+2*size.y*size.z;
+    return 2.f*size.x*size.y+2.f*size.x*size.z+2.f*size.y*size.z;
 
 }
 
 vec3 Patch::getNormal() const{
 
-    vec3 normal(transform[2],transform[6],transform[10]);
-
-    normal.normalize();
-
-    return normal;
+    return normalize( make_vec3(transform[2],transform[6],transform[10]) );
 
 }
 
 vec3 Triangle::getNormal() const{
     const std::vector<vec3> &vertices = getVertices();
-    vec3 norm = cross(vertices.at(1)-vertices.at(0),vertices.at(2)-vertices.at(1));
-    norm.normalize();
-    return norm;
+    return normalize(cross(vertices[1]-vertices[0],vertices[2]-vertices[1]));
 }
 
 vec3 Voxel::getNormal() const{
@@ -230,13 +226,14 @@ vec3 Voxel::getNormal() const{
 
 std::vector<vec3> Patch::getVertices() const{
 
-    vec3 Y[4];
-    std::vector<vec3> vertices;
-    vertices.resize(4);
-    Y[0] = make_vec3( -0.5f, -0.5f, 0.f);
-    Y[1] = make_vec3( 0.5f, -0.5f, 0.f);
-    Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
-    Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
+    std::vector<vec3> vertices(4);
+
+    std::vector<vec3> Y = {
+        {-0.5f, -0.5f, 0.f},
+        {0.5f, -0.5f, 0.f},
+        {0.5f, 0.5f, 0.f},
+        {-0.5f, 0.5f, 0.f}
+    };
 
     for( int i=0; i<4; i++ ){
         vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
@@ -248,12 +245,13 @@ std::vector<vec3> Patch::getVertices() const{
 
 std::vector<vec3> Triangle::getVertices() const{
 
-    vec3 Y[3];
-    std::vector<vec3> vertices;
-    vertices.resize(3);
-    Y[0] = make_vec3( 0.f, 0.f, 0.f);
-    Y[1] = make_vec3( 0.f, 1.f, 0.f);
-    Y[2] = make_vec3( 1.f, 1.f, 0.f);
+    std::vector<vec3> vertices(3);
+
+    std::vector<vec3> Y = {
+        {0.f, 0.f, 0.f},
+        { 0.f, 1.f, 0.f},
+        {1.f, 1.f, 0.f}
+    };
 
     for( int i=0; i<3; i++ ){
         vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
@@ -266,17 +264,19 @@ std::vector<vec3> Triangle::getVertices() const{
 
 std::vector<vec3> Voxel::getVertices() const{
 
-    vec3 Y[8];
-    std::vector<vec3> vertices;
-    vertices.resize(8);
-    Y[0] = make_vec3( -0.5f, -0.5f, -0.5f);
-    Y[1] = make_vec3( 0.5f, -0.5f, -0.5f);
-    Y[2] = make_vec3( 0.5f, 0.5f, -0.5f);
-    Y[3] = make_vec3( -0.5f, 0.5f, -0.5f);
-    Y[4] = make_vec3( -0.5f, -0.5f, 0.5f);
-    Y[5] = make_vec3( 0.5f, -0.5f, 0.5f);
-    Y[6] = make_vec3( 0.5f, 0.5f, 0.5f);
-    Y[7] = make_vec3( -0.5f, 0.5f, 0.5f);
+    std::vector<vec3> vertices(8);
+
+    std::vector<vec3> Y = {
+        {-0.5f, -0.5f, -0.5f},
+        {0.5f, -0.5f, -0.5f},
+        {0.5f, 0.5f, -0.5f},
+        {-0.5f, 0.5f, -0.5f},
+        {-0.5f, -0.5f, 0.5f},
+        {0.5f, -0.5f, 0.5f},
+        {0.5f, 0.5f, 0.5f},
+        {-0.5f, 0.5f, 0.5f}
+    };
+
 
     for( int i=0; i<8; i++ ){
         vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
@@ -287,11 +287,11 @@ std::vector<vec3> Voxel::getVertices() const{
 }
 
 RGBcolor Primitive::getColor() const{
-    return make_RGBcolor(color.r,color.g,color.b);
+    return {color.r,color.g,color.b};
 }
 
 RGBcolor Primitive::getColorRGB() const{
-    return make_RGBcolor(color.r,color.g,color.b);
+    return {color.r,color.g,color.b};
 }
 
 RGBAcolor Primitive::getColorRGBA() const{
@@ -305,7 +305,7 @@ void Primitive::setColor( const helios::RGBcolor& newcolor ){
     //   return;
     // }
 
-    color = make_RGBAcolor(newcolor,1);
+    color = make_RGBAcolor(newcolor, 1.f);
 
 }
 
@@ -380,67 +380,178 @@ void Patch::calculateSolidFraction( const std::map<std::string,Texture> &texture
 
   if( textures.at(texturefile).hasTransparencyChannel() ){
     const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
-    int A = 0;
-    int At = 0;
     const int2 &sz = textures.at(texturefile).getImageResolution();
     int2 uv_min( std::max(0,(int)roundf(uv.at(0).x*float(sz.x))), std::max(0,(int)roundf((1.f-uv.at(2).y)*float(sz.y))) );
     int2 uv_max( std::min(sz.x-1,(int)roundf(uv.at(2).x*float(sz.x))), std::min(sz.y-1,(int)roundf((1.f-uv.at(0).y)*float(sz.y))) );
-    for( int j=uv_min.y; j<uv_max.y; j++ ){
-      for( int i=uv_min.x; i<uv_max.x; i++ ){
-        At += 1;
-        if( alpha->at(j).at(i) ){
-          A += 1;
-        }
-      }
-    }
-    if( At==0 ){
+    
+    // Calculate total area size first
+    int width = uv_max.x - uv_min.x;
+    int height = uv_max.y - uv_min.y;
+    int At = width * height;
+    
+    // Early exit for zero-sized regions
+    if( At <= 0 ){
       solid_fraction = 0;
-    }else{
-      solid_fraction = float(A)/float(At);
+      return;
     }
+    
+    int A = 0; // Solid pixel count
+    
+#ifdef USE_OPENMP
+    #pragma omp parallel reduction(+:A)
+    {
+        #pragma omp for schedule(dynamic, 16) nowait
+        for( int j = uv_min.y; j < uv_max.y; j++ ){
+            const std::vector<bool> &row = alpha->at(j);
+            for( int i = uv_min.x; i < uv_max.x; i++ ){
+                if( row[i] ){
+                    A++;
+                }
+            }
+        }
+    }
+#else
+    for( int j = uv_min.y; j < uv_max.y; j++ ){
+        const std::vector<bool> &row = alpha->at(j);
+        for( int i = uv_min.x; i < uv_max.x; i++ ){
+            if( row[i] ){
+                A++;
+            }
+        }
+    }
+#endif
+
+    solid_fraction = float(A) / float(At);
   }else{
     solid_fraction = 1.f;
   }
-
 }
 
 void Triangle::calculateSolidFraction( const std::map<std::string,Texture> &textures ){
 
-  if( textures.at(texturefile).hasTransparencyChannel() ){
-    const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
-    const int2 &sz = textures.at(texturefile).getImageResolution();
-    int2 uv_min( std::max(0,(int)round(fminf(fminf(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::max(0,(int)round(fmin(fminf(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
-    int2 uv_max( std::min(sz.x-1,(int)round(fmaxf(fmaxf(uv.at(0).x,uv.at(1).x),uv.at(2).x)*float(sz.x))), std::min(sz.y-1,(int)round(fmaxf(fmaxf(uv.at(0).y,uv.at(1).y),uv.at(2).y)*float(sz.y))) );
-    int A = 0;
-    int At = 0;
-    vec2 xy;
-    for( int j=uv_min.y; j<uv_max.y; j++ ){
-      for( int i=uv_min.x; i<uv_max.x; i++ ){
-        xy.x = float(i+0.5)/float(sz.x-1);
-        xy.y = float(j+0.5)/float(sz.y-1);
+  // Early return for textures without transparency
+  if( !textures.at(texturefile).hasTransparencyChannel() ){
+    solid_fraction = 1.f;
+    return;
+  }
 
-        bool test_0 = edgeFunction( uv.at(0), uv.at(1), xy);
-        bool test_1 = edgeFunction( uv.at(1), uv.at(2), xy );
-        bool test_2 = edgeFunction( uv.at(2), uv.at(0), xy ) ;
-        uint test_sum =  test_0 + test_1 + test_2;
-
-        if(test_sum == 0 || test_sum == 3){
-          At += 1;
-          if( alpha->at(alpha->size()-j-1 ).at(i) ){
-            A += 1;
+  const std::vector<std::vector<bool> >* alpha = textures.at(texturefile).getTransparencyData();
+  const int2 &sz = textures.at(texturefile).getImageResolution();
+  
+  // Optimize min/max calculations
+  const float minX = std::min({uv.at(0).x, uv.at(1).x, uv.at(2).x});
+  const float maxX = std::max({uv.at(0).x, uv.at(1).x, uv.at(2).x});
+  const float minY = std::min({uv.at(0).y, uv.at(1).y, uv.at(2).y});
+  const float maxY = std::max({uv.at(0).y, uv.at(1).y, uv.at(2).y});
+  
+  // Calculate bounding box
+  int2 uv_min(std::max(0, (int)round(minX * float(sz.x))), 
+              std::max(0, (int)round(minY * float(sz.y))));
+  int2 uv_max(std::min(sz.x-1, (int)round(maxX * float(sz.x))), 
+              std::min(sz.y-1, (int)round(maxY * float(sz.y))));
+  
+  // Atomic variables for thread-safe updates
+  int A = 0;
+  int At = 0;
+  
+  // Calculate inverse denominator for normalized coords once
+  const float inv_x_denom = 1.0f / float(sz.x-1);
+  const float inv_y_denom = 1.0f / float(sz.y-1);
+  
+  // Precompute alpha row size for faster indexing
+  const size_t alpha_size = alpha->size();
+  
+  // Calculate the size of the area to process
+  const int width = uv_max.x - uv_min.x;
+  const int height = uv_max.y - uv_min.y;
+  
+#ifdef USE_OPENMP
+  // Only use OpenMP if the area is large enough to justify the overhead
+  if (width * height > 1000) {
+    #pragma omp parallel
+    {
+      // Thread-local counters to avoid atomic operations inside loop
+      int local_A = 0;
+      int local_At = 0;
+      
+      #pragma omp for schedule(dynamic, 16) nowait
+      for(int j = uv_min.y; j < uv_max.y; j++) {
+        // Pre-calculate the y coordinate used in all inner loop iterations
+        const float y_coord = float(j+0.5) * inv_y_denom;
+        const size_t alpha_row_idx = alpha_size - j - 1;
+        
+        for(int i = uv_min.x; i < uv_max.x; i++) {
+          vec2 xy(float(i+0.5) * inv_x_denom, y_coord);
+          
+          bool test_0 = edgeFunction(uv.at(0), uv.at(1), xy);
+          bool test_1 = edgeFunction(uv.at(1), uv.at(2), xy);
+          bool test_2 = edgeFunction(uv.at(2), uv.at(0), xy);
+          uint test_sum = test_0 + test_1 + test_2;
+          
+          if(test_sum == 0 || test_sum == 3) {
+            local_At++;
+            if(alpha->at(alpha_row_idx).at(i)) {
+              local_A++;
+            }
+          }
+        }
+      }
+      
+      // Add thread-local counters to the global ones
+      #pragma omp atomic
+      A += local_A;
+      
+      #pragma omp atomic
+      At += local_At;
+    }
+  } else {
+    // Sequential version for small areas
+    for(int j = uv_min.y; j < uv_max.y; j++) {
+      const float y_coord = float(j+0.5) * inv_y_denom;
+      const size_t alpha_row_idx = alpha_size - j - 1;
+      
+      for(int i = uv_min.x; i < uv_max.x; i++) {
+        vec2 xy(float(i+0.5) * inv_x_denom, y_coord);
+        
+        bool test_0 = edgeFunction(uv.at(0), uv.at(1), xy);
+        bool test_1 = edgeFunction(uv.at(1), uv.at(2), xy);
+        bool test_2 = edgeFunction(uv.at(2), uv.at(0), xy);
+        uint test_sum = test_0 + test_1 + test_2;
+        
+        if(test_sum == 0 || test_sum == 3) {
+          At++;
+          if(alpha->at(alpha_row_idx).at(i)) {
+            A++;
           }
         }
       }
     }
-    if( At==0 ){
-      solid_fraction = 0;
-    }else{
-      solid_fraction = float(A)/float(At);
-    }
-  }else{
-    solid_fraction = 1.f;
   }
-
+#else
+  // Sequential version (OpenMP disabled)
+  for(int j = uv_min.y; j < uv_max.y; j++) {
+    const float y_coord = float(j+0.5) * inv_y_denom;
+    const size_t alpha_row_idx = alpha_size - j - 1;
+    
+    for(int i = uv_min.x; i < uv_max.x; i++) {
+      vec2 xy(float(i+0.5) * inv_x_denom, y_coord);
+      
+      bool test_0 = edgeFunction(uv.at(0), uv.at(1), xy);
+      bool test_1 = edgeFunction(uv.at(1), uv.at(2), xy);
+      bool test_2 = edgeFunction(uv.at(2), uv.at(0), xy);
+      uint test_sum = test_0 + test_1 + test_2;
+      
+      if(test_sum == 0 || test_sum == 3) {
+        At++;
+        if(alpha->at(alpha_row_idx).at(i)) {
+          A++;
+        }
+      }
+    }
+  }
+#endif
+  
+  solid_fraction = (At == 0) ? 0.0f : float(A) / float(At);
 }
 
 void Voxel::calculateSolidFraction( const std::map<std::string,Texture> &textures ){
@@ -853,19 +964,18 @@ void Triangle::makeTransformationMatrix( const helios::vec3& vert0, const helios
 
 }
 
-Patch::Patch( const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ){
+Patch::Patch( const RGBAcolor& a_color, uint a_parent_objID, uint a_UUID ) {
 
-    makeIdentityMatrix( transform );
+    makeIdentityMatrix(transform);
 
     color = a_color;
-    assert( color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1 );
+    assert(color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1);
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     solid_fraction = 1.f;
     texturefile = "";
     texturecoloroverridden = false;
-
 }
 
 Patch::Patch( const char* a_texturefile, float a_solid_fraction, uint a_parent_objID, uint a_UUID ){
@@ -896,7 +1006,7 @@ Patch::Patch( const char* a_texturefile, const std::vector<helios::vec2>& a_uv, 
     if( uv.size()==4 && uv.at(0).x==0 && uv.at(0).y==0 && uv.at(1).x==1 && uv.at(1).y==0 && uv.at(2).x==1 && uv.at(2).y==1 && uv.at(3).x== 0 && uv.at(3).y==1 ){
       solid_fraction = textures.at(texturefile).getSolidFraction();
     }else {
-      this->calculateSolidFraction(textures);
+      this->Patch::calculateSolidFraction(textures);
     }
 
 }
@@ -905,7 +1015,7 @@ helios::vec2 Patch::getSize() const{
     const std::vector<vec3> &vertices = getVertices();
     float l = (vertices.at(1)-vertices.at(0)).magnitude();
     float w = (vertices.at(3)-vertices.at(0)).magnitude();
-    return make_vec2(l,w);
+    return {l, w};
 }
 
 helios::vec3 Patch::getCenter() const{
@@ -935,7 +1045,7 @@ Triangle::Triangle( const helios::vec3& a_vertex0, const helios::vec3& a_vertex1
 
   texturefile = a_texturefile;
   uv = a_uv;
-  solid_fraction = solid_fraction;
+  this->solid_fraction = solid_fraction;
   texturecoloroverridden = false;
 
 }
@@ -953,7 +1063,7 @@ Triangle::Triangle( const helios::vec3& a_vertex0, const helios::vec3& a_vertex1
   solid_fraction = 1.f;
   texturecoloroverridden = false;
 
-  this->calculateSolidFraction(textures);
+  this->Triangle::calculateSolidFraction(textures);
 
 }
 
@@ -963,10 +1073,11 @@ vec3 Triangle::getVertex( int vertex_index ){
         helios_runtime_error("ERROR (Context::getVertex): vertex index must be 1, 2, or 3.");
     }
 
-    vec3 Y[3];
-    Y[0] = make_vec3( 0.f, 0.f, 0.f);
-    Y[1] = make_vec3( 0.f, 1.f, 0.f);
-    Y[2] = make_vec3( 1.f, 1.f, 0.f);
+    std::vector<vec3> Y = {
+        { 0.f, 0.f, 0.f},
+        {0.f, 1.f, 0.f},
+        { 1.f, 1.f, 0.f}
+    };
 
     vec3 vertex;
 
@@ -984,7 +1095,7 @@ vec3 Triangle::getCenter() const{
 //    Y[1] = make_vec3( 0.f, 1.f, 0.f);
 //    Y[2] = make_vec3( 1.f/3.f, 1.f, 0.f);
 
-    vec3 center0 = make_vec3(1.f/3.f,2.f/3.f,0.f);
+    vec3 center0(1.f/3.f,2.f/3.f,0.f);
     vec3 center;
 
     center.x = transform[0] * center0.x + transform[1] * center0.y + transform[2] * center0.z + transform[3];
@@ -1021,9 +1132,6 @@ vec3 Voxel::getCenter() const{
 
     vec3 center;
     vec3 Y;
-    Y.x = 0.f;
-    Y.y = 0.f;
-    Y.z = 0.f;
 
     center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
     center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
@@ -1047,7 +1155,7 @@ vec3 Voxel::getSize(){
     float y = (ny_T-n0_T).magnitude();
     float z = (nz_T-n0_T).magnitude();
 
-    return make_vec3(x,y,z);
+    return {x,y,z};
 
 }
 
@@ -1201,7 +1309,7 @@ float Context::randn(){
 }
 
 float Context::randn( float mean, float stddev ){
-    return mean+norm_distribution(generator)*fabsf(stddev);
+    return mean+norm_distribution(generator)*fabs(stddev);
 }
 
 uint Context::addPatch(){
@@ -1289,12 +1397,12 @@ uint Context::addPatch( const vec3& center, const vec2& size, const SphericalCoo
 
     addTexture( texture_file );
 
-    std::vector<helios::vec2> uv;
-    uv.resize(4);
-    uv.at(0) = uv_center+make_vec2(-0.5f*uv_size.x,-0.5f*uv_size.y);
-    uv.at(1) = uv_center+make_vec2(+0.5f*uv_size.x,-0.5f*uv_size.y);
-    uv.at(2) =  uv_center+make_vec2(+0.5f*uv_size.x,+0.5f*uv_size.y);
-    uv.at(3) =  uv_center+make_vec2(-0.5f*uv_size.x,+0.5f*uv_size.y);
+    std::vector<helios::vec2> uv = {
+        uv_center+make_vec2(-0.5f*uv_size.x,-0.5f*uv_size.y),
+        uv_center+make_vec2(+0.5f*uv_size.x,-0.5f*uv_size.y),
+        uv_center+make_vec2(+0.5f*uv_size.x,+0.5f*uv_size.y),
+        uv_center+make_vec2(-0.5f*uv_size.x,+0.5f*uv_size.y)
+    };
 
     auto* patch_new = (new Patch( texture_file, uv, textures, 0, currentUUID ));
 
@@ -1346,11 +1454,7 @@ uint Context::addTriangle( const helios::vec3& vertex0, const helios::vec3& vert
 
     addTexture( texture_file );
 
-    std::vector<helios::vec2> uv;
-    uv.resize(3);
-    uv.at(0) = uv0;
-    uv.at(1) = uv1;
-    uv.at(2) = uv2;
+    std::vector<helios::vec2> uv{ uv0, uv1, uv2 };
 
     auto* tri_new = (new Triangle( vertex0, vertex1, vertex2, texture_file, uv, textures, 0, currentUUID ));
 
@@ -1412,23 +1516,23 @@ void Context::translatePrimitive( const std::vector<uint>& UUIDs, const vec3& sh
     }
 }
 
-void Context::rotatePrimitive(uint UUID, float rot, const char* axis ){
-    getPrimitivePointer_private(UUID)->rotate(rot,axis);
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const char* axis){
+    getPrimitivePointer_private(UUID)->rotate(rotation_rad,axis);
 }
 
-void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const char* axis ){
+void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const char* axis){
 
-    if( rot==0 ){
+    if( rotation_rad==0 ){
         return;
     }
 
     float T[16];
     if( strcmp(axis,"z")==0 ){
-        makeRotationMatrix(rot,"z",T);
+        makeRotationMatrix(rotation_rad,"z",T);
     }else if( strcmp(axis,"y")==0 ){
-        makeRotationMatrix(rot,"y",T);
+        makeRotationMatrix(rotation_rad,"y",T);
     }else if( strcmp(axis,"x")==0 ){
-        makeRotationMatrix(rot,"x",T);
+        makeRotationMatrix(rotation_rad,"x",T);
     }else{
         helios_runtime_error( "ERROR (Context::rotatePrimitive): Rotation axis should be one of x, y, or z." );
     }
@@ -1441,18 +1545,18 @@ void Context::rotatePrimitive( const std::vector<uint>& UUIDs, float rot, const 
     }
 }
 
-void Context::rotatePrimitive(uint UUID, float rot, const helios::vec3& axis ){
-    getPrimitivePointer_private(UUID)->rotate(rot,axis);
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3& axis){
+    getPrimitivePointer_private(UUID)->rotate(rotation_rad,axis);
 }
 
-void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const vec3 &axis ){
+void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const vec3 &axis){
 
-    if( rot==0 ){
+    if( rotation_rad==0 ){
         return;
     }
 
     float T[16];
-    makeRotationMatrix(rot,axis,T);
+    makeRotationMatrix(rotation_rad,axis,T);
 
     for( uint UUID : UUIDs){
         if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
@@ -1462,18 +1566,18 @@ void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const v
     }
 }
 
-void Context::rotatePrimitive( uint UUID, float rot, const helios::vec3& origin, const helios::vec3& axis ){
-    getPrimitivePointer_private(UUID)->rotate(rot,origin,axis);
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3& origin, const helios::vec3& axis){
+    getPrimitivePointer_private(UUID)->rotate(rotation_rad,origin,axis);
 }
 
-void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const helios::vec3& origin, const vec3 &axis ){
+void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rotation_rad, const helios::vec3& origin, const vec3 &axis){
 
-    if( rot==0 ){
+    if( rotation_rad==0 ){
         return;
     }
 
     float T[16];
-    makeRotationMatrix(rot,origin,axis,T);
+    makeRotationMatrix(rotation_rad,origin,axis,T);
 
     for( uint UUID : UUIDs){
         if( getPrimitivePointer_private(UUID)->getType()==PRIMITIVE_TYPE_VOXEL ){
@@ -1481,13 +1585,141 @@ void Context::rotatePrimitive(const std::vector<uint>& UUIDs, float rot, const h
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
+}
+
+void Context::setPrimitiveNormal(uint UUID, const helios::vec3& origin, const helios::vec3& new_normal) {
+#ifdef HELIOS_DEBUG
+    if( !doesPrimitiveExist(UUID) ){
+        helios_runtime_error("ERROR (Context::setPrimitiveNormal): UUID of " + std::to_string(UUID) + " not found in the context.");
+    }
+#endif
+
+    auto *prim = getPrimitivePointer_private(UUID);
+
+    // old and new normals, unitized
+    helios::vec3 oldN = normalize(prim->getNormal());
+    helios::vec3 newN = normalize(new_normal);
+
+    // minimal rotation axis/angle
+    float d     = std::clamp(oldN * newN, -1.f, 1.f);
+    float angle = acosf(d);
+    helios::vec3 axis = cross(oldN, newN);
+    if (axis.magnitude() < 1e-6f) {
+        axis = (std::fabs(oldN.x) < std::fabs(oldN.z))
+             ? cross(oldN, {1,0,0})
+             : cross(oldN, {0,0,1});
+    }
+    axis = axis.normalize();
+
+    // build M_delta about 'origin'
+    float M_delta[16];
+    makeRotationMatrix(angle, origin, axis, M_delta);
+
+    // grab existing world‐space model matrix
+    float M_old[16];
+    prim->getTransformationMatrix(M_old);
+
+    // preserve the rectangle’s forward (local X) direction:
+    //   - t0 is the world‐space image of (1,0,0) under M_old
+    helios::vec3 t0{
+        M_old[0],  // row0·[1,0,0,0]
+        M_old[4],  // row1·[1,0,0,0]
+        M_old[8]   // row2·[1,0,0,0]
+    };
+    t0 = normalize(t0);
+
+    //  apply M_delta to that direction (w=0)
+    helios::vec3 t1{
+        M_delta[0]*t0.x + M_delta[1]*t0.y + M_delta[2]*t0.z,
+        M_delta[4]*t0.x + M_delta[5]*t0.y + M_delta[6]*t0.z,
+        M_delta[8]*t0.x + M_delta[9]*t0.y + M_delta[10]*t0.z
+    };
+    t1 = normalize(t1);
+
+    //  desired forward is world‐X projected onto the new plane
+    helios::vec3 worldX{1.f,0.f,0.f};
+    helios::vec3 targ = worldX - newN*(newN * worldX);
+    targ = normalize(targ);
+
+    // compute the twist about newN that carries t1 → targ
+    //    using signed angle in that plane
+    float twist = std::atan2(
+        newN * cross(t1, targ),   // dot(newN, t1×targ)
+        t1   * targ               // dot(t1, targ)
+    );
+
+    // build that correction rotation
+    float M_twist[16];
+    makeRotationMatrix(twist, origin, newN, M_twist);
+
+    // now combine: M_new = M_twist * (M_delta * M_old)
+    float temp[16], M_new[16];
+    matmult(M_delta, M_old, temp);
+    matmult(M_twist,  temp,  M_new);
+
+    // write it back
+    prim->setTransformationMatrix(M_new);
+
+}
+
+void Context::setPrimitiveNormal(const std::vector<uint>& UUIDs, const helios::vec3& origin, const vec3 &new_normal) {
+    for( uint UUID : UUIDs){
+        setPrimitiveNormal(UUID,origin,new_normal);
+    }
+}
+
+void Context::setPrimitiveElevation(uint UUID, const vec3& origin, float elevation_rad) {
+#ifdef HELIOS_DEBUG
+    if (!doesPrimitiveExist(UUID))
+        helios_runtime_error("setPrimitiveElevation: invalid UUID");
+#endif
+
+    // pull the existing normal
+    auto* prim = getPrimitivePointer_private(UUID);
+    vec3 oldN = prim->getNormal();
+
+    // convert to spherical coords, extract azimuth
+    SphericalCoord sc = cart2sphere(oldN);
+    float az = sc.azimuth;
+
+    // build the new unit‐normal with desired elevation, same azimuth
+    SphericalCoord targetSC(1.0f, elevation_rad, az);
+    vec3         targetN = sphere2cart(targetSC);
+
+    // delegate to your normal‐setting routine
+    setPrimitiveNormal(UUID, origin, targetN);
+}
+
+void Context::setPrimitiveAzimuth(uint UUID, const vec3& origin, float azimuth_rad) {
+#ifdef HELIOS_DEBUG
+    if (!doesPrimitiveExist(UUID))
+        helios_runtime_error("setPrimitiveAzimuth: invalid UUID");
+#endif
+
+    // pull the existing normal
+    auto* prim = getPrimitivePointer_private(UUID);
+    vec3 oldN = prim->getNormal();
+
+    // convert to spherical coords, extract elevation
+    SphericalCoord sc = cart2sphere(oldN);
+    float elev = sc.elevation;
+
+    // build the new unit‐normal with same elevation, desired azimuth
+    SphericalCoord targetSC(1.0f, elev, azimuth_rad);
+    vec3         targetN = sphere2cart(targetSC);
+
+    // delegate to your normal‐setting routine
+    setPrimitiveNormal(UUID, origin, targetN);
 }
 
 void Context::scalePrimitive(uint UUID, const helios::vec3& S ){
 
+#ifdef HELIOS_DEBUG
     if( !doesPrimitiveExist(UUID) ){
         helios_runtime_error("ERROR (Context::scalePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
-    }else if( S.x==1 && S.y==1 && S.z==1 ){
+    }
+#endif
+    if( S.x==1 && S.y==1 && S.z==1 ){
         return;
     }
 
@@ -1504,11 +1736,14 @@ void Context::scalePrimitive( const std::vector<uint>& UUIDs, const helios::vec3
     }
 }
 
-void Context::scalePrimitiveAboutPoint( uint UUID, const helios::vec3& S, const helios::vec3 point ){
+void Context::scalePrimitiveAboutPoint(uint UUID, const helios::vec3& S, const helios::vec3 &point){
 
+#ifdef HELIOS_DEBUG
     if( !doesPrimitiveExist(UUID) ){
         helios_runtime_error("ERROR (Context::scalePrimitiveAboutPoint): UUID of " + std::to_string(UUID) + " not found in the context.");
-    }else if( S.x==1 && S.y==1 && S.z==1 ){
+    }
+#endif
+    if( S.x==1 && S.y==1 && S.z==1 ){
         return;
     }
 
@@ -1516,7 +1751,7 @@ void Context::scalePrimitiveAboutPoint( uint UUID, const helios::vec3& S, const 
 
 }
 
-void Context::scalePrimitiveAboutPoint( const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 point ){
+void Context::scalePrimitiveAboutPoint(const std::vector<uint>& UUIDs, const helios::vec3& S, const helios::vec3 &point){
     for( uint UUID : UUIDs ){
         scalePrimitiveAboutPoint(UUID,S,point);
     }
@@ -1529,7 +1764,7 @@ void Context::deletePrimitive( const std::vector<uint>& UUIDs ){
 }
 
 void Context::deletePrimitive(uint UUID ){
-    
+
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::deletePrimitive): UUID of " + std::to_string(UUID) + " not found in the context.");
     }
@@ -1680,7 +1915,7 @@ Patch* Context::getPatchPointer_private(uint UUID ) const{
     return dynamic_cast<Patch*>(primitives.at(UUID));
 }
 
-helios::vec2 Context::getPatchSize( uint UUID ) const{
+helios::vec2 Context::getPatchSize(uint UUID) const{
 #ifdef HELIOS_DEBUG
     if( primitives.find(UUID) == primitives.end() ){
         helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
@@ -1773,16 +2008,14 @@ uint Context::getPrimitiveCount() const{
 }
 
 std::vector<uint> Context::getAllUUIDs() const{
-    std::vector<uint> UUIDs(primitives.size());
-    size_t i=0;
+    std::vector<uint> UUIDs;
+    UUIDs.reserve(primitives.size());
     for( const auto &primitive : primitives){
         if( primitive.second->ishidden ){
             continue;
         }
-        UUIDs.at(i) = primitive.first;
-        i++;
+        UUIDs.push_back(primitive.first);
     }
-    UUIDs.resize(i);
     return UUIDs;
 }
 
@@ -2263,6 +2496,8 @@ void Context::cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &z
     cropDomain( UUIDs, xbounds, ybounds, zbounds );
 }
 
+CompoundObject::~CompoundObject() = default;
+
 uint CompoundObject::getObjectID() const{
     return OID;
 }
@@ -2612,16 +2847,16 @@ bool Context::doesObjectExist( const uint ObjID ) const{
 }
 
 std::vector<uint> Context::getAllObjectIDs() const{
-    std::vector<uint> objIDs(objects.size());
+    std::vector<uint> objIDs;
+    objIDs.reserve(objects.size());
     size_t i=0;
     for(auto object : objects){
         if( object.second->ishidden ){
             continue;
         }
-        objIDs.at(i) = object.first;
+        objIDs.push_back(object.first);
         i++;
     }
-    objIDs.resize(i);
     return objIDs;
 }
 
@@ -2931,8 +3166,26 @@ void Context::scaleObjectAboutPoint( const std::vector<uint>& ObjIDs, const heli
 
 std::vector<uint> Context::getObjectPrimitiveUUIDs( uint ObjID ) const{
 
-    const std::vector<uint> ObjIDs = {ObjID};
-    return getObjectPrimitiveUUIDs(ObjIDs);
+#ifdef HELIOS_DEBUG
+    if ( ! doesObjectExist(ObjID) && ObjID != 0 ) {
+        helios_runtime_error("ERROR (Context::getObjectPrimitiveUUIDs): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+    }
+#endif
+
+    if (ObjID == 0) {
+        // \todo This is inefficient and should be improved by storing the UUIDs for all objID = 0 primitives in the Context.
+        std::vector<uint> UUIDs;
+        UUIDs.reserve(getPrimitiveCount());
+        for (uint UUID : getAllUUIDs()) {
+            if (getPrimitiveParentObjectID(UUID) == 0) {
+                UUIDs.push_back(UUID);
+            }
+        }
+        return UUIDs;
+    } else {
+        return getObjectPointer(ObjID)->getPrimitiveUUIDs();
+    }
+
 
 }
 
@@ -2940,10 +3193,16 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs( const std::vector<uint> &Obj
 
     std::vector<uint> output_UUIDs;
 
-    for( uint ObjID : ObjIDs){
-        CompoundObject* pointer = getObjectPointer(ObjID);
-        const std::vector<uint> &current_UUIDs = pointer->getPrimitiveUUIDs();
+    for( uint ObjID : ObjIDs) {
+
+#ifdef HELIOS_DEBUG
+        if ( ! doesObjectExist(ObjID) ) {
+            helios_runtime_error("ERROR (Context::getObjectPrimitiveUUIDs): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+        }
+#endif
+        const std::vector<uint> &current_UUIDs = getObjectPrimitiveUUIDs(ObjID);
         output_UUIDs.insert( output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end() );
+
     }
     return output_UUIDs;
 }
@@ -2966,26 +3225,26 @@ helios::ObjectType Context::getObjectType( uint ObjID ) const{
     return getObjectPointer(ObjID)->getObjectType();
 }
 
-float Context::getTileObjectAreaRatio(uint ObjectID) const{
+float Context::getTileObjectAreaRatio(uint ObjID) const{
     
-    if( getObjectPointer(ObjectID)->getObjectType() != OBJECT_TYPE_TILE )
+    if( getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE )
     {
-        std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjectID<< " is not a tile object. Skipping..." << std::endl;
+        std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID<< " is not a tile object. Skipping..." << std::endl;
         return 0.0;
         
     }else{
         
-        if(!(getObjectPointer(ObjectID)->arePrimitivesComplete())){
-            std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjectID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
+        if(!(getObjectPointer(ObjID)->arePrimitivesComplete())){
+            std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
         }    
         
-        const int2 &subdiv = getTileObjectPointer(ObjectID)->getSubdivisionCount();
+        const int2 &subdiv = getTileObjectPointer(ObjID)->getSubdivisionCount();
         if(subdiv.x == int(1) && subdiv.y == int(1) )
         {
             return 1.0;
         }else{
-            float area = getTileObjectPointer(ObjectID)->getArea();
-            const vec2 &size = getTileObjectPointer(ObjectID)->getSize();
+            float area = getTileObjectPointer(ObjID)->getArea();
+            const vec2 &size = getTileObjectPointer(ObjID)->getSize();
             
             float subpatch_area = (size.x/float(subdiv.x))*(size.y/float(subdiv.y));
             return area/subpatch_area;
@@ -2994,17 +3253,17 @@ float Context::getTileObjectAreaRatio(uint ObjectID) const{
     }
 }
 
-std::vector<float> Context::getTileObjectAreaRatio(const std::vector<uint> &ObjectIDs) const {
+std::vector<float> Context::getTileObjectAreaRatio(const std::vector<uint> &ObjIDs) const {
     
-    std::vector<float> AreaRatios(ObjectIDs.size());
-    for( uint i=0; i<ObjectIDs.size(); i++ ){
-        AreaRatios.at(i) = getTileObjectAreaRatio(ObjectIDs.at(i));
+    std::vector<float> AreaRatios(ObjIDs.size());
+    for( uint i=0; i<ObjIDs.size(); i++ ){
+        AreaRatios.at(i) = getTileObjectAreaRatio(ObjIDs.at(i));
     }
     
     return AreaRatios;
 }
 
-void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, const int2 &new_subdiv)
+void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, const int2 &new_subdiv)
 {
     
     //check that all objects are Tile Objects, and get vector of texture files
@@ -3014,7 +3273,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     
     std::vector<std::string> tex;
 
-    for(uint OBJID : ObjectIDs)
+    for(uint OBJID : ObjIDs)
     {
         
         //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
@@ -3133,7 +3392,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     
 }
 
-void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, float area_ratio)
+void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, float area_ratio)
 {
     
     //check that all objects are Tile Objects, and get vector of texture files
@@ -3142,7 +3401,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
     
     std::vector<std::string> tex;
     // for(uint i=1;i<ObjectIDs.size();i++)
-    for(uint OBJID : ObjectIDs)
+    for(uint OBJID : ObjIDs)
     {
         //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if( getObjectPointer(OBJID)->getObjectType() != OBJECT_TYPE_TILE )
@@ -3322,8 +3581,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjectIDs, 
 }
 
 Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, helios::Context *a_context) {
-
-    makeIdentityMatrix( transform );
+    makeIdentityMatrix(transform);
 
     OID = a_OID;
     type = helios::OBJECT_TYPE_TILE;
@@ -3331,7 +3589,6 @@ Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, c
     subdiv = a_subdiv;
     texturefile = a_texturefile;
     context = a_context;
-
 }
 
 Tile* Context::getTileObjectPointer(uint ObjID ) const{
@@ -3399,11 +3656,6 @@ std::vector<helios::vec3> Tile::getVertices() const{
         vertices[i].y = transform[4] * Y[i].x + transform[5] * Y[i].y + transform[6] * Y[i].z + transform[7];
         vertices[i].z = transform[8] * Y[i].x + transform[9] * Y[i].y + transform[10] * Y[i].z + transform[11];
     }
-    
-    // vertices.at(0) = context->getPrimitiveVertices( UUIDs.front() ).at(0);
-    // vertices.at(1) = context->getPrimitiveVertices( UUIDs.at( subdiv.x-1 ) ).at(1);
-    // vertices.at(2) = context->getPrimitiveVertices( UUIDs.at( subdiv.x*subdiv.y-1 ) ).at(2);
-    // vertices.at(3) = context->getPrimitiveVertices( UUIDs.at( subdiv.x*subdiv.y-subdiv.x ) ).at(3);
     
     return vertices;
     
@@ -3495,7 +3747,7 @@ float Sphere::getVolume() const{
 }
 
 Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
-           uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
+           uint a_subdiv, const char *a_texturefile, helios::Context *a_context){
 
     makeIdentityMatrix( transform );
 
@@ -4124,7 +4376,7 @@ int2 Disk::getSubdivisionCount() const{
     return subdiv;
 }
 
-void Disk::setSubdivisionCount(int2 a_subdiv ){
+void Disk::setSubdivisionCount(const helios::int2 &a_subdiv){
     subdiv = a_subdiv;
 }
 
@@ -4397,7 +4649,8 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         helios_runtime_error("ERROR (Context::addSphereObject): Radius of sphere must be positive.");
     }
 
-    std::vector<uint> UUID; //\todo Resize here and avoid using push_back() below.
+    std::vector<uint> UUID;
+    UUID.reserve(Ndivs*(Ndivs-2)*2+2*Ndivs);
 
     float theta;
     float dtheta=float(M_PI)/float(Ndivs);
@@ -4486,7 +4739,8 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         helios_runtime_error("ERROR (Context::addSphereObject): Radius of sphere must be positive.");
     }
 
-    std::vector<uint> UUID; //\todo Resize here and avoid using push_back() below.
+    std::vector<uint> UUID;
+    UUID.reserve(Ndivs*(Ndivs-2)*2+2*Ndivs);
 
     float theta;
     float dtheta=float(M_PI)/float(Ndivs);
@@ -4628,7 +4882,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         helios_runtime_error("ERROR (Context::addTileObject): Number of tile subdivisions must be greater than 0.");
     }
 
-    std::vector<uint> UUID; //\todo Resize here and avoid using push_back() below.
+    std::vector<uint> UUID;
+    UUID.reserve(subdiv.x*subdiv.y);
 
     vec2 subsize;
     subsize.x = size.x/float(subdiv.x);
@@ -4697,7 +4952,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         helios_runtime_error("ERROR (Context::addTileObject): Number of tile subdivisions must be greater than 0.");
     }
 
-    std::vector<uint> UUID; //\todo Resize here and avoid using push_back() below.
+    std::vector<uint> UUID;
+    UUID.reserve(subdiv.x*subdiv.y);
 
     vec2 subsize;
     subsize.x = size.x/float(subdiv.x);
@@ -4705,8 +4961,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
     vec3 subcenter;
 
-    std::vector<helios::vec2> uv;
-    uv.resize(4);
+    std::vector<helios::vec2> uv(4);
     vec2 uv_sub;
     uv_sub.x = 1.f/float(subdiv.x);
     uv_sub.y = 1.f/float(subdiv.y);
@@ -4734,10 +4989,11 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
             auto* patch_new = (new Patch( texturefile, uv,  textures, 0, currentUUID ));
 
-            if( patch_new->getSolidFraction()==0 ){
-              delete patch_new;
-              continue;
-            }
+            // \todo This is causing problems in the radiation intersection.
+            // if( patch_new->getSolidFraction()==0 ){
+            //   delete patch_new;
+            //   continue;
+            // }
 
             assert( size.x>0.f && size.y>0.f );
             patch_new->scale( make_vec3(subsize.x,subsize.y,1) );
@@ -4795,8 +5051,7 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
     uint node_count = nodes.size();
 
-    std::vector<RGBcolor> color;
-    color.resize(node_count);
+    std::vector<RGBcolor> color(node_count);
 
     for( uint i=0; i<node_count; i++ ){
         color.at(i) = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
@@ -5086,8 +5341,9 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
         helios_runtime_error("ERROR (Context::addBoxObject): Number of box subdivisions must be positive.");
     }
 
-    std::vector<uint> UUID; //\todo Resize here and avoid using push_back() below.
-
+    std::vector<uint> UUID;
+    UUID.reserve(2 * (subdiv.z * (subdiv.x + subdiv.y) + subdiv.x * subdiv.y));
+    
     vec3 subsize;
     subsize.x = size.x/float(subdiv.x);
     subsize.y = size.y/float(subdiv.y);
@@ -5345,9 +5601,8 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
 
 uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
 
-    std::vector<uint> UUID;
-
-    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    std::vector<uint> UUID(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    
     int i=0;
     for( int r=0; r < Ndivs.y; r++ ) {
         for (int t = 0; t < Ndivs.x; t++) {
@@ -5409,9 +5664,7 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
         helios_runtime_error("ERROR (Context::addDiskObject): Texture file " + std::string(texturefile) + " does not exist.");
     }
 
-    std::vector<uint> UUID;
-
-    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    std::vector<uint> UUID(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
     int i=0;
     for( int r=0; r < Ndivs.y; r++ ) {
         for (int t = 0; t < Ndivs.x; t++) {
@@ -5504,9 +5757,9 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     vec3 vec, convec;
     std::vector<float> cfact(Ndivs+1);
     std::vector<float> sfact(Ndivs+1);
-    std::vector<std::vector<vec3> > xyz, normal;
-    xyz.resize(Ndivs+1);
-    normal.resize(Ndivs+1);
+    std::vector<std::vector<vec3> > xyz(Ndivs+1);
+    std::vector<std::vector<vec3> > normal(Ndivs+1);
+    
     for( uint j=0; j<Ndivs+1; j++ ){
         xyz.at(j).resize(2);
         normal.at(j).resize(2);
@@ -5881,15 +6134,13 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const RGBcolor &color ){
 
-    std::vector<uint> UUID;
-
     vec2 subsize;
     subsize.x = size.x/float(subdiv.x);
     subsize.y = size.y/float(subdiv.y);
 
     vec3 subcenter;
 
-    UUID.resize( subdiv.x*subdiv.y );
+    std::vector<uint> UUID( subdiv.x*subdiv.y );
 
     size_t t = 0;
     for( uint j=0; j<subdiv.y; j++ ){
@@ -5932,8 +6183,7 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
     vec3 subcenter;
 
-    std::vector<helios::vec2> uv;
-    uv.resize(4);
+    std::vector<helios::vec2> uv(4);
     vec2 uv_sub;
     uv_sub.x = 1.f/float(subdiv.x);
     uv_sub.y = 1.f/float(subdiv.y);
@@ -5994,15 +6244,8 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 }
 
 std::vector<uint> Context::addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius ){
-
-    uint node_count = nodes.size();
-
-    std::vector<RGBcolor> color;
-    color.resize(node_count);
-
-    for( uint i=0; i<node_count; i++ ){
-        color.at(i) = make_RGBcolor(0.f,0.75f,0.f); //Default color is green
-    }
+    
+    std::vector<RGBcolor> color(nodes.size(), make_RGBcolor(0.f,0.75f,0.f));
 
     return addTube(Ndivs,nodes,radius,color);
 
@@ -6445,8 +6688,7 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
 
 std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color ){
 
-    std::vector<uint> UUID;
-    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    std::vector<uint> UUID(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
     int i=0;
     for( int r=0; r < Ndivs.y; r++ ) {
         for (int t = 0; t < Ndivs.x; t++) {
@@ -6488,8 +6730,7 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
         helios_runtime_error("ERROR (Context::addDisk): Texture file " + std::string(texturefile) + " does not exist.");
     }
 
-    std::vector<uint> UUID;
-    UUID.resize(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
+    std::vector<uint> UUID(Ndivs.x+Ndivs.x*(Ndivs.y-1)*2);
     int i=0;
     for( int r=0; r < Ndivs.y; r++ ) {
         for (int t = 0; t < Ndivs.x; t++) {
@@ -6846,8 +7087,7 @@ std::vector<RGBcolor> Context::generateColormap( const std::vector<helios::RGBco
     helios_runtime_error("ERROR (Context::generateColormap): 'ctable' and 'cfrac' arguments contain empty vectors.");
   }
 
-  std::vector<RGBcolor> color_table;
-  color_table.resize(Ncolors);
+  std::vector<RGBcolor> color_table(Ncolors);
 
   for (int i = 0; i < Ncolors; i++){
 
@@ -6998,8 +7238,7 @@ std::vector<std::string> Context::generateTexturesFromColormap( const std::strin
   // get file base/stem
   std::string file_base = getFileStem(texturefile);
 
-  std::vector<RGBcolor> color_table;
-  color_table.resize(Ncolors);
+  std::vector<RGBcolor> color_table(Ncolors);
 
   std::vector<std::string> texture_filenames(Ncolors);
 
@@ -7084,6 +7323,14 @@ uint Context::getPrimitiveParentObjectID(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getParentObjectID();
 }
 
+std::vector<uint> Context::getPrimitiveParentObjectID( const std::vector<uint> &UUIDs  )const{
+    std::vector<uint> objIDs(UUIDs.size());
+    for ( uint i=0; i<UUIDs.size(); i++ ){
+        objIDs[i] = getPrimitivePointer_private(UUIDs[i])->getParentObjectID();
+    }
+    return objIDs;
+}
+
 
 std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const {
     return getUniquePrimitiveParentObjectIDs(UUIDs, false);
@@ -7091,9 +7338,13 @@ std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<u
 
 
 std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs, bool include_ObjID_zero) const {
-    
-    //vector of parent object ID for each primitive
+
     std::vector<uint> primitiveObjIDs;
+    if( UUIDs.empty() ){
+        return primitiveObjIDs;
+    }
+
+    //vector of parent object ID for each primitive
     primitiveObjIDs.resize(UUIDs.size());
     for(uint i=0;i<UUIDs.size();i++)
     {
@@ -7107,8 +7358,8 @@ std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<u
     auto it = unique(primitiveObjIDs.begin(), primitiveObjIDs.end());
     primitiveObjIDs.resize(distance(primitiveObjIDs.begin(), it));
     
-    // remove object ID = 0 from the output if desired and it exisits
-    if(include_ObjID_zero == false & primitiveObjIDs.at(0) == uint(0))
+    // remove object ID = 0 from the output if desired and it exists
+    if(include_ObjID_zero == false & primitiveObjIDs.front() == uint(0))
     {
         primitiveObjIDs.erase(primitiveObjIDs.begin()); 
     }
@@ -7989,6 +8240,24 @@ float Context::getObjectArea(uint ObjID) const {
     return getObjectPointer_private(ObjID)->getArea();
 }
 
+helios::vec3 Context::getObjectAverageNormal( uint ObjID ) const {
+#ifdef HELIOS_DEBUG
+    if( objects.find(ObjID) == objects.end() ){
+        helios_runtime_error("ERROR (Context::getObjectAverageNormal): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+    }
+#endif
+
+    const std::vector<uint> &UUIDs = objects.at(ObjID)->getPrimitiveUUIDs();
+
+    vec3 norm_avg;
+    for (uint UUID: UUIDs) {
+        norm_avg += getPrimitiveNormal(UUID);
+    }
+    norm_avg.normalize();
+
+    return norm_avg;
+}
+
 uint Context::getObjectPrimitiveCount(uint ObjID) const {
     return getObjectPointer_private(ObjID)->getPrimitiveCount();
 }
@@ -8005,26 +8274,80 @@ void Context::getObjectTransformationMatrix(uint ObjID, float (&T)[16] ) const {
     getObjectPointer_private(ObjID)->getTransformationMatrix( T );
 }
 
-void Context::setObjectTransformationMatrix(uint ObjID, float (&T)[16] ) {
+void Context::setObjectTransformationMatrix(uint ObjID, float (&T)[16] ) const {
     getObjectPointer_private(ObjID)->setTransformationMatrix(T);
 }
 
-void Context::setObjectTransformationMatrix(const std::vector<uint> &ObjIDs, float (&T)[16] ) {
+void Context::setObjectTransformationMatrix(const std::vector<uint> &ObjIDs, float (&T)[16] ) const {
     for( uint ObjID : ObjIDs){
         getObjectPointer_private(ObjID)->setTransformationMatrix(T);
     }
+}
+
+void Context::setObjectAverageNormal(uint ObjID, const vec3& origin, const vec3& new_normal) {
+
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("setObjectAverageNormal: invalid objectID");
+    }
+#endif
+
+    // 1) Compute unit old & new normals
+    helios::vec3 oldN = normalize(getObjectAverageNormal(ObjID));
+    helios::vec3 newN = normalize(new_normal);
+
+    // 2) Minimal‐angle axis & angle
+    float d     = std::clamp(oldN * newN, -1.f, 1.f);
+    float angle = acosf(d);
+    helios::vec3 axis = cross(oldN, newN);
+    if (axis.magnitude() < 1e-6f) {
+        // pick any vector ⟂ oldN
+        axis = (std::abs(oldN.x) < std::abs(oldN.z))
+             ? cross(oldN, {1,0,0})
+             : cross(oldN, {0,0,1});
+    }
+    axis = axis.normalize();
+
+    // 3) Apply that minimal‐angle rotation to the compound (no pizza‐spin yet)
+    //    NOTE: correct argument order is (objectID, angle, origin, axis)
+    rotateObject(ObjID, angle, origin, axis);
+
+    // 4) Fetch the updated transform and extract the world‐space “forward” (local +X)
+    float M_mid[16];
+    getObjectPointer_private(ObjID)->getTransformationMatrix(M_mid);
+
+    helios::vec3 localX{1,0,0};
+    helios::vec3 t1;
+    // vecmult multiplies the 4×4 M_mid by v3 (w=0), writing into t1
+    vecmult(M_mid, localX, t1);
+    t1 = normalize(t1);
+
+    // 5) Compute desired forward = world‐X projected into the new plane
+    helios::vec3 worldX{1,0,0};
+    helios::vec3 targ = worldX - newN * (newN * worldX);
+    targ = normalize(targ);
+
+    // 6) Compute signed twist about newN that carries t1→targ
+    float twist = atan2f(
+        newN * cross(t1, targ),  // dot(newN, t1×targ)
+        t1   * targ              // dot(t1, targ)
+    );
+
+    // 7) Apply that compensating twist about the same origin
+    rotateObject(ObjID, twist, origin, newN);
+
 }
 
 bool Context::objectHasTexture( uint ObjID ) const{
     return getObjectPointer_private(ObjID)->hasTexture();
 }
 
-void Context::setObjectColor(uint ObjID, const RGBcolor &color) {
+void Context::setObjectColor(uint ObjID, const RGBcolor &color) const {
     getObjectPointer_private(ObjID)->setColor( color );
 }
 
-void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBcolor &color) {
-    for( uint ObjID : ObjIDs){
+void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBcolor &color) const {
+    for( const uint ObjID : ObjIDs){
         getObjectPointer_private(ObjID)->setColor(color);
     }
 }
@@ -8033,27 +8356,27 @@ void Context::setObjectColor(uint ObjID, const RGBAcolor &color) {
     getObjectPointer_private(ObjID)->setColor( color );
 }
 
-void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBAcolor &color) {
-    for( uint ObjID : ObjIDs){
+void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBAcolor &color) const {
+    for( const uint ObjID : ObjIDs){
         getObjectPointer_private(ObjID)->setColor(color);
     }
 }
 
-bool Context::doesObjectContainPrimitive(uint ObjID, uint UUID ){
+bool Context::doesObjectContainPrimitive(uint ObjID, uint UUID ) const {
     return getObjectPointer_private(ObjID)->doesObjectContainPrimitive( UUID );
 }
 
-void Context::overrideObjectTextureColor(uint ObjID) {
+void Context::overrideObjectTextureColor(uint ObjID) const {
     getObjectPointer_private(ObjID)->overrideTextureColor();
 }
 
-void Context::overrideObjectTextureColor( const std::vector<uint> &ObjIDs) {
+void Context::overrideObjectTextureColor( const std::vector<uint> &ObjIDs) const {
     for( uint ObjID : ObjIDs ) {
         getObjectPointer_private(ObjID)->overrideTextureColor();
     }
 }
 
-void Context::useObjectTextureColor(uint ObjID) {
+void Context::useObjectTextureColor(uint ObjID) const {
     getObjectPointer_private(ObjID)->useTextureColor();
 }
 
@@ -8064,7 +8387,7 @@ void Context::useObjectTextureColor( const std::vector<uint> &ObjIDs) {
 }
 
 void Context::getObjectBoundingBox( uint ObjID, vec3 &min_corner, vec3 &max_corner ) const {
-    std::vector<uint> ObjIDs{ObjID};
+    const std::vector<uint> ObjIDs{ObjID};
     getObjectBoundingBox(ObjIDs,min_corner,max_corner);
 }
 
@@ -8080,7 +8403,7 @@ void Context::getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_c
         const std::vector<uint> &UUIDs = objects.at(ObjID)->getPrimitiveUUIDs();
 
         uint p=0;
-        for (uint UUID: UUIDs) {
+        for ( const uint UUID: UUIDs) {
 
             const std::vector<vec3> &vertices = getPrimitiveVertices(UUID);
 
@@ -8119,65 +8442,79 @@ void Context::getObjectBoundingBox( const std::vector<uint> &ObjIDs, vec3 &min_c
 }
 
 Tile* Context::getTileObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_TILE ){
         helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tile Object.");
     }
+#endif
     return dynamic_cast<Tile*>(objects.at(ObjID));
 }
 
 Sphere* Context::getSphereObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_SPHERE ){
         helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Sphere Object.");
     }
+#endif
     return dynamic_cast<Sphere*>(objects.at(ObjID));
 }
 
 Tube* Context::getTubeObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_TUBE ){
         helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tube Object.");
     }
+#endif
     return dynamic_cast<Tube*>(objects.at(ObjID));
 }
 
 Box* Context::getBoxObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_BOX ){
         helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Box Object.");
     }
+#endif
     return dynamic_cast<Box*>(objects.at(ObjID));
 }
 
 Disk* Context::getDiskObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_DISK ){
         helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Disk Object.");
     }
+#endif
     return dynamic_cast<Disk*>(objects.at(ObjID));
 }
 
 Polymesh* Context::getPolymeshObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_POLYMESH ){
         helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Polymesh Object.");
     }
+#endif
     return dynamic_cast<Polymesh*>(objects.at(ObjID));
 }
 
 Cone* Context::getConeObjectPointer_private(uint ObjID ) const{
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ){
         helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }else if( objects.at(ObjID)->getObjectType()!=OBJECT_TYPE_CONE ){
         helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Cone Object.");
     }
+#endif
     return dynamic_cast<Cone*>(objects.at(ObjID));
 }
 
@@ -8246,51 +8583,65 @@ float Context::getTubeObjectSegmentVolume( uint ObjID, uint segment_index ) cons
 }
 
 void Context::appendTubeSegment(uint ObjID, const helios::vec3 &node_position, float node_radius, const RGBcolor &node_color ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::appendTubeSegment): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->appendTubeSegment(node_position, node_radius, node_color);
 }
 
 void Context::appendTubeSegment( uint ObjID, const helios::vec3 &node_position, float node_radius, const char* texturefile, const helios::vec2 &textureuv_ufrac ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::appendTubeSegment): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->appendTubeSegment(node_position, node_radius, texturefile, textureuv_ufrac);
 }
 
 void Context::scaleTubeGirth( uint ObjID, float scale_factor ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::scaleTubeGirth): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->scaleTubeGirth(scale_factor);
 }
 
 void Context::setTubeRadii( uint ObjID, const std::vector<float> &node_radii ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::setTubeRadii): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->setTubeRadii(node_radii);
 }
 
 void Context::scaleTubeLength( uint ObjID, float scale_factor ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::scaleTubeLength): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->scaleTubeLength(scale_factor);
 }
 
 void Context::pruneTubeNodes( uint ObjID, uint node_index ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::pruneTubeNodes): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->pruneTubeNodes(node_index);
 }
 
 void Context::setTubeNodes( uint ObjID, const std::vector<helios::vec3> &node_xyz ){
+#ifdef HELIOS_DEBUG
     if( objects.find(ObjID) == objects.end() ) {
         helios_runtime_error("ERROR (Context::setTubeNodes): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
     }
+#endif
     dynamic_cast<Tube*>(objects.at(ObjID))->setTubeNodes(node_xyz);
 }
 

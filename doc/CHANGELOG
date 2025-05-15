@@ -2080,3 +2080,80 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Photosynthesis*
 - The way parameters are set for the FvCB model has been clarified to be more explicitly clear about how temperature response is being treated.
+
+[1.3.29] 2025-04-14
+
+*Tutorial #12 added for canopy water-use efficiency example. (credit to Ethan Frehner for this addition)
+
+*Context*
+- Added a check to Context::getUniquePrimitiveParentObjectIDs() to return an empty output objID vector if given an empty input UUID vector.
+- Error corrected with OBJ file loading that could cause incorrect material depending on the ordering of values in the material file.
+- The latest Xcode version on MacOS caused an error in libpng, which was fixed.
+
+*Radiation*
+- There were many instances where calling setter methods after calling updateGeometry() would cause issues. This has been fixed by making sure the setters force recalculation of the radiative properties.
+
+[1.3.30] 2025-05-01
+
+*Added automated performance benchmarking
+*Fixed documentation sidebar navigation collapse issue
+
+*Context*
+- Added Context::setPrimitiveNormal(), Context::setPrimitiveElevation(), and Context::setPrimitiveAzimuth() methods.
+- Added sample_Beta_distribution() funciton to randomly sample from a Beta distribution for inclination angle.
+- Added sample_ellipsoidal_distribution() funciton to randomly sample from an ellipsoidal distribution for azimuth angle.
+- Added explicit normalize() function for vec2, vec3, and vec4 types.
+- Minor performance improvements for Helios vector types and Context operations.
+- Added OpenMP parallelization for primitive area calculations from transparency textures.
+- Changed the type of 'primitives' and 'objects' from std::map to std::unordered_map to improve performance.
+- Changed Context::getObjectPrimitiveUUIDs( uint ObjID ) method to support passing an ObjID of 0.
+- Context::getObjectPrimitiveUUIDs( const std::vector<uint> &ObjIDs ) was missing a check for existence of the ObjID object.
+- Overloaded getPrimitiveParentObjectID( const std::vector<uint> &UUIDs  ) added to take a vector of UUIDs.
+- When tile objects are created, completely transparent sub-patch tiles are no longer deleted because this causes problems in the radiation model.
+- Context primitive and object class constructors were made 'protected' so that they cannot be instantiated outside of the Context.
+- Many new self-tests were added (credit to Ismael Mayanja for this addition).
+- Refactoring of PNG and JPEG image to improve robustness.
+
+*Radiation*
+- For two-sided primitives, diffuse ray launches were split into two passes to dramatically improve thread coherence and thus performance.
+- An issue with texture mapping for tile objects was fixed.
+- OptiX variable declarations were moved to RayTracing.cuh header file.
+- Moved texture sampling in rayGeneration.cu into a separate function to avoid redundant code.
+- New method for handling periodic boundaries was implemented to improve performance.
+- Completely transparent sub-patch tiles are no longer excluded from calculations.
+
+*Plant Architecture*
+- Many updates to carbohydrate model code. Credit to Ethan Frehner for these updates.
+- Added methods to calculate the leaf azimuth distribution of a plant (see PlantArchitecture::getPlantLeafAzimuthDistribution()), and overloaded versions of leaf angle distribution calculation functions that take a vector of multiple plant IDs.
+- Added method to set the leaf angle distribution of a plant.
+
+*Visualizer*
+- Visualizer::setColorbarRange() was not properly setting the colorbar range.
+
+*Project Builder*
+- Many updates and improvements to the project builder plug-in. Credit to Sean Banks for these updates.
+
+[1.3.31] 2025-05-10
+
+*Context*
+- Fixed minor compiler warning that appeared within Context::readPNGAlpha().
+- Added overloaded Context::writePLY() to take a vector of UUIDs. Also added optional parameter to silence output printing.
+- Some minor refactoring was done for the existing Context::writePLY() method to better validate file names and paths.
+- helios::CalendarDay() function was not working correctly. The bug appeared to be introduced in the last version.
+
+*Radiation*
+- Changed RadiationModel::setDiffuseSpectrum() such that it always needs to be associated with a band. This prevents confusion about the required order of the method call in the code.
+- The spectral data file plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml, the diffuse spectrum contained negative values which caused an error.
+
+*Plant Architecture*
+- Added PlantArchitecture::isPlantDormant().
+- Carbohydrate model updated to take a parameter structure rather than having hard-coded model parameters. Thanks to Ethan Frehner for these updates.
+- Minor refactoring improvements throughtout plant architecture code.
+- Error corrected that was causing plants to flower too quickly if starting with closed flowers.
+
+*Visualizer*
+- Minor refactoring improvements throughout visualizer code.
+- There was an error in the mouse-based camera controls that could cause phantom camera rotation while zooming.
+
+*Project Builder*
+- Lots of project builder updates and bug fixes. Credit to Sean Banks for these updates.

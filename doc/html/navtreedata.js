@@ -57,7 +57,8 @@ var NAVTREE =
       [ "Tutorial 7: Visualizer Basics", "visualizer_basics_tutorial.html#visualizer_basics_tutorial", null ],
       [ "Tutorial 8: Visualizing Variable and Primitive Data", "visualizer_pdata_tutorial.html#visualizer_pdata_tutorial", null ],
       [ "Tutorial 10: Tree light interception", "radiation_basics_tutorial.html#radiation_basics_tutorial", null ],
-      [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ]
+      [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ],
+      [ "Tutorial 12: Water-use efficiency for a canopy of spherical crowns", "canopy__w_u_e_tutorial.html#canopy_WUE_tutorial", null ]
     ] ],
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],
@@ -73,7 +74,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"helios__vector__types_8h_source.html"
+"globals_enum.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

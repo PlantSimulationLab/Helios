@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/projectbuilder/include/ProjectBuilder.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -148,24 +161,47 @@ $(function(){initNavTree('_project_builder_8h.html',''); initResizable(true); })
   <div class="headertitle"><div class="title">ProjectBuilder.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;chrono&gt;</code><br />
-<code>#include &lt;set&gt;</code><br />
-<code>#include &lt;thread&gt;</code><br />
-<code>#include &lt;iostream&gt;</code><br />
+<div class="textblock"><code>#include &lt;set&gt;</code><br />
 <code>#include &quot;<a class="el" href="_context_8h_source.html">Context.h</a>&quot;</code><br />
-<code>#include &lt;pugixml.hpp&gt;</code><br />
-<code>#include &quot;InitializeSimulation.h&quot;</code><br />
 </div>
 <p><a href="_project_builder_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">union &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="uniondigit_ptr.html">digitPtr</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Digit pointer object; union of int* and float*.  <a href="uniondigit_ptr.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structobj.html">obj</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to represent an object or canopy.  <a href="structobj.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtagged_ptr.html">taggedPtr</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to combine int* and float* objects. Also contains a bool* which is used to indicate that the associated object needs to be updated.  <a href="structtagged_ptr.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">union &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="uniondist_union.html">distUnion</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution.  <a href="uniondist_union.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdistribution.html">distribution</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Struct to combine distribution objects (flag: -1 = N/A, 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)  <a href="structdistribution.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structband_group.html">bandGroup</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Band group struct.  <a href="structband_group.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcanopy.html">canopy</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Canopy struct.  <a href="structcanopy.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structobject.html">object</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Object struct.  <a href="structobject.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structrig.html">rig</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rig struct.  <a href="structrig.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_project_builder.html">ProjectBuilder</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a7ddb646cf134a362bb2269e1ab49799a" id="r_a7ddb646cf134a362bb2269e1ab49799a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ddb646cf134a362bb2269e1ab49799a">BuildGeometry</a> (const std::string &amp;xml_input_file, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plant_architecture_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
+<tr class="memitem:a7ddb646cf134a362bb2269e1ab49799a" id="r_a7ddb646cf134a362bb2269e1ab49799a"><td class="memItemLeft" align="right" valign="top"><a id="a7ddb646cf134a362bb2269e1ab49799a" name="a7ddb646cf134a362bb2269e1ab49799a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildGeometry</b> (const std::string &amp;xml_input_file, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plant_architecture_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="separator:a7ddb646cf134a362bb2269e1ab49799a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a04e76764b019ad16cc1435e51698a2ad" id="r_a04e76764b019ad16cc1435e51698a2ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a04e76764b019ad16cc1435e51698a2ad">InitializeRadiation</a> (const std::string &amp;xml_input_file, <a class="el" href="class_solar_position.html">SolarPosition</a> *solarposition_ptr, <a class="el" href="class_radiation_model.html">RadiationModel</a> *radiation_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="separator:a04e76764b019ad16cc1435e51698a2ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -182,21 +218,47 @@ Functions</h2></td></tr>
 <tr class="memitem:a2024e38fdfc826ff46c8310a32b0069f" id="r_a2024e38fdfc826ff46c8310a32b0069f"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2024e38fdfc826ff46c8310a32b0069f">vec_to_string</a> (const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;v)</td></tr>
 <tr class="memdesc:a2024e38fdfc826ff46c8310a32b0069f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to convert vector to string.  <br /></td></tr>
 <tr class="separator:a2024e38fdfc826ff46c8310a32b0069f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a12e49501ab5f16e78cf312cb5b3060eb" id="r_a12e49501ab5f16e78cf312cb5b3060eb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12e49501ab5f16e78cf312cb5b3060eb">linspace</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> a, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> b, int num_points)</td></tr>
-<tr class="memdesc:a12e49501ab5f16e78cf312cb5b3060eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to linearly space between.  <br /></td></tr>
-<tr class="separator:a12e49501ab5f16e78cf312cb5b3060eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a09344830c3d75adf7597b38b253c5a0c" id="r_a09344830c3d75adf7597b38b253c5a0c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a09344830c3d75adf7597b38b253c5a0c">interpolate</a> (std::vector&lt; int &gt; keypoints, std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; positions, int num_points)</td></tr>
-<tr class="memdesc:a09344830c3d75adf7597b38b253c5a0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return interpolated vector based on keypoints.  <br /></td></tr>
-<tr class="separator:a09344830c3d75adf7597b38b253c5a0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5dbf3e7cbda62126b5dc0b34456e149" id="r_ab5dbf3e7cbda62126b5dc0b34456e149"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5dbf3e7cbda62126b5dc0b34456e149">linspace</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;a, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;b, int num_points)</td></tr>
+<tr class="memdesc:ab5dbf3e7cbda62126b5dc0b34456e149"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to linearly space between two vectors.  <br /></td></tr>
+<tr class="separator:ab5dbf3e7cbda62126b5dc0b34456e149"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4721e8292143200215a5142e64575a8f" id="r_a4721e8292143200215a5142e64575a8f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4721e8292143200215a5142e64575a8f">interpolate</a> (const std::vector&lt; int &gt; &amp;keypoints, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;positions, int num_points)</td></tr>
+<tr class="memdesc:a4721e8292143200215a5142e64575a8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return interpolated vector based on keypoints.  <br /></td></tr>
+<tr class="separator:a4721e8292143200215a5142e64575a8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0aab4524594812184433a3198d7174a5" id="r_a0aab4524594812184433a3198d7174a5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0aab4524594812184433a3198d7174a5">toggle_button</a> (const char *str_id, bool *v)</td></tr>
 <tr class="memdesc:a0aab4524594812184433a3198d7174a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">ImGUI toggle button function.  <br /></td></tr>
 <tr class="separator:a0aab4524594812184433a3198d7174a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a08a876d41e64daa8f53f1822c059e91b" id="r_a08a876d41e64daa8f53f1822c059e91b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08a876d41e64daa8f53f1822c059e91b">file_dialog</a> ()</td></tr>
 <tr class="memdesc:a08a876d41e64daa8f53f1822c059e91b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to open file dialog.  <br /></td></tr>
 <tr class="separator:a08a876d41e64daa8f53f1822c059e91b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3c921541a957139a8e9ba820a5eb08d8" id="r_a3c921541a957139a8e9ba820a5eb08d8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3c921541a957139a8e9ba820a5eb08d8">get_xml_node_values</a> (std::string xml_file, const std::string &amp;label_name, const std::string &amp;node_name)</td></tr>
-<tr class="memdesc:a3c921541a957139a8e9ba820a5eb08d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to get node labels for a given set of nodes.  <br /></td></tr>
-<tr class="separator:a3c921541a957139a8e9ba820a5eb08d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e4bf09362721eb7291e25c049e9b263" id="r_a4e4bf09362721eb7291e25c049e9b263"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4e4bf09362721eb7291e25c049e9b263">save_as_file_dialog</a> (std::vector&lt; std::string &gt; extensions)</td></tr>
+<tr class="memdesc:a4e4bf09362721eb7291e25c049e9b263"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to open save as file dialog.  <br /></td></tr>
+<tr class="separator:a4e4bf09362721eb7291e25c049e9b263"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37ea8aaac001a1f2eb0218c28a8e7c5a" id="r_a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37ea8aaac001a1f2eb0218c28a8e7c5a">get_xml_node_values</a> (const std::string &amp;xml_file, const std::string &amp;label_name, const std::string &amp;node_name)</td></tr>
+<tr class="memdesc:a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to get node labels for a given set of nodes.  <br /></td></tr>
+<tr class="separator:a37ea8aaac001a1f2eb0218c28a8e7c5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad47910406a5f4d3b38e94520345768d4" id="r_ad47910406a5f4d3b38e94520345768d4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad47910406a5f4d3b38e94520345768d4">createTaggedPtr</a> (int *ptr, bool *dirty)</td></tr>
+<tr class="memdesc:ad47910406a5f4d3b38e94520345768d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from an int pointer.  <br /></td></tr>
+<tr class="separator:ad47910406a5f4d3b38e94520345768d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace18936d75ee6d77c89ca4a09d747ae3" id="r_ace18936d75ee6d77c89ca4a09d747ae3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace18936d75ee6d77c89ca4a09d747ae3">createTaggedPtr</a> (float *ptr, bool *dirty)</td></tr>
+<tr class="memdesc:ace18936d75ee6d77c89ca4a09d747ae3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from a float pointer.  <br /></td></tr>
+<tr class="separator:ace18936d75ee6d77c89ca4a09d747ae3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c6eaa7f47ba7313e82a72c329e5d495" id="r_a6c6eaa7f47ba7313e82a72c329e5d495"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c6eaa7f47ba7313e82a72c329e5d495">createTaggedPtr</a> (int *ptr)</td></tr>
+<tr class="memdesc:a6c6eaa7f47ba7313e82a72c329e5d495"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from an int pointer.  <br /></td></tr>
+<tr class="separator:a6c6eaa7f47ba7313e82a72c329e5d495"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd12c73e785153a07f61d6d8b56bddd6" id="r_afd12c73e785153a07f61d6d8b56bddd6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtagged_ptr.html">taggedPtr</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd12c73e785153a07f61d6d8b56bddd6">createTaggedPtr</a> (float *ptr)</td></tr>
+<tr class="memdesc:afd12c73e785153a07f61d6d8b56bddd6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a tagged pointer object from a float pointer.  <br /></td></tr>
+<tr class="separator:afd12c73e785153a07f61d6d8b56bddd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53cbaff8568ea6dd2a7de5a6c5cbc14d" id="r_a53cbaff8568ea6dd2a7de5a6c5cbc14d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a53cbaff8568ea6dd2a7de5a6c5cbc14d">parse_distribution</a> (const std::string &amp;input_string, <a class="el" href="structdistribution.html">distribution</a> &amp;converted_distribution)</td></tr>
+<tr class="separator:a53cbaff8568ea6dd2a7de5a6c5cbc14d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a103dcbbdd88aa36e2e27b95ca83bc8b5" id="r_a103dcbbdd88aa36e2e27b95ca83bc8b5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structdistribution.html">distribution</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a103dcbbdd88aa36e2e27b95ca83bc8b5">createDistribution</a> (const std::normal_distribution&lt; float &gt; &amp;dist, bool randomize_repeat)</td></tr>
+<tr class="memdesc:a103dcbbdd88aa36e2e27b95ca83bc8b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a distribution struct from a normal distribution.  <br /></td></tr>
+<tr class="separator:a103dcbbdd88aa36e2e27b95ca83bc8b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af273a47fa92eb570339f6b74739a68c2" id="r_af273a47fa92eb570339f6b74739a68c2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structdistribution.html">distribution</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af273a47fa92eb570339f6b74739a68c2">createDistribution</a> (const std::uniform_real_distribution&lt; float &gt; &amp;dist, bool randomize_repeat)</td></tr>
+<tr class="memdesc:af273a47fa92eb570339f6b74739a68c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a distribution struct from a uniform real distribution.  <br /></td></tr>
+<tr class="separator:af273a47fa92eb570339f6b74739a68c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab618486e467af8087414e5136d261e75" id="r_ab618486e467af8087414e5136d261e75"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structdistribution.html">distribution</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab618486e467af8087414e5136d261e75">createDistribution</a> (const std::weibull_distribution&lt; float &gt; &amp;dist, bool randomize_repeat)</td></tr>
+<tr class="memdesc:ab618486e467af8087414e5136d261e75"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a distribution struct from a weibull distribution.  <br /></td></tr>
+<tr class="separator:ab618486e467af8087414e5136d261e75"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>ProjectBuilder header.</p>
@@ -211,31 +273,249 @@ GNU General Public License for more details.
 </pre> 
 <p class="definition">Definition in file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a id="a7ddb646cf134a362bb2269e1ab49799a" name="a7ddb646cf134a362bb2269e1ab49799a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7ddb646cf134a362bb2269e1ab49799a">&#9670;&#160;</a></span>BuildGeometry()</h2>
+<a id="a103dcbbdd88aa36e2e27b95ca83bc8b5" name="a103dcbbdd88aa36e2e27b95ca83bc8b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a103dcbbdd88aa36e2e27b95ca83bc8b5">&#9670;&#160;</a></span>createDistribution() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void BuildGeometry </td>
+          <td class="memname"><a class="el" href="structdistribution.html">distribution</a> createDistribution </td>
           <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>xml_input_file</em></span>, </td>
+          <td class="paramtype">const std::normal_distribution&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>dist</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *</td>          <td class="paramname"><span class="paramname"><em>plant_architecture_ptr</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context_ptr</em></span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>randomize_repeat</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_build_geometry_8cpp_source.html#l00006">6</a> of file <a class="el" href="_build_geometry_8cpp_source.html">BuildGeometry.cpp</a>.</p>
+<p>Function to create a distribution struct from a normal distribution. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dist</td><td>Distribution </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">randomize_repeat</td><td>If true, randomize for every image. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05274">5274</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af273a47fa92eb570339f6b74739a68c2" name="af273a47fa92eb570339f6b74739a68c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af273a47fa92eb570339f6b74739a68c2">&#9670;&#160;</a></span>createDistribution() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structdistribution.html">distribution</a> createDistribution </td>
+          <td>(</td>
+          <td class="paramtype">const std::uniform_real_distribution&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>dist</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>randomize_repeat</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to create a distribution struct from a uniform real distribution. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dist</td><td>Distribution </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">randomize_repeat</td><td>If true, randomize for every image. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05282">5282</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab618486e467af8087414e5136d261e75" name="ab618486e467af8087414e5136d261e75"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab618486e467af8087414e5136d261e75">&#9670;&#160;</a></span>createDistribution() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structdistribution.html">distribution</a> createDistribution </td>
+          <td>(</td>
+          <td class="paramtype">const std::weibull_distribution&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>dist</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>randomize_repeat</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to create a distribution struct from a weibull distribution. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dist</td><td>Distribution </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">randomize_repeat</td><td>If true, randomize for every image. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05290">5290</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afd12c73e785153a07f61d6d8b56bddd6" name="afd12c73e785153a07f61d6d8b56bddd6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd12c73e785153a07f61d6d8b56bddd6">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from a float pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Float pointer </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05242">5242</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ace18936d75ee6d77c89ca4a09d747ae3" name="ace18936d75ee6d77c89ca4a09d747ae3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace18936d75ee6d77c89ca4a09d747ae3">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *</td>          <td class="paramname"><span class="paramname"><em>dirty</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from a float pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Float pointer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dirty</td><td>Bool used to determine if associated object needs update </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05258">5258</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6c6eaa7f47ba7313e82a72c329e5d495" name="a6c6eaa7f47ba7313e82a72c329e5d495"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c6eaa7f47ba7313e82a72c329e5d495">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from an int pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Int pointer </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05250">5250</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad47910406a5f4d3b38e94520345768d4" name="ad47910406a5f4d3b38e94520345768d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad47910406a5f4d3b38e94520345768d4">&#9670;&#160;</a></span>createTaggedPtr() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structtagged_ptr.html">taggedPtr</a> createTaggedPtr </td>
+          <td>(</td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *</td>          <td class="paramname"><span class="paramname"><em>dirty</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function to create a tagged pointer object from an int pointer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ptr</td><td>Int pointer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dirty</td><td>Bool used to determine if associated object needs update </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05266">5266</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -256,20 +536,23 @@ GNU General Public License for more details.
 
 <p>Function to open file dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00155">155</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00154">154</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a3c921541a957139a8e9ba820a5eb08d8" name="a3c921541a957139a8e9ba820a5eb08d8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3c921541a957139a8e9ba820a5eb08d8">&#9670;&#160;</a></span>get_xml_node_values()</h2>
+<a id="a37ea8aaac001a1f2eb0218c28a8e7c5a" name="a37ea8aaac001a1f2eb0218c28a8e7c5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37ea8aaac001a1f2eb0218c28a8e7c5a">&#9670;&#160;</a></span>get_xml_node_values()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; std::string &gt; get_xml_node_values </td>
           <td>(</td>
-          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>xml_file</em></span>, </td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>xml_file</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -282,6 +565,11 @@ GNU General Public License for more details.
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>node_name</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to get node labels for a given set of nodes. </p>
@@ -294,7 +582,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00227">227</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00350">350</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -387,21 +675,24 @@ GNU General Public License for more details.
 
 </div>
 </div>
-<a id="a09344830c3d75adf7597b38b253c5a0c" name="a09344830c3d75adf7597b38b253c5a0c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a09344830c3d75adf7597b38b253c5a0c">&#9670;&#160;</a></span>interpolate()</h2>
+<a id="a4721e8292143200215a5142e64575a8f" name="a4721e8292143200215a5142e64575a8f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4721e8292143200215a5142e64575a8f">&#9670;&#160;</a></span>interpolate()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; interpolate </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>keypoints</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; int &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>keypoints</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>positions</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>positions</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -409,6 +700,11 @@ GNU General Public License for more details.
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num_points</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to return interpolated vector based on keypoints. </p>
@@ -421,25 +717,26 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00090">90</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
-
 </div>
 </div>
-<a id="a12e49501ab5f16e78cf312cb5b3060eb" name="a12e49501ab5f16e78cf312cb5b3060eb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a12e49501ab5f16e78cf312cb5b3060eb">&#9670;&#160;</a></span>linspace()</h2>
+<a id="ab5dbf3e7cbda62126b5dc0b34456e149" name="ab5dbf3e7cbda62126b5dc0b34456e149"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5dbf3e7cbda62126b5dc0b34456e149">&#9670;&#160;</a></span>linspace()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; linspace </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a></td>          <td class="paramname"><span class="paramname"><em>a</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a></td>          <td class="paramname"><span class="paramname"><em>b</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>b</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -447,9 +744,14 @@ GNU General Public License for more details.
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num_points</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Function to linearly space between. </p>
+<p>Function to linearly space between two vectors. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">a</td><td>Start point coordinates </td></tr>
@@ -459,7 +761,57 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00078">78</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00076">76</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a53cbaff8568ea6dd2a7de5a6c5cbc14d" name="a53cbaff8568ea6dd2a7de5a6c5cbc14d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53cbaff8568ea6dd2a7de5a6c5cbc14d">&#9670;&#160;</a></span>parse_distribution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool parse_distribution </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input_string</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structdistribution.html">distribution</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>converted_distribution</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01305">1305</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4e4bf09362721eb7291e25c049e9b263" name="a4e4bf09362721eb7291e25c049e9b263"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e4bf09362721eb7291e25c049e9b263">&#9670;&#160;</a></span>save_as_file_dialog()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string save_as_file_dialog </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; std::string &gt;</td>          <td class="paramname"><span class="paramname"><em>extensions</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to open save as file dialog. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">extensions</td><td>List of possible extensions </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00228">228</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -491,7 +843,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00121">121</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00120">120</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -518,7 +870,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00060">60</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00058">58</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -545,7 +897,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00066">66</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00064">64</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -572,7 +924,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00072">72</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00070">70</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>

@@ -8,7 +8,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/projectbuilder/src/InitializeEnergyBalance.cpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -64,7 +63,20 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -73,11 +85,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.27</span>
+       <span id="projectnumber">&#160;v1.3.31</span>
    </div>
   </td>
- </tr>
-   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -88,7 +99,8 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td></tr>
+</td>
+ </tr>
  </tbody>
 </table>
 </div>
@@ -105,6 +117,7 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -154,7 +167,7 @@ $(function(){initNavTree('_initialize_energy_balance_8cpp_source.html',''); init
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span>    pugi::xml_document xmldoc;</div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>    std::string xml_error_string;</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <span class="keywordflow">if</span>( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <span class="keywordflow">if</span>( !<a class="code hl_function" href="global_8h.html#affd6907db209d4696779a3d2497cfab5" title="Opens and parses an XML file into a pugi::xml_document object.">open_xml_file</a>(xml_input_file, xmldoc, xml_error_string) ) {</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(xml_error_string);</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    }</div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
@@ -201,9 +214,9 @@ $(function(){initNavTree('_initialize_energy_balance_8cpp_source.html',''); init
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    }</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordflow">if</span>( energybalance_block_count==0 ){</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#aa92b28a9c26bbff7e5621e1c9dd48086" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">false</span> );</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">false</span> );</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#aa92b28a9c26bbff7e5621e1c9dd48086" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    }</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>

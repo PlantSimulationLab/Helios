@@ -21,8 +21,9 @@
 #include <png.h>
 
 //JPEG Libraries (reading and writing JPEG images)
-#include <cstdio> //<-- note libjpeg requires this header be included before its headers.
+extern "C" {
 #include <jpeglib.h>
+}
 
 using namespace helios;
 
@@ -57,23 +58,23 @@ RGBcolor RGB::goldenrod = make_RGBcolor( 0.855, 0.647, 0.126 );
 SphericalCoord helios::nullrotation = make_SphericalCoord(0,0);
 vec3 helios::nullorigin = make_vec3(0,0,0);
 
-RGBcolor helios::blend(const RGBcolor &color0_RGB, const RGBcolor &color1_RGB, float weight_RGB ){
-  RGBcolor color;
-  weight_RGB = clamp(weight_RGB,0.f,1.f);
-  color.r = weight_RGB*color1_RGB.r+(1.f-weight_RGB)*color0_RGB.r;
-  color.g = weight_RGB*color1_RGB.g+(1.f-weight_RGB)*color0_RGB.g;
-  color.b = weight_RGB*color1_RGB.b+(1.f-weight_RGB)*color0_RGB.b;
-  return color;
+RGBcolor helios::blend(const RGBcolor &color0, const RGBcolor &color1, float weight ){
+  RGBcolor color_out;
+  weight = clamp(weight,0.f,1.f);
+  color_out.r = weight*color1.r+(1.f-weight)*color0.r;
+  color_out.g = weight*color1.g+(1.f-weight)*color0.g;
+  color_out.b = weight*color1.b+(1.f-weight)*color0.b;
+  return color_out;
 }
 
-RGBAcolor helios::blend(const RGBAcolor &color0_RGBA, const RGBAcolor &color1_RGBA, float weight_RGBA ){
-  RGBAcolor color;
-  weight_RGBA = clamp(weight_RGBA,0.f,1.f);
-  color.r = weight_RGBA*color1_RGBA.r+(1.f-weight_RGBA)*color0_RGBA.r;
-  color.g = weight_RGBA*color1_RGBA.g+(1.f-weight_RGBA)*color0_RGBA.g;
-  color.b = weight_RGBA*color1_RGBA.b+(1.f-weight_RGBA)*color0_RGBA.b;
-  color.a = weight_RGBA*color1_RGBA.a+(1.f-weight_RGBA)*color0_RGBA.a;
-  return color;
+RGBAcolor helios::blend(const RGBAcolor &color0, const RGBAcolor &color1, float weight ){
+  RGBAcolor color_out;
+  weight = clamp(weight,0.f,1.f);
+  color_out.r = weight*color1.r+(1.f-weight)*color0.r;
+  color_out.g = weight*color1.g+(1.f-weight)*color0.g;
+  color_out.b = weight*color1.b+(1.f-weight)*color0.b;
+  color_out.a = weight*color1.a+(1.f-weight)*color0.a;
+  return color_out;
 }
 
 vec3 helios::rotatePoint(const vec3& position, const SphericalCoord& rotation ) {
@@ -88,11 +89,11 @@ vec3 helios::rotatePoint(const vec3& position, float theta, float phi) {
 
   float Ry[3][3], Rz[3][3];
 
-  float st = sin(theta);
-  float ct = cos(theta);
+  const float st = sin(theta);
+  const float ct = cos(theta);
 
-  float sp = sin(phi);
-  float cp = cos(phi);
+  const float sp = sin(phi);
+  const float cp = cos(phi);
 	
   // Setup the rotation matrix, this matrix is based off of the rotation matrix used in glRotatef.
   Ry[0][0] = ct;
@@ -149,20 +150,20 @@ vec3 helios::rotatePointAboutLine( const vec3& point, const vec3& line_base, con
 
   vec3 tmp = line_direction;
   tmp.normalize();
-  float u = tmp.x;
-  float v = tmp.y;
-  float w = tmp.z;
+  const float u = tmp.x;
+  const float v = tmp.y;
+  const float w = tmp.z;
 
-  float a = line_base.x;
-  float b = line_base.y;
-  float c = line_base.z;
+  const float a = line_base.x;
+  const float b = line_base.y;
+  const float c = line_base.z;
 
-  float x = point.x;
-  float y = point.y;
-  float z = point.z;
+  const float x = point.x;
+  const float y = point.y;
+  const float z = point.z;
 
-  float st = sin(theta);
-  float ct = cos(theta);
+  const float st = sin(theta);
+  const float ct = cos(theta);
 
   position.x = (a*(v*v+w*w)-u*(b*v+c*w-u*x-v*y-w*z))*(1-ct)+x*ct+(-c*v+b*w-w*y+v*z)*st;
   position.y = (b*(u*u+w*w)-v*(a*u+c*w-u*x-v*y-w*z))*(1-ct)+y*ct+(c*u-a*w+w*x-u*z)*st;
@@ -173,14 +174,12 @@ vec3 helios::rotatePointAboutLine( const vec3& point, const vec3& line_base, con
 }
 
 float helios::calculateTriangleArea( const vec3& v0, const vec3& v1, const vec3& v2 ){
-  vec3 A( v1-v0 );
-  vec3 B( v2-v0 );
-  vec3 C( v2-v1 );
-  float a = A.magnitude();
-  float b = B.magnitude();
-  float c = C.magnitude();
-  float s = 0.5f*( a+b+c );
-  return sqrtf( s*(s-a)*(s-b)*(s-c) );
+    const float a = (v1 - v0).magnitude();
+    const float b = (v2 - v0).magnitude();
+    const float c = (v2 - v1).magnitude();
+
+    const float s = 0.5f*( a+b+c );
+    return sqrtf( s*(s-a)*(s-b)*(s-c) );
 }
 
 int helios::Date::JulianDay() const{
@@ -194,21 +193,35 @@ int helios::Date::JulianDay() const{
   }else{                 //non-leap year
     skips=skips_nonleap;
   }
-  
+
   return skips[month-1]+day;
 
 }
 
 void helios::Date::incrementDay() {
-    int JD = Calendar2Julian( *this );
-    if( JD<365 || ( JD==356 && isLeapYear() ) ) {
-        Date cal = Julian2Calendar(JD + 1, year);
-        day = cal.day;
-        month = cal.month;
-    }else{ //it is last day of the year
-        day = 1;
-        month = 1;
-        year ++;
+    // Compute “Julian day of year” for *this
+    const int jd = Calendar2Julian(*this);
+
+    // 2) Sanity-check jd
+    bool leap = isLeapYear();
+    const int maxJD = leap ? 366 : 365;
+    if (jd < 1 || jd > maxJD) {
+        helios_runtime_error("ERROR (incrementDay): current date out of range (JD=" + std::to_string(jd) + ")");
+    }
+
+    // Advance
+    if (jd < maxJD) {
+        // still inside this year
+        const Date next = Julian2Calendar(jd + 1, year);
+        day   = next.day;
+        month = next.month;
+        // year unchanged
+    }
+    else {
+        // rollover to Jan 1 of next year
+        year  += 1;
+        month  = 1;
+        day    = 1;
     }
 }
 
@@ -222,7 +235,7 @@ bool helios::Date::isLeapYear() const {
 
 float helios::randu(){
 
-  return float(rand()) / float(RAND_MAX + 1.); 
+  return float(rand()) / float(RAND_MAX + 1.);
 
 }
 
@@ -235,7 +248,7 @@ int helios::randu( int imin, int imax  ){
   }else{
     return imin + (int)lround(float(imax-imin)*ru);
   }
-    
+
 }
 
 float helios::acos_safe( float x ){
@@ -252,7 +265,7 @@ float helios::asin_safe( float x ){
 
 bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2)
 {
- 
+
     float ax = q1.x - p1.x;     // direction of line a
     float ay = q1.y - p1.y;     // ax and ay as above
 
@@ -270,7 +283,7 @@ bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, co
     float s = (ax * dy - ay * dx) / det;
 
     return !(r < 0 || r > 1 || s < 0 || s > 1);
-    
+
 }
 
 bool helios::pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts ){
@@ -287,12 +300,10 @@ bool helios::pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_
     vec2 p2 = pverts.at(i);
     vec2 q2 = pverts.at(i+1);
 
-    bool isect = lineIntersection( p1, q1, p2, q2 );
-
-    if( isect ){
+    if( lineIntersection( p1, q1, p2, q2 ) ){
       Nintersect ++;
     }
-    
+
   }
 
   if( Nintersect!=0 && Nintersect%2==1 ){
@@ -310,12 +321,12 @@ void helios::wait( float seconds ){
 
 }
 
-void helios::makeRotationMatrix( float rotation, const char* axis, float (&T)[16] ){
+void helios::makeRotationMatrix(const float rotation, const char* axis, float (&T)[16]){
 
   float sx = sin(rotation);
   float cx = cos(rotation);
 
-  if( strcmp(axis,"x")==0 ){  
+  if( strcmp(axis,"x")==0 ){
     T[0] = 1.f; //(0,0)
     T[1] = 0.f; //(0,1)
     T[2] = 0.f; //(0,2)
@@ -328,7 +339,7 @@ void helios::makeRotationMatrix( float rotation, const char* axis, float (&T)[16
     T[9] = sx;  //(2,1)
     T[10] = cx; //(2,2)
     T[11] = 0.f;//(2,3)
-  }else if( strcmp(axis,"y")==0 ){  
+  }else if( strcmp(axis,"y")==0 ){
     T[0] = cx;  //(0,0)
     T[1] = 0.f; //(0,1)
     T[2] = sx;  //(0,2)
@@ -341,7 +352,7 @@ void helios::makeRotationMatrix( float rotation, const char* axis, float (&T)[16
     T[9] = 0.f; //(2,1)
     T[10] = cx; //(2,2)
     T[11] = 0.f;//(2,3)
- }else if( strcmp(axis,"z")==0 ){     
+ }else if( strcmp(axis,"z")==0 ){
     T[0] = cx;  //(0,0)
     T[1] = -sx; //(0,1)
     T[2] = 0.f; //(0,2)
@@ -451,48 +462,48 @@ void helios::makeTranslationMatrix( const helios::vec3& translation, float (&T)[
   T[13] = 0.f;//(3,1)
   T[14] = 0.f;//(3,2)
   T[15] = 1.f;//(3,3)
-  
+
 }
 
-void helios::makeScaleMatrix( const helios::vec3& scale, float (&T)[16] ){
+void helios::makeScaleMatrix(const helios::vec3& scale, float (&transform)[16]){
 
-  T[0] = scale.x; //(0,0)
-  T[1] = 0.f; //(0,1)
-  T[2] = 0.f; //(0,2)
-  T[3] = 0.f; //(0,3)
-  T[4] = 0.f; //(1,0)
-  T[5] = scale.y;  //(1,1)
-  T[6] = 0.f; //(1,2)
-  T[7] = 0.f; //(1,3)
-  T[8] = 0.f; //(2,0)
-  T[9] = 0.f;  //(2,1)
-  T[10] = scale.z; //(2,2)
-  T[11] = 0.f;//(2,3)
-  T[12] = 0.f;//(3,0)
-  T[13] = 0.f;//(3,1)
-  T[14] = 0.f;//(3,2)
-  T[15] = 1.f;//(3,3)
-  
+  transform[0] = scale.x; //(0,0)
+  transform[1] = 0.f; //(0,1)
+  transform[2] = 0.f; //(0,2)
+  transform[3] = 0.f; //(0,3)
+  transform[4] = 0.f; //(1,0)
+  transform[5] = scale.y;  //(1,1)
+  transform[6] = 0.f; //(1,2)
+  transform[7] = 0.f; //(1,3)
+  transform[8] = 0.f; //(2,0)
+  transform[9] = 0.f;  //(2,1)
+  transform[10] = scale.z; //(2,2)
+  transform[11] = 0.f;//(2,3)
+  transform[12] = 0.f;//(3,0)
+  transform[13] = 0.f;//(3,1)
+  transform[14] = 0.f;//(3,2)
+  transform[15] = 1.f;//(3,3)
+
 }
 
-void helios::makeScaleMatrix( const helios::vec3 &scale, const helios::vec3 &point, float (&T)[16] ){
+void helios::makeScaleMatrix(const helios::vec3 &scale, const helios::vec3 &point, float (&transform)[16]){
 
-    T[0] = scale.x; //(0,0)
-    T[1] = 0.f; //(0,1)
-    T[2] = 0.f; //(0,2)
-    T[3] = point.x * (1 - scale.x); //(0,3)
-    T[4] = 0.f; //(1,0)
-    T[5] = scale.y;  //(1,1)
-    T[6] = 0.f; //(1,2)
-    T[7] = point.y * (1 - scale.y); //(1,3)
-    T[8] = 0.f; //(2,0)
-    T[9] = 0.f;  //(2,1)
-    T[10] = scale.z; //(2,2)
-    T[11] = point.z * (1 - scale.z);//(2,3)
-    T[12] = 0.f;//(3,0)
-    T[13] = 0.f;//(3,1)
-    T[14] = 0.f;//(3,2)
-    T[15] = 1.f;//(3,3)
+    transform[0] = scale.x; //(0,0)
+    transform[1] = 0.f; //(0,1)
+    transform[2] = 0.f; //(0,2)
+    transform[3] = point.x * (1 - scale.x); //(0,3)
+    transform[4] = 0.f; //(1,0)
+    transform[5] = scale.y;  //(1,1)
+    transform[6] = 0.f; //(1,2)
+    transform[7] = point.y * (1 - scale.y); //(1,3)
+    transform[8] = 0.f; //(2,0)
+    transform[9] = 0.f;  //(2,1)
+    transform[10] = scale.z; //(2,2)
+    transform[11] = point.z * (1 - scale.z);//(2,3)
+    transform[12] = 0.f;//(3,0)
+    transform[13] = 0.f;//(3,1)
+    transform[14] = 0.f;//(3,2)
+    transform[15] = 1.f;//(3,3)
 
 }
 
@@ -533,7 +544,7 @@ void helios::vecmult( const float M[16], const helios::vec3& v3, helios::vec3& r
   result.x = V[0];
   result.y = V[1];
   result.z = V[2];
-  
+
 }
 
 void helios::vecmult( const float M[16], const float v[3], float (&result)[3] ){
@@ -554,7 +565,7 @@ void helios::vecmult( const float M[16], const float v[3], float (&result)[3] ){
 
 void helios::makeIdentityMatrix( float (&T)[16] ){
 
-  /* [0,0] */ T[0] = 1.f; 
+  /* [0,0] */ T[0] = 1.f;
   /* [0,1] */ T[1] = 0.f;
   /* [0,2] */ T[2] = 0.f;
   /* [0,3] */ T[3] = 0.f;
@@ -611,7 +622,7 @@ SphericalCoord helios::cart2sphere( const vec3& Cartesian ){
 
   float radius = sqrtf( Cartesian.x*Cartesian.x + Cartesian.y*Cartesian.y + Cartesian.z*Cartesian.z );
   return {radius, asin_safe( Cartesian.z/radius ), atan2_2pi( Cartesian.x, Cartesian.y )};
-  
+
 }
 
 vec3 helios::sphere2cart( const SphericalCoord& Spherical ){
@@ -624,7 +635,7 @@ vec2 helios::string2vec2( const char* str ){
 
   float o[2] = {99999,99999};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -644,7 +655,7 @@ vec3 helios::string2vec3( const char* str ){
 
   float o[3]  = {99999,99999,99999};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -664,7 +675,7 @@ vec4 helios::string2vec4( const char* str ){
 
   float o[4]  = {99999,99999,99999,99999};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -704,7 +715,7 @@ int3 helios::string2int3( const char* str ){
 
   int o[3] = {99999,99999,99999};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -724,7 +735,7 @@ int4 helios::string2int4( const char* str ){
 
   int o[4] = {99999,99999,99999,99999};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -744,7 +755,7 @@ RGBAcolor helios::string2RGBcolor( const char* str ){
 
   float o[4] = {0,0,0,1};
   std::string tmp;
-  
+
   std::istringstream stream(str);
   int c=0;
   while( stream >> tmp ){
@@ -996,12 +1007,12 @@ std::string helios::deblank(const char* input)
     int i,j;
     char output[255];
     std::strcpy(output,input);
-    for (i = 0, j = 0; i<strlen(input); i++,j++)          
+    for (i = 0, j = 0; i<strlen(input); i++,j++)
     {
-        if (input[i]!=' ')                           
-            output[j]=input[i];                     
+        if (input[i]!=' ')
+            output[j]=input[i];
         else
-            j--;                                     
+            j--;
     }
     output[j]=0;
     std::string output_c = output;
@@ -1013,19 +1024,21 @@ std::string helios::deblank(const std::string &input){
   return deblank(input.c_str());
 }
 
-std::string helios::trim_whitespace(const std::string &input){
+std::string helios::trim_whitespace(const std::string &input) {
 
-  const std::string WHITESPACE = " \n\r\t\f\v";
+    static const std::string WHITESPACE = " \n\r\t\f\v";
 
-  std::string outstring;
+    // Find first non-whitespace character
+    size_t start = input.find_first_not_of(WHITESPACE);
+    if (start == std::string::npos) {
+        return ""; // String is all whitespace
+    }
 
-  size_t start = input.find_first_not_of(WHITESPACE);
-  outstring = (start == std::string::npos) ? "" : input.substr(start);
+    // Find last non-whitespace character
+    size_t end = input.find_last_not_of(WHITESPACE);
 
-  size_t end = outstring.find_last_not_of(WHITESPACE);
-  outstring = (end == std::string::npos) ? "" : outstring.substr(0, end + 1);
-
-  return outstring;
+    // Return the trimmed substring
+    return input.substr(start, end - start + 1);
 
 }
 
@@ -1136,7 +1149,7 @@ vec3 helios::min( const std::vector<vec3>& vect ){
     if( vect.at(i).z < vmin.z ){
       vmin.z = vect.at(i).z;
     }
-    
+
   }
 
   return vmin;
@@ -1182,7 +1195,7 @@ vec3 helios::max( const std::vector<vec3>& vect ){
     if( vect.at(i).z > vmax.z ){
       vmax.z = vect.at(i).z;
     }
-    
+
   }
 
   return vmax;
@@ -1221,16 +1234,14 @@ float helios::median( std::vector<float> vect ){
 
     sort(vect.begin(), vect.end());
 
-    int mid = size/2;
-
-    int midm1 = mid -1;
+    size_t middle_index = size/2;
 
     float median ;
     if( size % 2 == 0)
     {
-        median = (vect.at(mid) + vect.at(mid-1))/2.f;
+        median = (vect.at(middle_index) + vect.at(middle_index-1))/2.f;
     }else{
-        median = vect.at(mid);
+        median = vect.at(middle_index);
     }
     return median;
 }
@@ -1304,48 +1315,46 @@ template void helios::resize_vector<helios::int2>( std::vector<std::vector<std::
 template void helios::resize_vector<helios::int3>( std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &, uint, uint, uint, uint );
 template void helios::resize_vector<helios::int4>( std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &, uint, uint, uint, uint );
 
-Date helios::CalendarDay( int Julian_day, int year ){
+Date helios::CalendarDay(int Julian_day, int year)
+{
+    // -----------------------------  input checks  ----------------------------
+    if (Julian_day < 1 || Julian_day > 366)
+        helios_runtime_error("ERROR (CalendarDay): Julian day out of range [1–366].");
 
-  if( Julian_day<1 || Julian_day>366 ){
-      helios_runtime_error("ERROR (CalendarDay): Julian day out of range.");
-  }else if( year<1000 ){
-      helios_runtime_error("ERROR (CalendarDay): Year should be specified in YYYY format.");
-  }
+    if (year < 1000)
+        helios_runtime_error("ERROR (CalendarDay): Year must be given in YYYY format.");
 
-  int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
-  int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-  int* skips;
-  int day, month;
-    
-  if( (year-2000)%4 == 0 ){  //leap year
-    skips=skips_leap;
-  }else{                 //non-leap year
-    skips=skips_nonleap;
-  }
-  
-  //set month
-  int i;
-  month = 1;
-  for( i=0; i<12; i++ ){
-    if(i==11){
-      month=12;
-      break;
-    }else if(Julian_day>skips[i] && Julian_day<=skips[i+1]){
-      month=i+1;
-      break;
+    const bool leap =
+        (year % 4 == 0 && year % 100 != 0) ||  // divisible by 4 but not by 100
+        (year % 400 == 0);                     // or divisible by 400
+
+    if (!leap && Julian_day == 366)
+        helios_runtime_error("ERROR (CalendarDay): Day 366 occurs only in leap years.");
+
+    // -------------------  month lengths for the chosen year  -----------------
+    // Index 0 = January, …, 11 = December
+    int month_lengths[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (leap)            // adjust February
+        month_lengths[1] = 29;
+
+    // ---------------------------  computation  ------------------------------
+    int d_remaining = Julian_day;   // days still to account for
+    int month = 1;                  // 1‑based calendar month
+
+    // subtract complete months until the remainder lies in the current month
+    for (int i = 0; i < 12; ++i) {
+        if (d_remaining > month_lengths[i]) {
+            d_remaining -= month_lengths[i];
+            ++month;
+        } else {
+            break;
+        }
     }
-  }
-  
-  //set day
-  if(skips[i]==0){
-    day=Julian_day;
-  }else{
-    day=Julian_day%skips[i];
-  }
 
-  return make_Date(day,month,year);
-  
+    // d_remaining is now the calendar day of the computed month
+    return make_Date(d_remaining, month, year);
 }
+
 
 int helios::JulianDay( int day, int month, int year ){
 
@@ -1353,162 +1362,153 @@ int helios::JulianDay( int day, int month, int year ){
     
 }
 
-int helios::JulianDay( const Date& date ){
+int helios::JulianDay(const Date& date) {
 
-  int day = date.day;
-  int month = date.month;
-  int year = date.year;
-
-  if( day<1 || day>31 ){
-      helios_runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + " was given).");
-  }else if( month<1 || month>12){
-      helios_runtime_error("ERROR (JulianDay): Month of year is out of range (month of " + std::to_string(month) + " was given).");
-  }else if( year<1000 ){
-      helios_runtime_error("ERROR (JulianDay): Year should be specified in YYYY format.");
-  }
-
-  int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
-  int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-  int* skips;
-  
-  if( (year-2000)%4 == 0 ){  //leap year
-    skips=skips_leap;
-  }else{                 //non-leap year
-    skips=skips_nonleap;
-  }
-  
-  return skips[month]+day;
+    int day = date.day;
+    int month = date.month;
+    int year = date.year;
+    
+    // Validate inputs
+    if (month < 1 || month > 12) {
+        helios_runtime_error("ERROR (JulianDay): Month of year is out of range (month of " + std::to_string(month) + " was given).");
+    }
+    
+    // Get the correct number of days for the month (accounting for leap year in February)
+    int daysInMonth[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    
+    // Correct leap year calculation
+    if (bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
+        daysInMonth[2] = 29;
+    }
+    
+    if (day < 1 || day > daysInMonth[month]) {
+        helios_runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + 
+                            " was given for month " + std::to_string(month) + ").");
+    }
+    
+    if (year < 1000) {
+        helios_runtime_error("ERROR (JulianDay): Year should be specified in YYYY format.");
+    }
+    
+    // Calculate day of year
+    int dayOfYear = day;
+    for (int m = 1; m < month; m++) {
+        dayOfYear += daysInMonth[m];
+    }
+    
+    return dayOfYear;
     
 }
 
-// void Glyph::readFile( const char* __filename ){
+bool helios::PNGHasAlpha(const char* filename) {
+    if (!filename) {
+        helios_runtime_error("ERROR (PNGHasAlpha): Null filename provided.");
+    }
 
-//   filename = (char*)__filename;
-
-//   //read the mask file
-//   std::cout << "Reading mask file: " << filename << "..." << std::flush;
-//   std::ifstream file (filename); //open the file
-//   if(!file.is_open()){ //check that file exists
-//     std::cout << "failed." << std::endl;
-//     std::cerr << "ERROR: mask file does not exist." << std::endl;
-//     exit(EXIT_FAILURE);
-//   }
-  
-//   file >> size.x; //read the width of mask from the header
-//   file >> size.y; //read the height of mask from the header
-  
-//   data.resize(size.y);
-
-//   float temp;
-  
-//   int solid_count = -1;
-//   for( int j=0; j<size.y; j++ ){
-//     data.at(j).resize(size.x);
-//     for( int i=0; i<size.x; i++ ){
-//       file >> temp;
-//       data.at(j).at(i) = bool(temp);
-//       if( data.at(j).at(i) == 1 ){
-// 	solid_count++;
-// 	// }else if( data.at(j).at(i) !=0 ){
-// 	// 	std::cout << "WARNING (polyMask): Mask file should only contain binary 0 or 1 values. Found value of " << data.at(j).at(i) << " which is automatically being set to 1." << std::endl;
-// 	// 	data.at(j).at(i) = 1;
-//       }
-//     }
-//   }
-  
-//   file.close();
-
-//   if( solid_count == -1 ){
-//     std::cout << "ERROR (Glyph::readFile): Mask is empty (all values in the mask were 0)." << std::endl;
-//     exit(EXIT_FAILURE);
-//   }else{
-//     std::cout << "done." << std::endl;
-//   }
-
-//   solidFraction = float(solid_count)/float(size.x*size.y);
-
-//   return;
-
-// }
-
-bool helios::PNGHasAlpha( const char* filename ){
-
-    std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
+    std::string fn(filename);
+    auto dot_pos = fn.find_last_of('.');
+    if (dot_pos == std::string::npos) {
+        helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " has no extension.");
+    }
+    std::string ext = fn.substr(dot_pos + 1);
+    if (ext != "png" && ext != "PNG") {
         helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " is not PNG format.");
     }
 
-  uint Nchannels;
-  
-  png_structp png_ptr;
-  png_infop info_ptr;
+    // 3) Open file with RAII
+    auto fileCloser = [](FILE* f){ if (f) std::fclose(f); };
+    std::unique_ptr<FILE, decltype(fileCloser)> fp(
+        std::fopen(fn.c_str(), "rb"), fileCloser);
+    if (!fp) {
+        helios_runtime_error(
+          "ERROR (PNGHasAlpha): File " + fn +
+          " could not be opened for reading.");
+    }
 
-  char header[8]; 
+    // 4) Read & validate PNG signature
+    unsigned char header[8];
+    if (std::fread(header, 1, 8, fp.get()) != 8 ||
+        png_sig_cmp(header, 0, 8))
+    {
+        helios_runtime_error(
+          "ERROR (PNGHasAlpha): File " + fn + " is not a valid PNG file.");
+    }
 
-  /* open file and test for it being a png */
-  FILE *fp = fopen(filename, "rb");
-  if (!fp){
-      helios_runtime_error("ERROR (PNGHasAlpha): File " + std::string(filename) + " could not be opened for reading. The file either does not exist or you do not have permission to read it.");
-  }
-  size_t result=fread(header, 1, 8, fp);
-  
-  /* initialize stuff */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+    png_structp png_ptr  = nullptr;
+    png_infop   info_ptr = nullptr;
 
-  if (!png_ptr){
-      helios_runtime_error("ERROR (PNGHasAlpha): png_create_read_struct failed.");
-  }
+    try {
+        // 5) Create libpng read & info structs
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
+                                         nullptr, nullptr, nullptr);
+        if (!png_ptr) {
+            throw std::runtime_error("png_create_read_struct failed.");
+        }
+        info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr) {
+            png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+            throw std::runtime_error("png_create_info_struct failed.");
+        }
 
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr){
-      helios_runtime_error("ERROR (PNGHasAlpha): png_create_info_struct failed.");
-  }
-  
-  if (setjmp(png_jmpbuf(png_ptr))){
-      helios_runtime_error("ERROR (PNGHasAlpha): init_io failed.");
-  }  
+        // 6) Error handling via setjmp
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG initialization.");
+        }
 
-  png_init_io(png_ptr, fp);
-  png_set_sig_bytes(png_ptr, 8);
-  
-  png_read_info(png_ptr, info_ptr);
+        // 7) Initialize IO & read info
+        png_init_io(png_ptr, fp.get());
+        png_set_sig_bytes(png_ptr, 8);
+        png_read_info(png_ptr, info_ptr);
 
-  Nchannels = png_get_channels(png_ptr, info_ptr);
+        // 8) Inspect color type and tRNS chunk
+        png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+        bool has_tRNS = png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
 
-  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        // 9) Determine alpha presence
+        bool has_alpha =
+            ((color_type & PNG_COLOR_MASK_ALPHA) != 0) ||
+             has_tRNS;
 
-  if( Nchannels==4 ){
-    return true;
-  }else{
+        // 10) Clean up libpng structs
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
+        return has_alpha;
+
+    } catch (const std::exception &e) {
+        // Ensure libpng structs are freed on error
+        if (png_ptr) {
+            if (info_ptr)
+                png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            else
+                png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+        }
+        helios_runtime_error(std::string("ERROR (PNGHasAlpha): ") + e.what());
+    }
+
+    // Should never reach here
     return false;
-  }
-
 }
 
 std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filename ){
-
-    std::string fn = filename;
-    if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ) {
+    if(const std::string& fn = filename; fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG" ) {
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
   int y;
-  uint height, width;
 
-  std::vector<std::vector<bool> > mask;
-  
+    std::vector<std::vector<bool> > mask;
+
   png_structp png_ptr;
   png_infop info_ptr;
-  png_bytep * row_pointers;
 
-  char header[8];    // 8 is the maximum size that can be checked
+    char header[8];    // 8 is the maximum size that can be checked
 
   /* open file and test for it being a png */
   FILE *fp = fopen(filename.c_str(), "rb");
   if (!fp){
       helios_runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading.");
   }
-  size_t result=fread(header, 1, 8, fp);
+  size_t head = fread(header, 1, 8, fp);
   // if (png_sig_cmp(header, 0, 8)){
   //   std::cerr << "ERROR (read_png_alpha): File " << filename << " is not recognized as a PNG file." << std::endl;
   //   exit(EXIT_FAILURE);
@@ -1525,18 +1525,18 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
   if (!info_ptr){
       helios_runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed.");
   }
-  
+
   if (setjmp(png_jmpbuf(png_ptr))){
       helios_runtime_error("ERROR (readPNGAlpha): init_io failed.");
-  }  
+  }
 
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
-  
+
   png_read_info(png_ptr, info_ptr);
 
-  width = png_get_image_width(png_ptr, info_ptr);
-  height = png_get_image_height(png_ptr, info_ptr);
+  uint width = png_get_image_width(png_ptr, info_ptr);
+  uint height = png_get_image_height(png_ptr, info_ptr);
 //  color_type = png_get_color_type(png_ptr, info_ptr);
 //  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
@@ -1553,7 +1553,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
       helios_runtime_error("ERROR (readPNGAlpha): read_image failed.");
   }
 
-  row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
+  auto *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
   for (y=0; y<height; y++)
     row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
 
@@ -1570,7 +1570,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
 	mask.at(j).at(i) = false;
       }else{
 	mask.at(j).at(i) = true;
-      } 
+      }
     }
   }
 
@@ -1581,100 +1581,167 @@ std::vector<std::vector<bool> > helios::readPNGAlpha( const std::string &filenam
 
 
   return mask;
-  
+
 }
 
-void helios::readPNG( const std::string &filename, uint & width, uint & height, std::vector<helios::RGBAcolor> &texture ){
+void helios::readPNG(const std::string &filename, uint &width, uint &height, std::vector<helios::RGBAcolor> &texture) {
 
-  std::string fn = filename;
-  if( fn.substr(fn.find_last_of(".") + 1) != "png" && fn.substr(fn.find_last_of(".") + 1) != "PNG" ){
-    helios_runtime_error("ERROR (readPNG): File " + fn + " is not PNG format.");
-  }
-
-  int x, y;
-
-  png_byte color_type;
-  png_byte bit_depth;
-
-  png_structp png_ptr;
-  png_infop info_ptr;
-  int number_of_passes;
-  png_bytep * row_pointers;
-
-  char header[8];    // 8 is the maximum size that can be checked
-
-  /* open file and test for it being a png */
-  FILE *fp = fopen(filename.c_str(), "rb");
-  if (!fp){
-    helios_runtime_error("ERROR (readPNG): File " + filename + "could not be opened for reading.");
-   }
-   size_t result=fread(header, 1, 8, fp);
-
-  /* initialize stuff */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-
-  if (!png_ptr){
-    helios_runtime_error("ERROR (readPNG): failed to create PNG read structure.");
-  }
-
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr){
-    helios_runtime_error("ERROR (readPNG): failed to create PNG inof structure.");
-  }
-
-  if (setjmp(png_jmpbuf(png_ptr))){
-    helios_runtime_error("ERROR (readPNG): init_io failed.");
-  }
-
-  png_init_io(png_ptr, fp);
-  png_set_sig_bytes(png_ptr, 8);
-
-  png_read_info(png_ptr, info_ptr);
-
-  width = png_get_image_width(png_ptr, info_ptr);
-  height = png_get_image_height(png_ptr, info_ptr);
-  color_type = png_get_color_type(png_ptr, info_ptr);
-  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-
-  number_of_passes = png_set_interlace_handling(png_ptr);
-  png_read_update_info(png_ptr, info_ptr);
-
-  /* read file */
-  if (setjmp(png_jmpbuf(png_ptr))){
-    helios_runtime_error("ERROR (readPNG): PNG read failed.");
-  }
-
-  row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
-  for (y=0; y<height; y++)
-    row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
-
-  png_read_image(png_ptr, row_pointers);
-
-  fclose(fp);
-
-  texture.resize(height*width);
-
-  for (uint j=0; j<height; j++){
-    png_byte* row=row_pointers[j];
-    for (int i=0; i < width; i++ ){
-      png_byte* ba=&row[i*4];
-      texture.at(j*width+i).r = (float)ba[0]/255.f;
-      texture.at(j*width+i).g = (float)ba[1]/255.f;
-      texture.at(j*width+i).b = (float)ba[2]/255.f;
-      texture.at(j*width+i).a = (float)ba[3]/255.f;
+    // 1) Safe extension check
+    auto ext_pos = filename.find_last_of('.');
+    if (ext_pos == std::string::npos) {
+        helios_runtime_error("ERROR (readPNG): File " + filename + " has no extension.");
     }
-  }
+    std::string ext = filename.substr(ext_pos + 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+    if (ext != "png") {
+        helios_runtime_error("ERROR (readPNG): File " + filename + " is not PNG format.");
+    }
 
-  for(y = 0;y<height;y++)
-    png_free (png_ptr,row_pointers[y]);
-  png_free (png_ptr, row_pointers);
-  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+    png_structp png_ptr  = nullptr;
+    png_infop   info_ptr = nullptr;
 
+    try {
+        //
+        // 2) RAII for FILE*
+        //
+        auto fileDeleter = [](FILE* f){ if (f) fclose(f); };
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(
+            fopen(filename.c_str(), "rb"), fileDeleter);
+        if (!fp) {
+            throw std::runtime_error("File " + filename + " could not be opened.");
+        }
 
+        // 3) Read & validate PNG signature
+        unsigned char header[8];
+        if (fread(header, 1, 8, fp.get()) != 8) {
+            throw std::runtime_error("Failed to read PNG header from " + filename);
+        }
+        if (png_sig_cmp(header, 0, 8)) {
+            throw std::runtime_error("File " + filename + " is not a valid PNG.");
+        }
+
+        // 4) Create libpng structs
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if (!png_ptr) {
+            throw std::runtime_error("Failed to create PNG read struct.");
+        }
+        info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr) {
+            png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+            throw std::runtime_error("Failed to create PNG info struct.");
+        }
+
+        // 5) libpng error handling
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG initialization.");
+        }
+
+        // 6) Set up IO & read basic info
+        png_init_io(png_ptr, fp.get());
+        png_set_sig_bytes(png_ptr, 8);
+        png_read_info(png_ptr, info_ptr);
+
+        // 7) Transformations → strip 16-bit, expand palette/gray, add alpha
+        png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
+        png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+
+        if (bit_depth == 16) {
+            png_set_strip_16(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            png_set_palette_to_rgb(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+            png_set_expand_gray_1_2_4_to_8(png_ptr);
+        }
+        if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            png_set_tRNS_to_alpha(png_ptr);
+        }
+        // Ensure we have RGBA
+        if (color_type == PNG_COLOR_TYPE_RGB ||
+            color_type == PNG_COLOR_TYPE_GRAY ||
+            color_type == PNG_COLOR_TYPE_PALETTE)
+        {
+            png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY ||
+            color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        {
+            png_set_gray_to_rgb(png_ptr);
+        }
+
+        // 8) Handle interlacing
+        png_set_interlace_handling(png_ptr);
+
+        // 9) Apply transforms & re-fetch info
+        png_read_update_info(png_ptr, info_ptr);
+
+        // 10) Get & validate dimensions
+        size_t w = png_get_image_width(png_ptr,  info_ptr);
+        size_t h = png_get_image_height(png_ptr, info_ptr);
+        // Prevent overflow when resizing vectors
+        constexpr size_t max_pixels =
+            std::numeric_limits<size_t>::max() / sizeof(helios::RGBAcolor);
+        if (w == 0 || h == 0 || w > max_pixels / h) {
+            throw std::runtime_error(
+                "Invalid image dimensions: " +
+                std::to_string(w) + "×" + std::to_string(h));
+        }
+        width  = static_cast<uint>(w);
+        height = static_cast<uint>(h);
+
+        // 11) Prepare row pointers
+        size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+        if (rowbytes < width * 4) {
+            throw std::runtime_error(
+              "Unexpected row size: " + std::to_string(rowbytes));
+        }
+        std::vector<std::vector<png_byte>> row_data(
+            height, std::vector<png_byte>(rowbytes));
+        std::vector<png_bytep> row_pointers(height);
+        for (uint y = 0; y < height; ++y) {
+            row_pointers[y] = row_data[y].data();
+        }
+
+        // 12) Read the image
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG read.");
+        }
+        png_read_image(png_ptr, row_pointers.data());
+
+        // 13) Convert into normalized RGBAcolor
+        texture.resize(static_cast<size_t>(width) * height);
+        for (uint y = 0; y < height; ++y) {
+            png_bytep row = row_pointers[y];
+            for (uint x = 0; x < width; ++x) {
+                png_bytep px = row + x * 4;
+                auto &c = texture[y * width + x];
+                c.r = px[0] / 255.0f;
+                c.g = px[1] / 255.0f;
+                c.b = px[2] / 255.0f;
+                c.a = px[3] / 255.0f;
+            }
+        }
+
+    } catch (const std::exception &e) {
+        // Clean up libpng structs on error
+        if (png_ptr) {
+            if (info_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            else          png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+        }
+        helios_runtime_error("ERROR (readPNG): " + std::string(e.what()));
+    }
+
+    // Normal cleanup
+    if (png_ptr) {
+        if (info_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        else          png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+    }
 }
+
 
 void helios::writePNG( const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data ) {
-  int y;
 
   FILE *fp = fopen(filename.c_str(), "wb");
   if(!fp){
@@ -1760,9 +1827,9 @@ void helios::readJPEG( const std::string &filename, uint &width, uint &height, s
          helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo;
+    struct jpeg_decompress_struct cinfo{};
 
-    struct jpg_error_mgr jerr;
+    struct jpg_error_mgr jerr{};
     FILE * infile;		/* source file */
     JSAMPARRAY buffer;		/*output row buffer */
     int row_stride;
@@ -1830,12 +1897,10 @@ helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo;
+    struct jpeg_decompress_struct cinfo{};
 
-    struct jpg_error_mgr jerr;
+    struct jpg_error_mgr jerr{};
     FILE * infile;		/* source file */
-    JSAMPARRAY buffer;		/*output row buffer */
-    int row_stride;
 
     if ((infile = fopen(filename.c_str(), "rb")) == nullptr ) {
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
@@ -1855,9 +1920,6 @@ helios::int2 helios::getImageResolutionJPEG( const std::string &filename ){
 
     (void) jpeg_read_header(&cinfo, TRUE);
     (void) jpeg_start_decompress(&cinfo);
-
-    row_stride = cinfo.output_width * cinfo.output_components;
-    buffer = (*cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
     jpeg_destroy_decompress(&cinfo);
 
@@ -1895,9 +1957,9 @@ void helios::writeJPEG( const std::string &a_filename, uint width, uint height, 
         ii+=3;
     }
 
-    struct jpeg_compress_struct cinfo;
+    struct jpeg_compress_struct cinfo{};
 
-    struct jpeg_error_mgr jerr;
+    struct jpeg_error_mgr jerr{};
 
     cinfo.err = jpeg_std_error(&jerr);
 
@@ -1940,830 +2002,76 @@ void helios::writeJPEG( const std::string &a_filename, uint width, uint height, 
 
 }
 
-std::vector<int> helios::flatten( const std::vector<std::vector<int> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
+// Implementation of template function to flatten a 2D vector into a 1D vector
+template <typename T>
+std::vector<T> helios::flatten(const std::vector<std::vector<T>>& vec) {
+    std::vector<T> result;
+    for (const auto& row : vec) {
+        result.insert(result.end(), row.begin(), row.end());
     }
-
-    std::vector<int> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
+    return result;
 }
+template std::vector<int> helios::flatten(const std::vector<std::vector<int>>& vec);
+template std::vector<uint> helios::flatten(const std::vector<std::vector<uint>>& vec);
+template std::vector<float> helios::flatten(const std::vector<std::vector<float>>& vec);
+template std::vector<double> helios::flatten(const std::vector<std::vector<double>>& vec);
+template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<helios::vec2>>& vec);
+template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<helios::vec3>>& vec);
+template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<helios::vec4>>& vec);
+template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<helios::int2>>& vec);
+template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<helios::int3>>& vec);
+template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<helios::int4>>& vec);
+template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::string>>& vec);
 
-std::vector<uint> helios::flatten( const std::vector<std::vector<uint> > &vec ){
 
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
+// Implementation of template function to flatten a 3D vector into a 1D vector
+template <typename T>
+std::vector<T> helios::flatten(const std::vector<std::vector<std::vector<T>>>& vec) {
+    std::vector<T> result;
+    for (const auto& matrix : vec) {
+        for (const auto& row : matrix) {
+            result.insert(result.end(), row.begin(), row.end());
         }
     }
-
-    std::vector<uint> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
+    return result;
 }
+template std::vector<int> helios::flatten(const std::vector<std::vector<std::vector<int>>>& vec);
+template std::vector<uint> helios::flatten(const std::vector<std::vector<std::vector<uint>>>& vec);
+template std::vector<float> helios::flatten(const std::vector<std::vector<std::vector<float>>>& vec);
+template std::vector<double> helios::flatten(const std::vector<std::vector<std::vector<double>>>& vec);
+template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<std::vector<helios::vec2>>>& vec);
+template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<std::vector<helios::vec3>>>& vec);
+template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<std::vector<helios::vec4>>>& vec);
+template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<std::vector<helios::int2>>>& vec);
+template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<std::vector<helios::int3>>>& vec);
+template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<std::vector<helios::int4>>>& vec);
+template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::vector<std::string>>>& vec);
 
-std::vector<float> helios::flatten( const std::vector<std::vector<float> > &vec ){
 
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
+// Implementation of template function to flatten a 4D vector into a 1D vector
+template <typename T>
+std::vector<T> helios::flatten(const std::vector<std::vector<std::vector<std::vector<T>>>>& vec) {
+    std::vector<T> result;
+    for (const auto& tensor : vec) {
+        for (const auto& matrix : tensor) {
+            for (const auto& row : matrix) {
+                result.insert(result.end(), row.begin(), row.end());
+            }
         }
     }
-
-    std::vector<float> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
+    return result;
 }
-
-std::vector<double> helios::flatten( const std::vector<std::vector<double> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<double> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<helios::vec2> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::vec2> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<helios::vec3> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::vec3> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<helios::vec4> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::vec4> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int2> helios::flatten( const std::vector<std::vector<helios::int2> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::int2> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int3> helios::flatten( const std::vector<std::vector<helios::int3> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::int3> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int4> helios::flatten( const std::vector<std::vector<helios::int4> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<helios::int4> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<std::string> helios::flatten( const std::vector<std::vector<std::string> > &vec ){
-
-    size_t ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            ind++;
-        }
-    }
-
-    std::vector<std::string> flat( ind );
-    ind = 0;
-    for( const auto &j : vec ) {
-        for( const auto& i : j ) {
-            flat[ind] = i;
-            ind++;
-        }
-    }
-    return flat;
-
-}
-
-std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<int> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<int> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<uint> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<uint> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<float> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<float> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<double> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<double> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<helios::vec2> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::vec2> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<helios::vec3> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::vec3> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<helios::vec4> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::vec4> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<helios::int2> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::int2> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<helios::int3> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::int3> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<helios::int4> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<helios::int4> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::string> > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                ind++;
-            }
-        }
-    }
-
-    std::vector<std::string> flat( ind );
-    ind = 0;
-    for( const auto &k : vec ) {
-        for( const auto &j : k ) {
-            for( const auto& i : j ) {
-                flat[ind] = i;
-                ind++;
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<int> helios::flatten( const std::vector<std::vector<std::vector<std::vector<int> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<int> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<uint> helios::flatten( const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<uint> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<float> helios::flatten( const std::vector<std::vector<std::vector<std::vector<float> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<float> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<double> helios::flatten( const std::vector<std::vector<std::vector<std::vector<double> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<double> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec2> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::vec2> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec3> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::vec3> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::vec4> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::vec4> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int2> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::int2> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int3> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::int3> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<helios::int4> helios::flatten( const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<helios::int4> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
-
-std::vector<std::string> helios::flatten( const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec ){
-
-    size_t ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    ind++;
-                }
-            }
-        }
-    }
-
-    std::vector<std::string> flat( ind );
-    ind = 0;
-    for( const auto &w : vec ) {
-        for( const auto &k : w) {
-            for (const auto &j: k) {
-                for (const auto &i: j) {
-                    flat[ind] = i;
-                    ind++;
-                }
-            }
-        }
-    }
-    return flat;
-
-}
+template std::vector<int> helios::flatten(const std::vector<std::vector<std::vector<std::vector<int>>>>& vec);
+template std::vector<uint> helios::flatten(const std::vector<std::vector<std::vector<std::vector<uint>>>>& vec);
+template std::vector<float> helios::flatten(const std::vector<std::vector<std::vector<std::vector<float>>>>& vec);
+template std::vector<double> helios::flatten(const std::vector<std::vector<std::vector<std::vector<double>>>>& vec);
+template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec2>>>>& vec);
+template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec3>>>>& vec);
+template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec4>>>>& vec);
+template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int2>>>>& vec);
+template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int3>>>>& vec);
+template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int4>>>>& vec);
+template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::vector<std::vector<std::string>>>>& vec);
 
 helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end ){
 
@@ -2778,17 +2086,17 @@ helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &ta
   float B[16] = {2.f, -2.f, 1.f, 1.f, -3.f, 3.f, -2.f, -1.f, 0, 0, 1.f, 0, 1.f, 0, 0, 0};
 
   //Control matrix
-  float C[12] = {x_start.x, x_start.y, x_start.z, x_end.x, x_end.y, x_end.z, tan_start.x, tan_start.y, tan_start.z, tan_end.x, tan_end.y, tan_end.z};
+  const float C[12] = {x_start.x, x_start.y, x_start.z, x_end.x, x_end.y, x_end.z, tan_start.x, tan_start.y, tan_start.z, tan_end.x, tan_end.y, tan_end.z};
 
   //Parameter vector
-  float P[4] = {u*u*u, u*u, u, 1.f};
+  const float P[4] = {u*u*u, u*u, u, 1.f};
 
   float R[12]={0.f};
 
   for( int i=0;i<4;i++){
     for(int j=0;j<3;j++){
       for(int k=0;k<4;k++){
-	R[3*i+j]=R[3*i+j]+B[4*i+k]*C[3*k+j];
+	    R[3*i+j]=R[3*i+j]+B[4*i+k]*C[3*k+j];
       }
     }
   }
@@ -2805,7 +2113,7 @@ helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &ta
 
 }
 
-float helios::XMLloadfloat( pugi::xml_node node, const char* field ){
+float helios::XMLloadfloat(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2822,7 +2130,7 @@ float helios::XMLloadfloat( pugi::xml_node node, const char* field ){
   
 }
 
-int helios::XMLloadint( pugi::xml_node node, const char* field ){
+int helios::XMLloadint(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2839,9 +2147,9 @@ int helios::XMLloadint( pugi::xml_node node, const char* field ){
   
 }
 
-std::string helios::XMLloadstring( pugi::xml_node node, const char* field ){
+std::string helios::XMLloadstring(const pugi::xml_node node, const char* field ){
 
-  std::string field_str = deblank(node.child_value(field));
+  const std::string field_str = deblank(node.child_value(field));
     
   std::string value;
   if( field_str.empty() ){
@@ -2854,7 +2162,7 @@ std::string helios::XMLloadstring( pugi::xml_node node, const char* field ){
   
 }
 
-helios::vec2 helios::XMLloadvec2( pugi::xml_node node, const char* field ){
+helios::vec2 helios::XMLloadvec2(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2869,7 +2177,7 @@ helios::vec2 helios::XMLloadvec2( pugi::xml_node node, const char* field ){
   
 }
 
-helios::vec3 helios::XMLloadvec3( pugi::xml_node node, const char* field ){
+helios::vec3 helios::XMLloadvec3(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2884,7 +2192,7 @@ helios::vec3 helios::XMLloadvec3( pugi::xml_node node, const char* field ){
   
 }
 
-helios::vec4 helios::XMLloadvec4( pugi::xml_node node, const char* field ){
+helios::vec4 helios::XMLloadvec4(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2899,7 +2207,7 @@ helios::vec4 helios::XMLloadvec4( pugi::xml_node node, const char* field ){
   
 }
 
-helios::int2 helios::XMLloadint2( pugi::xml_node node, const char* field ){
+helios::int2 helios::XMLloadint2(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2914,7 +2222,7 @@ helios::int2 helios::XMLloadint2( pugi::xml_node node, const char* field ){
   
 }
 
-helios::int3 helios::XMLloadint3( pugi::xml_node node, const char* field ){
+helios::int3 helios::XMLloadint3(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2929,7 +2237,7 @@ helios::int3 helios::XMLloadint3( pugi::xml_node node, const char* field ){
   
 }
 
-helios::int4 helios::XMLloadint4( pugi::xml_node node, const char* field ){
+helios::int4 helios::XMLloadint4(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2944,7 +2252,7 @@ helios::int4 helios::XMLloadint4( pugi::xml_node node, const char* field ){
   
 }
 
-helios::RGBcolor helios::XMLloadrgb( pugi::xml_node node, const char* field ){
+helios::RGBcolor helios::XMLloadrgb(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2959,7 +2267,7 @@ helios::RGBcolor helios::XMLloadrgb( pugi::xml_node node, const char* field ){
   
 }
 
-helios::RGBAcolor helios::XMLloadrgba( pugi::xml_node node, const char* field ){
+helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char* field ){
 
   const char* field_str = node.child_value(field);
     
@@ -2976,7 +2284,7 @@ helios::RGBAcolor helios::XMLloadrgba( pugi::xml_node node, const char* field ){
 
 float helios::fzero(float(*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol, int max_iterations ){
 
-    float T;
+    float T = init_guess;
 
     float T_old_old = 1.1f*init_guess;
 
@@ -3022,7 +2330,7 @@ float helios::fzero(float(*function)(float value, std::vector<float> &variables,
 float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
 
     //Ensure that no 2 adjacent x values are equal, and that x values are monotonically increasing
-    const float EPSILON{1.0E-5};
+    constexpr float EPSILON{1.0E-5};
     for (std::size_t i = 1; i < points.size(); ++i) {
         float deltaX{std::abs(points[i].x - points[i - 1].x)};
         if (deltaX < EPSILON) {
@@ -3041,7 +2349,7 @@ float helios::interp1( const std::vector<helios::vec2> &points, float x ) {
     };
 
     //Find the first table entry whose value is >= caller's x value
-    auto iter = std::lower_bound(points.cbegin(), points.cend(), x, lessThan);
+    const auto iter = std::lower_bound(points.cbegin(), points.cend(), x, lessThan);
 
     //If the caller's X value is greater than the largest
     //X value in the table, we can't interpolate.
@@ -3160,3 +2468,128 @@ std::vector<float> helios::importVectorFromFile(const std::string &filepath){
   return vec;
 
 }
+
+float helios::sample_Beta_distribution(float mu, float nu, std::minstd_rand0 *generator) {
+
+    // 1) draw two independent Gamma variates:
+    //    X ~ Gamma(α=ν, 1),  Y ~ Gamma(β=μ, 1)
+    std::gamma_distribution<float>  dist_nu (nu, 1.0);
+    std::gamma_distribution<float>  dist_mu (mu, 1.0);
+
+    float X = dist_nu(*generator);
+    float Y = dist_mu(*generator);
+
+    // 2) form the Beta = X/(X+Y)
+    float b = X / (X + Y);
+
+    // 3) rescale to θ_L = (π/2)*b
+    return 0.5f * PI_F * b;
+}
+
+// Complete elliptic integral of the first kind via the arithmetic–geometric mean (AGM)
+float compute_elliptic_integral_first_kind(float e) {
+    // K(e) = π / (2 * AGM(1, sqrt(1 - e^2)))
+    float a = 1.0f;
+    float b = std::sqrt(1.0f - e*e);
+    for (int iter = 0; iter < 10; ++iter) {
+        float an = 0.5f * (a + b);
+        float bn = std::sqrt(a * b);
+        a = an;
+        b = bn;
+    }
+    return PI_F / (2.0f * a);
+}
+
+// Ellipsoidal PDF for leaf azimuth distribution
+// phi: sample angle [0,2π), e: eccentricity, phi0: rotation offset, K_e: precomputed ellip. integral
+float evaluate_ellipsoidal_azimuth_PDF(float phi, float e, float phi0, float K_e) {
+    float d = phi - phi0;
+    float c2 = (1.f - e*e) * std::cos(d) * std::cos(d) + std::sin(d) * std::sin(d);
+    return 1.f / (4.f * K_e * std::sqrt(c2));
+}
+
+// Sample phi from ellipsoidal distribution via rejection sampling
+float helios::sample_ellipsoidal_azimuth(
+    float e,
+    float phi0_degrees,
+    std::minstd_rand0 *generator
+) {
+    // sanity‐check
+    if (e < 0.f || e > 1.f) {
+        helios_runtime_error( "ERROR (helios::sample_ellipsoidal_azimuth): Eccentricity must be in [0,1].");
+    }
+
+    // convert rotation offset to radians
+    float phi0 = deg2rad(phi0_degrees);
+
+    // ellipse semiaxes: a=1, b = sqrt(1 - e^2)
+    float a = 1.f;
+    float b = std::sqrt(1.f - e*e);
+
+    // sample the ellipse parameter t uniformly in [0,2π)
+    std::uniform_real_distribution<float> distT(0.f, 2.f * PI_F);
+    float t = distT(*generator);
+
+    // point on the ellipse boundary
+    float x = a * std::cos(t);
+    float y = b * std::sin(t);
+
+    // compute its polar angle
+    float phi = std::atan2(y, x) + phi0;
+
+    // wrap into [0,2π)
+    if (phi < 0.f)
+        phi += 2.f * PI_F;
+    else if (phi >= 2.f*PI_F)
+        phi -= 2.f * PI_F;
+
+    return phi;
+}
+
+// float helios::sample_ellipsoidal_azimuth(
+//     float e,
+//     float phi0_degrees,
+//     std::minstd_rand0 *generator
+// ) {
+//     // 1) sanity‐check
+//     if (e < 0.f || e > 1.f) {
+//         helios_runtime_error(
+//             "ERROR (helios::sample_ellipsoidal_azimuth): "
+//             "eccentricity must be in [0,1]."
+//         );
+//     }
+//
+//     // 2) trivial uniform case
+//     std::uniform_real_distribution<float> distPhi(0.f, 2.f * PI_F);
+//     if (e == 0.f) {
+//         return distPhi(*generator);
+//     }
+//
+//     // 3) precompute rotation offset
+//     float phi0 = deg2rad(phi0_degrees);
+//
+//     // 4) rejection sampling: envelope = uniform φ, accept with ratio = (1–e²)/denominator
+//     std::uniform_real_distribution<float> dist01(0.f, 1.f);
+//     while (true) {
+//         float phi = distPhi(*generator);
+//         float d   = phi - phi0;
+//         // wrap to [–π,π) for numerical stability
+//         if      (d < -PI_F) d += 2.f*PI_F;
+//         else if (d >=  PI_F) d -= 2.f*PI_F;
+//
+//         // denominator = (1–e²)·cos²d + sin²d
+//         float c = std::cos(d), s = std::sin(d);
+//         float denom = (1.f - e*e)*c*c + s*s;
+//
+//         // acceptance ratio ∈ (0,1]
+//         float ratio = (1.f - e*e) / denom;
+//
+//         if (dist01(*generator) <= ratio) {
+//             // wrap phi back into [0,2π)
+//             if      (phi < 0.f)        phi += 2.f*PI_F;
+//             else if (phi >= 2.f*PI_F)  phi -= 2.f*PI_F;
+//             return phi;
+//         }
+//         // otherwise retry
+//     }
+// }
