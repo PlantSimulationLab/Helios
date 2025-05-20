@@ -845,6 +845,15 @@ void ProjectBuilder::buildFromXML(){
     // } //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
     #endif //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
 
+    #ifdef ENABLE_CANOPY_GENERATOR
+        canopygenerator = new CanopyGenerator(context);
+        std::cout << "Loaded CanopyGenerator plugin." << std::endl;
+    // }else{
+    #else
+        std::cout << "Excluding CanopyGenerator plugin." << std::endl;
+    // } //CANOPYGENERATOR
+    #endif //CANOPYGENERATOR
+
     // -- main time loop -- //
     if (enable_radiation){
         assert( context->doesGlobalDataExist( "air_turbidity" ) );
@@ -894,6 +903,7 @@ void ProjectBuilder::buildFromXML(){
         helios_runtime_error(xml_error_string);
     }
     xmlGetValues();
+    updateGround();
     updateSpectra();
 
     ground_area = context->sumPrimitiveSurfaceArea( ground_UUIDs );
@@ -2311,6 +2321,15 @@ void ProjectBuilder::visualize(){
                     } else{
                         ImGui::Text("Coordinate Axes Disabled");
                     }
+                    // ####### LIGHTING MODEL ####### //
+                    std::string prev_lighting_model = lighting_model;
+                    ImGui::SetNextItemWidth(100);
+                    dropDown("Lighting Model", lighting_model, lighting_models);
+                    if (prev_lighting_model != lighting_model){
+                        if (lighting_model == "None") visualizer->setLightingModel(Visualizer::LIGHTING_NONE);
+                        if (lighting_model == "Phong") visualizer->setLightingModel(Visualizer::LIGHTING_PHONG);
+                        if (lighting_model == "Phong Shadowed") visualizer->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+                    }
                     // ####### LOCATION ####### //
                     ImGui::SetWindowFontScale(1.25f);
                     ImGui::Text("Location:");
@@ -2337,40 +2356,6 @@ void ProjectBuilder::visualize(){
                     randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
                     randomizerParams("UTC_offset");
                     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
-                    // ####### DOMAIN ORIGIN ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
-                    randomizerParams("domain_origin_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
-                    randomizerParams("domain_origin_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
-                    randomizerParams("domain_origin_z");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Origin");
-                    // ####### DOMAIN EXTENT ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
-                    randomizerParams("domain_extent_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
-                    randomizerParams("domain_extent_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Extent");
                      // ####### Weather File ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::RadioButton("CSV", is_weather_file_csv); if (ImGui::IsItemClicked()) is_weather_file_csv = true;
@@ -2493,6 +2478,57 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
+                    // ####### DOMAIN EXTENT ####### //
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
+                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+                    randomizerParams("domain_extent_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
+                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+                    randomizerParams("domain_extent_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Extent");
+                    // ####### DOMAIN ORIGIN ####### //
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
+                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
+                    randomizerParams("domain_origin_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
+                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
+                    randomizerParams("domain_origin_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
+                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
+                    randomizerParams("domain_origin_z");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Origin");
+                    #ifdef ENABLE_CANOPY_GENERATOR
+                    // ####### NUMBER OF TILES ####### //
+                    ImGui::SetNextItemWidth(60);
+                    int temp[2];
+                    temp[0] = num_tiles.x;
+                    temp[1] = num_tiles.y;
+                    ImGui::InputInt2("Number of Tiles", temp);
+                    num_tiles.x = temp[0];
+                    num_tiles.y = temp[1];
+                    // ####### SUBPATCHES ####### //
+                    ImGui::SetNextItemWidth(60);
+                    temp[0] = subpatches.x;
+                    temp[1] = subpatches.y;
+                    ImGui::InputInt2("Subpatches", temp);
+                    subpatches.x = temp[0];
+                    subpatches.y = temp[1];
+                    #endif
 
                     ImGui::EndTabItem();
                 }
@@ -4871,6 +4907,7 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
 }
 
 void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, vec3 position, std::string file_extension) const{
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     std::vector<std::string> primitive_data_vec = {"object_label"};
     std::vector<uint> canopy_primID_vec;
     std::vector<uint> canopy_objID_vec;
@@ -4892,9 +4929,11 @@ void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_
     for (uint objID : canopy_objID_vec){
         context->translateObject(objID, position);
     }
+    #endif
 }
 
 void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const{
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     std::vector<std::string> primitive_data_vec = {"object_label"};
     std::vector<std::vector<uint>> canopy_primID_vec;
     std::vector<std::vector<uint>> canopy_objID_vec;
@@ -4926,6 +4965,7 @@ void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> ca
             context->translateObject(objID, positions[i]);
         }
     }
+    #endif
 }
 
 void ProjectBuilder::addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission){
@@ -5531,6 +5571,7 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, st
 }
 
 void ProjectBuilder::deleteCanopy(const std::string &canopy){
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     int delete_idx = canopy_labels_dict[canopy];
     for (auto plant_instance : canopy_IDs[delete_idx]){
         plantarchitecture->deletePlantInstance(plant_instance);
@@ -5542,6 +5583,7 @@ void ProjectBuilder::deleteCanopy(const std::string &canopy){
     } else{
         current_canopy = "";
     }
+    #endif
 }
 
 
@@ -5560,6 +5602,7 @@ void ProjectBuilder::deleteObject(const std::string& obj){
 
 
 void ProjectBuilder::updateCanopy(const std::string &canopy){
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     int update_idx = canopy_labels_dict[canopy];
     for (auto plant_instance : canopy_IDs[update_idx]){
         plantarchitecture->deletePlantInstance(plant_instance);
@@ -5593,6 +5636,7 @@ void ProjectBuilder::updateCanopy(const std::string &canopy){
     primitive_UUIDs["flower"] = flower_UUIDs;
 
     canopy_IDs[canopy_labels_dict[canopy]] = new_canopy_IDs;
+    #endif
 }
 
 
@@ -5661,15 +5705,39 @@ void ProjectBuilder::updateGround(){
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
         ground_objID = context->addPolymeshObject( ground_UUIDs );
     }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
+        #ifdef ENABLE_CANOPY_GENERATOR
+        ground_UUIDs.clear();
+        canopygenerator->buildGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str() );
+        ground_UUIDs = canopygenerator->getGroundUUIDs();
+        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+        context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+        primitive_UUIDs["ground"] = ground_UUIDs;
+
+        return;
+        #else
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        #endif
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
+
+        #ifdef ENABLE_CANOPY_GENERATOR
+        ground_UUIDs.clear();
+        canopygenerator->buildGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str() );
+        ground_UUIDs = canopygenerator->getGroundUUIDs();
+        context->setPrimitiveColor(ground_UUIDs, ground_color_);
+        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+        context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+        primitive_UUIDs["ground"] = ground_UUIDs;
+
+        return;
+        #else
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        #endif
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];

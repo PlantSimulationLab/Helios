@@ -30,6 +30,7 @@ class RadiationModel;
 class SolarPosition;
 class Visualizer;
 class CameraProperties;
+class CanopyGenerator;
 void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_architecture_ptr, helios::Context *context_ptr);
 void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solarposition_ptr, RadiationModel *radiation_ptr, helios::Context *context_ptr );
 void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceModel *boundarylayerconductancemodel, EnergyBalanceModel *energybalancemodel, helios::Context *context_ptr);
@@ -52,6 +53,10 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
     #include "PlantArchitecture.h"
     #include "BuildGeometry.h"
 #endif //PLANT_ARCHITECTURE
+
+#ifdef ENABLE_CANOPY_GENERATOR
+    #include "CanopyGenerator.h"
+#endif //CANOPY_GENERATOR
 
 #ifdef ENABLE_RADIATION_MODEL
     #include "RadiationModel.h"
@@ -1199,6 +1204,18 @@ class ProjectBuilder {
     //! Indices of canopies that need to be updated
     std::set<int> dirty_canopies = {};
 
+    //! Possible lighting models
+    std::set<std::string> lighting_models = {"None", "Phong", "Phong Shadowed"};
+
+    //! Lighting model
+    std::string lighting_model = "None";
+
+    //! Number of tiles
+    helios::int2 num_tiles{1,1};
+
+    //! Subpatches
+    helios::int2 subpatches{1,1};
+
   public:
     //! Context
     helios::Context *context = nullptr;
@@ -1208,6 +1225,9 @@ class ProjectBuilder {
 
     //! Plant Architecture
     PlantArchitecture *plantarchitecture = nullptr;
+
+    //! Canopy Generator
+    CanopyGenerator *canopygenerator = nullptr;
 
     //! Radiation Model
     RadiationModel *radiation = nullptr;
