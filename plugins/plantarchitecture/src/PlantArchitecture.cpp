@@ -1272,6 +1272,27 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     }
 }
 
+float Phytomer::calculatePhytomerVolume(uint node_number) const {
+    // Get the radii of this phytomer from the parent shoot
+    const auto &segment = parent_shoot_ptr->shoot_internode_radii.at(node_number);
+
+    // Find the average radius
+    float avg_radius = 0.0f;
+    for (float radius : segment) {
+        avg_radius += radius;
+    }
+    avg_radius /= segment.size();
+
+    // Get the length of the phytomer
+    float length = getInternodeLength();
+
+    // Calculate the volume of the cylinder
+    float volume = PI_F * avg_radius * avg_radius * length;
+
+    return volume;
+
+}
+
 void Phytomer::updateInflorescence(FloralBud &fbud) {
     bool build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
@@ -3690,7 +3711,11 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
                 //scale internode girth
                 if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
-                    incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
+                    if( carbon_model_enabled ){
+                        incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false);
+                    }else{
+                        incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
+                    }
                 }
 
                 node_index++;

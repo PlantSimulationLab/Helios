@@ -274,10 +274,14 @@ enum BudState{
 struct CarbohydrateParameters {
 
     // -- Stem Growth Parameters -- //
-    //! internode (wood/stem) density (g m^-3)
+    //! mature internode (wood/stem) density (g m^-3)
     float stem_density = 540000;
-    //! fraction of the dry weight of internode made up by carbon
+    //! fraction of the dry weight of internode made up by carbon in mature shoot
     float stem_carbon_percentage = 0.4559;
+    //! age at which stem reaches physiological maturity (days)
+    float maturity_age = 365;
+    //! starting fraction of the final stem carbon density in new growth
+    float initial_density_ratio = .1;
     //! ratio of shoot internode dry weight to root dry weight
     float shoot_root_ratio = 3;
 
@@ -302,7 +306,7 @@ struct CarbohydrateParameters {
     float stem_maintainance_respiration_rate = 3.5024e-05;
     //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
     float root_maintainance_respiration_rate = 3.5024e-05;
-    //! growth respiration cost as a fraction of [what?]
+    //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
     float growth_respiration_fraction = 0.28;
 
     // -- Organ Abortion Thresholds -- //
@@ -318,6 +322,9 @@ struct CarbohydrateParameters {
     float carbohydrate_phyllochron_threshold = 0.1;
     //! carbohydrate concentration threshold [what?] as a fraction of the molar density of the stem
     float carbohydrate_phyllochron_threshold_low = 0.05;
+
+    //! carbohydrate concentration threshold for radial growth as a fraction of the molar density of the stem
+    float carbohydrate_growth_threshold = 0.1;
 
     // -- Carbon Transfer Parameters -- //
     //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of the molar density of the stem
@@ -966,6 +973,8 @@ public:
      */
     [[nodiscard]] std::vector<float> getInternodeNodeRadii() const;
 
+    float calculatePhytomerVolume(uint node_number) const;
+
     /**
      * \brief Retrieves the axis vector of the internode at a given fraction along the internode.
      *
@@ -1231,6 +1240,8 @@ public:
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
+
+    float old_phytomer_volume = 0;
 
     float downstream_leaf_area = 0;
 
@@ -2392,6 +2403,7 @@ protected:
     // --- Plant Growth --- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
+    void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
     // --- Carbohydrate Model --- //
 
