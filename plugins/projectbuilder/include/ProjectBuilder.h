@@ -391,6 +391,12 @@ class ProjectBuilder {
     std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode",
                                                 "peduncle", "petal", "pedicel", "fruit"};
 
+    //! Bounding boxes
+    std::map<std::string, bool> bounding_boxes = {};
+
+    //! Bounding boxes map
+    std::map<std::string, int> bounding_boxes_map;
+
     //! Primitive names set
     std::set<std::string> primitive_names_set = {"All", "ground", "leaf", "petiolule", "petiole", "internode",
                                                  "peduncle", "petal", "pedicel", "fruit"};
@@ -1210,6 +1216,12 @@ class ProjectBuilder {
     //! Lighting model
     std::string lighting_model = "None";
 
+    //! Light direction in the visualizer
+    helios::vec3 light_direction{0, 0, 1};
+
+    //! Light intensity factor in the visualizer
+    float light_intensity = 2.0;
+
     //! Number of tiles
     helios::int2 num_tiles{1,1};
 
@@ -1709,6 +1721,9 @@ class ProjectBuilder {
 
     //! Shorten absolute path to file name
     std::string shortenPath(std::string path_name);
+
+    //!
+    void setBoundingBoxObjects();
 
     //! Constructor
     ProjectBuilder(){
