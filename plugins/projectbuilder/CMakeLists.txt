@@ -19,7 +19,6 @@ if("boundarylayerconductance" IN_LIST PLUGINS)
     )
 endif()
 
-
 if("energybalance" IN_LIST PLUGINS)
     add_definitions(-DENABLE_ENERGYBALANCEMODEL)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../energybalance/include")
@@ -44,6 +43,13 @@ if("plantarchitecture" IN_LIST PLUGINS)
     list(APPEND SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/BuildGeometry.cpp"
     )
+endif()
+
+if("canopygenerator" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_CANOPY_GENERATOR)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../canopygenerator/include")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/canopygenerator/include)
 endif()
 
 if("radiation" IN_LIST PLUGINS)
