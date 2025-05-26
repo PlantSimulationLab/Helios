@@ -1687,18 +1687,34 @@ class ProjectBuilder {
     void updateColor(std::string curr_obj, std::string obj_type, float* new_color);
 
     //! Update object in visualizer (e.g. position, orientation, scale, color, etc.)
+    /**
+     * \param[in] curr_obj Object to update
+    */
     void updateObject(std::string curr_obj);
 
     //! Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.)
     void updateRigs();
 
     //! Delete rig
+    /**
+     * \param[in] curr_rig Rig to be deleted
+    */
     void deleteRig(std::string curr_rig);
 
     //! Create dropdown widget
+    /**
+     * \param[in] widget_name Name of dropdown widget (must be unique)
+     * \param[in] selected Selected option
+     * \param[in] choices Possible selection options
+    */
     void dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices);
 
     //! Create dropdown widget
+    /**
+     * \param[in] widget_name Name of dropdown widget (must be unique)
+     * \param[in] selected Selected option
+     * \param[in] choices Possible selection options
+    */
     void dropDown(std::string widget_name, std::string& selected, std::set<std::string> choices);
 
     //! Refresh visualizer context and display loading text
@@ -1720,10 +1736,24 @@ class ProjectBuilder {
     void updateContext();
 
     //! Shorten absolute path to file name
+    /**
+     * \param[in] path_name Absolute path to be shortened
+    */
     std::string shortenPath(std::string path_name);
 
-    //!
+    //! Set object_number primitive data for
     void setBoundingBoxObjects();
+
+    //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes (from `buildGround` Canopy Generator plugin)
+    /**
+     * \param[in] ground_origin x-, y-, and z-position of the ground center point.
+     * \param[in] ground_extent Width of the ground in the x- and y-directions.
+     * \param[in] texture_subtiles Number of sub-divisions of the ground into texture map tiles in the x- and y-directions.
+     * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
+     * \param[in] ground_texture_file Path to file used for tile texture mapping.
+     * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
+    */
+    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation);
 
     //! Constructor
     ProjectBuilder(){

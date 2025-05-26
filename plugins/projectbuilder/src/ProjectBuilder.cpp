@@ -631,6 +631,7 @@ void ProjectBuilder::updateSpectra(){
             }
         }
     }
+    radiation->updateGeometry();
 }
 
 void ProjectBuilder::updateCameras(){
@@ -692,6 +693,7 @@ void ProjectBuilder::record(){
             image_dir_idx++;
         }
         std::filesystem::create_directory(image_dir);
+        std::cout << "Saving images to " << image_dir << std::endl;
         std::vector<uint> temp_lights{};
         for (std::string rig_label : rig_labels_set){
             int rig_index = rig_dict[rig_label];
@@ -924,8 +926,8 @@ void ProjectBuilder::buildFromXML(){
     }
     xmlGetValues();
     updateGround(); // TODO: add repeat ground to buildGeometry
+    updatePrimitiveTypes();
     updateSpectra(); // TODO: add update geometry at end
-    radiation->updateGeometry();
 
     ground_area = context->sumPrimitiveSurfaceArea( ground_UUIDs );
 
@@ -2237,6 +2239,7 @@ void ProjectBuilder::visualize(){
                             RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
                         visualizer->plotUpdate();
                         visualizer->clearGeometry();
+                        updateSpectra();
                         if (visualization_type != "RGB") {
                             visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             visualizer->enableColorbar();
@@ -2301,17 +2304,21 @@ void ProjectBuilder::visualize(){
             #ifdef ENABLE_RADIATION_MODEL
             ImGui::SameLine();
             if (ImGui::Button("Record")){
-                // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
-                const char* font_name = "LCD";
-                visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                    RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                visualizer->plotUpdate();
-                updateSpectra();
-                updateCameras(); //TODO: figure out why this causes an error
-                record();
-                visualizer->clearGeometry();
-                visualizer->buildContextGeometry(context);
-                visualizer->plotUpdate();
+                if (band_group_names.empty()){
+                    std::cout << "At least 1 band group (a group of 1 or 3 bands) must be defined to record images." << std::endl;
+                } else{
+                    // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+                    const char* font_name = "LCD";
+                    visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                        RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                    visualizer->plotUpdate();
+                    updateSpectra();
+                    updateCameras(); //TODO: figure out why this causes an error
+                    record();
+                    visualizer->clearGeometry();
+                    visualizer->buildContextGeometry(context);
+                    visualizer->plotUpdate();
+                }
             }
             recordPopup();
             ImGui::OpenPopupOnItemClick("repeat_record", ImGuiPopupFlags_MouseButtonRight);
@@ -2503,6 +2510,26 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::Text("Manually Set Ground Color");
                     }
+                    // ####### DOMAIN ORIGIN ####### //
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
+                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
+                    randomizerParams("domain_origin_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
+                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
+                    randomizerParams("domain_origin_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
+                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
+                    randomizerParams("domain_origin_z");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Origin");
                     if (ground_flag == 1){
                         // ####### GROUND RESOLUTION ####### //
                         ImGui::SetNextItemWidth(100);
@@ -2532,44 +2559,22 @@ void ProjectBuilder::visualize(){
                         ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Domain Extent");
+                        // ####### NUMBER OF TILES ####### //
+                        ImGui::SetNextItemWidth(60);
+                        int temp[2];
+                        temp[0] = num_tiles.x;
+                        temp[1] = num_tiles.y;
+                        ImGui::InputInt2("Number of Tiles", temp);
+                        num_tiles.x = temp[0];
+                        num_tiles.y = temp[1];
+                        // ####### SUBPATCHES ####### //
+                        ImGui::SetNextItemWidth(60);
+                        temp[0] = subpatches.x;
+                        temp[1] = subpatches.y;
+                        ImGui::InputInt2("Subpatches", temp);
+                        subpatches.x = temp[0];
+                        subpatches.y = temp[1];
                     }
-                    // ####### DOMAIN ORIGIN ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
-                    randomizerParams("domain_origin_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
-                    randomizerParams("domain_origin_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
-                    randomizerParams("domain_origin_z");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Origin");
-                    #ifdef ENABLE_CANOPY_GENERATOR
-                    // ####### NUMBER OF TILES ####### //
-                    ImGui::SetNextItemWidth(60);
-                    int temp[2];
-                    temp[0] = num_tiles.x;
-                    temp[1] = num_tiles.y;
-                    ImGui::InputInt2("Number of Tiles", temp);
-                    num_tiles.x = temp[0];
-                    num_tiles.y = temp[1];
-                    // ####### SUBPATCHES ####### //
-                    ImGui::SetNextItemWidth(60);
-                    temp[0] = subpatches.x;
-                    temp[1] = subpatches.y;
-                    ImGui::InputInt2("Subpatches", temp);
-                    subpatches.x = temp[0];
-                    subpatches.y = temp[1];
-                    #endif
 
                     ImGui::EndTabItem();
                 }
@@ -5767,39 +5772,29 @@ void ProjectBuilder::updateGround(){
         context->translatePrimitive( ground_UUIDs, domain_origin );
         ground_objID = context->addPolymeshObject( ground_UUIDs );
     }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
-        #ifdef ENABLE_CANOPY_GENERATOR
-        ground_UUIDs.clear();
-        canopygenerator->buildGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str() );
-        ground_UUIDs = canopygenerator->getGroundUUIDs();
-        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
-        context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
-        primitive_UUIDs["ground"] = ground_UUIDs;
+        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
 
-        return;
-        #else
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-        #endif
+            return;
+        }else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        }
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
 
-        #ifdef ENABLE_CANOPY_GENERATOR
-        ground_UUIDs.clear();
-        canopygenerator->buildGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str() );
-        ground_UUIDs = canopygenerator->getGroundUUIDs();
-        context->setPrimitiveColor(ground_UUIDs, ground_color_);
-        context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
-        context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
-        primitive_UUIDs["ground"] = ground_UUIDs;
+        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+            context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
-        return;
-        #else
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
-        #endif
+            return;
+        }else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        }
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
@@ -5816,6 +5811,7 @@ void ProjectBuilder::updateGround(){
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
 }
 
@@ -5868,4 +5864,35 @@ void ProjectBuilder::setBoundingBoxObjects(){
     }
 }
 
+
+void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  ){
+
+    ground_UUIDs.clear();
+
+    vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
+
+    vec2 dx_subpatch( dx_tile.x/float(texture_subpatches.x), dx_tile.y/float(texture_subpatches.y) );
+
+    std::vector<uint> UUIDs;
+    for( int j=0; j<texture_subtiles.y; j++ ){
+        for( int i=0; i<texture_subtiles.x; i++ ){
+
+            vec3 center = ground_origin + make_vec3( -0.5f*ground_extent.x+(float(i)+0.5f)*dx_tile.x, -0.5f*ground_extent.y+(float(j)+0.5f)*dx_tile.y, 0 );
+
+            if( ground_rotation!=0 ){
+                center = rotatePointAboutLine( center, ground_origin, make_vec3(0,0,1), ground_rotation );
+            }
+
+            UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_texture_file );
+
+            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
+
+        }
+    }
+
+    context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    primitive_UUIDs["ground"] = ground_UUIDs;
+
+}
 
