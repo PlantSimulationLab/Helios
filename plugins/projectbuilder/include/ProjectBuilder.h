@@ -1225,9 +1225,6 @@ class ProjectBuilder {
     //! Number of tiles
     helios::int2 num_tiles{1,1};
 
-    //! Subpatches
-    helios::int2 subpatches{1,1};
-
   public:
     //! Context
     helios::Context *context = nullptr;

@@ -2533,20 +2533,28 @@ void ProjectBuilder::visualize(){
                     ImGui::SameLine();
                     ImGui::Text("Domain Origin");
                     if (ground_flag == 1){
-                    // ####### GROUND RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
-                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
-                    randomizerParams("ground_resolution_x");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
-                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
-                    randomizerParams("ground_resolution_y");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Ground Resolution");
+                        // ####### GROUND RESOLUTION ####### //
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
+                        randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
+                        randomizerParams("ground_resolution_x");
+                        ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
+                        randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
+                        randomizerParams("ground_resolution_y");
+                        ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Ground Resolution");
+                        // ####### NUMBER OF TILES ####### //
+                        ImGui::SetNextItemWidth(60);
+                        int temp[2];
+                        temp[0] = num_tiles.x;
+                        temp[1] = num_tiles.y;
+                        ImGui::InputInt2("Number of Tiles", temp);
+                        num_tiles.x = temp[0];
+                        num_tiles.y = temp[1];
                         // ####### DOMAIN EXTENT ####### //
                         ImGui::SetNextItemWidth(50);
                         ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
@@ -2561,21 +2569,6 @@ void ProjectBuilder::visualize(){
                         ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Domain Extent");
-                        // ####### NUMBER OF TILES ####### //
-                        ImGui::SetNextItemWidth(60);
-                        int temp[2];
-                        temp[0] = num_tiles.x;
-                        temp[1] = num_tiles.y;
-                        ImGui::InputInt2("Number of Tiles", temp);
-                        num_tiles.x = temp[0];
-                        num_tiles.y = temp[1];
-                        // ####### SUBPATCHES ####### //
-                        ImGui::SetNextItemWidth(60);
-                        temp[0] = subpatches.x;
-                        temp[1] = subpatches.y;
-                        ImGui::InputInt2("Subpatches", temp);
-                        subpatches.x = temp[0];
-                        subpatches.y = temp[1];
                     }
 
                     ImGui::EndTabItem();
@@ -5774,13 +5767,13 @@ void ProjectBuilder::updateGround(){
         context->translatePrimitive( ground_UUIDs, domain_origin );
         ground_objID = context->addPolymeshObject( ground_UUIDs );
     }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
-        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+        if (num_tiles.x > 1 || num_tiles.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
 
             return;
         }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
@@ -5788,14 +5781,14 @@ void ProjectBuilder::updateGround(){
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
 
-        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+        if (num_tiles.x > 1 || num_tiles.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
             context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
             return;
         }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
