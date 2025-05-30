@@ -12,5 +12,6 @@ var searchData=
   ['_7eradiationmodel_9',['~RadiationModel',['../class_radiation_model.html#aeae03b4de9b9c57ac987407fdfd6afa4',1,'RadiationModel']]],
   ['_7esphere_10',['~Sphere',['../classhelios_1_1_sphere.html#ae7e8121c9a60f9c4e4efa853fd2cee59',1,'helios::Sphere']]],
   ['_7etile_11',['~Tile',['../classhelios_1_1_tile.html#a001e45730aa531c75c90a599b5524956',1,'helios::Tile']]],
-  ['_7etube_12',['~Tube',['../classhelios_1_1_tube.html#a15d0248cb525ce91129abcb398f728e8',1,'helios::Tube']]]
+  ['_7etube_12',['~Tube',['../classhelios_1_1_tube.html#a15d0248cb525ce91129abcb398f728e8',1,'helios::Tube']]],
+  ['_7evisualizer_13',['~Visualizer',['../class_visualizer.html#a013ec3101407fbe4805f289bc32d1265',1,'Visualizer']]]
 ];

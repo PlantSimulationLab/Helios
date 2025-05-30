@@ -32,7 +32,7 @@ include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng"   "${CMAKE_BINARY_DIR}/lib/libpng")
 add_dependencies( png_static zlibstatic )
 
-include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a;${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a")
+include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a" "${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
 
 target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng

@@ -15,8 +15,6 @@
     
 #include "VoxelIntersection.h"
 
-using namespace helios;
-
 #define CUDA_CHECK_ERROR(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -240,9 +238,9 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   for( size_t u = 0; u<UUIDs.size(); u++ ){
     size_t p = UUIDs[u];
 
-    PrimitiveType type = context->getPrimitiveType(p);
+    helios::PrimitiveType type = context->getPrimitiveType(p);
 
-    if( type == PRIMITIVE_TYPE_VOXEL ){
+    if( type == helios::PRIMITIVE_TYPE_VOXEL ){
       UUIDs_voxels.at(Nvoxels) = p;
       Nvoxels++;
     }else{
@@ -307,7 +305,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
     size[c] = vec3tofloat3( context->getVoxelSize(UUIDs_voxels.at(c)) );
     //rotation[c] = voxel->getRotation();
     rotation[c] = 0.f;
-    context->setPrimitiveData( UUIDs_voxels.at(c), "inside_UUIDs", HELIOS_TYPE_UINT, 0, NULL );
+    context->setPrimitiveData( UUIDs_voxels.at(c), "inside_UUIDs", helios::HELIOS_TYPE_UINT, 0, nullptr );
   }
 
   //copy from host to device memory
@@ -343,7 +341,7 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection( std::vector<uint> U
   for( std::map<uint,std::vector<uint> >::iterator it = vint.begin(); it!=vint.end(); ++it ){
     uint UUID = it->first;
     size_t s = vint.at(UUID).size();
-    context->setPrimitiveData( UUID, "inside_UUIDs", HELIOS_TYPE_UINT, s, &vint.at(UUID)[0] );
+    context->setPrimitiveData( UUID, "inside_UUIDs", helios::HELIOS_TYPE_UINT, s, &vint.at(UUID)[0] );
   }
 
   free(hit_vol);

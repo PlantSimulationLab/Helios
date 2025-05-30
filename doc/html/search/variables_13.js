@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['w_0',['w',['../structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f',1,'helios::int4::w'],['../structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937',1,'helios::vec4::w']]],
+  ['w_0',['w',['../structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f',1,'helios::int4::w'],['../structhelios_1_1uint4.html#a9f3e508e3d66ce70430853eeef65a6ed',1,'helios::uint4::w'],['../structhelios_1_1vec4.html#a5d4e8add341c4076176aac3574fe0937',1,'helios::vec4::w']]],
   ['wave_5famplitude_1',['wave_amplitude',['../struct_leaf_prototype.html#ab86a62f2f03c638481bfdd28997c74d1',1,'LeafPrototype']]],
   ['wave_5fperiod_2',['wave_period',['../struct_leaf_prototype.html#aa62b74d58f6a490473f3e30c5e5aa01a',1,'LeafPrototype']]],
   ['wavebandbounds_3',['wavebandBounds',['../struct_radiation_band.html#a11a0c1b2fe1f6be6efb8052fa247b396',1,'RadiationBand']]],

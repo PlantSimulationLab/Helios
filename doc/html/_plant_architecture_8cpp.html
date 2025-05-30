@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -167,12 +167,6 @@ $(function(){initNavTree('_plant_architecture_8cpp.html',''); initResizable(true
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae8890eda0cc734b787234ca36a92ff7d" id="r_ae8890eda0cc734b787234ca36a92ff7d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae8890eda0cc734b787234ca36a92ff7d">interpolateTube</a> (const std::vector&lt; float &gt; &amp;P, const float frac)</td></tr>
-<tr class="memdesc:ae8890eda0cc734b787234ca36a92ff7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interpolate the radius of a point along a tube.  <br /></td></tr>
-<tr class="separator:ae8890eda0cc734b787234ca36a92ff7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a66c0f084de79aed38888cd83d3bff788" id="r_a66c0f084de79aed38888cd83d3bff788"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a66c0f084de79aed38888cd83d3bff788">interpolateTube</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; &amp;P, const float frac)</td></tr>
-<tr class="memdesc:a66c0f084de79aed38888cd83d3bff788"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interpolate the position of a point along a tube.  <br /></td></tr>
-<tr class="separator:a66c0f084de79aed38888cd83d3bff788"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a90314e1f16ad76c838da858b9bf0ae86" id="r_a90314e1f16ad76c838da858b9bf0ae86"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a90314e1f16ad76c838da858b9bf0ae86">makeTubeFromCones</a> (uint radial_subdivisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;vertices, const std::vector&lt; float &gt; &amp;radii, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;colors, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="separator:a90314e1f16ad76c838da858b9bf0ae86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -184,70 +178,6 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition in file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a id="ae8890eda0cc734b787234ca36a92ff7d" name="ae8890eda0cc734b787234ca36a92ff7d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae8890eda0cc734b787234ca36a92ff7d">&#9670;&#160;</a></span>interpolateTube() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float interpolateTube </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>P</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>frac</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Interpolate the radius of a point along a tube. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">P</td><td>Vector of radii making up the tube. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">frac</td><td>Fractional position along the tube. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00022">22</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a66c0f084de79aed38888cd83d3bff788" name="a66c0f084de79aed38888cd83d3bff788"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a66c0f084de79aed38888cd83d3bff788">&#9670;&#160;</a></span>interpolateTube() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> interpolateTube </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>P</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>frac</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Interpolate the position of a point along a tube. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">P</td><td>Vector of 3D points making up the tube. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">frac</td><td>Fractional position along the tube. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00048">48</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
-
-</div>
-</div>
 <a id="a90314e1f16ad76c838da858b9bf0ae86" name="a90314e1f16ad76c838da858b9bf0ae86"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a90314e1f16ad76c838da858b9bf0ae86">&#9670;&#160;</a></span>makeTubeFromCones()</h2>
 
@@ -282,7 +212,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03886">3886</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l03829">3829</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>

@@ -254,7 +254,7 @@ RT_PROGRAM void closest_hit_camera() {
 
         //Note: UUID corresponds to the object that the ray hit (i.e., where energy is coming from), and UUID_origin is the object the ray originated from (i.e., where the energy is being received)
 
-        //find out if we hit top or bottom surface // per each ray
+        //find out if we hit top or bottom surface per each ray
         float3 normal;
 
         float m[16];
@@ -308,48 +308,42 @@ RT_PROGRAM void closest_hit_camera() {
                 strength = radiation_out_bottom[Nbands_launch * UUID + b] * prd.strength;
             }
 
-
             //specular reflection
 
-//            float strength_spec = 0;
-//            for( int rr=0; rr<Nsources; rr++ ) {
-//
-//                //light direction
-//                float3 light_direction;
-//                float light_magnitude;
-//                float spec = 0;
-//                if (source_types[rr] == 0) { //collimated source
-//                    light_direction = normalize(source_positions[rr]);
-//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[rr*Nbands_launch + b];
-//
-//                } else { //sphere source
-//
-//                    float3 ray_origin = ray.origin + t_hit * ray.direction;
-//
-//                    //sample point on surface of sphere
-//                    float theta_s = acos_safe(1.f - 2.f * rnd(prd.seed));
-//                    float phi_s = rnd(prd.seed) * 2.f * M_PI;
-//                    float3 sphere_point = 0.5 * source_widths[rr].x * make_float3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
-//
-//                    light_direction = sphere_point + source_positions[rr] - ray_origin;
-//
-//                    light_magnitude = d_magnitude(light_direction);
-//                    light_direction = normalize(light_direction);
-//                    spec = fabs(dot(normal, light_direction)) * source_fluxes[ rr*Nbands_launch + b] * fabs(dot(normal, light_direction)) / (light_magnitude * light_magnitude)*source_widths[rr].x*source_widths[rr].x;
-//                }
-//
-//                float3 specular_direction = normalize(2 * abs(dot(light_direction, normal)) * normal - light_direction);
-//
-//                strength_spec += spec * powf( abs(dot(specular_direction,ray.direction)), 1.7f) *1.f/float(launch_dim.x*launch_dim.y);
-//
-////                printf("strength_spec = %f %f %f %f\n",spec,specular_direction.x,specular_direction.y,specular_direction.z);
-//
-//            }
+           double strength_spec = 0;
+           if( specular_reflection_enabled && specular_exponent[objID] > 0.f ) {
+               for( int rr=0; rr<Nsources; rr++ ) {
+
+                   //light direction
+                   float3 light_direction;
+                   float spec = 0;
+                   if (source_types[rr] == 0 || source_types[rr] == 2) { //collimated source or sunsphere source
+
+                       light_direction = normalize(source_positions[rr]);
+                       // dot product term projects the flux onto the surface normal. This is different from traditional Blinn-Phong
+                       spec = max(0.f, dot(normal, light_direction));
+                       if (face) {
+                           spec *= radiation_out_top[Nbands_launch * UUID + b];
+                       } else {
+                           spec *= radiation_out_bottom[Nbands_launch * UUID + b];
+                       }
+
+                   } else { //sphere, disk or rectangular source
+                        //\todo Need to add generic functions to sample points on sphere, disk and rectangle source surfaces
+                   }
+
+                   //float3 specular_direction = normalize(2 * fabs(dot(light_direction, normal)) * normal - light_direction);
+                   float3 specular_direction = normalize(light_direction - ray.direction);
+
+                   //specular reflection
+                   float exponent = specular_exponent[objID];
+                   strength_spec += spec * pow( max(0.f,dot(specular_direction,normal)), exponent)*(exponent+2.f)/(double(launch_dim.x)*2.f*M_PI); //launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
+               }
+            }
 
             // absorption
 
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength );
-//            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength+strength_spec );
+           atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength+strength_spec );
 
         }
 

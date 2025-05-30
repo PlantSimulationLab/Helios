@@ -1,5 +1,7 @@
 var global_8h =
 [
+    [ "helios::PixelUVKey", "structhelios_1_1_pixel_u_v_key.html", null ],
+    [ "helios::PixelUVKeyHash", "structhelios_1_1_pixel_u_v_key_hash.html", null ],
     [ "helios::acos_safe", "group__functions.html#ga9f732ec5c2153020247c879034f81432", null ],
     [ "helios::asin_safe", "group__functions.html#gac400d6d37ff2494ec592a9f0a17ee9ab", null ],
     [ "helios::atan2_2pi", "group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf", null ],
@@ -93,7 +95,9 @@ var global_8h =
     [ "helios::vecmult", "global_8h.html#a40054144f951b396cd9f9ba32586862a", null ],
     [ "helios::wait", "group__functions.html#gad28da0b06687dc68c1212c1624e54bd0", null ],
     [ "helios::writeJPEG", "global_8h.html#a95600894b45bcc627d66c3dd8c202cd8", null ],
+    [ "helios::writeJPEG", "global_8h.html#a41e8e23d720957b63210ffce4d00af57", null ],
     [ "helios::writePNG", "global_8h.html#afc2520441ef9a290c5221dd892ea9f01", null ],
+    [ "helios::writePNG", "global_8h.html#ab052d0b3bc94e9795d807ac58206103d", null ],
     [ "helios::XMLloadfloat", "global_8h.html#a74ae3a9e16e2ca39dab735a1ac97a506", null ],
     [ "helios::XMLloadint", "global_8h.html#a4b756357236942bec6cc7f853aa77fc5", null ],
     [ "helios::XMLloadint2", "global_8h.html#ae55d4cef14213f642705952dc1ad4659", null ],

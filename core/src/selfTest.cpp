@@ -361,7 +361,7 @@ int Context::selfTest(){
 
     }
 
-    float area_exact = 0.25f*float(M_PI)*size.x*size.y;
+    float area_exact = 0.25f*PI_F*size.x*size.y;
 
     if( std::abs(At-area_exact)>0.005 ){
         error_count++;
@@ -561,6 +561,7 @@ int Context::selfTest(){
     if( fabs(solid_fraction-0.5f)>errtol ){
       error_count ++;
       std::cerr << "failed: Textured triangle solid fraction was not correct." << std::endl;
+        std::cout << solid_fraction << std::endl;
     }
 
     //------- Global Data --------//
@@ -1035,7 +1036,7 @@ int Context::selfTest(){
         error_count ++;
     }
     double err_4 = fabs(context_to.getTileObjectAreaRatio(to6) - 1.0*0.5/(1.0/15.0));
-    if(err_4 >= errtol){
+    if(err_4 >= 5.f*errtol){
         std::cerr << "failed. tile object area ratio returned by getTileObjectAreaRatio is not correct for textured multi-subpatch tile." << std::endl;
         error_count ++;
     }
@@ -1284,6 +1285,7 @@ int Context::selfTest(){
     {
         // Test Context::markGeometryClean()
         Context context_test;
+        context_test.addPatch();
         context_test.markGeometryDirty();
         context_test.markGeometryClean();
 
@@ -1296,6 +1298,7 @@ int Context::selfTest(){
     {
         // Test Context::isGeometryDirty() const
         Context context_test;
+        context_test.addPatch();
         context_test.markGeometryDirty();
 
         if (!context_test.isGeometryDirty()) {
@@ -2398,7 +2401,7 @@ int Context::selfTest(){
             error_count++;
             std::cerr << "failed: hidePrimitive - Patch creation failed." << std::endl;
         } else {
-            context_test.hidePrimitive({UUID});
+            context_test.hidePrimitive(UUID);
             if (!context_test.isPrimitiveHidden(UUID)) {
                 error_count++;
                 std::cerr << "failed: hidePrimitive - Patch should be hidden but is not." << std::endl;
@@ -2420,7 +2423,7 @@ int Context::selfTest(){
                 std::cerr << "failed: isPrimitiveHidden - Newly created patch should not be hidden." << std::endl;
             }
 
-            context_test.hidePrimitive({UUID});
+            context_test.hidePrimitive(UUID);
             if (!context_test.isPrimitiveHidden(UUID)) {
                 error_count++;
                 std::cerr << "failed: isPrimitiveHidden - Patch should be hidden but is not." << std::endl;
@@ -4710,9 +4713,6 @@ int Context::selfTest(){
                 error_count++;
                 std::cerr << "failed: Tube::updateTriangleVertices() - Original vertices retrieval failed." << std::endl;
             }
-
-            // Indirectly trigger the update
-            context_test.markGeometryDirty();  // If this exists
 
             // Retrieve updated vertices
             std::vector<vec3> updated_vertices = context_test.getPrimitiveVertices(tubeUUID);

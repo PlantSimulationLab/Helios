@@ -2157,3 +2157,57 @@ The radiation model has been re-designed, with the following primary additions:
 
 *Project Builder*
 - Lots of project builder updates and bug fixes. Credit to Sean Banks for these updates.
+
+[1.3.32] 2025-05-30
+
+*Context*
+- Minor refactoring to improve code clarity.
+- Added pre-defined RGBA colors, which mirror the existing RGB definitions.
+- Added Context::getPatchCount() and Context::getTriangleCount() methods.
+- Context::getPrimitiveCount() method now has optional argument to control whether to include hidden primitives in the count.
+- Added overloaded Context::hidePrimitive() and Context::hideObject() that takes a single UUID or object ID.
+- Implemented caching of primitive solid fraction calculations, which should dramatically speed up build times when there are a lot of Tiles/Triangles with transparency masking.
+- Added uint2, uint3, and uint4 vector types.
+- Added macro 'scast' to avoid having to type out static_cast.
+- Added many additional debug checks for object and primitive methods to catch index out-of-bounds errors.
+- Added object type enumeration OBJECT_TYPE_NONE to handle the case when the object type is queried but the object ID = 0 (no object assigned).
+- Changed how 'dirty' flags are handled in the Context. Dirty flags are handled on a per-primitive basis. If a primitive's geometry or primitive data are modified, it will get flagged as dirty.
+- Small issue with libjpeg and libpng include file paths was fixed to avoid possible unusual build errors on some systems.
+
+*Visualizer*
+- Core of Visualizer plug-in was re-written. This should dramatically improve performance, and allows for updating of geometry on a per-primitive basis. It should be backward compatible, except for the API modifications given below.
+- Visualizer::addDisk() methods have been removed.
+- Line size argument for Visualizer::addLine() was removed because it didn't do anything.
+- Removed Visualizer::plotInit() as this seemed to be dead code that was not used anywhere.
+- Significant improvements to shadows, which should remove the issue of pixelated shadows when the domain is very large, and erroneous shadows cast on the ground when the aspect ratio of the domain is very high.
+- Added Visualizer::displayImage() methods to display a PNG or JPEG image in the visualizer window.
+- Depth images were re-worked. Calling Visualizer::plotDepthMap() works without calling other methods. Calculation of physical depth should now be correct.
+
+*Plant Architecture*
+- Fixed CMakeLists.txt to automatically copy assets into the build directory if they are modified.
+- Re-defined interpolateTube() function as a private member of the PlantArchitecture class to avoid naming clash with the interpolateTube() function of the canopy generator plug-in.
+- Updates to the carbohydrate model to better represent carbon costs of wood growth. Credit to Ethan Frehner for these updates.
+
+*Canopy Generator*
+- Minor change needed to achieve compatability with the new way that textures are handled in the Context.
+
+*Energy Balance*
+- Removed 'using namespace helios' from EnergyBalance.cu because it was causing a naming clash with the new uint3 vector type.
+- Reconfigured the plugin CMakeLists.txt to automatically detect all supported GPU compute capabilities and build them all. This should likely result in some performance improvements.
+
+*LiDAR*
+- Reconfigured the plugin CMakeLists.txt to automatically detect all supported GPU compute capabilities and build them all. This should likely result in some performance improvements.
+- Calls to Visualizer::addLine() were updated to reflect removal of line width argument.
+
+*Voxel Intersection*
+- Removed 'using namespace helios' from VoxelIntersection.cu because it was causing a naming clash with the new uint3 vector type.
+- Reconfigured the plugin CMakeLists.txt to automatically detect all supported GPU compute capabilities and build them all. This should likely result in some performance improvements.
+
+*Project Builder*
+- Many more updates to the project builder plug-in, including ability to change the lighting model, texture tiling of the ground, and many others. Credit to Sean Banks for these updates.
+
+*Radiation*
+- Added specular reflection in synthetic images for collimated and sun sphere sources (still need to implement disk, rectangle, and sphere sources).
+
+Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
+Co-authored by: Sean Banks <smbanx@users.noreply.github.com>

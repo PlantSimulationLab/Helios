@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -314,7 +314,7 @@ Visualization Window</h2>
  </li>
 </ul>
 <p>If <a class="el" href="class_visualizer.html#aa87c684dd84db8d1ae0d12872b1dda22">plotUpdate()</a> is issued, another command <a class="el" href="class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32">printWindow()</a> can be used to output the current visualization to file (JPEG files only).</p>
-<p>The current window can be closed using the <a class="el" href="class_visualizer.html#a6b7be76387563b2981bba995a7578d78">closeWindow()</a> command.</p>
+<p>The current window can be closed using the <a class="el" href="class_visualizer.html#a7fa7d3b17d43efef66b88adf57dbc8cb">closeWindow()</a> command.</p>
 <p>Below is an example of opening a window (blank), exporting its contents to file, then closing the window:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -326,7 +326,7 @@ Visualization Window</h2>
 <div class="line"> }</div>
 </div><!-- fragment --><h2><a class="anchor" id="Background"></a>
 Window background</h2>
-<p>The window background can be set to a constant color via the command setBackgroundColor( RGBcolor color ). Alternatively, a three-dimensional &lsquo;sky&rsquo; background can be set using the <a class="el" href="class_visualizer.html#abc14ae2206a8b46c9724cc6aac06b44b">addSkyDomeByCenter</a> command. This adds a hemispherical dome with a sky texture image mapped to its surface. The default sky texture is &lsquo;SkyDome_clouds.jpg&rsquo; located in the plugins/visualizer/textures directory. The following example shows how to add a sky dome:</p>
+<p>The window background can be set to a constant color via the command setBackgroundColor( RGBcolor color ). Alternatively, a three-dimensional &lsquo;sky&rsquo; background can be set using the <a class="el" href="class_visualizer.html#a266e9ff3e825dcbd283f9e403688e09d">addSkyDomeByCenter</a> command. This adds a hemispherical dome with a sky texture image mapped to its surface. The default sky texture is &lsquo;SkyDome_clouds.jpg&rsquo; located in the plugins/visualizer/textures directory. The following example shows how to add a sky dome:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
@@ -608,11 +608,11 @@ Coloring by pseudocolor map</h3>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(1000);</div>
 <div class="line"> </div>
 <div class="line">std::vector&lt;RGBcolor&gt; ctable_colors;</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.f, 0.f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.5f, 0.f, 0.5f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.5f, 0.f ) );</div>
-<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 1.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.f, 0.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>( 0.5f, 0.f, 0.5f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 0.5f, 0.f ) );</div>
+<div class="line">ctable_colors.push_back( <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>( 1.f, 1.f, 0.f ) );</div>
 <div class="line"> </div>
 <div class="line">std::vector&lt;float&gt; ctable_positions;</div>
 <div class="line">ctable_positions.push_back( 0.f );</div>

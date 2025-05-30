@@ -46,6 +46,13 @@ if("plantarchitecture" IN_LIST PLUGINS)
     )
 endif()
 
+if("canopygenerator" IN_LIST PLUGINS)
+    add_definitions(-DENABLE_CANOPY_GENERATOR)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../canopygenerator/include")
+    list(APPEND PLUGIN_INCLUDE_DIRS
+            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/canopygenerator/include)
+endif()
+
 if("radiation" IN_LIST PLUGINS)
     add_definitions(-DENABLE_RADIATION_MODEL)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../radiation/include")

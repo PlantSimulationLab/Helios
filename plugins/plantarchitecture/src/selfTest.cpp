@@ -34,6 +34,7 @@ int PlantArchitecture::selfTest() {
             std::cout << "done." << std::endl;
         }catch (std::exception &e) {
             std::cerr << plant_label << " model failed." << std::endl;
+            std::cerr << e.what() << std::endl;
             error_count++;
         }
     };

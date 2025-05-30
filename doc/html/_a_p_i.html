@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -440,7 +440,7 @@ Vector Types</h1>
 <tr>
 <td><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a></td><td>Spherical coordinate</td><td><a class="el" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906">radius</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73">elevation</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643">zenith</a>, <a class="el" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59">azimuth</a></td><td>none</td><td>==, !=, &lt;&lt; </td><td><a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code (values normalized to 1)</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td>==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code (values normalized to 1)</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td>==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef">make_RGBcolor()</a> </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a></td><td>red-green-blue-alpha color code (values normalized to 1)</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#a1941a63762f40fe1aabc5bb863a7aa1e">a</a></td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a4d6937733ccdd97cee440a56bd556ff3">scale()</a></td><td>==, !=, &lt;&lt; </td><td><a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a> </td></tr>
 <tr>
@@ -735,17 +735,17 @@ Primitive Properties</h2>
 <tr>
 <td>Diffuse R-G-B color code</td><td><ul>
 <li>
-<a class="el" href="classhelios_1_1_context.html#a029f95ee0056f027866f8bad2fe9e48e">helios::Context::setPrimitiveColor( uint, const helios::RGBcolor&amp; )</a></li>
+helios::Context::setPrimitiveColor( uint, const helios::RGBcolor&amp; )</li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#af445c8f33a279ce7374d1b2691ef1f1c">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBcolor&amp; )</a></li>
+helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBcolor&amp; )</li>
 </ul>
 </td><td><a class="el" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">helios::Context::getPrimitiveColor( uint ) const</a> </td></tr>
 <tr>
 <td>Diffuse R-G-B-A color code</td><td><ul>
 <li>
-<a class="el" href="classhelios_1_1_context.html#a22dce781917215d2e80784ae5eb78d60">helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor&amp; )</a></li>
+helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor&amp; )</li>
 <li>
-<a class="el" href="classhelios_1_1_context.html#aa4e3d7f71aaa0823edd9341b3c2d786c">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBAcolor&amp; )</a></li>
+helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBAcolor&amp; )</li>
 </ul>
 </td><td><a class="el" href="classhelios_1_1_context.html#a4e29adcb908d55172efd239f294b49e5">helios::Context::getPrimitiveColorRGBA( uint ) const</a> </td></tr>
 <tr>

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -177,7 +177,7 @@ $(function(){initNavTree('context_vectors_tutorial.html',''); initResizable(true
 <tr>
 <td><a class="el" href="structhelios_1_1int4.html">int4</a></td><td>4D vector of integers</td><td><a class="el" href="structhelios_1_1int4.html#a1ac3b0b91901dc1d1497267bd3f3b4c3">x</a>, <a class="el" href="structhelios_1_1int4.html#ae979ffc27c702a6b67258d07ddcdf3b3">y</a>, <a class="el" href="structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99">z</a>, <a class="el" href="structhelios_1_1int4.html#a997159b161576d521fdad7e2d5e3786f">w</a></td><td>none</td><td><a class="el" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6">make_int4()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code</td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8">r</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023">g</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td><a class="el" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor()</a> </td></tr>
+<td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code</td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8">r</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023">g</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td><a class="el" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef">make_RGBcolor()</a> </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a> </td><td>red-green-blue-alpha color code</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#a1941a63762f40fe1aabc5bb863a7aa1e">a</a></td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a4d6937733ccdd97cee440a56bd556ff3">scale()</a>, clamp()</td><td><a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a>  </td></tr>
 <tr>
@@ -249,7 +249,7 @@ RGB Color Vector</h1>
 <tr>
 <td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor( helios::vec3 C )</a></td><td>N/A </td></tr>
 </table>
-<p>After an r-g-b vector has already been initialized, channel values are changed using the functions <a class="el" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b">make_RGBcolor()</a> and <a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a>.</p>
+<p>After an r-g-b vector has already been initialized, channel values are changed using the functions <a class="el" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef">make_RGBcolor()</a> and <a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a>.</p>
 <p>The code below gives several simple examples of using color vectors.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -260,7 +260,7 @@ RGB Color Vector</h1>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> color(1,0,0); <span class="comment">//red color (opaque)</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1_r_g_b_acolor.html" title="R-G-B-A color vector.">RGBAcolor</a> color_t(1,0,0,0.5); <span class="comment">//red color (semi-transparent)</span></div>
 <div class="line"> </div>
-<div class="line">   color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0,0,1); <span class="comment">//change color to blue</span></div>
+<div class="line">   color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0,0,1); <span class="comment">//change color to blue</span></div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="Timetut"></a>

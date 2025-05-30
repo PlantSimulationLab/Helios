@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -240,6 +240,9 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
             <a href="#RadCamAdd">Adding a Radiation Camera</a>
           </li>
           <li class="level3">
+            <a href="#RadCamSpecular">Radiation Camera Specular Reflection</a>
+          </li>
+          <li class="level3">
             <a href="#RadCamCalibColor">Radiation Camera Color Calibration</a>
           </li>
         </ul>
@@ -333,6 +336,8 @@ Input Primitive Data</h2>
 <td>emissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
 <tr>
 <td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
+<tr>
+<td>specular_exponent </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value controlling the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
 </table>
 <p><br  />
 </p>
@@ -381,15 +386,15 @@ Input Spectral Data</h2>
 <div class="line">   &lt;<span class="keywordtype">globaldata_vec2</span>&gt;</div>
 <div class="line">&lt;<span class="keywordtype">helios</span>&gt;</div>
 </div><!-- fragment --><p>In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.</p>
-<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The file "surface_spectral_library.xml" has many surface reflectivity and transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
+<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
 <p>In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:</p>
-<div class="fragment"><div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/surface_spectral_library.xml&quot;</span>);</div>
-</div><!-- fragment --><p>This command would load all the surface spectra from the file "surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on <a class="el" href="_a_p_i.html#GlobalData">Global Data</a> for details on Helios global data):</p>
+<div class="fragment"><div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
+</div><!-- fragment --><p>This command would load all the leaf surface spectra from the file "leaf_surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on <a class="el" href="_a_p_i.html#GlobalData">Global Data</a> for details on Helios global data):</p>
 <div class="fragment"><div class="line">std::vector&lt;vec2&gt; transmissivity;</div>
 <div class="line">context.getGlobalData(<span class="stringliteral">&quot;grape_leaf_transmissivity_0000&quot;</span>, transmissivity);</div>
 <div class="line"><span class="keywordtype">float</span> wavelength = transmissivity.at(0).x;</div>
 <div class="line"><span class="keywordtype">float</span> tau = transmissivity.at(0).y;</div>
-</div><!-- fragment --><p>In the above example, we've retrieved the spectrum in the file "surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).</p>
+</div><!-- fragment --><p>In the above example, we've retrieved the spectrum in the file "leaf_surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).</p>
 <h2><a class="anchor" id="RadProps"></a>
 Radiative Properties</h2>
 <p>Radiative properties (reflectivity, transmissivity, emissivity) are defined for each band for each primitive. Their reflectivity or transmissivity values can be set directly via primitive data, or they can be calculated from spectral data. The emissivity is always a constant and cannot be set from spectral data.</p>
@@ -421,7 +426,7 @@ Radiative Properties</h2>
 <div class="line">uint UUID = context.addPatch();</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Load the surface spectral library</span></div>
-<div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/surface_spectral_library.xml&quot;</span>);</div>
+<div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Set the reflectivity and transmissivity based on an example spectrum in the library</span></div>
 <div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
@@ -599,6 +604,24 @@ Adding a Radiation Camera</h3>
 <div class="line"> </div>
 <div class="line">radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
 </div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to RadiationModel::addBand().</p>
+<h3><a class="anchor" id="RadCamSpecular"></a>
+Radiation Camera Specular Reflection</h3>
+<p>The specular exponent is a measure of how "shiny" the surface is. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.</p>
+<p>Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.</p>
+<p>The strength of specular reflection is calculated according to the following equation:</p>
+<p class="formulaDsp">
+\[    I_{spec} = I_{s} \big| \vec{n}_p \cdot \vec{n}_s \big| \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
+\]
+</p>
+<p>where \(I_{spec}\) is the specular flux contribution, \(I_s\) is the outgoing flux of the sampled primitive, \(\vec{n}_p\) is the surface normal, \(\vec{n}_s\) is the source direction, \(\vec{n}_{ray}\) is the ray direction, and \(k\) is the specular exponent. \(\vec{n}_{spec}\) is the specular reflection direction, which is calculated as:</p>
+<p class="formulaDsp">
+\[    \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
+\]
+</p>
+<p>The figure below shows the effect of different specular exponents on the simulated camera image.</p>
+<div class="image">
+<img src="specular_exponent_comparison.png" alt=""/>
+</div>
 <h3><a class="anchor" id="RadCamCalibColor"></a>
 Radiation Camera Color Calibration</h3>
 <p>By default, it is assumed that the spectral sensitivity is 100% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a> method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.</p>
@@ -797,7 +820,7 @@ Writing Camera Images to File</h3>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;bunny&quot;</span>, 0 );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil</span></div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;plugins/radiation/spectral_data/surface_spectral_library.xml&quot;</span>);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;soil_reflectivity_0000&quot;</span> );</div>
 <div class="line"> </div>

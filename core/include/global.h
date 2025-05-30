@@ -60,6 +60,13 @@ constexpr float PI_F = 3.14159265358979323846f;
 
 typedef unsigned int uint;
 
+template<typename To, typename From>
+constexpr To scast(From&& v) noexcept
+{
+    return static_cast<To>(std::forward<From>(v));
+}
+
+
 #include "helios_vector_types.h"
 
 //pugi XML parser
@@ -671,7 +678,7 @@ namespace helios {
         };
 
         //! Stop timer and print elapsed time
-        [[nodiscard]] double toc() const {
+        double toc() const {
             return toc("");
         }
 
@@ -680,7 +687,7 @@ namespace helios {
          * \param[in] message Message to print with elapsed time
          * \note the timer print message can be turned off by passing the message argument  "mute"
         */
-        [[nodiscard]] double toc(const char *message) const {
+        double toc(const char *message) const {
             if (!running) {
                 std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..." <<
                         std::endl;
@@ -738,6 +745,15 @@ namespace helios {
     */
     void writePNG(const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data);
 
+    //! Function to write a PNG image based on pixel data
+    /**
+    * \param[in] filename Name of the PNG image file
+    * \param[in] width Image width in pixels
+    * \param[in] height Image height in pixels
+    * \param[in] pixel_data pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
+        * \note The length of pixel_data must be width*height*4 (or if it is width*height*3, the last channel is assumed opaque).
+    */
+    void writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
 
     //! Function to read a JPEG image file into pixel data array
     /**
@@ -761,8 +777,17 @@ namespace helios {
         * \param[in] height Image height in pixels
         * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
     */
-    void writeJPEG(const std::string &filename, uint width, uint height,
-                   const std::vector<helios::RGBcolor> &pixel_data);
+    void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data);
+
+    //! Function to write a JPEG image based on pixel data
+    /**
+        * \param[in] filename Name of the JPEG image file
+        * \param[in] width Image width in pixels
+        * \param[in] height Image height in pixels
+        * \param[in] pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
+        * \note The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored).
+    */
+    void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
 
     //! Template function to flatten a 2D vector into a 1D vector
     /**
@@ -1005,6 +1030,35 @@ namespace helios {
         }
         return result;
     }
+
+    /**
+     * \class PixelUVKey
+     * \brief Represents a unique key for a pixel using its UV coordinates.
+     *
+     * Combines the U and V coordinates of a pixel into a unique identifier, which is then used for a hash table lookup to see if these (u,v)'s have been used before for a given texture.
+     */
+    struct PixelUVKey {
+        std::vector<int> coords;            // {x0,y0, x1,y1, …}
+        bool operator==(PixelUVKey const &o) const noexcept {
+            return coords == o.coords;
+        }
+    };
+
+    /**
+     * \brief A hash function object for PixelUVKey.
+     *
+     * Provides a way to generate unique hash values for PixelUVKey objects.
+     */
+    struct PixelUVKeyHash {
+        size_t operator()(PixelUVKey const &k) const noexcept {
+            uint64_t h = 146527;  // arbitrary seed
+            for(int v: k.coords) {
+                // mix in v
+                h ^= uint64_t(v) + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+            }
+            return size_t(h);
+        }
+    };
 
 
     //! Default null SphericalCoord that applies no rotation

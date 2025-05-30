@@ -101,6 +101,9 @@ rtBuffer<float, 1> primitive_solid_fraction;
 rtBuffer<float, 1> rho, tau;
 rtBuffer<float, 1> rho_cam, tau_cam;
 
+rtBuffer<float, 1> specular_exponent;
+rtDeclareVariable( bool, specular_reflection_enabled,, );
+
 //Output buffers
 rtBuffer<float, 1>   radiation_in;
 rtBuffer<float, 1>   radiation_in_camera;
@@ -162,7 +165,7 @@ __device__ __inline__ void atomicFloatAdd( float *address, float val ) {
   #endif
 } // end atomic float add
 
-#if __CUDA_ARCH__ < 600
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 600)
 __device__ __inline__ double atomicAdd(double* address, double val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull, assumed;

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -195,6 +195,12 @@ Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html">helios::Timer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call tic() to start timer, call toc() to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_pixel_u_v_key.html">helios::PixelUVKey</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a unique key for a pixel using its UV coordinates.  <a href="structhelios_1_1_pixel_u_v_key.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_pixel_u_v_key_hash.html">helios::PixelUVKeyHash</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A hash function object for PixelUVKey.  <a href="structhelios_1_1_pixel_u_v_key_hash.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
@@ -210,6 +216,9 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:ab41db2f933a3e448d99437bf66ae9520" id="r_ab41db2f933a3e448d99437bf66ae9520"><td class="memTemplParams" colspan="2">template&lt;typename To, typename From&gt; </td></tr>
+<tr class="memitem:ab41db2f933a3e448d99437bf66ae9520"><td class="memTemplItemLeft" align="right" valign="top">constexpr To&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab41db2f933a3e448d99437bf66ae9520">scast</a> (From &amp;&amp;v) noexcept</td></tr>
+<tr class="separator:ab41db2f933a3e448d99437bf66ae9520"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a672182e7d8beb63c7cf256fa8294dc86" id="r_a672182e7d8beb63c7cf256fa8294dc86"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a672182e7d8beb63c7cf256fa8294dc86">helios::helios_runtime_error</a> (const std::string &amp;error_message)</td></tr>
 <tr class="memdesc:a672182e7d8beb63c7cf256fa8294dc86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to throw a runtime error.  <br /></td></tr>
 <tr class="separator:a672182e7d8beb63c7cf256fa8294dc86"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -442,6 +451,9 @@ Functions</h2></td></tr>
 <tr class="memitem:afc2520441ef9a290c5221dd892ea9f01" id="r_afc2520441ef9a290c5221dd892ea9f01"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc2520441ef9a290c5221dd892ea9f01">helios::writePNG</a> (const std::string &amp;filename, uint width, uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_b_acolor.html">helios::RGBAcolor</a> &gt; &amp;pixel_data)</td></tr>
 <tr class="memdesc:afc2520441ef9a290c5221dd892ea9f01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to write a PNG image based on pixel data.  <br /></td></tr>
 <tr class="separator:afc2520441ef9a290c5221dd892ea9f01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab052d0b3bc94e9795d807ac58206103d" id="r_ab052d0b3bc94e9795d807ac58206103d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab052d0b3bc94e9795d807ac58206103d">helios::writePNG</a> (const std::string &amp;filename, uint width, uint height, const std::vector&lt; unsigned char &gt; &amp;pixel_data)</td></tr>
+<tr class="memdesc:ab052d0b3bc94e9795d807ac58206103d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to write a PNG image based on pixel data.  <br /></td></tr>
+<tr class="separator:ab052d0b3bc94e9795d807ac58206103d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a248b712fb0f1b77074a223179850a6dd" id="r_a248b712fb0f1b77074a223179850a6dd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a248b712fb0f1b77074a223179850a6dd">helios::readJPEG</a> (const std::string &amp;filename, uint &amp;width, uint &amp;height, std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;pixel_data)</td></tr>
 <tr class="memdesc:a248b712fb0f1b77074a223179850a6dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to read a JPEG image file into pixel data array.  <br /></td></tr>
 <tr class="separator:a248b712fb0f1b77074a223179850a6dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -451,6 +463,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a95600894b45bcc627d66c3dd8c202cd8" id="r_a95600894b45bcc627d66c3dd8c202cd8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a95600894b45bcc627d66c3dd8c202cd8">helios::writeJPEG</a> (const std::string &amp;filename, uint width, uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;pixel_data)</td></tr>
 <tr class="memdesc:a95600894b45bcc627d66c3dd8c202cd8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to write a JPEG image based on pixel data.  <br /></td></tr>
 <tr class="separator:a95600894b45bcc627d66c3dd8c202cd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41e8e23d720957b63210ffce4d00af57" id="r_a41e8e23d720957b63210ffce4d00af57"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a41e8e23d720957b63210ffce4d00af57">helios::writeJPEG</a> (const std::string &amp;filename, uint width, uint height, const std::vector&lt; unsigned char &gt; &amp;pixel_data)</td></tr>
+<tr class="memdesc:a41e8e23d720957b63210ffce4d00af57"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to write a JPEG image based on pixel data.  <br /></td></tr>
+<tr class="separator:a41e8e23d720957b63210ffce4d00af57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga475421ec394da63f3964f56bb5a81335" id="r_ga475421ec394da63f3964f56bb5a81335"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:ga475421ec394da63f3964f56bb5a81335"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335">helios::flatten</a> (const std::vector&lt; std::vector&lt; T &gt; &gt; &amp;vec)</td></tr>
 <tr class="memdesc:ga475421ec394da63f3964f56bb5a81335"><td class="mdescLeft">&#160;</td><td class="mdescRight">Template function to flatten a 2D vector into a 1D vector.  <br /></td></tr>
@@ -541,10 +556,10 @@ Functions</h2></td></tr>
 Variables</h2></td></tr>
 <tr class="memitem:a2d6b12d3f019b61b427ec3c63270143d" id="r_a2d6b12d3f019b61b427ec3c63270143d"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2d6b12d3f019b61b427ec3c63270143d">PI_F</a> = 3.14159265358979323846f</td></tr>
 <tr class="separator:a2d6b12d3f019b61b427ec3c63270143d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adcd5a98ec7c45292736ec8e19ce9de51" id="r_adcd5a98ec7c45292736ec8e19ce9de51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a> = <a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0,0)</td></tr>
+<tr class="memitem:adcd5a98ec7c45292736ec8e19ce9de51" id="r_adcd5a98ec7c45292736ec8e19ce9de51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcd5a98ec7c45292736ec8e19ce9de51">helios::nullrotation</a> = <a class="el" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1">make_SphericalCoord</a>(0, 0)</td></tr>
 <tr class="memdesc:adcd5a98ec7c45292736ec8e19ce9de51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null SphericalCoord that applies no rotation.  <br /></td></tr>
 <tr class="separator:adcd5a98ec7c45292736ec8e19ce9de51"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a876dc18d1da8ace50c131f428f8883be" id="r_a876dc18d1da8ace50c131f428f8883be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a> = <a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">make_vec3</a>(0,0,0)</td></tr>
+<tr class="memitem:a876dc18d1da8ace50c131f428f8883be" id="r_a876dc18d1da8ace50c131f428f8883be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a876dc18d1da8ace50c131f428f8883be">helios::nullorigin</a> = <a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">make_vec3</a>(0, 0, 0)</td></tr>
 <tr class="memdesc:a876dc18d1da8ace50c131f428f8883be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default null vec3 that gives the origin (0,0,0)  <br /></td></tr>
 <tr class="separator:a876dc18d1da8ace50c131f428f8883be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -655,7 +670,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00070">70</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00091">91</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -704,7 +719,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00061">61</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00082">82</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -746,7 +761,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>int3, with int3::x = day, int3::y = month, int3::z = year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>JulianDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01318">1318</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01279">1279</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -810,7 +825,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02285">2285</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02289">2289</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -847,7 +862,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain an extension, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02383">2383</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02381">2381</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -884,7 +899,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename including extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02393">2393</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02391">2391</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -926,7 +941,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>File path contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a path, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02398">2398</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02396">2396</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -963,7 +978,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Filename without extension contained in input string </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the string does not contain a file name, an empty string is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02388">2388</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02386">2386</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -998,7 +1013,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01893">1893</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01867">1867</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1061,7 +1076,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-dimensional vector of floats contained in text file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02458">2458</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02451">2451</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1150,7 +1165,7 @@ Variables</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01359">1359</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01319">1319</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1177,7 +1192,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00566">566</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00549">549</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1216,7 +1231,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00510">510</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00499">499</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1255,7 +1270,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if the XML file was successfully opened and parsed, false otherwise (in case of failure, check error_string for details) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00924">924</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00883">883</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1286,7 +1301,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00996">996</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01021">1021</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1317,7 +1332,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00982">982</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01007">1007</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1350,7 +1365,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00790">790</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00765">765</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1383,7 +1398,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00774">774</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00751">751</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1416,7 +1431,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00805">805</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00778">778</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1449,7 +1464,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00820">820</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00791">791</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1482,7 +1497,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00836">836</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00805">805</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1515,7 +1530,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00904">904</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00865">865</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1548,7 +1563,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00853">853</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00820">820</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1581,7 +1596,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00871">871</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00836">836</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1614,7 +1629,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if conversion was successful, false if unsuccessful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00887">887</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00850">850</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1661,7 +1676,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Float value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00965">965</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00922">922</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1708,7 +1723,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integer value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00953">953</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00910">910</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1755,7 +1770,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>String value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01001">1001</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00958">958</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1802,7 +1817,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vec2 value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00977">977</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00934">934</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1849,7 +1864,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vec3 value of the tag </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00989">989</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00946">946</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1884,7 +1899,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01403">1403</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01359">1359</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1925,7 +1940,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>distance between p1 and p2 in three dimensions </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02379">2379</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02377">2377</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1969,7 +1984,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01823">1823</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01799">1799</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2013,7 +2028,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01587">1587</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01540">1540</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2049,7 +2064,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2D mask, where false denotes no material </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01492">1492</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01446">1446</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2101,7 +2116,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00141">141</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00160">160</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2147,7 +2162,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02472">2472</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02463">2463</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2194,7 +2209,36 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The sampled azimuth angle. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02512">2512</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02502">2502</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab41db2f933a3e448d99437bf66ae9520" name="ab41db2f933a3e448d99437bf66ae9520"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab41db2f933a3e448d99437bf66ae9520">&#9670;&#160;</a></span>scast()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename To, typename From&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">To scast </td>
+          <td>(</td>
+          <td class="paramtype">From &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>v</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00064">64</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -2227,7 +2271,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if directory/file was valid, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02410">2410</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02408">2408</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2265,7 +2309,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00550">550</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00535">535</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2303,12 +2347,12 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00528">528</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00515">515</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a95600894b45bcc627d66c3dd8c202cd8" name="a95600894b45bcc627d66c3dd8c202cd8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a95600894b45bcc627d66c3dd8c202cd8">&#9670;&#160;</a></span>writeJPEG()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a95600894b45bcc627d66c3dd8c202cd8">&#9670;&#160;</a></span>writeJPEG() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2347,12 +2391,57 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01930">1930</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01902">1902</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a41e8e23d720957b63210ffce4d00af57" name="a41e8e23d720957b63210ffce4d00af57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a41e8e23d720957b63210ffce4d00af57">&#9670;&#160;</a></span>writeJPEG() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void helios::writeJPEG </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; unsigned char &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>pixel_data</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to write a JPEG image based on pixel data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name of the JPEG image file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Image width in pixels </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Image height in pixels </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">pixel_data</td><td>Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01974">1974</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
 <a id="afc2520441ef9a290c5221dd892ea9f01" name="afc2520441ef9a290c5221dd892ea9f01"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afc2520441ef9a290c5221dd892ea9f01">&#9670;&#160;</a></span>writePNG()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#afc2520441ef9a290c5221dd892ea9f01">&#9670;&#160;</a></span>writePNG() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2391,7 +2480,52 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01744">1744</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01693">1693</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab052d0b3bc94e9795d807ac58206103d" name="ab052d0b3bc94e9795d807ac58206103d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab052d0b3bc94e9795d807ac58206103d">&#9670;&#160;</a></span>writePNG() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void helios::writePNG </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; unsigned char &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>pixel_data</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function to write a PNG image based on pixel data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name of the PNG image file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Image width in pixels </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Image height in pixels </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">pixel_data</td><td>pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The length of pixel_data must be width*height*4 (or if it is width*height*3, the last channel is assumed opaque). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01758">1758</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2431,7 +2565,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02116">2116</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02142">2142</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2471,7 +2605,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02133">2133</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02157">2157</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2511,7 +2645,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02210">2210</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02224">2224</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2551,7 +2685,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02225">2225</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02237">2237</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2591,7 +2725,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02240">2240</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02250">2250</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2631,7 +2765,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02255">2255</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02263">2263</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2671,7 +2805,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02270">2270</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02276">2276</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2711,7 +2845,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02150">2150</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02172">2172</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2751,7 +2885,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02165">2165</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02185">2185</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2791,7 +2925,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02180">2180</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02198">2198</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2831,7 +2965,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02195">2195</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02211">2211</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2846,7 +2980,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> helios::nullorigin = make_vec3(0,0,0)</td>
+          <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> helios::nullorigin = make_vec3(0, 0, 0)</td>
         </tr>
       </table>
   </td>
@@ -2858,7 +2992,7 @@ Variables</h2></td></tr>
 
 <p>Default null vec3 that gives the origin (0,0,0) </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00059">59</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00080">80</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2872,7 +3006,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> helios::nullrotation = make_SphericalCoord(0,0)</td>
+          <td class="memname"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> helios::nullrotation = make_SphericalCoord(0, 0)</td>
         </tr>
       </table>
   </td>
@@ -2884,7 +3018,7 @@ Variables</h2></td></tr>
 
 <p>Default null SphericalCoord that applies no rotation. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00058">58</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00079">79</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
