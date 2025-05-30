@@ -4,6 +4,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+configure_file( "${BASE_DIRECTORY}/core/lib/detect_GPU_compute.cmake" "${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake" COPYONLY )
+
 if ( WIN32 )
     string(REGEX REPLACE "/MD*" "/MT" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
     string(REGEX REPLACE "/MD*" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")

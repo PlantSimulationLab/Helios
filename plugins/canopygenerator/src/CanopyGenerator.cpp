@@ -2347,25 +2347,19 @@ void CanopyGenerator::buildCanopy(const HomogeneousCanopyParameters &params ){
 
     UUID_leaf.resize(1);
 
-    float solidFractionx;
-    if(params.leaf_texture_file.empty()){
-        solidFractionx = 1.0;
+    uint ID0;
+    float solidFractionx = 1.f;
+    if( params.leaf_texture_file.empty() ){
+        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
     }else{
-        helios::Texture texture(params.leaf_texture_file.c_str());
-        solidFractionx = texture.getSolidFraction();
+        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+        solidFractionx = context->getObjectArea(ID0)/ (params.leaf_size.x*params.leaf_size.y);
     }
 
     float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
     int Nleaves = (int)lroundf(params.leaf_area_index*params.canopy_extent.x*params.canopy_extent.y/leafArea);
 
     float Lmax = sqrtf(params.leaf_size.x*params.leaf_size.x + params.leaf_size.y*params.leaf_size.y);
-
-    uint ID0;
-    if( params.leaf_texture_file.empty() ){
-        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
-    }else{
-        ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
-    }
 
     for( int i=0; i<Nleaves; i++ ){
 
@@ -2420,19 +2414,6 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params 
 
     vec3 r = params.crown_radius;
 
-    float solidFractionx;
-    if(params.leaf_texture_file.empty()){
-        solidFractionx = 1.0;
-    }else{
-        helios::Texture texture(params.leaf_texture_file.c_str());
-        solidFractionx = texture.getSolidFraction();
-    }
-
-    float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
-    int Nleaves = (int)lroundf(4.f/3.f*float(M_PI)*r.x*r.y*r.z*params.leaf_area_density/leafArea);
-
-    vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
-
     std::string cconfig = params.canopy_configuration;
     if( cconfig !="uniform" && cconfig !="random" ){
         std::cout << "WARNING: Unknown canopy configuration parameter for spherical crowns canopy: " << cconfig << ". Using uniformly spaced configuration." << std::endl;
@@ -2442,11 +2423,18 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params 
     UUID_leaf.resize(params.plant_count.x*params.plant_count.y);
 
     uint ID0;
+    float solidFractionx = 1.f;
     if( params.leaf_texture_file.empty() ){
         ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
     }else{
         ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+        solidFractionx = context->getObjectArea(ID0)/ (params.leaf_size.x*params.leaf_size.y);
     }
+
+    float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
+    int Nleaves = (int)lroundf(4.f/3.f*float(M_PI)*r.x*r.y*r.z*params.leaf_area_density/leafArea);
+
+    vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
 
     uint plant_ID = 0;
     uint prim_count = 0;
@@ -2522,19 +2510,6 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params ){
     float r = params.crown_radius;
     float h = params.crown_height;
 
-    float solidFractionx;
-    if(params.leaf_texture_file.empty()){
-        solidFractionx = 1.0;
-    }else{
-        helios::Texture texture(params.leaf_texture_file.c_str());
-        solidFractionx = texture.getSolidFraction();
-    }
-
-    float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
-    int Nleaves = (int)lroundf(1.f/3.f*float(M_PI)*r*r*h*params.leaf_area_density/leafArea);
-
-    vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
-
     std::string cconfig = params.canopy_configuration;
     if( cconfig !="uniform" && cconfig !="random" ){
         std::cout << "WARNING: Unknown canopy configuration parameter for conical crowns canopy: " << cconfig << ". Using uniformly spaced configuration." << std::endl;
@@ -2544,11 +2519,18 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params ){
     UUID_leaf.resize(params.plant_count.x*params.plant_count.y);
 
     uint ID0;
+    float solidFractionx = 1.f;
     if( params.leaf_texture_file.empty() ){
         ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_color );
     }else{
         ID0 = context->addTileObject( make_vec3(0,0,0), params.leaf_size, make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+        solidFractionx = context->getObjectArea(ID0)/ (params.leaf_size.x*params.leaf_size.y);
     }
+
+    float leafArea = params.leaf_size.x*params.leaf_size.y*solidFractionx;
+    int Nleaves = (int)lroundf(1.f/3.f*float(M_PI)*r*r*h*params.leaf_area_density/leafArea);
+
+    vec2 canopy_extent( params.plant_spacing.x*float(params.plant_count.x), params.plant_spacing.y*float(params.plant_count.y) );
 
     uint plant_ID = 0;
     uint prim_count = 0;

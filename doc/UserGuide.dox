@@ -429,6 +429,7 @@ $ git pull
    <tr><td>\<sstream\></td></tr>
    <tr><td>\<fstream\></td></tr>
    <tr><td>\<vector\></td></tr>
+   <tr><td>\<array\></td></tr>
    <tr><td>\<stdexcept\></td></tr>
    <tr><td>\<exception\></td></tr>
    <tr><td>\<cassert\></td></tr>

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -200,14 +200,17 @@ Functions</h2></td></tr>
 <tr class="memitem:a1ffc8a34ba2895084c71e95ed615d10a" id="r_a1ffc8a34ba2895084c71e95ed615d10a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ffc8a34ba2895084c71e95ed615d10a">read_JPEG_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a1ffc8a34ba2895084c71e95ed615d10a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a JPEG image.  <br /></td></tr>
 <tr class="separator:a1ffc8a34ba2895084c71e95ed615d10a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72ab446b93211938da98a8eec0c5d33a" id="r_a72ab446b93211938da98a8eec0c5d33a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a72ab446b93211938da98a8eec0c5d33a">write_JPEG_file</a> (const char *filename, uint width, uint height, void *_window, bool print_messages)</td></tr>
-<tr class="memdesc:a72ab446b93211938da98a8eec0c5d33a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <br /></td></tr>
-<tr class="separator:a72ab446b93211938da98a8eec0c5d33a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a944153aa0d0a629342342388914e026e" id="r_a944153aa0d0a629342342388914e026e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a944153aa0d0a629342342388914e026e">write_JPEG_file</a> (const char *filename, const uint width, const uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;data, bool print_messages)</td></tr>
-<tr class="separator:a944153aa0d0a629342342388914e026e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3979d667f04d2df74adaa6e1ccc994b" id="r_aa3979d667f04d2df74adaa6e1ccc994b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa3979d667f04d2df74adaa6e1ccc994b">write_JPEG_file</a> (const char *filename, uint width, uint height, void *window, bool print_messages)</td></tr>
+<tr class="memdesc:aa3979d667f04d2df74adaa6e1ccc994b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write current graphics window to a JPEG image file.  <br /></td></tr>
+<tr class="separator:aa3979d667f04d2df74adaa6e1ccc994b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43e09c4530affa4b61e9aa8349205cc1" id="r_a43e09c4530affa4b61e9aa8349205cc1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43e09c4530affa4b61e9aa8349205cc1">write_JPEG_file</a> (const char *filename, uint width, uint height, const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;data, bool print_messages)</td></tr>
+<tr class="separator:a43e09c4530affa4b61e9aa8349205cc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e60a86e54784ea9f2b178ce9540713f" id="r_a0e60a86e54784ea9f2b178ce9540713f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e60a86e54784ea9f2b178ce9540713f">read_png_file</a> (const char *filename, std::vector&lt; unsigned char &gt; &amp;texture, uint &amp;height, uint &amp;width)</td></tr>
 <tr class="memdesc:a0e60a86e54784ea9f2b178ce9540713f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to create a texture map from a PNG image.  <br /></td></tr>
 <tr class="separator:a0e60a86e54784ea9f2b178ce9540713f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5da0b121eeea90777c60a97c6c366839" id="r_a5da0b121eeea90777c60a97c6c366839"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5da0b121eeea90777c60a97c6c366839">validateTextureFile</a> (const std::string &amp;texture_file, bool pngonly)</td></tr>
+<tr class="memdesc:a5da0b121eeea90777c60a97c6c366839"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validates the given texture file.  <br /></td></tr>
+<tr class="separator:a5da0b121eeea90777c60a97c6c366839"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b8e3d832e0aeb8c7bf0e77f0ddf0c94" id="r_a8b8e3d832e0aeb8c7bf0e77f0ddf0c94"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b8e3d832e0aeb8c7bf0e77f0ddf0c94">mouseCallback</a> (GLFWwindow *window, int button, int action, int mods)</td></tr>
 <tr class="memdesc:a8b8e3d832e0aeb8c7bf0e77f0ddf0c94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function for mouse button presses.  <br /></td></tr>
 <tr class="separator:a8b8e3d832e0aeb8c7bf0e77f0ddf0c94"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -330,7 +333,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04742">4742</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04155">4155</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -360,7 +363,7 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse cursor movements. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04523">4523</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03945">3945</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +382,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04717">4717</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04132">4132</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -433,7 +436,7 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse button presses. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04496">4496</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03919">3919</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -521,7 +524,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00268">268</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00260">260</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -551,50 +554,46 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse scroll. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04538">4538</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03960">3960</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a944153aa0d0a629342342388914e026e" name="a944153aa0d0a629342342388914e026e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a944153aa0d0a629342342388914e026e">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[1/2]</span></h2>
+<a id="a5da0b121eeea90777c60a97c6c366839" name="a5da0b121eeea90777c60a97c6c366839"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5da0b121eeea90777c60a97c6c366839">&#9670;&#160;</a></span>validateTextureFile()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int write_JPEG_file </td>
+          <td class="memname">bool validateTextureFile </td>
           <td>(</td>
-          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>texture_file</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>print_messages</em></span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>pngonly</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00203">203</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p>Validates the given texture file. </p>
+<p>This function checks whether the provided texture file can be used for loading a texture. If the pngonly flag is set to true, the function specifically validates for PNG file formats.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">texture_file</td><td>The path to the texture file to validate. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">pngonly</td><td>[optional] If true, only validates the file for PNG format. Defaults to false. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the texture file is valid, false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03650">3650</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a72ab446b93211938da98a8eec0c5d33a" name="a72ab446b93211938da98a8eec0c5d33a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a72ab446b93211938da98a8eec0c5d33a">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[2/2]</span></h2>
+<a id="a43e09c4530affa4b61e9aa8349205cc1" name="a43e09c4530affa4b61e9aa8349205cc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43e09c4530affa4b61e9aa8349205cc1">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -617,7 +616,45 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">void *</td>          <td class="paramname"><span class="paramname"><em>_window</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>print_messages</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00197">197</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa3979d667f04d2df74adaa6e1ccc994b" name="aa3979d667f04d2df74adaa6e1ccc994b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3979d667f04d2df74adaa6e1ccc994b">&#9670;&#160;</a></span>write_JPEG_file() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int write_JPEG_file </td>
+          <td>(</td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *</td>          <td class="paramname"><span class="paramname"><em>window</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -634,12 +671,12 @@ Variables</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">width</td><td>Width of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Height of the graphics window in pixels </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">window</td><td>Pointer to the window object </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">print_messages</td><td>[OPTIONAL] Flag to print output messages to the console </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">print_messages</td><td>[optional] Flag to print output messages to the console </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00130">130</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00128">128</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -656,7 +693,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03316">3316</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02610">2610</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -672,7 +709,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03323">3323</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02617">2617</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -688,7 +725,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03317">3317</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02611">2611</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -704,7 +741,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03318">3318</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02612">2612</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -720,7 +757,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03321">3321</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02615">2615</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -736,7 +773,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03319">3319</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02613">2613</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -752,7 +789,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03322">3322</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02616">2616</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -768,7 +805,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03320">3320</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02614">2614</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -784,7 +821,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04488">4488</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03911">3911</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -800,7 +837,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04490">4490</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03913">3913</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -816,7 +853,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04489">4489</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03912">3912</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -832,7 +869,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04493">4493</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03916">3916</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -848,7 +885,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03915">3915</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -864,7 +901,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03915">3915</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -880,7 +917,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04491">4491</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03914">3914</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -896,7 +933,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04491">4491</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03914">3914</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

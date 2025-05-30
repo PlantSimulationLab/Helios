@@ -481,6 +481,23 @@ void ProjectBuilder::updatePrimitiveTypes(){
         }
         current_primitive = "All";
     }
+    for (auto it = bounding_boxes.begin(); it != bounding_boxes.end(); /* no increment here */) {
+        if (primitive_names_set.find(it->first) == primitive_names_set.end()) {
+            it = bounding_boxes.erase(it);
+        }else {
+            ++it;
+        }
+    }
+    for (auto& prim : primitive_names_set){
+        if (prim == "All"){
+            continue;
+        }
+        if (bounding_boxes.find(prim) == bounding_boxes.end()){
+            bounding_boxes[prim] = false;
+        }
+    }
+    //context->setPrimitiveData
+    // context->setPrimitiveData(); type uint or int
 }
 
 
@@ -616,6 +633,9 @@ void ProjectBuilder::updateSpectra(){
             }
         }
     }
+#ifdef ENABLE_RADIATION_MODEL
+    radiation->updateGeometry();
+#endif
 }
 
 void ProjectBuilder::updateCameras(){
@@ -660,6 +680,7 @@ void ProjectBuilder::record(){
     deleteArrows();
     deleteCameraModels();
     randomize(true);
+    setBoundingBoxObjects();
     for (int _ = 0; _ < num_recordings; _++){
         updateContext();
         // std::time_t now = std::time(nullptr);
@@ -675,6 +696,8 @@ void ProjectBuilder::record(){
             image_dir = image_dir_base + std::to_string(image_dir_idx) + "/";
             image_dir_idx++;
         }
+        std::filesystem::create_directory(image_dir);
+        std::cout << "Saving images to " << image_dir << std::endl;
         std::vector<uint> temp_lights{};
         for (std::string rig_label : rig_labels_set){
             int rig_index = rig_dict[rig_label];
@@ -751,8 +774,10 @@ void ProjectBuilder::record(){
                         if (!primitive_name.empty()){
                             primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                         }
-                        if (primitive_name != "all")
-                        radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                        if (bounding_boxes_map.find(primitive_name) != bounding_boxes_map.end())
+                            radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                        // radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                        // radiation->writeImageBoundingBoxes_ObjectData();
                     }
                     //
                 }
@@ -845,6 +870,15 @@ void ProjectBuilder::buildFromXML(){
     // } //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
     #endif //BOUNDARYLAYERCONDUCTANCEMODE && ENERGYBALANCEMODEL
 
+    #ifdef ENABLE_CANOPY_GENERATOR
+        canopygenerator = new CanopyGenerator(context);
+        std::cout << "Loaded CanopyGenerator plugin." << std::endl;
+    // }else{
+    #else
+        std::cout << "Excluding CanopyGenerator plugin." << std::endl;
+    // } //CANOPYGENERATOR
+    #endif //CANOPYGENERATOR
+
     // -- main time loop -- //
     if (enable_radiation){
         assert( context->doesGlobalDataExist( "air_turbidity" ) );
@@ -868,6 +902,7 @@ void ProjectBuilder::buildFromXML(){
         // context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
         for (std::string primitive_name : primitive_names){
             if (primitive_name != "All" && primitive_name != "all"){
+                bounding_boxes[primitive_name] = false;
                 std::string primitive_name_lower = primitive_name;
                 primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
                 std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
@@ -894,7 +929,9 @@ void ProjectBuilder::buildFromXML(){
         helios_runtime_error(xml_error_string);
     }
     xmlGetValues();
-    updateSpectra();
+    updateGround(); // TODO: add repeat ground to buildGeometry
+    updatePrimitiveTypes();
+    updateSpectra(); // TODO: add update geometry at end
 
     ground_area = context->sumPrimitiveSurfaceArea( ground_UUIDs );
 
@@ -1930,7 +1967,6 @@ void ProjectBuilder::visualize(){
         bool switch_visualization = false;
 
         std::string current_cam_position = "0";
-        glm::mat4 depthMVP = visualizer->plotInit();
         while ( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose((GLFWwindow*)window) == 0 ) {
             glfwPollEvents();
             ImGui_ImplOpenGL3_NewFrame();
@@ -1968,7 +2004,6 @@ void ProjectBuilder::visualize(){
             glm::mat4 perspectiveTransformationMatrix = visualizer->getPerspectiveTransformationMatrix();
             glm::vec4 origin_position;
             std::string current_label;
-            //glm::mat4 depthMVP = visualizer->getDepthMVP();
             if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
                 !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)){
                 currently_dragging = "";
@@ -2206,6 +2241,7 @@ void ProjectBuilder::visualize(){
                             RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
                         visualizer->plotUpdate();
                         visualizer->clearGeometry();
+                        updateSpectra();
                         if (visualization_type != "RGB") {
                             visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             visualizer->enableColorbar();
@@ -2270,6 +2306,9 @@ void ProjectBuilder::visualize(){
             #ifdef ENABLE_RADIATION_MODEL
             ImGui::SameLine();
             if (ImGui::Button("Record")){
+                if (band_group_names.empty()){
+                    std::cout << "At least 1 band group (a group of 1 or 3 bands) must be defined to record images." << std::endl;
+                } else{
                 // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
                 const char* font_name = "LCD";
                 visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
@@ -2281,6 +2320,7 @@ void ProjectBuilder::visualize(){
                 visualizer->clearGeometry();
                 visualizer->buildContextGeometry(context);
                 visualizer->plotUpdate();
+            }
             }
             recordPopup();
             ImGui::OpenPopupOnItemClick("repeat_record", ImGuiPopupFlags_MouseButtonRight);
@@ -2294,6 +2334,10 @@ void ProjectBuilder::visualize(){
             if (ImGui::BeginTabBar("Settings#left_tabs_bar")){
                 if (ImGui::BeginTabItem("General")){
                     current_tab = "General";
+                    // ####### LOCATION ####### //
+                    ImGui::SetWindowFontScale(1.25f);
+                    ImGui::Text("Visualization:");
+                    ImGui::SetWindowFontScale(1.0f);
                     // ####### COORDINATE AXES ####### //
                     bool enable_coords_ = enable_coordinate_axes;
                     toggle_button("##coordinate_axes", &enable_coordinate_axes);
@@ -2311,6 +2355,29 @@ void ProjectBuilder::visualize(){
                     } else{
                         ImGui::Text("Coordinate Axes Disabled");
                     }
+                    // ####### LIGHTING MODEL ####### //
+                    std::string prev_lighting_model = lighting_model;
+                    ImGui::SetNextItemWidth(120);
+                    dropDown("Lighting Model", lighting_model, lighting_models);
+                    if (prev_lighting_model != lighting_model){
+                        if (lighting_model == "None") visualizer->setLightingModel(Visualizer::LIGHTING_NONE);
+                        if (lighting_model == "Phong") visualizer->setLightingModel(Visualizer::LIGHTING_PHONG);
+                        if (lighting_model == "Phong Shadowed") visualizer->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+                    }
+                    ImGui::SetNextItemWidth(120);
+                    // ####### LIGHTING INTENSITY ####### //
+                    ImGui::InputFloat("Light Intensity Factor", &light_intensity);
+                    visualizer->setLightIntensityFactor(light_intensity);
+                    // ####### LIGHTING DIRECTION ####### //
+                    float light_dir[3];
+                    light_dir[0] = light_direction.x;
+                    light_dir[1] = light_direction.y;
+                    light_dir[2] = light_direction.z;
+                    ImGui::InputFloat3("Light Direction", light_dir);
+                    light_direction.x = light_dir[0];
+                    light_direction.y = light_dir[1];
+                    light_direction.z = light_dir[2];
+                    visualizer->setLightDirection(light_direction);
                     // ####### LOCATION ####### //
                     ImGui::SetWindowFontScale(1.25f);
                     ImGui::Text("Location:");
@@ -2337,40 +2404,6 @@ void ProjectBuilder::visualize(){
                     randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
                     randomizerParams("UTC_offset");
                     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
-                    // ####### DOMAIN ORIGIN ####### //
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
-                    randomizerParams("domain_origin_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
-                    randomizerParams("domain_origin_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
-                    randomizerParams("domain_origin_z");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Origin");
-                    // ####### DOMAIN EXTENT ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
-                    randomizerParams("domain_extent_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
-                    randomizerParams("domain_extent_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Extent");
                      // ####### Weather File ####### //
                     ImGui::SetNextItemWidth(60);
                     ImGui::RadioButton("CSV", is_weather_file_csv); if (ImGui::IsItemClicked()) is_weather_file_csv = true;
@@ -2479,6 +2512,27 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::Text("Manually Set Ground Color");
                     }
+                    // ####### DOMAIN ORIGIN ####### //
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
+                    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
+                    randomizerParams("domain_origin_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
+                    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
+                    randomizerParams("domain_origin_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
+                    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
+                    randomizerParams("domain_origin_z");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Origin");
+                    if (ground_flag == 1){
                     // ####### GROUND RESOLUTION ####### //
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
@@ -2493,6 +2547,36 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
+                        // ####### DOMAIN EXTENT ####### //
+                        ImGui::SetNextItemWidth(50);
+                        ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
+                        randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+                        randomizerParams("domain_extent_x");
+                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(50);
+                        ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
+                        randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+                        randomizerParams("domain_extent_y");
+                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
+                        ImGui::SameLine();
+                        ImGui::Text("Domain Extent");
+                        // ####### NUMBER OF TILES ####### //
+                        ImGui::SetNextItemWidth(60);
+                        int temp[2];
+                        temp[0] = num_tiles.x;
+                        temp[1] = num_tiles.y;
+                        ImGui::InputInt2("Number of Tiles", temp);
+                        num_tiles.x = temp[0];
+                        num_tiles.y = temp[1];
+                        // ####### SUBPATCHES ####### //
+                        ImGui::SetNextItemWidth(60);
+                        temp[0] = subpatches.x;
+                        temp[1] = subpatches.y;
+                        ImGui::InputInt2("Subpatches", temp);
+                        subpatches.x = temp[0];
+                        subpatches.y = temp[1];
+                    }
 
                     ImGui::EndTabItem();
                 }
@@ -3575,6 +3659,26 @@ void ProjectBuilder::visualize(){
                         bool write_norm_depth_ = write_norm_depth[rig_dict[current_rig]];
                         ImGui::Checkbox("Write Norm Depth Images", &write_norm_depth_);
                         write_norm_depth[rig_dict[current_rig]] = write_norm_depth_;
+                        // ####### BOUNDING BOXES ####### //
+                        if (ImGui::BeginPopup("multi_select_popup")) {
+                            for (auto &box_pair : bounding_boxes) {
+                                ImGui::Selectable(box_pair.first.c_str(), &box_pair.second, ImGuiSelectableFlags_DontClosePopups);
+                            }
+                            ImGui::EndPopup();
+                        }
+                        if (ImGui::Button("Select Bounding Box Objects")) {
+                            ImGui::OpenPopup("multi_select_popup");
+                        }
+                        // ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
+                        // Display selected items
+                        ImGui::Text("Objects:");
+                        int idx = 0;
+                        for (auto &box_pair : bounding_boxes) {
+                            if (box_pair.second){
+                                ImGui::SameLine(), ImGui::Text("%i. %s", idx, box_pair.first.c_str());
+                                idx++;
+                            }
+                        }
                         // ####### RIG COLOR ####### //
                         float col[3];
                         col[0] = rig_colors[rig_dict[current_rig]].r;
@@ -4137,7 +4241,7 @@ void ProjectBuilder::visualize(){
             // (Your code clears your framebuffer, renders your other stuff etc.)
             // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);  // Set a background color (e.g., dark grey)
             // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            visualizer->plotOnce(depthMVP, !io.WantCaptureMouse);
+            visualizer->plotOnce(!io.WantCaptureMouse);
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glfwSwapBuffers(window);
@@ -4871,6 +4975,7 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
 }
 
 void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, vec3 position, std::string file_extension) const{
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     std::vector<std::string> primitive_data_vec = {"object_label"};
     std::vector<uint> canopy_primID_vec;
     std::vector<uint> canopy_objID_vec;
@@ -4892,9 +4997,11 @@ void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_
     for (uint objID : canopy_objID_vec){
         context->translateObject(objID, position);
     }
+    #endif
 }
 
 void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const{
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     std::vector<std::string> primitive_data_vec = {"object_label"};
     std::vector<std::vector<uint>> canopy_primID_vec;
     std::vector<std::vector<uint>> canopy_objID_vec;
@@ -4926,6 +5033,7 @@ void ProjectBuilder::saveCanopy(std::string file_name_base, std::vector<uint> ca
             context->translateObject(objID, positions[i]);
         }
     }
+    #endif
 }
 
 void ProjectBuilder::addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission){
@@ -5531,6 +5639,7 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, st
 }
 
 void ProjectBuilder::deleteCanopy(const std::string &canopy){
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     int delete_idx = canopy_labels_dict[canopy];
     for (auto plant_instance : canopy_IDs[delete_idx]){
         plantarchitecture->deletePlantInstance(plant_instance);
@@ -5542,6 +5651,7 @@ void ProjectBuilder::deleteCanopy(const std::string &canopy){
     } else{
         current_canopy = "";
     }
+    #endif
 }
 
 
@@ -5560,6 +5670,7 @@ void ProjectBuilder::deleteObject(const std::string& obj){
 
 
 void ProjectBuilder::updateCanopy(const std::string &canopy){
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     int update_idx = canopy_labels_dict[canopy];
     for (auto plant_instance : canopy_IDs[update_idx]){
         plantarchitecture->deletePlantInstance(plant_instance);
@@ -5593,6 +5704,7 @@ void ProjectBuilder::updateCanopy(const std::string &canopy){
     primitive_UUIDs["flower"] = flower_UUIDs;
 
     canopy_IDs[canopy_labels_dict[canopy]] = new_canopy_IDs;
+    #endif
 }
 
 
@@ -5659,17 +5771,32 @@ void ProjectBuilder::updateGround(){
     uint ground_objID;
     if( !ground_model_file.empty() && ground_flag == 2 && use_ground_texture ) {
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
+        context->translatePrimitive( ground_UUIDs, domain_origin );
         ground_objID = context->addPolymeshObject( ground_UUIDs );
     }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
+        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+
+            return;
+        }else{
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        }
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
+
+        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+            context->setPrimitiveColor(ground_UUIDs, ground_color_);
+
+            return;
+        }else{
         ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
         ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        }
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
         ground_color_.r = ground_color[0];
@@ -5686,6 +5813,7 @@ void ProjectBuilder::updateGround(){
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
 }
 
@@ -5714,5 +5842,59 @@ std::string ProjectBuilder::shortenPath(std::string path_name){
         shorten_path = shorten_path.substr(last_file + 1);
     }
     return shorten_path;
+}
+
+
+void ProjectBuilder::setBoundingBoxObjects(){
+    bounding_boxes_map.clear();
+    int idx = 0;
+    for (auto &box_pair : bounding_boxes) {
+        if (box_pair.second){
+            bounding_boxes_map[box_pair.first] = idx;
+            idx++;
+        }
+    }
+    std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    context->clearPrimitiveData(all_UUIDs, "object_number");
+    for (auto &UUID : all_UUIDs){
+        if (!context->doesPrimitiveDataExist(UUID, "object_label")) continue;
+        std::string obj_label;
+        context->getPrimitiveData(UUID, "object_label", obj_label);
+        if (bounding_boxes_map.find(obj_label) != bounding_boxes_map.end()){
+            context->setPrimitiveData(UUID, "object_number", HELIOS_TYPE_UINT, 1, &bounding_boxes_map[obj_label]);
+        }
+    }
+}
+
+
+void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  ){
+
+    ground_UUIDs.clear();
+
+    vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
+
+    vec2 dx_subpatch( dx_tile.x/float(texture_subpatches.x), dx_tile.y/float(texture_subpatches.y) );
+
+    std::vector<uint> UUIDs;
+    for( int j=0; j<texture_subtiles.y; j++ ){
+        for( int i=0; i<texture_subtiles.x; i++ ){
+
+            vec3 center = ground_origin + make_vec3( -0.5f*ground_extent.x+(float(i)+0.5f)*dx_tile.x, -0.5f*ground_extent.y+(float(j)+0.5f)*dx_tile.y, 0 );
+
+            if( ground_rotation!=0 ){
+                center = rotatePointAboutLine( center, ground_origin, make_vec3(0,0,1), ground_rotation );
+            }
+
+            UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_texture_file );
+
+            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
+
+        }
+    }
+
+    context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    primitive_UUIDs["ground"] = ground_UUIDs;
+
 }
 

@@ -274,10 +274,14 @@ enum BudState{
 struct CarbohydrateParameters {
 
     // -- Stem Growth Parameters -- //
-    //! internode (wood/stem) density (g m^-3)
+    //! mature internode (wood/stem) density (g m^-3)
     float stem_density = 540000;
-    //! fraction of the dry weight of internode made up by carbon
+    //! fraction of the dry weight of internode made up by carbon in mature shoot
     float stem_carbon_percentage = 0.4559;
+    //! age at which stem reaches physiological maturity (days)
+    float maturity_age = 365;
+    //! starting fraction of the final stem carbon density in new growth
+    float initial_density_ratio = 0.1;
     //! ratio of shoot internode dry weight to root dry weight
     float shoot_root_ratio = 3;
 
@@ -302,7 +306,7 @@ struct CarbohydrateParameters {
     float stem_maintainance_respiration_rate = 3.5024e-05;
     //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
     float root_maintainance_respiration_rate = 3.5024e-05;
-    //! growth respiration cost as a fraction of [what?]
+    //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
     float growth_respiration_fraction = 0.28;
 
     // -- Organ Abortion Thresholds -- //
@@ -318,6 +322,9 @@ struct CarbohydrateParameters {
     float carbohydrate_phyllochron_threshold = 0.1;
     //! carbohydrate concentration threshold [what?] as a fraction of the molar density of the stem
     float carbohydrate_phyllochron_threshold_low = 0.05;
+
+    //! carbohydrate concentration threshold for radial growth as a fraction of the molar density of the stem
+    float carbohydrate_growth_threshold = 0.1;
 
     // -- Carbon Transfer Parameters -- //
     //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of the molar density of the stem
@@ -966,6 +973,8 @@ public:
      */
     [[nodiscard]] std::vector<float> getInternodeNodeRadii() const;
 
+    float calculatePhytomerVolume(uint node_number) const;
+
     /**
      * \brief Retrieves the axis vector of the internode at a given fraction along the internode.
      *
@@ -1231,6 +1240,8 @@ public:
 
     float current_internode_scale_factor = 1;
     float current_leaf_scale_factor = 1;
+
+    float old_phytomer_volume = 0;
 
     float downstream_leaf_area = 0;
 
@@ -1551,7 +1562,7 @@ public:
     //! Build a plant instance based on the model currently loaded from the library
     /**
      * \param[in] base_position Cartesian coordinates of the base of the plant.
-     * \param[in] age Age of the plant.
+     * \param[in] age Age of the plant in days.
      * \return ID of the plant instance.
      */
     uint buildPlantInstanceFromLibrary( const helios::vec3 &base_position, float age );
@@ -1561,7 +1572,7 @@ public:
      * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy.
      * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
-     * \param[in] age Age of the plants in the canopy.
+     * \param[in] age Age of the plants in the canopy in days.
      * \param[in] germination_rate [optional] Probability that a plant in the canopy germinates and a plant is created.
      * \return Vector of plant instance IDs.
      */
@@ -1572,7 +1583,7 @@ public:
      * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy boundaries.
      * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
      * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
-     * \param[in] age Age of the plants in the canopy.
+     * \param[in] age Age of the plants in the canopy in days.
      * \return Vector of plant instance IDs.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age);
@@ -1643,7 +1654,7 @@ public:
      */
     void deletePlantInstance( const std::vector<uint> &plantIDs );
 
-    //! Specify the threshold values for plant phenological stages
+    //! Specify the threshold values for plant phenological stages. All time values have units of days.
     /**
      * \param[in] plantID ID of the plant.
      * \param[in] time_to_dormancy_break Length of the dormancy period.
@@ -2386,12 +2397,17 @@ protected:
     void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float
                                                ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
 
+    static float interpolateTube(const std::vector<float> &P, float frac);
+
+    static helios::vec3 interpolateTube(const std::vector<helios::vec3> &P, float frac);
+
     //! Names of additional object data to add to the Context
     std::map<std::string,bool> output_object_data;
 
     // --- Plant Growth --- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
+    void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
     // --- Carbohydrate Model --- //
 

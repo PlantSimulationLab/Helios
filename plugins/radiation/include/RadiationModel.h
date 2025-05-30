@@ -1446,6 +1446,14 @@ protected:
     //! Primitive transmissivity weighted by camera response - RTvariable
     RTvariable tau_cam_RTvariable;
 
+    //! Primitive specular reflection exponent - RTbuffer
+    RTbuffer specular_exponent_RTbuffer;
+    //! Primitive specular reflection exponent - RTvariable
+    RTvariable specular_exponent_RTvariable;
+
+    //! Flag indicating whether specular reflection is enabled - RTvariable
+    RTvariable specular_reflection_enabled_RTvariable;
+
     //! Primitive type - RTbuffer object
     RTbuffer primitive_type_RTbuffer;
     //! Primitive type - RTvariable

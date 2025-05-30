@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -383,7 +383,7 @@ $(function(){initNavTree('_assets_8cpp_source.html',''); initResizable(true); })
 <div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    colors.push_back( RGB::forestgreen );</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#ga51f79fece15fee384255237359563a18" title="Add a 3D tube compound object to the Context.">addTubeObject</a>( 8, nodes, radius, colors);</div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a3b4ffa6ef56001319b2b63703b9f2acd" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>( objID, context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>(0,2.f*M_PI), <span class="stringliteral">&quot;x&quot;</span> );</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#ad0e8038dec42cf800e41d41ea27a8fac" title="Rotate a single compound object about the x, y, or z axis.">rotateObject</a>( objID, context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>(0,2.f*M_PI), <span class="stringliteral">&quot;x&quot;</span> );</div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="keywordflow">return</span> objID;</div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>}</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
@@ -647,7 +647,7 @@ $(function(){initNavTree('_assets_8cpp_source.html',''); initResizable(true); })
 <div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    std::vector&lt;uint&gt; UUIDs;</div>
 <div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; grape : grapes) {</div>
 <div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span><span class="comment">//        std::vector&lt;uint&gt; UUIDs_tmp = context_ptr-&gt;addSphere( 10, grape.first, grape.second, &quot;../../../plugins/plantarchitecture/assets/textures/GrapeBerry.jpg&quot; );</span></div>
-<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>        std::vector&lt;uint&gt; UUIDs_tmp = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gac5df0d862dd8d6783edc037804c452bf" title="Add a spherical compound object to the Context.">addSphere</a>( 10, grape.first, grape.second, <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.053,0.076,0.098) );</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>        std::vector&lt;uint&gt; UUIDs_tmp = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gac5df0d862dd8d6783edc037804c452bf" title="Add a spherical compound object to the Context.">addSphere</a>( 10, grape.first, grape.second, <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.053,0.076,0.098) );</div>
 <div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>        UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());</div>
 <div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>    }</div>
 <div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span> </div>
@@ -744,8 +744,8 @@ $(function(){initNavTree('_assets_8cpp_source.html',''); initResizable(true); })
 <div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>uint OliveFruitPrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions ){</div>
 <div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/OliveFruit.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    std::vector&lt;uint&gt; UUIDs_fruit = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7" title="Filter a set of primitives based on their primitive data and a condition and float value.">filterPrimitivesByData</a>( context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a7d0b3a6ca36b02702b06208a735a3b03" title="Get primitive UUIDs associated with compound object (single object ID input)">getObjectPrimitiveUUIDs</a>(objID), <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;fruit&quot;</span>);</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a029f95ee0056f027866f8bad2fe9e48e" title="Method to set the diffuse color of a Primitive.">setPrimitiveColor</a>( UUIDs_fruit, <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.65,0.7,0.4)); <span class="comment">//green</span></div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    std::vector&lt;uint&gt; UUIDs_fruit = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a5d2b4e168e1d434a7a0815ba81f2ed4c" title="Filter a set of primitives based on their primitive data and a condition and float value.">filterPrimitivesByData</a>( context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a7d0b3a6ca36b02702b06208a735a3b03" title="Get primitive UUIDs associated with compound object (single object ID input)">getObjectPrimitiveUUIDs</a>(objID), <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;fruit&quot;</span>);</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a5f95e8537f22f83b8376806cf40768d6" title="Method to set the diffuse color of a Primitive.">setPrimitiveColor</a>( UUIDs_fruit, <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.65,0.7,0.4)); <span class="comment">//green</span></div>
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    <span class="keywordflow">return</span> objID;</div>
 <div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>}</div>
 <div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span> </div>
@@ -1034,92 +1034,100 @@ $(function(){initNavTree('_assets_8cpp_source.html',''); initResizable(true); })
 <div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    <span class="keywordflow">if</span>( shoot_node_index&lt;8 &amp;&amp; phytomer-&gt;rank==0 ){</div>
 <div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>        phytomer-&gt;setFloralBudState(BUD_DEAD);</div>
 <div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>    }</div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span> </div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    <span class="comment">//set leaf and internode scale based on position along the shoot</span></div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    <span class="keywordtype">float</span> leaf_scale = fmin(1.f, 0.5 + 0.5 * plant_age / 10.f);</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    phytomer-&gt;scaleLeafPrototypeScale(leaf_scale);</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span> </div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    <span class="keywordtype">float</span> inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    phytomer-&gt;scaleInternodeMaxLength(inode_scale);</div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>    <span class="keywordflow">if</span> ( phytomer-&gt;rank &gt; 1 ) {</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        phytomer-&gt;setFloralBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        phytomer-&gt;setVegetativeBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    }</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    <span class="keywordflow">if</span> ( phytomer-&gt;rank&gt;1 ) {</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>        phytomer-&gt;setFloralBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>        phytomer-&gt;setVegetativeBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    }</div>
 <div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span> </div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>}</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span> </div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span><span class="keywordtype">void</span> CherryTomatoPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ){</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    <span class="comment">//set leaf and internode scale based on position along the shoot</span></div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keywordtype">float</span> leaf_scale = fmin(1.f, 0.5 + 0.5 * plant_age / 10.f);</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    phytomer-&gt;scaleLeafPrototypeScale(leaf_scale);</div>
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span> </div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">if</span>( shoot_node_index&lt;8 || phytomer-&gt;rank&gt;1 ){</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        phytomer-&gt;setFloralBudState(BUD_DEAD);</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>        phytomer-&gt;setVegetativeBudState(BUD_DEAD);</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>    }</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span> </div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    <span class="comment">//set leaf and internode scale based on position along the shoot</span></div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    <span class="keywordtype">float</span> leaf_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 15.f);</div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>    phytomer-&gt;scaleLeafPrototypeScale(leaf_scale);</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span> </div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>    <span class="keywordtype">float</span> inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>    phytomer-&gt;scaleInternodeMaxLength(inode_scale);</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    <span class="keywordtype">float</span> inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>    phytomer-&gt;scaleInternodeMaxLength(inode_scale);</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>}</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span> </div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span><span class="keywordtype">void</span> CherryTomatoPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ){</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span> </div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>    <span class="keywordflow">if</span>( shoot_node_index&lt;8 || phytomer-&gt;rank&gt;1 ){</div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        phytomer-&gt;setFloralBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>        phytomer-&gt;setVegetativeBudState(BUD_DEAD);</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>    }</div>
 <div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span> </div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>}</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span> </div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span><span class="keywordtype">void</span> CherryTomatoPhytomerCallbackFunction( std::shared_ptr&lt;Phytomer&gt; phytomer ){</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    <span class="comment">//set leaf and internode scale based on position along the shoot</span></div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <span class="keywordtype">float</span> leaf_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 15.f);</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    phytomer-&gt;scaleLeafPrototypeScale(leaf_scale);</div>
 <div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span> </div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="keywordtype">float</span> pruning_height = 1.f;</div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    <span class="keywordtype">float</span> pruning_day = 101.f;</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span> </div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keywordtype">float</span> plant_age = phytomer-&gt;parent_shoot_ptr-&gt;plantarchitecture_ptr-&gt;getPlantAge(phytomer-&gt;plantID);</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span> </div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    <span class="keywordflow">if</span>( phytomer-&gt;hasLeaf() &amp;&amp; plant_age &gt;= pruning_day  ) {</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>        <span class="keywordtype">float</span> height = phytomer-&gt;getInternodeNodePositions().at(0).z;</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>        <span class="keywordflow">if</span> ( height&lt; pruning_height ) {</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>            phytomer-&gt;removeLeaf();</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>        }</div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    }</div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span> </div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>}</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span> </div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>uint WalnutFruitPrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions ){</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/WalnutHull.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>    <span class="keywordflow">return</span> objID;</div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>}</div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    <span class="keywordtype">float</span> inode_scale = fmin(1.f, 0.7 + 0.3 * plant_age / 10.f);</div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    phytomer-&gt;scaleInternodeMaxLength(inode_scale);</div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span> </div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>}</div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span> </div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span><span class="keywordtype">void</span> CherryTomatoPhytomerCallbackFunction( std::shared_ptr&lt;Phytomer&gt; phytomer ){</div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span> </div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    <span class="keywordtype">float</span> pruning_height = 1.f;</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    <span class="keywordtype">float</span> pruning_day = 101.f;</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span> </div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>    <span class="keywordtype">float</span> plant_age = phytomer-&gt;parent_shoot_ptr-&gt;plantarchitecture_ptr-&gt;getPlantAge(phytomer-&gt;plantID);</div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span> </div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="keywordflow">if</span>( phytomer-&gt;hasLeaf() &amp;&amp; plant_age &gt;= pruning_day  ) {</div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        <span class="keywordtype">float</span> height = phytomer-&gt;getInternodeNodePositions().at(0).z;</div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>        <span class="keywordflow">if</span> ( height&lt; pruning_height ) {</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>            phytomer-&gt;removeLeaf();</div>
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>        }</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    }</div>
 <div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> </div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>uint WalnutFlowerPrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open ){</div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondFlower.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.0,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    <span class="keywordflow">return</span> objID;</div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>}</div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span> </div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span><span class="keywordtype">void</span> WalnutPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ) {</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>}</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span> </div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>uint WalnutFruitPrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions ){</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/WalnutHull.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keywordflow">return</span> objID;</div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>}</div>
 <div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span> </div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="comment">//blind nodes</span></div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    <span class="keywordflow">if</span>( shoot_node_index&lt;4 ){</div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>        phytomer-&gt;setVegetativeBudState( BUD_DEAD );</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>        phytomer-&gt;setFloralBudState( BUD_DEAD );</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    }</div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>uint WalnutFlowerPrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions, <span class="keywordtype">bool</span> flower_is_open ){</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/AlmondFlower.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.0,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <span class="keywordflow">return</span> objID;</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>}</div>
 <div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span> </div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>}</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span><span class="keywordtype">void</span> WalnutPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ) {</div>
 <div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span> </div>
-<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span><span class="keywordtype">void</span> WalnutPhytomerCallbackFunction( std::shared_ptr&lt;Phytomer&gt; phytomer ){</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span> </div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>}</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span> </div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>uint WheatSpikePrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions ){</div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/WheatSpike.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    <span class="keywordflow">return</span> objID;</div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>}</div>
+<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    <span class="comment">//blind nodes</span></div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>    <span class="keywordflow">if</span>( shoot_node_index&lt;4 ){</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>        phytomer-&gt;setVegetativeBudState( BUD_DEAD );</div>
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>        phytomer-&gt;setFloralBudState( BUD_DEAD );</div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>    }</div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span> </div>
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>}</div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span><span class="keywordtype">void</span> WalnutPhytomerCallbackFunction( std::shared_ptr&lt;Phytomer&gt; phytomer ){</div>
 <div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span> </div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span><span class="keywordtype">void</span> WheatPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ){</div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>}</div>
 <div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span> </div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    <span class="comment">//set leaf scale based on position along the shoot</span></div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    <span class="keywordtype">float</span> scale = fmin(1.f, 0.7 + 0.3*<span class="keywordtype">float</span>(shoot_node_index)/5.f);</div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    phytomer-&gt;scaleLeafPrototypeScale(scale);</div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span> </div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    phytomer-&gt;scaleInternodeMaxLength(scale);</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span> </div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>}</div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>uint WheatSpikePrototype( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr, uint subdivisions ){</div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    std::vector&lt;uint&gt; UUIDs = context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a8657240a0b2926e8c73b083f0fdc339d" title="Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without an...">loadOBJ</a>( <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/WheatSpike.obj&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.,0,0), 0,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, <span class="stringliteral">&quot;ZUP&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    uint objID = context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#gababf99153757527880fe3866cc23fd1b" title="Add new Polymesh Compound Object.">addPolymeshObject</a>( UUIDs );</div>
+<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>    <span class="keywordflow">return</span> objID;</div>
+<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>}</div>
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span> </div>
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span><span class="keywordtype">void</span> WheatPhytomerCreationFunction( std::shared_ptr&lt;Phytomer&gt; phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, <span class="keywordtype">float</span> plant_age ){</div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span> </div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>    <span class="comment">//set leaf scale based on position along the shoot</span></div>
+<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>    <span class="keywordtype">float</span> scale = fmin(1.f, 0.7 + 0.3*<span class="keywordtype">float</span>(shoot_node_index)/5.f);</div>
+<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>    phytomer-&gt;scaleLeafPrototypeScale(scale);</div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span> </div>
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>    <span class="comment">//set internode length based on position along the shoot</span></div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>    phytomer-&gt;scaleInternodeMaxLength(scale);</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span> </div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>}</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

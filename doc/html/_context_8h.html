@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -239,6 +239,7 @@ Enumerations</h2></td></tr>
 &#160;&#160;<a class="el" href="#ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51">helios::OBJECT_TYPE_DISK</a> = 4
 , <a class="el" href="#ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38">helios::OBJECT_TYPE_POLYMESH</a> = 5
 , <a class="el" href="#ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def">helios::OBJECT_TYPE_CONE</a> = 6
+, <a class="el" href="#ad0894682f41916c84c2026b3cb8ac682a07b25c3fca3818d486c8fb9db65d910d">helios::OBJECT_TYPE_NONE</a> = -1
 <br />
  }</td></tr>
 <tr class="memdesc:ad0894682f41916c84c2026b3cb8ac682"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of compound object.  <a href="#ad0894682f41916c84c2026b3cb8ac682">More...</a><br /></td></tr>
@@ -308,23 +309,25 @@ Enumerations</h2></td></tr>
 
 <p>Type of compound object. </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde" name="ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde"></a>OBJECT_TYPE_TILE&#160;</td><td class="fielddoc"><p>&lt; Tile </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde" name="ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde"></a>OBJECT_TYPE_TILE&#160;</td><td class="fielddoc"><p>Tile. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175" name="ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175"></a>OBJECT_TYPE_SPHERE&#160;</td><td class="fielddoc"><p>&lt; Sphere </p>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175" name="ad0894682f41916c84c2026b3cb8ac682af4e336a18e47e54ca6e9a7f57e665175"></a>OBJECT_TYPE_SPHERE&#160;</td><td class="fielddoc"><p>Sphere. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a4c8545d7bc5d79cd8d150eca0624b623" name="ad0894682f41916c84c2026b3cb8ac682a4c8545d7bc5d79cd8d150eca0624b623"></a>OBJECT_TYPE_TUBE&#160;</td><td class="fielddoc"><p>Tube. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a2f065407387865d0564746c763c78d66" name="ad0894682f41916c84c2026b3cb8ac682a2f065407387865d0564746c763c78d66"></a>OBJECT_TYPE_BOX&#160;</td><td class="fielddoc"><p>Box. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51" name="ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51"></a>OBJECT_TYPE_DISK&#160;</td><td class="fielddoc"><p>&lt; Disk </p>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51" name="ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51"></a>OBJECT_TYPE_DISK&#160;</td><td class="fielddoc"><p>Disk. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38" name="ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38"></a>OBJECT_TYPE_POLYMESH&#160;</td><td class="fielddoc"><p>&lt; Triangular Mesh </p>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38" name="ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38"></a>OBJECT_TYPE_POLYMESH&#160;</td><td class="fielddoc"><p>Triangular Mesh. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def" name="ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def"></a>OBJECT_TYPE_CONE&#160;</td><td class="fielddoc"><p>&lt; Cone/tapered cylinder </p>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def" name="ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def"></a>OBJECT_TYPE_CONE&#160;</td><td class="fielddoc"><p>Cone/tapered cylinder. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad0894682f41916c84c2026b3cb8ac682a07b25c3fca3818d486c8fb9db65d910d" name="ad0894682f41916c84c2026b3cb8ac682a07b25c3fca3818d486c8fb9db65d910d"></a>OBJECT_TYPE_NONE&#160;</td><td class="fielddoc"><p>Not assigned to an object. </p>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00128">128</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00143">143</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>

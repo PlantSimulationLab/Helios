@@ -891,6 +891,10 @@ void TomatoPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
         phytomer->setFloralBudState(BUD_DEAD);
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
+    if ( phytomer->rank>1 ) {
+        phytomer->setFloralBudState(BUD_DEAD);
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
 
     //set leaf and internode scale based on position along the shoot
     float leaf_scale = fmin(1.f, 0.5 + 0.5 * plant_age / 10.f);

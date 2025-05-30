@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1009,9 +1009,9 @@ Getting Primitive UUIDs for Organ Sub-Components</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">Sepals   </td><td class="markdownTableBodyNone">"object_label"   </td><td class="markdownTableBodyNone">"sepals"   </td><td class="markdownTableBodyNone">The sepals (i.e., green part at base) of the fruit.   </td></tr>
 </table>
-<p>The UUIDs for a given sub-organ group can be retrieved by calling the Context method <a class="el" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7">helios::Context::filterPrimitivesByData()</a>. Below is an example for getting the leaf vein UUIDs.</p>
+<p>The UUIDs for a given sub-organ group can be retrieved by calling the Context method <a class="el" href="classhelios_1_1_context.html#a5d2b4e168e1d434a7a0815ba81f2ed4c">helios::Context::filterPrimitivesByData()</a>. Below is an example for getting the leaf vein UUIDs.</p>
 <div class="fragment"><div class="line">std::vector&lt;uint&gt; plant_UUIDs = plantarchitecture.getAllPlantUUIDs( plantID );</div>
-<div class="line">std::vector&lt;uint&gt; leaf_vein_UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a416b75bbf3ddf4ca0184df35651f41b7" title="Filter a set of primitives based on their primitive data and a condition and float value.">filterPrimitivesByData</a>( plant_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;veins&quot;</span> );</div>
+<div class="line">std::vector&lt;uint&gt; leaf_vein_UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a5d2b4e168e1d434a7a0815ba81f2ed4c" title="Filter a set of primitives based on their primitive data and a condition and float value.">filterPrimitivesByData</a>( plant_UUIDs, <span class="stringliteral">&quot;object_label&quot;</span>, <span class="stringliteral">&quot;veins&quot;</span> );</div>
 </div><!-- fragment --><p>For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

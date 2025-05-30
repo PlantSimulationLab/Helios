@@ -43,7 +43,6 @@ namespace helios{
  * \ingroup vectors
  */
 struct int2{
-public:
 
   //! First element in vector
   int x;
@@ -70,19 +69,19 @@ public:
 
 
   //! Add two int2 vectors
-  inline constexpr int2 operator+(const int2& a) const noexcept;
+  constexpr int2 operator+(const int2& a) const noexcept;
   //! Increment int2 vector
   inline int2& operator+=(const int2& a) noexcept;
-  //! Deccrement int2 vector
+  //! Decrement int2 vector
   inline int2& operator-=(const int2& a) noexcept;
   //! Subtract two int2 vectors
-  inline constexpr int2 operator-(const int2& a) const noexcept;
+  constexpr int2 operator-(const int2& a) const noexcept;
   //! Equality for all elements
-  inline constexpr bool operator==( const int2& a ) const noexcept;
+  constexpr bool operator==( const int2& a ) const noexcept;
   //! Inequality for all elements
-  inline constexpr bool operator!=( const int2& a ) const noexcept;
+  constexpr bool operator!=( const int2& a ) const noexcept;
   //! Multiply each element by -1
-  inline constexpr int2 operator-() const noexcept;
+  constexpr int2 operator-() const noexcept;
 
   //! Write int2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int2 &vec) {
@@ -97,7 +96,7 @@ public:
  * \param[in] y First component of integer vector
  * \ingroup vectors
 */
-inline constexpr int2 make_int2( int x, int y ){
+constexpr int2 make_int2( int x, int y ){
   return {x,y};
 }
  
@@ -110,7 +109,7 @@ inline int2 make_int2( int X[2] ){
   return {X[0],X[1]};
 }
 
-inline constexpr int2 int2::operator+(const int2& a) const  noexcept {
+constexpr int2 int2::operator+(const int2& a) const  noexcept {
   return {a.x+x, a.y+y};
 }
 
@@ -126,26 +125,25 @@ inline int2& int2::operator-=(const int2& a) noexcept {
     return *this;
 }
 
-inline constexpr int2 int2::operator-(const int2& a) const noexcept {
+constexpr int2 int2::operator-(const int2& a) const noexcept {
   return {x-a.x, y-a.y};
 }
 
-inline constexpr bool int2::operator==( const int2& a ) const noexcept{
+constexpr bool int2::operator==( const int2& a ) const noexcept{
   return a.x==x && a.y==y;
 }
 
-inline constexpr bool int2::operator!=( const int2& a ) const noexcept{
+constexpr bool int2::operator!=( const int2& a ) const noexcept{
     return a.x!=x || a.y!=y;
 }
 
-inline constexpr int2 int2::operator-() const noexcept{
+constexpr int2 int2::operator-() const noexcept{
     return {-x,-y};
 }
 
 //! Vector of three elements of type 'int'. 
 /** \ingroup vectors */
 struct int3{
-public:
 
   //! First element in vector
   int x;
@@ -174,19 +172,19 @@ public:
   constexpr int3( int v0, int v1, int v2 ) : x(v0), y(v1), z(v2) {}
 
   //! Add two int3 vectors
-  inline constexpr int3 operator+(const int3& a) const noexcept;
+  constexpr int3 operator+(const int3& a) const noexcept;
   //! Increment int3 vector
   inline int3& operator+=(const int3& a) noexcept;
   //! Decrement int3 vector
   inline int3& operator-=(const int3& a) noexcept;
   //! Subtract two int3 vectors
-  inline constexpr int3 operator-(const int3& a) const noexcept;
+  constexpr int3 operator-(const int3& a) const noexcept;
   //! Equality for all elements
-  inline constexpr bool operator==( const int3& a ) const noexcept;
+  constexpr bool operator==( const int3& a ) const noexcept;
   //! Inequality for all elements
-  inline constexpr bool operator!=( const int3& a ) const noexcept;
+  constexpr bool operator!=( const int3& a ) const noexcept;
   //! Multiply each element by -1
-  inline constexpr int3 operator-() const noexcept;
+  constexpr int3 operator-() const noexcept;
 
   //! Write int3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int3 &vec) {
@@ -196,16 +194,16 @@ public:
 };
 
 //! Make an int3 vector from three ints
-inline constexpr int3 make_int3( int X, int Y, int Z ){
+constexpr int3 make_int3( int X, int Y, int Z ){
   return {X,Y,Z};
 }
 
 //! Make an int2 vector from an array of ints
-inline constexpr int3 make_int3( int X[3] ){
+constexpr int3 make_int3( int X[3] ){
   return {X[0],X[1],X[2]};
 }
 
-inline constexpr int3 int3::operator+(const int3& a) const noexcept{
+constexpr int3 int3::operator+(const int3& a) const noexcept{
   return {a.x+x, a.y+y, a.z+z};
 }
 
@@ -223,26 +221,26 @@ inline int3& int3::operator-=(const int3& a) noexcept{
     return *this;
 }
 
-inline constexpr int3 int3::operator-(const int3& a) const noexcept{
+constexpr int3 int3::operator-(const int3& a) const noexcept{
   return {x-a.x, y-a.y, z-a.z};
 }
 
-inline constexpr bool int3::operator==( const int3& a ) const noexcept{
+constexpr bool int3::operator==( const int3& a ) const noexcept{
   return a.x==x && a.y==y && a.z==z;
 }
 
-inline constexpr bool int3::operator!=( const int3& a ) const noexcept{
+constexpr bool int3::operator!=( const int3& a ) const noexcept{
     return a.x!=x || a.y!=y || a.z!=z;
 }
 
-inline constexpr int3 int3::operator-() const noexcept{
+constexpr int3 int3::operator-() const noexcept{
     return {-x,-y,-z};
 }
 
 //! Vector of four elements of type 'int'. 
 /** \ingroup vectors */
 struct int4{
-public:
+
 
   //! First element in vector
   int x;
@@ -275,19 +273,19 @@ public:
   constexpr int4( int v0, int v1, int v2, int v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Add two int4 vectors
-  inline constexpr int4 operator+(const int4& a) const noexcept;
+  constexpr int4 operator+(const int4& a) const noexcept;
   //! Increment int4 vector
   inline int4& operator+=(const int4& a) noexcept;
   //! Decrement int4 vector
   inline int4& operator-=(const int4& a) noexcept;
   //! Subtract two int4 vectors
-  inline constexpr int4 operator-(const int4& a) const noexcept;
+  constexpr int4 operator-(const int4& a) const noexcept;
   //! Equality for all elements
-  inline constexpr bool operator==( const int4& a ) const noexcept;
+  constexpr bool operator==( const int4& a ) const noexcept;
   //! Inequality for all elements
-  inline constexpr bool operator!=( const int4& a ) const noexcept;
+  constexpr bool operator!=( const int4& a ) const noexcept;
   //! Multiply each element by -1
-  inline constexpr int4 operator-() const noexcept;
+  constexpr int4 operator-() const noexcept;
 
   //! Write int4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::int4 &vec) {
@@ -297,16 +295,16 @@ public:
 };
 
 //! Make an int4 vector from three ints
- inline constexpr int4 make_int4(int x, int y, int z, int w ){
+ constexpr int4 make_int4(int x, int y, int z, int w ){
    return {x, y, z, w};
  }
 
  //! Make an int4 vector from an array of ints
-inline constexpr int4 make_int4( const int X[4] ){
+constexpr int4 make_int4( const int X[4] ){
   return {X[0],X[1],X[2],X[3]};
 }
 
-inline constexpr int4 int4::operator+(const int4& a) const noexcept{
+constexpr int4 int4::operator+(const int4& a) const noexcept{
   return {a.x+x, a.y+y, a.z+z, a.w+w};
 }
 
@@ -326,26 +324,362 @@ inline int4& int4::operator-=(const int4& a) noexcept{
     return *this;
 }
 
-inline constexpr int4 int4::operator-(const int4& a) const noexcept{
+constexpr int4 int4::operator-(const int4& a) const noexcept{
     return {a.x-x, a.y-y, a.z-z, a.w-w};
 }
 
-inline constexpr bool int4::operator==( const int4& a ) const noexcept{
+constexpr bool int4::operator==( const int4& a ) const noexcept{
   return a.x==x && a.y==y && a.z==z && a.w==w;
 }
 
-inline constexpr bool int4::operator!=( const int4& a ) const noexcept{
+constexpr bool int4::operator!=( const int4& a ) const noexcept{
     return a.x!=x || a.y!=y || a.z!=z || a.w!=w;
 }
 
-inline constexpr int4 int4::operator-() const noexcept{
+constexpr int4 int4::operator-() const noexcept{
     return {-x,-y,-z,-w};
 }
 
+  //! Vector of two elements of type 'unsigned int'. 
+/**
+ * \ingroup vectors
+ */
+struct uint2{
+
+
+  //! First element in vector
+  unsigned int x;
+  //! Second element in vector
+  unsigned int y;
+
+  //! Default constructor
+  /* initializes to zero */
+  constexpr uint2() : x(0u), y(0u) {}
+
+  //! Construct uint2 from a vector of unsigned ints
+  explicit uint2( const std::vector<unsigned int> &v ) {
+    if( v.size()!=2){
+      throw(std::runtime_error("ERROR: vector for initialization of uint2 must have length 2."));
+    }
+    x=v[0];
+    y=v[1];
+  }
+  //! Construct uint2 from an array of unsigned ints
+  constexpr explicit uint2( const unsigned int v[2] ) : x(v[0]), y(v[1]) {}
+
+  //! Construct uint2 from two unsigned ints
+  constexpr uint2( unsigned int v0, unsigned int v1 ) : x(v0), y(v1) {}
+
+
+  //! Add two uint2 vectors
+  constexpr uint2 operator+(const uint2& a) const noexcept;
+  //! Increment uint2 vector
+  inline uint2& operator+=(const uint2& a) noexcept;
+  //! Decrement uint2 vector
+  inline uint2& operator-=(const uint2& a) noexcept;
+  //! Subtract two uint2 vectors
+  constexpr uint2 operator-(const uint2& a) const noexcept;
+  //! Equality for all elements
+  constexpr bool operator==( const uint2& a ) const noexcept;
+  //! Inequality for all elements
+  constexpr bool operator!=( const uint2& a ) const noexcept;
+  //! Multiply each element by zero minus itself (wraps)
+  constexpr uint2 operator-() const noexcept;
+
+  //! Write uint2 to output stream
+  friend std::ostream &operator<<(std::ostream &os, const helios::uint2 &vec) {
+    return os << "helios::uint2<" << vec.x << ", " << vec.y << ">";
+  }
+
+};
+
+//! Make a uint2 vector from two unsigned ints
+/**
+ * \param[in] x First component of unsigned integer vector
+ * \param[in] y Second component of unsigned integer vector
+ * \ingroup vectors
+ */
+constexpr uint2 make_uint2( unsigned int x, unsigned int y ){
+  return {x,y};
+}
+ 
+//! Make a uint2 vector from an array of unsigned ints
+/**
+ * \param[in] X 2D array of unsigned integers
+ * \ingroup vectors
+ */
+constexpr uint2 make_uint2( unsigned int X[2] ){
+  return {X[0],X[1]};
+}
+
+constexpr uint2 uint2::operator+(const uint2& a) const noexcept {
+  return {a.x+x, a.y+y};
+}
+
+inline uint2& uint2::operator+=(const uint2& a) noexcept {
+    this->x += a.x;
+    this->y += a.y;
+    return *this;
+}
+
+inline uint2& uint2::operator-=(const uint2& a) noexcept {
+    this->x -= a.x;
+    this->y -= a.y;
+    return *this;
+}
+
+constexpr uint2 uint2::operator-(const uint2& a) const noexcept {
+  return {x-a.x, y-a.y};
+}
+
+constexpr bool uint2::operator==( const uint2& a ) const noexcept{
+  return a.x==x && a.y==y;
+}
+
+constexpr bool uint2::operator!=( const uint2& a ) const noexcept{
+    return a.x!=x || a.y!=y;
+}
+
+constexpr uint2 uint2::operator-() const noexcept{
+    return {- x, - y};
+}
+
+
+//! Vector of three elements of type 'unsigned int'. 
+/**
+ * \ingroup vectors
+ */
+struct uint3{
+
+
+  //! First element in vector
+  unsigned int x;
+  //! Second element in vector
+  unsigned int y;
+  //! Third element in vector
+  unsigned int z;
+
+  //! Default constructor
+  /**
+   * initializes to zero
+   */
+  constexpr uint3() : x(0u), y(0u), z(0u) {}
+
+  //! Construct uint3 from a vector of unsigned ints
+  explicit uint3( const std::vector<unsigned int> &v ){
+    if( v.size()!=3){
+        throw(std::runtime_error("ERROR: vector for initialization of uint3 must have length 3."));
+    }
+    x=v[0];
+    y=v[1];
+    z=v[2];
+  }
+  //! Construct uint3 from an array of unsigned ints
+  constexpr explicit uint3( const unsigned int v[3] ) : x(v[0]), y(v[1]), z(v[2]) {}
+
+  //! Construct uint3 from three unsigned ints
+  constexpr uint3( unsigned int v0, unsigned int v1, unsigned int v2 ) : x(v0), y(v1), z(v2) {}
+
+  //! Add two uint3 vectors
+  constexpr uint3 operator+(const uint3& a) const noexcept;
+  //! Increment uint3 vector
+  inline uint3& operator+=(const uint3& a) noexcept;
+  //! Decrement uint3 vector
+  inline uint3& operator-=(const uint3& a) noexcept;
+  //! Subtract two uint3 vectors
+  constexpr uint3 operator-(const uint3& a) const noexcept;
+  //! Equality for all elements
+  constexpr bool operator==( const uint3& a ) const noexcept;
+  //! Inequality for all elements
+  constexpr bool operator!=( const uint3& a ) const noexcept;
+  //! Multiply each element by zero minus itself (wraps)
+  constexpr uint3 operator-() const noexcept;
+
+  //! Write uint3 to output stream
+  friend std::ostream &operator<<(std::ostream &os, const helios::uint3 &vec) {
+    return os << "helios::uint3<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
+  }
+
+};
+
+//! Make a uint3 vector from three unsigned ints
+/**
+ * \param[in] X First component of unsigned integer vector
+ * \param[in] Y Second component of unsigned integer vector
+ * \param[in] Z Third component of unsigned integer vector
+ * \ingroup vectors
+ */
+constexpr uint3 make_uint3( unsigned int X, unsigned int Y, unsigned int Z ){
+  return {X,Y,Z};
+}
+
+//! Make a uint3 vector from an array of unsigned ints
+/**
+ * \param[in] X 3D array of unsigned integers
+ * \ingroup vectors
+ */
+constexpr uint3 make_uint3( unsigned int X[3] ){
+  return {X[0],X[1],X[2]};
+}
+
+constexpr uint3 uint3::operator+(const uint3& a) const noexcept{
+  return {a.x+x, a.y+y, a.z+z};
+}
+
+inline uint3& uint3::operator+=(const uint3& a) noexcept{
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    return *this;
+}
+
+inline uint3& uint3::operator-=(const uint3& a) noexcept{
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
+    return *this;
+}
+
+constexpr uint3 uint3::operator-(const uint3& a) const noexcept{
+  return {x-a.x, y-a.y, z-a.z};
+}
+
+constexpr bool uint3::operator==( const uint3& a ) const noexcept{
+  return a.x==x && a.y==y && a.z==z;
+}
+
+constexpr bool uint3::operator!=( const uint3& a ) const noexcept{
+    return a.x!=x || a.y!=y || a.z!=z;
+}
+
+constexpr uint3 uint3::operator-() const noexcept{
+    return {- x, - y, - z};
+}
+
+
+//! Vector of four elements of type 'unsigned int'. 
+/**
+ * \ingroup vectors
+ */
+struct uint4{
+
+  //! First element in vector
+  unsigned int x;
+  //! Second element in vector
+  unsigned int y;
+  //! Third element in vector
+  unsigned int z;
+  //! Fourth element in vector
+  unsigned int w;
+
+  //! Default constructor
+  /**
+   * initializes to zero
+   */
+  constexpr uint4() : x(0u), y(0u), z(0u), w(0u) {}
+
+  //! Construct uint4 from a vector of unsigned ints
+  explicit uint4( const std::vector<unsigned int> &v ){
+    if( v.size()!=4){
+        throw(std::runtime_error("ERROR: vector for initialization of uint4 must have length 4."));
+    }
+    x=v[0];
+    y=v[1];
+    z=v[2];
+    w=v[3];
+  }
+
+  //! Construct uint4 from an array of unsigned ints
+  constexpr explicit uint4( const unsigned int v[4] ) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+
+  //! Construct uint4 from four unsigned ints
+  constexpr uint4( unsigned int v0, unsigned int v1, unsigned int v2, unsigned int v3 ) : x(v0), y(v1), z(v2), w(v3) {}
+
+  //! Add two uint4 vectors
+  constexpr uint4 operator+(const uint4& a) const noexcept;
+  //! Increment uint4 vector
+  inline uint4& operator+=(const uint4& a) noexcept;
+  //! Decrement uint4 vector
+  inline uint4& operator-=(const uint4& a) noexcept;
+  //! Subtract two uint4 vectors
+  constexpr uint4 operator-(const uint4& a) const noexcept;
+  //! Equality for all elements
+  constexpr bool operator==( const uint4& a ) const noexcept;
+  //! Inequality for all elements
+  constexpr bool operator!=( const uint4& a ) const noexcept;
+  //! Multiply each element by zero minus itself (wraps)
+  constexpr uint4 operator-() const noexcept;
+
+  //! Write uint4 to output stream
+  friend std::ostream &operator<<(std::ostream &os, const helios::uint4 &vec) {
+    return os << "helios::uint4<" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ">";
+  }
+
+};
+
+//! Make a uint4 vector from four unsigned ints
+/**
+ * \param[in] x First component of unsigned integer vector
+ * \param[in] y Second component of unsigned integer vector
+ * \param[in] z Third component of unsigned integer vector
+ * \param[in] w Fourth component of unsigned integer vector
+ * \ingroup vectors
+ */
+constexpr uint4 make_uint4(unsigned int x, unsigned int y, unsigned int z, unsigned int w ){
+  return {x, y, z, w};
+}
+
+//! Make a uint4 vector from an array of unsigned ints
+/**
+ * \param[in] X 4D array of unsigned integers
+ * \ingroup vectors
+ */
+constexpr uint4 make_uint4( const unsigned int X[4] ){
+  return {X[0],X[1],X[2],X[3]};
+}
+
+constexpr uint4 uint4::operator+(const uint4& a) const noexcept{
+  return {a.x+x, a.y+y, a.z+z, a.w+w};
+}
+
+inline uint4& uint4::operator+=(const uint4& a) noexcept{
+    this->x += a.x;
+    this->y += a.y;
+    this->z += a.z;
+    this->w += a.w;
+    return *this;
+}
+
+inline uint4& uint4::operator-=(const uint4& a) noexcept{
+    this->x -= a.x;
+    this->y -= a.y;
+    this->z -= a.z;
+    this->w -= a.w;
+    return *this;
+}
+
+constexpr uint4 uint4::operator-(const uint4& a) const noexcept{
+    return {x-a.x, y-a.y, z-a.z, w-a.w};
+}
+
+constexpr bool uint4::operator==( const uint4& a ) const noexcept{
+  return a.x==x && a.y==y && a.z==z && a.w==w;
+}
+
+constexpr bool uint4::operator!=( const uint4& a ) const noexcept{
+    return a.x!=x || a.y!=y || a.z!=z || a.w!=w;
+}
+
+constexpr uint4 uint4::operator-() const noexcept{
+    return {static_cast<unsigned int>(0u - x), static_cast<unsigned int>(0u - y), static_cast<unsigned int>(0u - z), static_cast<unsigned int>(0u - w)};
+}
+
 //! Vector of two elements of type 'float'. 
-/** \ingroup vectors */
+/**
+ * \ingroup vectors
+*/
 struct vec2{
-public:
+
 
   //! First element in vector
   float x;
@@ -370,7 +704,9 @@ public:
   }
 
   //! Default constructor 
-  /** initializes to zero */
+  /**
+   * initializes to zero
+   */
   constexpr vec2()  : x(0), y(0) {}
 
   //! Initialize vec2 using a vector of floats
@@ -388,29 +724,29 @@ public:
   constexpr vec2(float v0, float v1)  : x(v0), y(v1) {}
 
   //! Dot (scalar) product of two vec2 vectors
-  inline constexpr float operator*(const vec2& a) const noexcept;
+  constexpr float operator*(const vec2& a) const noexcept;
   //! Sum of two vec2 vectors
-  inline constexpr vec2 operator+(const vec2& a) const noexcept;
+  constexpr vec2 operator+(const vec2& a) const noexcept;
   //! Increment vec2 vector
   inline vec2& operator+=(const vec2& a) noexcept;
   //! Decrement vec2 vector
   inline vec2& operator-=(const vec2& a) noexcept;
   //! Difference of two vec2 vectors noexcept
-  inline constexpr vec2 operator-(const vec2& a) const noexcept;
+  constexpr vec2 operator-(const vec2& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
-  inline constexpr vec2 operator*(float a) const noexcept;
+  constexpr vec2 operator*(float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec2/a)
   inline vec2 operator/(float a) const noexcept;
   //!Add a scalar to each element (scalar is added on right: vec2+a)
-  inline constexpr vec2 operator+(float a) const noexcept;
+  constexpr vec2 operator+(float a) const noexcept;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec2-a)
-  inline constexpr vec2 operator-(float a) const noexcept;
+  constexpr vec2 operator-(float a) const noexcept;
   //! check for equality of two vec2 vectors
-  inline constexpr bool operator==(const vec2& a) const noexcept;
+  constexpr bool operator==(const vec2& a) const noexcept;
   //! check for inequality of two vec2 vectors
-  inline constexpr bool operator!=(const vec2& a) const noexcept;
+  constexpr bool operator!=(const vec2& a) const noexcept;
   //! Multiply each element by -1
-  inline constexpr vec2 operator-() const noexcept;
+  constexpr vec2 operator-() const noexcept;
 
   //! Write vec2 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec2 &vec) {
@@ -420,11 +756,11 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec2)
-inline constexpr vec2 operator*( float a, const vec2& v) noexcept;
+constexpr vec2 operator*( float a, const vec2& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec2)
-inline constexpr vec2 operator+( float a, const vec2& v) noexcept;
+constexpr vec2 operator+( float a, const vec2& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec2)
-inline constexpr vec2 operator-( float a, const vec2& v) noexcept;
+constexpr vec2 operator-( float a, const vec2& v) noexcept;
 
 //! Make a vec2 from two floats
 /**
@@ -432,7 +768,7 @@ inline constexpr vec2 operator-( float a, const vec2& v) noexcept;
  * \param[in] y Second element of vector
  * \ingroup vectors
 */
-inline constexpr vec2 make_vec2(float x, float y ){
+constexpr vec2 make_vec2(float x, float y ){
   return {x, y};
 }
 
@@ -442,11 +778,11 @@ inline vec2 normalize(const vec2 &v)  {
   return {v.x*inv, v.y*inv};
 }
 
-inline constexpr float vec2::operator*(const vec2& a) const noexcept {
+constexpr float vec2::operator*(const vec2& a) const noexcept {
   return a.x*x + a.y*y;
 }
 
-inline constexpr vec2 vec2::operator+(const vec2& a) const noexcept  {
+constexpr vec2 vec2::operator+(const vec2& a) const noexcept  {
   return {a.x+x, a.y+y};
 }
 
@@ -462,31 +798,31 @@ inline vec2& vec2::operator-=(const vec2& a) noexcept {
     return *this;
 }
 
-inline constexpr vec2 vec2::operator+(const float a) const noexcept  {
+constexpr vec2 vec2::operator+(const float a) const noexcept  {
   return {a+x, a+y};
 }
 
-inline constexpr vec2 operator+(const float a, const vec2& v) noexcept  {
+constexpr vec2 operator+(const float a, const vec2& v) noexcept  {
   return {a+v.x, a+v.y};
 }
 
-inline constexpr vec2 vec2::operator-(const vec2& a) const noexcept  {
+constexpr vec2 vec2::operator-(const vec2& a) const noexcept  {
   return {x-a.x, y-a.y};
 }
 
-inline constexpr vec2 vec2::operator-(const float a) const noexcept {
+constexpr vec2 vec2::operator-(const float a) const noexcept {
   return {x-a, y-a};
 }
 
-inline constexpr vec2 operator-(const float a, const vec2& v) noexcept {
+constexpr vec2 operator-(const float a, const vec2& v) noexcept {
   return {a-v.x, a-v.y};
 }
 
-inline constexpr vec2 vec2::operator*(const float a) const noexcept {
+constexpr vec2 vec2::operator*(const float a) const noexcept {
   return {x*a, y*a};
 }
 
-inline constexpr vec2 operator*(const float a, const vec2& v) noexcept{
+constexpr vec2 operator*(const float a, const vec2& v) noexcept{
   return {a*v.x, a*v.y};
 }
 
@@ -495,22 +831,23 @@ inline vec2 vec2::operator/(const float a) const noexcept{
   return {x*inv_a, y*inv_a};
 }
 
-inline constexpr bool vec2::operator==(const vec2& a) const noexcept {
+constexpr bool vec2::operator==(const vec2& a) const noexcept {
   return x == a.x && y == a.y;
 }
 
-inline constexpr bool vec2::operator!=(const vec2& a) const noexcept {
+constexpr bool vec2::operator!=(const vec2& a) const noexcept {
   return x != a.x || y != a.y;
 }
 
-inline constexpr vec2 vec2::operator-() const noexcept {
+constexpr vec2 vec2::operator-() const noexcept {
   return {-x, -y};
 }
 
 //! Vector of three elements of type 'float'. 
-/** \ingroup vectors */
+/**
+ * \ingroup vectors
+ */
 struct vec3{
-public:
 
   //! First element in vector
   float x;
@@ -538,7 +875,9 @@ public:
   }
 
   //! Default constructor 
-  /** initializes to zero */
+  /**
+   * initializes to zero
+   */
   constexpr vec3()  : x(0), y(0), z(0) {}
 
   //! Initialize vec3 using a vector of floats
@@ -557,29 +896,29 @@ public:
   constexpr vec3(float v0, float v1, float v2)  : x(v0), y(v1), z(v2) {}
 
   //! Dot (scalar) product of two vec3 vectors
-  inline constexpr float operator*(const vec3& a) const noexcept;
+  constexpr float operator*(const vec3& a) const noexcept;
   //! Sum of two vec3 vectors
-  inline constexpr vec3 operator+(const vec3& a) const noexcept;
+  constexpr vec3 operator+(const vec3& a) const noexcept;
   //! Increment vec3 vector
   inline vec3& operator+=(const vec3& a) noexcept;
   //! Decrement vec3 vector
   inline vec3& operator-=(const vec3& a) noexcept;
   //! Difference of two vec3 vectors
-  inline constexpr vec3 operator-(const vec3& a) const noexcept;
+  constexpr vec3 operator-(const vec3& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
-  inline constexpr vec3 operator*( float a) const noexcept;
+  constexpr vec3 operator*( float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec3/a)
   inline vec3 operator/( float a) const noexcept;
   //! Add a scalar to each element (scalar is added on right: vec3+a)
-  inline constexpr vec3 operator+( float a) const noexcept;
+  constexpr vec3 operator+( float a) const noexcept;
   //! Subtract a scalar from each element (scalar is subtracted on right: vec3-a)
-  inline constexpr vec3 operator-( float a) const noexcept;
+  constexpr vec3 operator-( float a) const noexcept;
   //! check for equality of two vec3 vectors
-  inline constexpr bool operator==(const vec3& a) const noexcept;
+  constexpr bool operator==(const vec3& a) const noexcept;
   //! check for inequality of two vec3 vectors
-  inline constexpr bool operator!=(const vec3& a) const noexcept;
+  constexpr bool operator!=(const vec3& a) const noexcept;
   //! Multiply vector by -1
-  inline constexpr vec3 operator-() const noexcept;
+  constexpr vec3 operator-() const noexcept;
 
   //! Write vec3 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec3 &vec) {
@@ -589,24 +928,24 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec3)
-inline constexpr vec3 operator*( float a, const vec3& v) noexcept;
+constexpr vec3 operator*( float a, const vec3& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec3)
-inline constexpr vec3 operator+( float a, const vec3& v) noexcept;
+constexpr vec3 operator+( float a, const vec3& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec3)
-inline constexpr vec3 operator-( float a, const vec3& v) noexcept;
+constexpr vec3 operator-( float a, const vec3& v) noexcept;
 
 //! Make a vec3 from three floats
-inline constexpr vec3 make_vec3(float x, float y, float z ){
+constexpr vec3 make_vec3(float x, float y, float z ){
   return {x, y, z};
 }
 
 //! Make a vec3 from an array of floats
-inline constexpr vec3 make_vec3( float X[3] ){
+constexpr vec3 make_vec3( float X[3] ){
   return {X[0],X[1],X[2]};
 }
 
 //! Cross product of two vec3 vectors
-inline constexpr vec3 cross(const vec3 &a, const vec3 &b)  {
+constexpr vec3 cross(const vec3 &a, const vec3 &b)  {
   return {
     a.y*b.z - a.z*b.y,
     a.z*b.x - a.x*b.z,
@@ -620,11 +959,11 @@ inline vec3 normalize( const vec3 &v ) noexcept {
   return {v.x*inv, v.y*inv, v.z*inv};
 }
 
-inline constexpr float vec3::operator*(const vec3& a) const noexcept{
+constexpr float vec3::operator*(const vec3& a) const noexcept{
   return  a.x*x+a.y*y+a.z*z;
 }
 
-inline constexpr vec3 vec3::operator+(const vec3& a) const noexcept{
+constexpr vec3 vec3::operator+(const vec3& a) const noexcept{
   return  {a.x+x,a.y+y,a.z+z};
 }
 
@@ -642,31 +981,31 @@ inline vec3& vec3::operator-=(const vec3& a) noexcept{
     return *this;
 }
 
-inline constexpr vec3 vec3::operator+(float a) const noexcept{
+constexpr vec3 vec3::operator+(float a) const noexcept{
   return { x+a, y+a, z+a };
 }
 
-inline constexpr vec3 operator+(float a, const vec3& v) noexcept{
+constexpr vec3 operator+(float a, const vec3& v) noexcept{
   return {a+v.x, a+v.y, a+v.z};
 }
 
-inline constexpr vec3 vec3::operator-(const vec3& a) const noexcept{
+constexpr vec3 vec3::operator-(const vec3& a) const noexcept{
   return  {x-a.x,y-a.y,z-a.z};
 }
 
-inline constexpr vec3 vec3::operator-(float a) const noexcept{
+constexpr vec3 vec3::operator-(float a) const noexcept{
   return { x-a, y-a, z-a };
 }
 
-inline constexpr vec3 operator-(float a, const vec3& v)  noexcept{
+constexpr vec3 operator-(float a, const vec3& v)  noexcept{
   return {a-v.x, a-v.y, a-v.z};
 }
 
-inline constexpr vec3 vec3::operator*(float a) const noexcept{
+constexpr vec3 vec3::operator*(float a) const noexcept{
   return  {x*a,y*a,z*a};
 }
 
-inline constexpr vec3 operator*(float a, const vec3& v)  noexcept{
+constexpr vec3 operator*(float a, const vec3& v)  noexcept{
   return {a * v.x, a * v.y, a * v.z};
 }
 
@@ -675,15 +1014,15 @@ inline vec3 vec3::operator/(const float a) const noexcept{
   return {x*inv_a,y*inv_a,z*inv_a};
 }
 
-inline constexpr bool vec3::operator==(const vec3& a) const noexcept{
+constexpr bool vec3::operator==(const vec3& a) const noexcept{
   return x == a.x && y == a.y && z == a.z;
 }
 
-inline constexpr bool vec3::operator!=(const vec3& a) const noexcept{
+constexpr bool vec3::operator!=(const vec3& a) const noexcept{
     return x != a.x || y != a.y || z != a.z;
 }
 
-inline constexpr vec3 vec3::operator-() const noexcept{
+constexpr vec3 vec3::operator-() const noexcept{
     return {-x,-y,-z};
 }
 
@@ -692,7 +1031,7 @@ inline constexpr vec3 vec3::operator-() const noexcept{
  * \ingroup vectors
  */
 struct vec4{
-public:
+
 
   //! First element in vector
   float x;
@@ -723,7 +1062,9 @@ public:
   }
 
   //! Default constructor 
-  /** initializes to zero */
+  /**
+   * initializes to zero
+   */
   constexpr vec4() : x(0), y(0), z(0), w(0) {}
 
   //! Initialize vec4 using a vector of floats
@@ -743,29 +1084,29 @@ public:
   constexpr vec4( float v0, float v1, float v2, float v3 ) : x(v0), y(v1), z(v2), w(v3) {}
 
   //! Dot (scalar) product of two vec4 vectors
-  inline constexpr float operator*(const vec4& a) const noexcept;
+  constexpr float operator*(const vec4& a) const noexcept;
   //! Sum of two vec4 vectors
-  inline constexpr vec4 operator+(const vec4& a) const noexcept;
+  constexpr vec4 operator+(const vec4& a) const noexcept;
   //! Increment vec4 vector
   inline vec4& operator+=(const vec4& a) noexcept;
   //! Decrement vec4 vector
   inline vec4& operator-=(const vec4& a) noexcept;
   //! Difference of two vec4 vectors
-  inline constexpr vec4 operator-(const vec4& a) const noexcept;
+  constexpr vec4 operator-(const vec4& a) const noexcept;
   //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
-  inline constexpr vec4 operator*( float a) const noexcept;
+  constexpr vec4 operator*( float a) const noexcept;
   //! Divide each element by scalar (scalar is divided on right: vec4/a)
   inline vec4 operator/( float a) const noexcept;
   //!Add a scalar to each element (scalar is added on right: vec4+a)
-  inline constexpr vec4 operator+( float a) const noexcept;
+  constexpr vec4 operator+( float a) const noexcept;
   //!Subtract a scalar from each element (scalar is subtracted on right: vec4-a)
-  inline constexpr vec4 operator-( float a) const noexcept;
+  constexpr vec4 operator-( float a) const noexcept;
   //! check for equality of two vec4 vectors
-  inline constexpr bool operator==(const vec4& a) const noexcept;
+  constexpr bool operator==(const vec4& a) const noexcept;
   //! check for equality of two vec4 vectors
-  inline constexpr bool operator!=(const vec4& a) const noexcept;
+  constexpr bool operator!=(const vec4& a) const noexcept;
   //! Multiply each element by -1
-  inline constexpr vec4 operator-() const noexcept;
+  constexpr vec4 operator-() const noexcept;
 
   //! Write vec4 to output stream
   friend std::ostream &operator<<(std::ostream &os, const helios::vec4 &vec) {
@@ -775,19 +1116,19 @@ public:
 };
 
 //! Multiply each element by scalar (scalar is multiplied on left: a*vec4)
-inline constexpr vec4 operator*( float a, const vec4& v) noexcept;
+constexpr vec4 operator*( float a, const vec4& v) noexcept;
 //! Add a scalar to each element (scalar is added on left: a+vec4)
-inline constexpr vec4 operator+( float a, const vec4& v) noexcept;
+constexpr vec4 operator+( float a, const vec4& v) noexcept;
 //! Subtract a scalar from each element (scalar is subtracted on left: a-vec4)
-inline constexpr vec4 operator-( float a, const vec4& v) noexcept;
+constexpr vec4 operator-( float a, const vec4& v) noexcept;
 
 //! Make a vec4 from three floats
- inline constexpr vec4 make_vec4( float x, float y, float z, float w ){
+ constexpr vec4 make_vec4( float x, float y, float z, float w ){
   return {x, y, z, w};
 }
 
 //! Make a vec4 from an array of floats
-inline constexpr vec4 make_vec4( float X[4] ){
+constexpr vec4 make_vec4( float X[4] ){
   return {X[0],X[1],X[2],X[3]};
 }
 
@@ -797,11 +1138,11 @@ inline vec4 normalize( const vec4 &v ) {
    return {v.x*inv, v.y*inv, v.z*inv, v.w*inv};
  }
 
-inline constexpr float vec4::operator*(const vec4& a) const noexcept{
+constexpr float vec4::operator*(const vec4& a) const noexcept{
   return  a.x*x+a.y*y+a.z*z+a.w*w;
 }
 
-inline constexpr vec4 vec4::operator+(const vec4& a) const noexcept{
+constexpr vec4 vec4::operator+(const vec4& a) const noexcept{
   return  {a.x+x,a.y+y,a.z+z,a.w+w};
 }
 
@@ -821,31 +1162,31 @@ inline vec4& vec4::operator-=(const vec4& a) noexcept{
     return *this;
     }
 
-inline constexpr vec4 vec4::operator+(float a) const noexcept{
+constexpr vec4 vec4::operator+(float a) const noexcept{
   return { x+a, y+a, z+a, w+a };
 }
 
-inline constexpr vec4 operator+(float a, const vec4& v)  noexcept{
+constexpr vec4 operator+(float a, const vec4& v)  noexcept{
   return {a+v.x, a+v.y, a+v.z, a+v.w};
 }
 
-inline constexpr vec4 vec4::operator-(const vec4& a) const noexcept{
+constexpr vec4 vec4::operator-(const vec4& a) const noexcept{
   return  {x-a.x,y-a.y,z-a.z,w-a.w};
 }
 
-inline constexpr vec4 vec4::operator-(float a) const noexcept{
+constexpr vec4 vec4::operator-(float a) const noexcept{
   return { x-a, y-a, z-a, w-a };
 }
 
-inline constexpr vec4 operator-(float a, const vec4& v) noexcept {
+constexpr vec4 operator-(float a, const vec4& v) noexcept {
   return {a-v.x, a-v.y, a-v.z, a-v.w};
 }
 
-inline constexpr vec4 vec4::operator*(float a) const noexcept{
+constexpr vec4 vec4::operator*(float a) const noexcept{
   return  {x*a,y*a,z*a,w*a};
 }
 
-inline constexpr vec4 operator*(float a, const vec4& v) noexcept{
+constexpr vec4 operator*(float a, const vec4& v) noexcept{
   return {a * v.x, a * v.y, a * v.z, a * v.w};
 }
 
@@ -854,15 +1195,15 @@ inline vec4 vec4::operator/(const float a) const noexcept{
    return {x*inv_a,y*inv_a,z*inv_a,w*inv_a};
 }
 
-inline constexpr bool vec4::operator==(const vec4& a) const noexcept{
+constexpr bool vec4::operator==(const vec4& a) const noexcept{
   return x == a.x && y == a.y && z == a.z && w == a.w;
 }
 
-inline constexpr bool vec4::operator!=(const vec4& a) const noexcept{
+constexpr bool vec4::operator!=(const vec4& a) const noexcept{
   return x != a.x || y != a.y || z != a.z || w != a.w;
 }
 
-inline constexpr vec4 vec4::operator-() const noexcept{
+constexpr vec4 vec4::operator-() const noexcept{
     return {-x,-y,-z, -w};
 }
 
@@ -871,7 +1212,7 @@ inline constexpr vec4 vec4::operator-() const noexcept{
  * \ingroup vectors
  */
 struct RGBcolor{
-public:
+
 
   //! Red color component.
   /** Takes a value between 0 and 1. */
@@ -888,12 +1229,12 @@ public:
 
   //! Constructor given three floats denoting R-G-B components.
   /**
-   * \param[in] r Red color component
-   * \param[in] g Green color component
-   * \param[in] b Blue color component
+   * \param[in] red Red color component
+   * \param[in] green Green color component
+   * \param[in] blue Blue color component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-   RGBcolor( float r, float g, float b ) : r(RGBcolor::clamp(r)), g(RGBcolor::clamp(g)), b(RGBcolor::clamp(b)) {}
+   RGBcolor( float red, float green, float blue ) : r(RGBcolor::clamp(red)), g(RGBcolor::clamp(green)), b(RGBcolor::clamp(blue)) {}
 
   //! Constructor given an array of three floats denoting R-G-B components.
   /**
@@ -941,9 +1282,9 @@ public:
   }
 
   //! check for equality of two RGB colors
-  inline constexpr bool operator==( const RGBcolor &c ) const noexcept;
+  constexpr bool operator==( const RGBcolor &c ) const noexcept;
   //! check for inequality of two RGB colors
-  inline constexpr bool operator!=( const RGBcolor &c ) const noexcept;
+  constexpr bool operator!=( const RGBcolor &c ) const noexcept;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -954,24 +1295,24 @@ private:
   static float clamp( float value ){
     if( value<0.f ){
       return 0.f;
-    }else if( value>1.f ){
-      return 1.f;
-    }else{
-      return value;
     }
+    if( value>1.f ){
+      return 1.f;
+    }
+    return value;
   }
 
 };
 
 //! Make an RGBcolor vector
 /**
- * \param[in] r Red component
- * \param[in] g Green component
- * \param[in] b Blue component
+ * \param[in] red Red component
+ * \param[in] green Green component
+ * \param[in] blue Blue component
  * \ingroup vectors
 */
-inline RGBcolor make_RGBcolor( float r, float g, float b ){
-  return {r,g,b};
+inline RGBcolor make_RGBcolor( float red, float green, float blue ){
+  return {red,green,blue};
 }
 
 //! Blend two RGB colors together
@@ -982,11 +1323,11 @@ inline RGBcolor make_RGBcolor( float r, float g, float b ){
 */
 RGBcolor blend(const RGBcolor &color0, const RGBcolor &color1, float weight );
 
-inline constexpr bool RGBcolor::operator==( const RGBcolor &c ) const noexcept{
+constexpr bool RGBcolor::operator==( const RGBcolor &c ) const noexcept{
   return c.r==r && c.g==g && c.b==b;
 }
 
-inline constexpr bool RGBcolor::operator!=( const RGBcolor &c ) const noexcept{
+constexpr bool RGBcolor::operator!=( const RGBcolor &c ) const noexcept{
   return c.r!=r || c.g!=g || c.b!=b;
 }
 
@@ -1041,7 +1382,6 @@ namespace RGB{
  * \ingroup vectors
  */
 struct RGBAcolor{
-public:
 
   //! Red color component.
   /** Takes a value between 0 and 1. */
@@ -1061,13 +1401,13 @@ public:
 
   //! Constructor given three floats denoting R-G-B components.
   /**
-   * \param[in] r Red color component
-   * \param[in] g Green color component
-   * \param [in] b Blue color component
-   * \param[in] a Alpha (transparency) component
+   * \param[in] red Red color component
+   * \param[in] green Green color component
+   * \param [in] blue Blue color component
+   * \param[in] alpha Alpha (transparency) component
    * \note If arguments are outside of the range 0 to 1, values are clamped.
    */
-  RGBAcolor( float r, float g, float b, float a ) : r(RGBAcolor::clamp(r)), g(RGBAcolor::clamp(g)), b(RGBAcolor::clamp(b)), a(RGBAcolor::clamp(a)) {}
+  RGBAcolor( float red, float green, float blue, float alpha ) : r(RGBAcolor::clamp(red)), g(RGBAcolor::clamp(green)), b(RGBAcolor::clamp(blue)), a(RGBAcolor::clamp(alpha)) {}
 
   //! Constructor given an array of three floats denoting R-G-B-A components.
   /**
@@ -1111,9 +1451,9 @@ public:
   }
 
   //! check for equality of two RGBA colors
-  inline constexpr bool operator==( const helios::RGBAcolor &c ) const noexcept;
+  constexpr bool operator==( const helios::RGBAcolor &c ) const noexcept;
   //! check for inequality of two RGBA colors
-  inline constexpr bool operator!=( const helios::RGBAcolor &c ) const noexcept;
+  constexpr bool operator!=( const helios::RGBAcolor &c ) const noexcept;
 
 private:
   //! Clamp float to range of 0 to 1.
@@ -1124,11 +1464,11 @@ private:
   static float clamp( float value ){
     if( value<0.f ){
       return 0.f;
-    }else if( value>1.f ){
-      return 1.f;
-    }else{
-      return value;
     }
+    if( value>1.f ){
+      return 1.f;
+    }
+    return value;
   }
 
 };
@@ -1163,12 +1503,58 @@ inline RGBAcolor make_RGBAcolor( RGBcolor color, float a ){
 */
 RGBAcolor blend(const helios::RGBAcolor &color0, const helios::RGBAcolor &color1, float weight );
 
-inline constexpr bool RGBAcolor::operator==( const RGBAcolor &c ) const noexcept{
+constexpr bool RGBAcolor::operator==( const RGBAcolor &c ) const noexcept{
   return c.r==r && c.g==g && c.b==b && c.a==a;
 }
 
-inline constexpr bool RGBAcolor::operator!=( const RGBAcolor &c ) const noexcept{
+constexpr bool RGBAcolor::operator!=( const RGBAcolor &c ) const noexcept{
   return c.r!=r || c.g!=g || c.b!=b || c.a!=a;
+}
+
+  /// @private
+  namespace RGBA{
+
+  /// @private
+  extern RGBAcolor red;
+  /// @private
+  extern RGBAcolor blue;
+  /// @private
+  extern RGBAcolor green;
+  /// @private
+  extern RGBAcolor cyan;
+  /// @private
+  extern RGBAcolor magenta;
+  /// @private
+  extern RGBAcolor yellow;
+  /// @private
+  extern RGBAcolor orange;
+  /// @private
+  extern RGBAcolor violet;
+  /// @private
+  extern RGBAcolor black;
+  /// @private
+  extern RGBAcolor white;
+  /// @private
+  extern RGBAcolor lime;
+  /// @private
+  extern RGBAcolor silver;
+  /// @private
+  extern RGBAcolor gray;
+  /// @private
+  extern RGBAcolor navy;
+  /// @private
+  extern RGBAcolor brown;
+  /// @private
+  extern RGBAcolor khaki;
+  /// @private
+  extern RGBAcolor greenyellow;
+  /// @private
+  extern RGBAcolor forestgreen;
+  /// @private
+  extern RGBAcolor yellowgreen;
+  /// @private
+  extern RGBAcolor goldenrod;
+
 }
 
 //! Date vector
@@ -1177,7 +1563,7 @@ inline constexpr bool RGBAcolor::operator!=( const RGBAcolor &c ) const noexcept
  * \ingroup vectors
 */
 struct Date{
-public:
+
 
   //! Day of month
   int day;
@@ -1223,9 +1609,9 @@ public:
   [[nodiscard]] bool isLeapYear() const;
 
   //! check for equality of two dates
-  inline constexpr bool operator==( const helios::Date &c ) const noexcept;
+  constexpr bool operator==( const helios::Date &c ) const noexcept;
   //! check for inequality of two Dates
-  inline constexpr bool operator!=( const helios::Date &c ) const noexcept;
+  constexpr bool operator!=( const helios::Date &c ) const noexcept;
 
   //! Write Date to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Date const &d) {
@@ -1254,11 +1640,11 @@ inline Date make_Date( int day, int month, int year ){
   
 }
 
-inline constexpr bool Date::operator==( const Date &c ) const noexcept{
+constexpr bool Date::operator==( const Date &c ) const noexcept{
   return c.day==day && c.month==month && c.year==year;
 }
 
-inline constexpr bool Date::operator!=( const Date &c ) const noexcept{
+constexpr bool Date::operator!=( const Date &c ) const noexcept{
   return c.day!=day || c.month!=month || c.year!=year;
 }
 
@@ -1397,9 +1783,9 @@ struct Time{
   }
 
   //! check for equality of two times
-  inline constexpr bool operator==( const helios::Time &c ) const noexcept;
+  constexpr bool operator==( const helios::Time &c ) const noexcept;
   //! check for inequality of two times
-  inline constexpr bool operator!=( const helios::Time &c ) const noexcept;
+  constexpr bool operator!=( const helios::Time &c ) const noexcept;
 
   //! Write Time to output stream
   friend std::ostream &operator<<(std::ostream &os, helios::Time const &t) {
@@ -1445,11 +1831,11 @@ inline Time make_Time( int hour, int minute, int second ){
   
 }
 
-inline constexpr bool Time::operator==( const Time &c ) const noexcept{
+constexpr bool Time::operator==( const Time &c ) const noexcept{
    return c.hour==hour && c.minute==minute && c.second==second;
 }
 
-inline constexpr bool Time::operator!=( const Time &c ) const noexcept{
+constexpr bool Time::operator!=( const Time &c ) const noexcept{
    return c.hour!=hour || c.minute!=minute || c.second!=second;
 }
 

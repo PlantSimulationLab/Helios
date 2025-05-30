@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1777,7 +1777,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01620" name="l01620"></a><span class="lineno"> 1620</span>        uv.x = 1.f - (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));</div>
 <div class="line"><a id="l01621" name="l01621"></a><span class="lineno"> 1621</span>        uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));</div>
 <div class="line"><a id="l01622" name="l01622"></a><span class="lineno"> 1622</span> </div>
-<div class="line"><a id="l01623" name="l01623"></a><span class="lineno"> 1623</span>        uint2 ind = make_uint2( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
+<div class="line"><a id="l01623" name="l01623"></a><span class="lineno"> 1623</span>        uint2 ind = <a class="code hl_function" href="group__vectors.html#ga114e3820753253392a63dcd9686b3aac" title="Make a uint2 vector from two unsigned ints.">make_uint2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
 <div class="line"><a id="l01624" name="l01624"></a><span class="lineno"> 1624</span>        assert( ind.x&lt;sz.x &amp;&amp; ind.y&lt;sz.y );</div>
 <div class="line"><a id="l01625" name="l01625"></a><span class="lineno"> 1625</span> </div>
 <div class="line"><a id="l01626" name="l01626"></a><span class="lineno"> 1626</span>        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>

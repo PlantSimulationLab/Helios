@@ -118,6 +118,14 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>N/A</td>
      <td>1</td>
    </tr>
+   <tr>
+     <td>specular\_exponent</td>
+     <td>N/A</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Value controlling the strength of specular reflection in simulated camera images.</td>
+     <td>N/A</td>
+     <td>-1 (specular reflection disabled)</td>
+   </tr>
  </table>	
  
  \subsection RadOutputData Output Primitive Data
@@ -204,15 +212,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.
 
- The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The file "surface_spectral_library.xml" has many surface reflectivity and transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
+ The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
 
  In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:
 
  ~~~~~~{.cpp}
- context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+ context.loadXML("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
  ~~~~~~
 
- This command would load all the surface spectra from the file "surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on \ref GlobalData "Global Data" for details on Helios global data):
+ This command would load all the leaf surface spectra from the file "leaf_surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on \ref GlobalData "Global Data" for details on Helios global data):
 
  ~~~~~~{.cpp}
  std::vector<vec2> transmissivity;
@@ -221,7 +229,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  float tau = transmissivity.at(0).y;
  ~~~~~~
 
- In the above example, we've retrieved the spectrum in the file "surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).
+ In the above example, we've retrieved the spectrum in the file "leaf_surface_spectral_library.xml" with the tag "grape_leaf_transmissivity_0000" and stored it into the vector "transmissivity". As an example, we looked up the wavelength and transmissivity at the first wavelength (index of 0).
 
 
  \subsection RadProps Radiative Properties
@@ -266,7 +274,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   uint UUID = context.addPatch();
 
   // Load the surface spectral library
-  context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+  context.loadXML("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
 
   // Set the reflectivity and transmissivity based on an example spectrum in the library
   context.setPrimitiveData( UUID, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
@@ -562,6 +570,28 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addBand().
 
+ \subsubsection RadCamSpecular Radiation Camera Specular Reflection
+
+ The specular exponent is a measure of how "shiny" the surface is. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.
+
+ Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.
+
+ The strength of specular reflection is calculated according to the following equation:
+
+ \f[
+    I_{spec} = I_{s} \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
+ \f]
+
+ where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the outgoing flux of the sampled primitive, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
+
+ \f[
+    \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
+ \f]
+
+ The figure below shows the effect of different specular exponents on the simulated camera image.
+
+ \image html specular_exponent_comparison.png
+
  \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 
  By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.
@@ -805,7 +835,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     context.setPrimitiveData( UUIDs_ground, "bunny", 0 );
 
     // Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil
-    context.loadXML("plugins/radiation/spectral_data/surface_spectral_library.xml");
+    context.loadXML("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
     context.setPrimitiveData( UUIDs_bunny, "reflectivity_spectrum", "grape_leaf_reflectivity_0000" );
     context.setPrimitiveData( UUIDs_ground, "reflectivity_spectrum", "soil_reflectivity_0000" );
 

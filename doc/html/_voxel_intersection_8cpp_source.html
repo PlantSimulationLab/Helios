@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1806,7 +1806,7 @@ $(function(){initNavTree('_voxel_intersection_8cpp_source.html',''); initResizab
 <div class="line"><a id="l01664" name="l01664"></a><span class="lineno"> 1664</span>    <span class="keywordflow">for</span>(uint i=0;i&lt;resulting_UUIDs.size();i++){</div>
 <div class="line"><a id="l01665" name="l01665"></a><span class="lineno"> 1665</span>        context-&gt;copyPrimitiveData(UUID, resulting_UUIDs.at(i));</div>
 <div class="line"><a id="l01666" name="l01666"></a><span class="lineno"> 1666</span>        uint parentID = context-&gt;getPrimitiveParentObjectID(UUID);</div>
-<div class="line"><a id="l01667" name="l01667"></a><span class="lineno"> 1667</span>        <span class="keywordflow">if</span>( parentID&gt;0 &amp;&amp; context-&gt;getObjectType(parentID)==<a class="code hl_enumvalue" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde" title="&lt; Tile">helios::OBJECT_TYPE_TILE</a> ){</div>
+<div class="line"><a id="l01667" name="l01667"></a><span class="lineno"> 1667</span>        <span class="keywordflow">if</span>( parentID&gt;0 &amp;&amp; context-&gt;getObjectType(parentID)==<a class="code hl_enumvalue" href="_context_8h.html#ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde" title="Tile.">helios::OBJECT_TYPE_TILE</a> ){</div>
 <div class="line"><a id="l01668" name="l01668"></a><span class="lineno"> 1668</span>            context-&gt;setPrimitiveParentObjectID(resulting_UUIDs.at(i),0);</div>
 <div class="line"><a id="l01669" name="l01669"></a><span class="lineno"> 1669</span>        }<span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l01670" name="l01670"></a><span class="lineno"> 1670</span>            context-&gt;setPrimitiveParentObjectID(resulting_UUIDs.at(i), parentID);</div>

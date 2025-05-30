@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -3139,7 +3139,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l02989" name="l02989"></a><span class="lineno"> 2989</span>                <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l02990" name="l02990"></a><span class="lineno"> 2990</span>            }</div>
 <div class="line"><a id="l02991" name="l02991"></a><span class="lineno"> 2991</span> </div>
-<div class="line"><a id="l02992" name="l02992"></a><span class="lineno"> 2992</span>            <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">helios::make_RGBcolor</a>(0,0,0);</div>
+<div class="line"><a id="l02992" name="l02992"></a><span class="lineno"> 2992</span>            <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">helios::make_RGBcolor</a>(0,0,0);</div>
 <div class="line"><a id="l02993" name="l02993"></a><span class="lineno"> 2993</span>            color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8" title="Red color component.">r</a> = (hits.at(ID0).color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8" title="Red color component.">r</a> + hits.at(ID1).color.r + hits.at(ID2).color.r )/3.f;</div>
 <div class="line"><a id="l02994" name="l02994"></a><span class="lineno"> 2994</span>            color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023" title="Green color component.">g</a> = (hits.at(ID0).color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023" title="Green color component.">g</a> + hits.at(ID1).color.g + hits.at(ID2).color.g )/3.f;</div>
 <div class="line"><a id="l02995" name="l02995"></a><span class="lineno"> 2995</span>            color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335" title="Blue color component.">b</a> = (hits.at(ID0).color.<a class="code hl_variable" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335" title="Blue color component.">b</a> + hits.at(ID1).color.b + hits.at(ID2).color.b )/3.f;</div>
@@ -4157,7 +4157,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l04000" name="l04000"></a><span class="lineno"> 4000</span>                        uv.x = (uv0.x + beta*(uv1.x-uv0.x) + gamma*(uv2.x-uv0.x));</div>
 <div class="line"><a id="l04001" name="l04001"></a><span class="lineno"> 4001</span>                        uv.y = (uv0.y + beta*(uv1.y-uv0.y) + gamma*(uv2.y-uv0.y));</div>
 <div class="line"><a id="l04002" name="l04002"></a><span class="lineno"> 4002</span> </div>
-<div class="line"><a id="l04003" name="l04003"></a><span class="lineno"> 4003</span>                        uint2 ind = make_uint2( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
+<div class="line"><a id="l04003" name="l04003"></a><span class="lineno"> 4003</span>                        uint2 ind = <a class="code hl_function" href="group__vectors.html#ga114e3820753253392a63dcd9686b3aac" title="Make a uint2 vector from two unsigned ints.">make_uint2</a>( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)) );</div>
 <div class="line"><a id="l04004" name="l04004"></a><span class="lineno"> 4004</span>                        assert( ind.x&lt;sz.x &amp;&amp; ind.y&lt;sz.y );</div>
 <div class="line"><a id="l04005" name="l04005"></a><span class="lineno"> 4005</span> </div>
 <div class="line"><a id="l04006" name="l04006"></a><span class="lineno"> 4006</span>                        <span class="keywordflow">if</span>( d_maskdata[ ID*masksize_max.x*masksize_max.y + ind.y*masksize_max.x + ind.x ] ){</div>

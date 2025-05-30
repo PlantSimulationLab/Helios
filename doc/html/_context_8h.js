@@ -32,7 +32,8 @@ var _context_8h =
       [ "helios::OBJECT_TYPE_BOX", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a2f065407387865d0564746c763c78d66", null ],
       [ "helios::OBJECT_TYPE_DISK", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a7d26aca591c366d41bca9d184a07ee51", null ],
       [ "helios::OBJECT_TYPE_POLYMESH", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a40bb0200100d500b738a6c3efc70df38", null ],
-      [ "helios::OBJECT_TYPE_CONE", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def", null ]
+      [ "helios::OBJECT_TYPE_CONE", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a6bcd175267f2f6d4f4a75b8e1e520def", null ],
+      [ "helios::OBJECT_TYPE_NONE", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682a07b25c3fca3818d486c8fb9db65d910d", null ]
     ] ],
     [ "helios::PrimitiveType", "_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601", [
       [ "helios::PRIMITIVE_TYPE_PATCH", "_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601a6fcd29f0c812849b3eb5bedec52cd744", null ],

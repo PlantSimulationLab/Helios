@@ -1570,6 +1570,14 @@ void RadiationModel::initializeOptiX() {
     //primitive transmissivity buffer
     addBuffer( "tau_cam", tau_cam_RTbuffer, tau_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
 
+    //specular reflection exponent buffer
+    addBuffer( "specular_exponent", specular_exponent_RTbuffer, specular_exponent_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
+    //number of external radiation sources
+    RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "specular_reflection_enabled", &specular_reflection_enabled_RTvariable ) );
+    uint8_t boolf = false;
+    RT_CHECK_ERROR( rtVariableSetUserData( specular_reflection_enabled_RTvariable, sizeof(bool), &boolf ) );
+
     //primitive transformation matrix buffer
     addBuffer( "transform_matrix", transform_matrix_RTbuffer, transform_matrix_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 2 );
 
@@ -2012,11 +2020,13 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     context_UUIDs = UUIDs;
 
     //remove any primitive UUIDs that don't exist or have zero area
-    for( int u=context_UUIDs.size()-1; u>=0; u-- ){
-        float area = context->getPrimitiveArea(context_UUIDs.at(u));
+    for (std::size_t u = context_UUIDs.size(); u-- > 0;) {
         if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
-        }else if( (area==0 || area!=area) && context->getObjectType(context->getPrimitiveParentObjectID(context_UUIDs.at(u)))!=OBJECT_TYPE_TILE ){
+            continue;
+        }
+        float area = context->getPrimitiveArea(context_UUIDs.at(u));
+        if( (area==0 || std::isnan(area) ) && context->getObjectType(context->getPrimitiveParentObjectID(context_UUIDs.at(u)))!=OBJECT_TYPE_TILE ){
             context_UUIDs.erase( context_UUIDs.begin()+u );
         }
     }
@@ -3094,6 +3104,28 @@ void RadiationModel::updateRadiativeProperties() {
 
     initializeBuffer1Df(rho_cam_RTbuffer, flatten(rho_cam));
     initializeBuffer1Df(tau_cam_RTbuffer, flatten(tau_cam));
+
+    // Specular reflection exponent
+    std::vector<float> specular_exponent;
+    specular_exponent.resize(Nprimitives, 0.f);
+    bool specular_enabled = false;
+    for (size_t u = 0; u < Nprimitives; u++) {
+
+        uint UUID = context_UUIDs.at(u);
+
+        if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType(UUID, "specular_exponent") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "specular_exponent", specular_exponent.at(u));
+            specular_enabled = true;
+        } else {
+            specular_exponent.at(u) = -1.f;
+        }
+
+    }
+
+    if ( specular_enabled ) {
+        initializeBuffer1Df(specular_exponent_RTbuffer, specular_exponent);
+    }
+    RT_CHECK_ERROR( rtVariableSetUserData( specular_reflection_enabled_RTvariable, sizeof(bool), &specular_enabled ) );
 
     radiativepropertiesneedupdate = false;
 

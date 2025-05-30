@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.31</span>
+       <span id="projectnumber">&#160;v1.3.32</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -381,7 +381,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    phytomer_parameters_almond.petiole.radius = 0.0005;</div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    phytomer_parameters_almond.petiole.length_segments = 1;</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    phytomer_parameters_almond.petiole.radial_subdivisions = 3;</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    phytomer_parameters_almond.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    phytomer_parameters_almond.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    phytomer_parameters_almond.leaf.leaves_per_petiole = 1;</div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    phytomer_parameters_almond.leaf.roll.uniformDistribution(-10,10);</div>
@@ -424,7 +424,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    <span class="comment">// Proleptic shoots</span></div>
 <div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    ShootParameters shoot_parameters_proleptic(context_ptr-&gt;getRandomGenerator());</div>
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_almond;</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;</div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;</div>
@@ -517,7 +517,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span> </div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <a class="code hl_function" href="class_plant_architecture.html#a81e64c850e1b35cf2b3eca2d8205dfcf" title="Makes the specified plant enter a dormant state.">makePlantDormant</a>(plantID);</div>
 <div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>    plant_instances.at(plantID).max_age = 1825;</div>
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span> </div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    <span class="keywordflow">return</span> plantID;</div>
@@ -556,7 +556,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    phytomer_parameters_apple.petiole.radius = 0.00075;</div>
 <div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    phytomer_parameters_apple.petiole.length_segments = 1;</div>
 <div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    phytomer_parameters_apple.petiole.radial_subdivisions = 3;</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    phytomer_parameters_apple.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    phytomer_parameters_apple.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span> </div>
 <div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>    phytomer_parameters_apple.leaf.leaves_per_petiole = 1;</div>
 <div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    phytomer_parameters_apple.leaf.prototype_scale = 0.12;</div>
@@ -597,7 +597,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>    <span class="comment">// Proleptic shoots</span></div>
 <div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    ShootParameters shoot_parameters_proleptic(context_ptr-&gt;getRandomGenerator());</div>
 <div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_apple;</div>
-<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
 <div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = ApplePhytomerCreationFunction;</div>
 <div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    shoot_parameters_proleptic.max_nodes = 40;</div>
 <div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    shoot_parameters_proleptic.max_nodes_per_season = 20;</div>
@@ -658,7 +658,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span> </div>
 <div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>    <a class="code hl_function" href="class_plant_architecture.html#a81e64c850e1b35cf2b3eca2d8205dfcf" title="Makes the specified plant enter a dormant state.">makePlantDormant</a>(plantID);</div>
 <div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span> </div>
-<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 30, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 30, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>    plant_instances.at(plantID).max_age = 1460;</div>
 <div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span> </div>
 <div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    <span class="keywordflow">return</span> plantID;</div>
@@ -763,7 +763,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span> </div>
 <div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span> </div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, 5, 100, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, 5, 100, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span> </div>
 <div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    plant_instances.at(plantID).max_age = 20;</div>
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span> </div>
@@ -780,7 +780,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    phytomer_parameters_bindweed.internode.pitch.uniformDistribution(0,15);</div>
 <div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    phytomer_parameters_bindweed.internode.phyllotactic_angle = 180.f;</div>
 <div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>    phytomer_parameters_bindweed.internode.radius_initial = 0.0012;</div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    phytomer_parameters_bindweed.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.38,0.21);</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    phytomer_parameters_bindweed.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.38,0.21);</div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    phytomer_parameters_bindweed.internode.length_segments = 1;</div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span> </div>
 <div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    phytomer_parameters_bindweed.petiole.petioles_per_internode = 1;</div>
@@ -874,7 +874,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span> </div>
 <div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span> </div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 14, -1, -1, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 14, -1, -1, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span> </div>
 <div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    plant_instances.at(plantID).max_age = 50;</div>
 <div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
@@ -912,7 +912,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    phytomer_parameters_trifoliate.internode.radius_initial = 0.001;</div>
 <div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;</div>
 <div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>    phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2,0.25,0.05);</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2,0.25,0.05);</div>
 <div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    phytomer_parameters_trifoliate.internode.length_segments = 2;</div>
 <div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span> </div>
 <div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;</div>
@@ -921,7 +921,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>    phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.1,0.14);</div>
 <div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    phytomer_parameters_trifoliate.petiole.taper = 0.;</div>
 <div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-100,200);</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    phytomer_parameters_trifoliate.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.28,0.35,0.07);</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    phytomer_parameters_trifoliate.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.28,0.35,0.07);</div>
 <div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    phytomer_parameters_trifoliate.petiole.length_segments = 5;</div>
 <div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;</div>
 <div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span> </div>
@@ -1032,7 +1032,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span> </div>
 <div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span> </div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span> </div>
 <div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span> </div>
@@ -1062,7 +1062,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    phytomer_parameters.internode.pitch = 10;</div>
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(137.5-10, 137.5+10);</div>
 <div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    phytomer_parameters.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
 <div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
 <div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>    phytomer_parameters.petiole.petioles_per_internode = 1;</div>
@@ -1159,7 +1159,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span> </div>
 <div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span> </div>
-<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 75, 14, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 75, 14, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span> </div>
 <div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span> </div>
@@ -1181,7 +1181,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    phytomer_parameters_cheeseweed.internode.pitch = 0;</div>
 <div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>    phytomer_parameters_cheeseweed.internode.phyllotactic_angle.uniformDistribution( 127.5f, 147.5);</div>
 <div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>    phytomer_parameters_cheeseweed.internode.radius_initial = 0.0005;</div>
-<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>    phytomer_parameters_cheeseweed.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.60, 0.65, 0.40);</div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>    phytomer_parameters_cheeseweed.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.60, 0.65, 0.40);</div>
 <div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>    phytomer_parameters_cheeseweed.internode.length_segments = 1;</div>
 <div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span> </div>
 <div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>    phytomer_parameters_cheeseweed.petiole.petioles_per_internode = 1;</div>
@@ -1234,7 +1234,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span> </div>
 <div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span> </div>
-<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span> </div>
 <div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span>    plant_instances.at(plantID).max_age = 40;</div>
 <div class="line"><a id="l01079" name="l01079"></a><span class="lineno"> 1079</span> </div>
@@ -1271,7 +1271,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span>    phytomer_parameters_trifoliate.internode.radius_initial = 0.0015;</div>
 <div class="line"><a id="l01111" name="l01111"></a><span class="lineno"> 1111</span>    phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;</div>
 <div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;</div>
-<div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.15, 0.2, 0.1);</div>
+<div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.15, 0.2, 0.1);</div>
 <div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>    phytomer_parameters_trifoliate.internode.length_segments = 2;</div>
 <div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span> </div>
 <div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span>    phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;</div>
@@ -1280,7 +1280,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>    phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.06,0.08);</div>
 <div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>    phytomer_parameters_trifoliate.petiole.taper = 0.25;</div>
 <div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>    phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-200,-50);</div>
-<div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>    phytomer_parameters_trifoliate.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.17,0.25,0.07);</div>
+<div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>    phytomer_parameters_trifoliate.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.17,0.25,0.07);</div>
 <div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span>    phytomer_parameters_trifoliate.petiole.length_segments = 5;</div>
 <div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span>    phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;</div>
 <div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span> </div>
@@ -1299,7 +1299,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01138" name="l01138"></a><span class="lineno"> 1138</span>    phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);</div>
 <div class="line"><a id="l01139" name="l01139"></a><span class="lineno"> 1139</span>    phytomer_parameters_trifoliate.peduncle.roll = 90;</div>
 <div class="line"><a id="l01140" name="l01140"></a><span class="lineno"> 1140</span>    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(50, 250);</div>
-<div class="line"><a id="l01141" name="l01141"></a><span class="lineno"> 1141</span>    phytomer_parameters_trifoliate.peduncle.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.15, 0.25, 0.1);</div>
+<div class="line"><a id="l01141" name="l01141"></a><span class="lineno"> 1141</span>    phytomer_parameters_trifoliate.peduncle.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.15, 0.25, 0.1);</div>
 <div class="line"><a id="l01142" name="l01142"></a><span class="lineno"> 1142</span>    phytomer_parameters_trifoliate.peduncle.length_segments = 6;</div>
 <div class="line"><a id="l01143" name="l01143"></a><span class="lineno"> 1143</span>    phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;</div>
 <div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span> </div>
@@ -1390,7 +1390,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span> </div>
 <div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span> </div>
-<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span> </div>
 <div class="line"><a id="l01234" name="l01234"></a><span class="lineno"> 1234</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l01235" name="l01235"></a><span class="lineno"> 1235</span> </div>
@@ -1421,13 +1421,13 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01260" name="l01260"></a><span class="lineno"> 1260</span>    phytomer_parameters_grapevine.internode.pitch = 20;</div>
 <div class="line"><a id="l01261" name="l01261"></a><span class="lineno"> 1261</span>    phytomer_parameters_grapevine.internode.phyllotactic_angle.uniformDistribution(160, 200);</div>
 <div class="line"><a id="l01262" name="l01262"></a><span class="lineno"> 1262</span>    phytomer_parameters_grapevine.internode.radius_initial = 0.003;</div>
-<div class="line"><a id="l01263" name="l01263"></a><span class="lineno"> 1263</span>    phytomer_parameters_grapevine.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.23,0.13,0.062);</div>
+<div class="line"><a id="l01263" name="l01263"></a><span class="lineno"> 1263</span>    phytomer_parameters_grapevine.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.23,0.13,0.062);</div>
 <div class="line"><a id="l01264" name="l01264"></a><span class="lineno"> 1264</span>    phytomer_parameters_grapevine.internode.length_segments = 1;</div>
 <div class="line"><a id="l01265" name="l01265"></a><span class="lineno"> 1265</span>    phytomer_parameters_grapevine.internode.max_floral_buds_per_petiole = 1;</div>
 <div class="line"><a id="l01266" name="l01266"></a><span class="lineno"> 1266</span>    phytomer_parameters_grapevine.internode.max_vegetative_buds_per_petiole = 1;</div>
 <div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span> </div>
 <div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>    phytomer_parameters_grapevine.petiole.petioles_per_internode = 1;</div>
-<div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>    phytomer_parameters_grapevine.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.13, 0.066, 0.03);</div>
+<div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>    phytomer_parameters_grapevine.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.13, 0.066, 0.03);</div>
 <div class="line"><a id="l01270" name="l01270"></a><span class="lineno"> 1270</span>    phytomer_parameters_grapevine.petiole.pitch.uniformDistribution(45, 70);</div>
 <div class="line"><a id="l01271" name="l01271"></a><span class="lineno"> 1271</span>    phytomer_parameters_grapevine.petiole.radius = 0.0025;</div>
 <div class="line"><a id="l01272" name="l01272"></a><span class="lineno"> 1272</span>    phytomer_parameters_grapevine.petiole.length = 0.1;</div>
@@ -1444,7 +1444,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01283" name="l01283"></a><span class="lineno"> 1283</span> </div>
 <div class="line"><a id="l01284" name="l01284"></a><span class="lineno"> 1284</span>    phytomer_parameters_grapevine.peduncle.length = 0.08;</div>
 <div class="line"><a id="l01285" name="l01285"></a><span class="lineno"> 1285</span>    phytomer_parameters_grapevine.peduncle.pitch.uniformDistribution(50, 90);</div>
-<div class="line"><a id="l01286" name="l01286"></a><span class="lineno"> 1286</span>    phytomer_parameters_grapevine.peduncle.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.32, 0.05, 0.13);</div>
+<div class="line"><a id="l01286" name="l01286"></a><span class="lineno"> 1286</span>    phytomer_parameters_grapevine.peduncle.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.32, 0.05, 0.13);</div>
 <div class="line"><a id="l01287" name="l01287"></a><span class="lineno"> 1287</span> </div>
 <div class="line"><a id="l01288" name="l01288"></a><span class="lineno"> 1288</span>    phytomer_parameters_grapevine.inflorescence.flowers_per_peduncle = 1;</div>
 <div class="line"><a id="l01289" name="l01289"></a><span class="lineno"> 1289</span>    phytomer_parameters_grapevine.inflorescence.pitch = 0;</div>
@@ -1539,7 +1539,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01378" name="l01378"></a><span class="lineno"> 1378</span>    <a class="code hl_function" href="class_plant_architecture.html#a647777da6c67e777c21c89e9dbda587d" title="Removes all leaves from a specified shoot in a specified plant.">removeShootLeaves</a>( plantID, uID_cane_L );</div>
 <div class="line"><a id="l01379" name="l01379"></a><span class="lineno"> 1379</span>    <a class="code hl_function" href="class_plant_architecture.html#a647777da6c67e777c21c89e9dbda587d" title="Removes all leaves from a specified shoot in a specified plant.">removeShootLeaves</a>( plantID, uID_cane_R );</div>
 <div class="line"><a id="l01380" name="l01380"></a><span class="lineno"> 1380</span> </div>
-<div class="line"><a id="l01381" name="l01381"></a><span class="lineno"> 1381</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, -1, 45, 45, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01381" name="l01381"></a><span class="lineno"> 1381</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, -1, 45, 45, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01382" name="l01382"></a><span class="lineno"> 1382</span> </div>
 <div class="line"><a id="l01383" name="l01383"></a><span class="lineno"> 1383</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l01384" name="l01384"></a><span class="lineno"> 1384</span> </div>
@@ -1569,7 +1569,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01408" name="l01408"></a><span class="lineno"> 1408</span>    phytomer_parameters.internode.pitch = 5;</div>
 <div class="line"><a id="l01409" name="l01409"></a><span class="lineno"> 1409</span>    phytomer_parameters.internode.phyllotactic_angle = 137.5;</div>
 <div class="line"><a id="l01410" name="l01410"></a><span class="lineno"> 1410</span>    phytomer_parameters.internode.radius_initial = 0.0005;</div>
-<div class="line"><a id="l01411" name="l01411"></a><span class="lineno"> 1411</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
+<div class="line"><a id="l01411" name="l01411"></a><span class="lineno"> 1411</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
 <div class="line"><a id="l01412" name="l01412"></a><span class="lineno"> 1412</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l01413" name="l01413"></a><span class="lineno"> 1413</span> </div>
 <div class="line"><a id="l01414" name="l01414"></a><span class="lineno"> 1414</span>    phytomer_parameters.petiole.petioles_per_internode = 1;</div>
@@ -1655,7 +1655,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span> </div>
 <div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span> </div>
-<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 20, -1, 20, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 20, -1, 20, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span> </div>
 <div class="line"><a id="l01499" name="l01499"></a><span class="lineno"> 1499</span>    plant_instances.at(plantID).max_age = 50;</div>
 <div class="line"><a id="l01500" name="l01500"></a><span class="lineno"> 1500</span> </div>
@@ -1688,7 +1688,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01527" name="l01527"></a><span class="lineno"> 1527</span>    phytomer_parameters_maize.internode.pitch = 0;</div>
 <div class="line"><a id="l01528" name="l01528"></a><span class="lineno"> 1528</span>    phytomer_parameters_maize.internode.phyllotactic_angle.uniformDistribution(170, 190);</div>
 <div class="line"><a id="l01529" name="l01529"></a><span class="lineno"> 1529</span>    phytomer_parameters_maize.internode.radius_initial = 0.0075;</div>
-<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span>    phytomer_parameters_maize.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.09, 0.13, 0.06);</div>
+<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span>    phytomer_parameters_maize.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.09, 0.13, 0.06);</div>
 <div class="line"><a id="l01531" name="l01531"></a><span class="lineno"> 1531</span>    phytomer_parameters_maize.internode.length_segments = 2;</div>
 <div class="line"><a id="l01532" name="l01532"></a><span class="lineno"> 1532</span>    phytomer_parameters_maize.internode.radial_subdivisions = 10;</div>
 <div class="line"><a id="l01533" name="l01533"></a><span class="lineno"> 1533</span>    phytomer_parameters_maize.internode.max_floral_buds_per_petiole = 1;</div>
@@ -1764,7 +1764,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01603" name="l01603"></a><span class="lineno"> 1603</span> </div>
 <div class="line"><a id="l01604" name="l01604"></a><span class="lineno"> 1604</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l01605" name="l01605"></a><span class="lineno"> 1605</span> </div>
-<div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 100, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 100, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span> </div>
 <div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l01609" name="l01609"></a><span class="lineno"> 1609</span> </div>
@@ -1799,7 +1799,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01638" name="l01638"></a><span class="lineno"> 1638</span>    phytomer_parameters_olive.petiole.radius = 0.0005;</div>
 <div class="line"><a id="l01639" name="l01639"></a><span class="lineno"> 1639</span>    phytomer_parameters_olive.petiole.length_segments = 1;</div>
 <div class="line"><a id="l01640" name="l01640"></a><span class="lineno"> 1640</span>    phytomer_parameters_olive.petiole.radial_subdivisions = 3;</div>
-<div class="line"><a id="l01641" name="l01641"></a><span class="lineno"> 1641</span>    phytomer_parameters_olive.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61, 0.5, 0.24);</div>
+<div class="line"><a id="l01641" name="l01641"></a><span class="lineno"> 1641</span>    phytomer_parameters_olive.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61, 0.5, 0.24);</div>
 <div class="line"><a id="l01642" name="l01642"></a><span class="lineno"> 1642</span> </div>
 <div class="line"><a id="l01643" name="l01643"></a><span class="lineno"> 1643</span>    phytomer_parameters_olive.leaf.leaves_per_petiole = 1;</div>
 <div class="line"><a id="l01644" name="l01644"></a><span class="lineno"> 1644</span>    phytomer_parameters_olive.leaf.prototype_scale = 0.06;</div>
@@ -1810,7 +1810,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01649" name="l01649"></a><span class="lineno"> 1649</span>    phytomer_parameters_olive.peduncle.pitch = 60;</div>
 <div class="line"><a id="l01650" name="l01650"></a><span class="lineno"> 1650</span>    phytomer_parameters_olive.peduncle.roll = 0;</div>
 <div class="line"><a id="l01651" name="l01651"></a><span class="lineno"> 1651</span>    phytomer_parameters_olive.peduncle.length_segments = 1;</div>
-<div class="line"><a id="l01652" name="l01652"></a><span class="lineno"> 1652</span>    phytomer_parameters_olive.peduncle.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.7, 0.72, 0.7);</div>
+<div class="line"><a id="l01652" name="l01652"></a><span class="lineno"> 1652</span>    phytomer_parameters_olive.peduncle.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.7, 0.72, 0.7);</div>
 <div class="line"><a id="l01653" name="l01653"></a><span class="lineno"> 1653</span> </div>
 <div class="line"><a id="l01654" name="l01654"></a><span class="lineno"> 1654</span>    phytomer_parameters_olive.inflorescence.flowers_per_peduncle = 10;</div>
 <div class="line"><a id="l01655" name="l01655"></a><span class="lineno"> 1655</span>    phytomer_parameters_olive.inflorescence.flower_offset = 0.13;</div>
@@ -1913,7 +1913,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span> </div>
 <div class="line"><a id="l01753" name="l01753"></a><span class="lineno"> 1753</span>    <a class="code hl_function" href="class_plant_architecture.html#a81e64c850e1b35cf2b3eca2d8205dfcf" title="Makes the specified plant enter a dormant state.">makePlantDormant</a>(plantID);</div>
 <div class="line"><a id="l01754" name="l01754"></a><span class="lineno"> 1754</span> </div>
-<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, 600, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, 600, <span class="keyword">true</span>);</div>
 <div class="line"><a id="l01756" name="l01756"></a><span class="lineno"> 1756</span>    plant_instances.at(plantID).max_age = 1825;</div>
 <div class="line"><a id="l01757" name="l01757"></a><span class="lineno"> 1757</span> </div>
 <div class="line"><a id="l01758" name="l01758"></a><span class="lineno"> 1758</span>    <span class="keywordflow">return</span> plantID;</div>
@@ -1954,7 +1954,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>    phytomer_parameters_pistachio.petiole.radius = 0.001;</div>
 <div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>    phytomer_parameters_pistachio.petiole.length_segments = 1;</div>
 <div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>    phytomer_parameters_pistachio.petiole.radial_subdivisions = 3;</div>
-<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>    phytomer_parameters_pistachio.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.6, 0.6, 0.4);</div>
+<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>    phytomer_parameters_pistachio.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.6, 0.6, 0.4);</div>
 <div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span> </div>
 <div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span>    phytomer_parameters_pistachio.leaf.leaves_per_petiole = 3;</div>
 <div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span>    phytomer_parameters_pistachio.leaf.prototype_scale = 0.08;</div>
@@ -1970,7 +1970,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01809" name="l01809"></a><span class="lineno"> 1809</span>    phytomer_parameters_pistachio.peduncle.roll = 0;</div>
 <div class="line"><a id="l01810" name="l01810"></a><span class="lineno"> 1810</span>    phytomer_parameters_pistachio.peduncle.length_segments = 1;</div>
 <div class="line"><a id="l01811" name="l01811"></a><span class="lineno"> 1811</span>    phytomer_parameters_pistachio.peduncle.curvature.uniformDistribution(500,900);</div>
-<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span>    phytomer_parameters_pistachio.peduncle.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.7, 0.72, 0.7);</div>
+<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span>    phytomer_parameters_pistachio.peduncle.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.7, 0.72, 0.7);</div>
 <div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span> </div>
 <div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span>    phytomer_parameters_pistachio.inflorescence.flowers_per_peduncle = 16;</div>
 <div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span>    phytomer_parameters_pistachio.inflorescence.flower_offset = 0.08;</div>
@@ -2061,7 +2061,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span> </div>
 <div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>    <a class="code hl_function" href="class_plant_architecture.html#a81e64c850e1b35cf2b3eca2d8205dfcf" title="Makes the specified plant enter a dormant state.">makePlantDormant</a>(plantID);</div>
 <div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span> </div>
-<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span>    plant_instances.at(plantID).max_age = 1095;</div>
 <div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span> </div>
 <div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span>    <span class="keywordflow">return</span> plantID;</div>
@@ -2088,7 +2088,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01927" name="l01927"></a><span class="lineno"> 1927</span>    phytomer_parameters_puncturevine.internode.pitch.uniformDistribution(0,15);</div>
 <div class="line"><a id="l01928" name="l01928"></a><span class="lineno"> 1928</span>    phytomer_parameters_puncturevine.internode.phyllotactic_angle = 180.f;</div>
 <div class="line"><a id="l01929" name="l01929"></a><span class="lineno"> 1929</span>    phytomer_parameters_puncturevine.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span>    phytomer_parameters_puncturevine.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.28, 0.18, 0.13);</div>
+<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span>    phytomer_parameters_puncturevine.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.28, 0.18, 0.13);</div>
 <div class="line"><a id="l01931" name="l01931"></a><span class="lineno"> 1931</span>    phytomer_parameters_puncturevine.internode.length_segments = 1;</div>
 <div class="line"><a id="l01932" name="l01932"></a><span class="lineno"> 1932</span> </div>
 <div class="line"><a id="l01933" name="l01933"></a><span class="lineno"> 1933</span>    phytomer_parameters_puncturevine.petiole.petioles_per_internode = 1;</div>
@@ -2184,7 +2184,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02023" name="l02023"></a><span class="lineno"> 2023</span> </div>
 <div class="line"><a id="l02024" name="l02024"></a><span class="lineno"> 2024</span>    plant_instances.at(plantID).max_age = 45;</div>
 <div class="line"><a id="l02025" name="l02025"></a><span class="lineno"> 2025</span> </div>
-<div class="line"><a id="l02026" name="l02026"></a><span class="lineno"> 2026</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 14, -1, -1, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02026" name="l02026"></a><span class="lineno"> 2026</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, 14, -1, -1, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02027" name="l02027"></a><span class="lineno"> 2027</span> </div>
 <div class="line"><a id="l02028" name="l02028"></a><span class="lineno"> 2028</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l02029" name="l02029"></a><span class="lineno"> 2029</span> </div>
@@ -2219,7 +2219,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02058" name="l02058"></a><span class="lineno"> 2058</span>    phytomer_parameters_redbud.internode.max_floral_buds_per_petiole = 5;</div>
 <div class="line"><a id="l02059" name="l02059"></a><span class="lineno"> 2059</span> </div>
 <div class="line"><a id="l02060" name="l02060"></a><span class="lineno"> 2060</span>    phytomer_parameters_redbud.petiole.petioles_per_internode = 1;</div>
-<div class="line"><a id="l02061" name="l02061"></a><span class="lineno"> 2061</span>    phytomer_parameters_redbud.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.65, 0.52, 0.39);</div>
+<div class="line"><a id="l02061" name="l02061"></a><span class="lineno"> 2061</span>    phytomer_parameters_redbud.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.65, 0.52, 0.39);</div>
 <div class="line"><a id="l02062" name="l02062"></a><span class="lineno"> 2062</span>    phytomer_parameters_redbud.petiole.pitch.uniformDistribution(20, 40);</div>
 <div class="line"><a id="l02063" name="l02063"></a><span class="lineno"> 2063</span>    phytomer_parameters_redbud.petiole.radius = 0.002;</div>
 <div class="line"><a id="l02064" name="l02064"></a><span class="lineno"> 2064</span>    phytomer_parameters_redbud.petiole.length = 0.075;</div>
@@ -2236,7 +2236,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02075" name="l02075"></a><span class="lineno"> 2075</span> </div>
 <div class="line"><a id="l02076" name="l02076"></a><span class="lineno"> 2076</span>    phytomer_parameters_redbud.peduncle.length = 0.02;</div>
 <div class="line"><a id="l02077" name="l02077"></a><span class="lineno"> 2077</span>    phytomer_parameters_redbud.peduncle.pitch.uniformDistribution(50,90);</div>
-<div class="line"><a id="l02078" name="l02078"></a><span class="lineno"> 2078</span>    phytomer_parameters_redbud.peduncle.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.32, 0.05, 0.13);</div>
+<div class="line"><a id="l02078" name="l02078"></a><span class="lineno"> 2078</span>    phytomer_parameters_redbud.peduncle.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.32, 0.05, 0.13);</div>
 <div class="line"><a id="l02079" name="l02079"></a><span class="lineno"> 2079</span> </div>
 <div class="line"><a id="l02080" name="l02080"></a><span class="lineno"> 2080</span>    phytomer_parameters_redbud.inflorescence.flowers_per_peduncle = 1;</div>
 <div class="line"><a id="l02081" name="l02081"></a><span class="lineno"> 2081</span>    phytomer_parameters_redbud.inflorescence.pitch = 0;</div>
@@ -2315,7 +2315,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02154" name="l02154"></a><span class="lineno"> 2154</span>        }</div>
 <div class="line"><a id="l02155" name="l02155"></a><span class="lineno"> 2155</span>    }</div>
 <div class="line"><a id="l02156" name="l02156"></a><span class="lineno"> 2156</span> </div>
-<div class="line"><a id="l02157" name="l02157"></a><span class="lineno"> 2157</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 30, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02157" name="l02157"></a><span class="lineno"> 2157</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 30, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02158" name="l02158"></a><span class="lineno"> 2158</span> </div>
 <div class="line"><a id="l02159" name="l02159"></a><span class="lineno"> 2159</span>    plant_instances.at(plantID).max_age = 1460;</div>
 <div class="line"><a id="l02160" name="l02160"></a><span class="lineno"> 2160</span> </div>
@@ -2345,7 +2345,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02184" name="l02184"></a><span class="lineno"> 2184</span>    phytomer_parameters_rice.internode.pitch = 0;</div>
 <div class="line"><a id="l02185" name="l02185"></a><span class="lineno"> 2185</span>    phytomer_parameters_rice.internode.phyllotactic_angle.uniformDistribution(67, 77);</div>
 <div class="line"><a id="l02186" name="l02186"></a><span class="lineno"> 2186</span>    phytomer_parameters_rice.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l02187" name="l02187"></a><span class="lineno"> 2187</span>    phytomer_parameters_rice.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.27, 0.31, 0.16);</div>
+<div class="line"><a id="l02187" name="l02187"></a><span class="lineno"> 2187</span>    phytomer_parameters_rice.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.27, 0.31, 0.16);</div>
 <div class="line"><a id="l02188" name="l02188"></a><span class="lineno"> 2188</span>    phytomer_parameters_rice.internode.length_segments = 1;</div>
 <div class="line"><a id="l02189" name="l02189"></a><span class="lineno"> 2189</span>    phytomer_parameters_rice.internode.radial_subdivisions = 6;</div>
 <div class="line"><a id="l02190" name="l02190"></a><span class="lineno"> 2190</span>    phytomer_parameters_rice.internode.max_floral_buds_per_petiole = 0;</div>
@@ -2420,7 +2420,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02259" name="l02259"></a><span class="lineno"> 2259</span> </div>
 <div class="line"><a id="l02260" name="l02260"></a><span class="lineno"> 2260</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02261" name="l02261"></a><span class="lineno"> 2261</span> </div>
-<div class="line"><a id="l02262" name="l02262"></a><span class="lineno"> 2262</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02262" name="l02262"></a><span class="lineno"> 2262</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02263" name="l02263"></a><span class="lineno"> 2263</span> </div>
 <div class="line"><a id="l02264" name="l02264"></a><span class="lineno"> 2264</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02265" name="l02265"></a><span class="lineno"> 2265</span> </div>
@@ -2448,7 +2448,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02287" name="l02287"></a><span class="lineno"> 2287</span>    phytomer_parameters.internode.pitch = 0;</div>
 <div class="line"><a id="l02288" name="l02288"></a><span class="lineno"> 2288</span>    phytomer_parameters.internode.phyllotactic_angle = 137.5;</div>
 <div class="line"><a id="l02289" name="l02289"></a><span class="lineno"> 2289</span>    phytomer_parameters.internode.radius_initial = 0.02;</div>
-<div class="line"><a id="l02290" name="l02290"></a><span class="lineno"> 2290</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.402,0.423,0.413);</div>
+<div class="line"><a id="l02290" name="l02290"></a><span class="lineno"> 2290</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.402,0.423,0.413);</div>
 <div class="line"><a id="l02291" name="l02291"></a><span class="lineno"> 2291</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l02292" name="l02292"></a><span class="lineno"> 2292</span>    phytomer_parameters.internode.radial_subdivisions = 10;</div>
 <div class="line"><a id="l02293" name="l02293"></a><span class="lineno"> 2293</span> </div>
@@ -2503,7 +2503,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02342" name="l02342"></a><span class="lineno"> 2342</span> </div>
 <div class="line"><a id="l02343" name="l02343"></a><span class="lineno"> 2343</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02344" name="l02344"></a><span class="lineno"> 2344</span> </div>
-<div class="line"><a id="l02345" name="l02345"></a><span class="lineno"> 2345</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02345" name="l02345"></a><span class="lineno"> 2345</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02346" name="l02346"></a><span class="lineno"> 2346</span> </div>
 <div class="line"><a id="l02347" name="l02347"></a><span class="lineno"> 2347</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02348" name="l02348"></a><span class="lineno"> 2348</span> </div>
@@ -2536,7 +2536,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02375" name="l02375"></a><span class="lineno"> 2375</span>    phytomer_parameters_sorghum.internode.pitch = 0;</div>
 <div class="line"><a id="l02376" name="l02376"></a><span class="lineno"> 2376</span>    phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(170,190);</div>
 <div class="line"><a id="l02377" name="l02377"></a><span class="lineno"> 2377</span>    phytomer_parameters_sorghum.internode.radius_initial = 0.003;</div>
-<div class="line"><a id="l02378" name="l02378"></a><span class="lineno"> 2378</span>    phytomer_parameters_sorghum.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.09,0.13,0.06);</div>
+<div class="line"><a id="l02378" name="l02378"></a><span class="lineno"> 2378</span>    phytomer_parameters_sorghum.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.09,0.13,0.06);</div>
 <div class="line"><a id="l02379" name="l02379"></a><span class="lineno"> 2379</span>    phytomer_parameters_sorghum.internode.length_segments = 2;</div>
 <div class="line"><a id="l02380" name="l02380"></a><span class="lineno"> 2380</span>    phytomer_parameters_sorghum.internode.radial_subdivisions = 10;</div>
 <div class="line"><a id="l02381" name="l02381"></a><span class="lineno"> 2381</span>    phytomer_parameters_sorghum.internode.max_floral_buds_per_petiole = 0;</div>
@@ -2608,7 +2608,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02447" name="l02447"></a><span class="lineno"> 2447</span> </div>
 <div class="line"><a id="l02448" name="l02448"></a><span class="lineno"> 2448</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02449" name="l02449"></a><span class="lineno"> 2449</span> </div>
-<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 15, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 15, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02451" name="l02451"></a><span class="lineno"> 2451</span> </div>
 <div class="line"><a id="l02452" name="l02452"></a><span class="lineno"> 2452</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02453" name="l02453"></a><span class="lineno"> 2453</span> </div>
@@ -2637,7 +2637,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02476" name="l02476"></a><span class="lineno"> 2476</span>    phytomer_parameters_trifoliate.internode.radius_initial = 0.002;</div>
 <div class="line"><a id="l02477" name="l02477"></a><span class="lineno"> 2477</span>    phytomer_parameters_trifoliate.internode.max_floral_buds_per_petiole = 1;</div>
 <div class="line"><a id="l02478" name="l02478"></a><span class="lineno"> 2478</span>    phytomer_parameters_trifoliate.internode.max_vegetative_buds_per_petiole = 1;</div>
-<div class="line"><a id="l02479" name="l02479"></a><span class="lineno"> 2479</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2,0.25,0.05);</div>
+<div class="line"><a id="l02479" name="l02479"></a><span class="lineno"> 2479</span>    phytomer_parameters_trifoliate.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2,0.25,0.05);</div>
 <div class="line"><a id="l02480" name="l02480"></a><span class="lineno"> 2480</span>    phytomer_parameters_trifoliate.internode.length_segments = 5;</div>
 <div class="line"><a id="l02481" name="l02481"></a><span class="lineno"> 2481</span> </div>
 <div class="line"><a id="l02482" name="l02482"></a><span class="lineno"> 2482</span>    phytomer_parameters_trifoliate.petiole.petioles_per_internode = 1;</div>
@@ -2753,7 +2753,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span> </div>
 <div class="line"><a id="l02593" name="l02593"></a><span class="lineno"> 2593</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span> </div>
-<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span> </div>
 <div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span> </div>
@@ -2783,7 +2783,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>    phytomer_parameters.internode.pitch = 10;</div>
 <div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(80,100);</div>
 <div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>    phytomer_parameters.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.38, 0.48, 0.1);</div>
+<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.38, 0.48, 0.1);</div>
 <div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span> </div>
 <div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>    phytomer_parameters.petiole.petioles_per_internode = 1;</div>
@@ -2792,7 +2792,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>    phytomer_parameters.petiole.length.uniformDistribution(0.15,0.25);</div>
 <div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>    phytomer_parameters.petiole.taper = 0.5;</div>
 <div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>    phytomer_parameters.petiole.curvature.uniformDistribution(-300,100);</div>
-<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>    phytomer_parameters.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.24, 0.28, 0.08);</div>
+<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>    phytomer_parameters.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.24, 0.28, 0.08);</div>
 <div class="line"><a id="l02635" name="l02635"></a><span class="lineno"> 2635</span>    phytomer_parameters.petiole.length_segments = 5;</div>
 <div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span> </div>
 <div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>    phytomer_parameters.leaf.leaves_per_petiole = 3;</div>
@@ -2871,7 +2871,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02710" name="l02710"></a><span class="lineno"> 2710</span> </div>
 <div class="line"><a id="l02711" name="l02711"></a><span class="lineno"> 2711</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02712" name="l02712"></a><span class="lineno"> 2712</span> </div>
-<div class="line"><a id="l02713" name="l02713"></a><span class="lineno"> 2713</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 100, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02713" name="l02713"></a><span class="lineno"> 2713</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 100, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02714" name="l02714"></a><span class="lineno"> 2714</span> </div>
 <div class="line"><a id="l02715" name="l02715"></a><span class="lineno"> 2715</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02716" name="l02716"></a><span class="lineno"> 2716</span> </div>
@@ -2902,7 +2902,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02741" name="l02741"></a><span class="lineno"> 2741</span>    phytomer_parameters_sugarbeet.internode.pitch = 0;</div>
 <div class="line"><a id="l02742" name="l02742"></a><span class="lineno"> 2742</span>    phytomer_parameters_sugarbeet.internode.phyllotactic_angle = 137.5;</div>
 <div class="line"><a id="l02743" name="l02743"></a><span class="lineno"> 2743</span>    phytomer_parameters_sugarbeet.internode.radius_initial = 0.005;</div>
-<div class="line"><a id="l02744" name="l02744"></a><span class="lineno"> 2744</span>    phytomer_parameters_sugarbeet.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.44,0.58,0.19);</div>
+<div class="line"><a id="l02744" name="l02744"></a><span class="lineno"> 2744</span>    phytomer_parameters_sugarbeet.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.44,0.58,0.19);</div>
 <div class="line"><a id="l02745" name="l02745"></a><span class="lineno"> 2745</span>    phytomer_parameters_sugarbeet.internode.length_segments = 1;</div>
 <div class="line"><a id="l02746" name="l02746"></a><span class="lineno"> 2746</span>    phytomer_parameters_sugarbeet.internode.max_vegetative_buds_per_petiole = 0;</div>
 <div class="line"><a id="l02747" name="l02747"></a><span class="lineno"> 2747</span>    phytomer_parameters_sugarbeet.internode.max_floral_buds_per_petiole = 0;</div>
@@ -2957,7 +2957,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02796" name="l02796"></a><span class="lineno"> 2796</span> </div>
 <div class="line"><a id="l02797" name="l02797"></a><span class="lineno"> 2797</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02798" name="l02798"></a><span class="lineno"> 2798</span> </div>
-<div class="line"><a id="l02799" name="l02799"></a><span class="lineno"> 2799</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02799" name="l02799"></a><span class="lineno"> 2799</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02800" name="l02800"></a><span class="lineno"> 2800</span> </div>
 <div class="line"><a id="l02801" name="l02801"></a><span class="lineno"> 2801</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02802" name="l02802"></a><span class="lineno"> 2802</span> </div>
@@ -2985,9 +2985,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02824" name="l02824"></a><span class="lineno"> 2824</span>    PhytomerParameters phytomer_parameters(context_ptr-&gt;getRandomGenerator());</div>
 <div class="line"><a id="l02825" name="l02825"></a><span class="lineno"> 2825</span> </div>
 <div class="line"><a id="l02826" name="l02826"></a><span class="lineno"> 2826</span>    phytomer_parameters.internode.pitch = 10;</div>
-<div class="line"><a id="l02827" name="l02827"></a><span class="lineno"> 2827</span>    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(145, 215);</div>
+<div class="line"><a id="l02827" name="l02827"></a><span class="lineno"> 2827</span>    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(140, 220);</div>
 <div class="line"><a id="l02828" name="l02828"></a><span class="lineno"> 2828</span>    phytomer_parameters.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l02829" name="l02829"></a><span class="lineno"> 2829</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
+<div class="line"><a id="l02829" name="l02829"></a><span class="lineno"> 2829</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.213, 0.270, 0.056);</div>
 <div class="line"><a id="l02830" name="l02830"></a><span class="lineno"> 2830</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l02831" name="l02831"></a><span class="lineno"> 2831</span> </div>
 <div class="line"><a id="l02832" name="l02832"></a><span class="lineno"> 2832</span>    phytomer_parameters.petiole.petioles_per_internode = 1;</div>
@@ -3041,17 +3041,17 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02880" name="l02880"></a><span class="lineno"> 2880</span>    shoot_parameters.internode_length_decay_rate = 0;</div>
 <div class="line"><a id="l02881" name="l02881"></a><span class="lineno"> 2881</span>    shoot_parameters.base_roll = 90;</div>
 <div class="line"><a id="l02882" name="l02882"></a><span class="lineno"> 2882</span>    shoot_parameters.base_yaw.uniformDistribution(-20,20);</div>
-<div class="line"><a id="l02883" name="l02883"></a><span class="lineno"> 2883</span>    shoot_parameters.gravitropic_curvature = -200;</div>
+<div class="line"><a id="l02883" name="l02883"></a><span class="lineno"> 2883</span>    shoot_parameters.gravitropic_curvature = 150;</div>
 <div class="line"><a id="l02884" name="l02884"></a><span class="lineno"> 2884</span>    shoot_parameters.tortuosity = 3;</div>
 <div class="line"><a id="l02885" name="l02885"></a><span class="lineno"> 2885</span> </div>
 <div class="line"><a id="l02886" name="l02886"></a><span class="lineno"> 2886</span>    shoot_parameters.phyllochron_min = 2;</div>
 <div class="line"><a id="l02887" name="l02887"></a><span class="lineno"> 2887</span>    shoot_parameters.elongation_rate_max = 0.1;</div>
 <div class="line"><a id="l02888" name="l02888"></a><span class="lineno"> 2888</span>    shoot_parameters.girth_area_factor = 3.f;</div>
-<div class="line"><a id="l02889" name="l02889"></a><span class="lineno"> 2889</span>    shoot_parameters.vegetative_bud_break_time = 10;</div>
-<div class="line"><a id="l02890" name="l02890"></a><span class="lineno"> 2890</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.15;</div>
-<div class="line"><a id="l02891" name="l02891"></a><span class="lineno"> 2891</span>    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;</div>
-<div class="line"><a id="l02892" name="l02892"></a><span class="lineno"> 2892</span>    shoot_parameters.flower_bud_break_probability = 0.5;</div>
-<div class="line"><a id="l02893" name="l02893"></a><span class="lineno"> 2893</span>    shoot_parameters.fruit_set_probability = 0.5;</div>
+<div class="line"><a id="l02889" name="l02889"></a><span class="lineno"> 2889</span>    shoot_parameters.vegetative_bud_break_time = 30;</div>
+<div class="line"><a id="l02890" name="l02890"></a><span class="lineno"> 2890</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.25;</div>
+<div class="line"><a id="l02891" name="l02891"></a><span class="lineno"> 2891</span>    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.25;</div>
+<div class="line"><a id="l02892" name="l02892"></a><span class="lineno"> 2892</span>    shoot_parameters.flower_bud_break_probability = 0.2;</div>
+<div class="line"><a id="l02893" name="l02893"></a><span class="lineno"> 2893</span>    shoot_parameters.fruit_set_probability = 0.8;</div>
 <div class="line"><a id="l02894" name="l02894"></a><span class="lineno"> 2894</span>    shoot_parameters.flowers_require_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l02895" name="l02895"></a><span class="lineno"> 2895</span>    shoot_parameters.growth_requires_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l02896" name="l02896"></a><span class="lineno"> 2896</span>    shoot_parameters.determinate_shoot_growth = <span class="keyword">true</span>;</div>
@@ -3072,11 +3072,11 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02911" name="l02911"></a><span class="lineno"> 2911</span>    uint plantID = <a class="code hl_function" href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance</a>(base_position, 0);</div>
 <div class="line"><a id="l02912" name="l02912"></a><span class="lineno"> 2912</span> </div>
 <div class="line"><a id="l02913" name="l02913"></a><span class="lineno"> 2913</span>    AxisRotation base_rotation = make_AxisRotation(0, context_ptr-&gt;randu(0.f, 2.f * M_PI), context_ptr-&gt;randu(0.f, 2.f * M_PI));</div>
-<div class="line"><a id="l02914" name="l02914"></a><span class="lineno"> 2914</span>    uint uID_stem = <a class="code hl_function" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6" title="Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...">addBaseStemShoot</a>(plantID, 1, base_rotation, 0.002, 0.06, 0.01, 0.01, 0, <span class="stringliteral">&quot;mainstem&quot;</span>);</div>
+<div class="line"><a id="l02914" name="l02914"></a><span class="lineno"> 2914</span>    uint uID_stem = <a class="code hl_function" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6" title="Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...">addBaseStemShoot</a>(plantID, 1, base_rotation, 0.002, 0.04, 0.01, 0.01, 0, <span class="stringliteral">&quot;mainstem&quot;</span>);</div>
 <div class="line"><a id="l02915" name="l02915"></a><span class="lineno"> 2915</span> </div>
 <div class="line"><a id="l02916" name="l02916"></a><span class="lineno"> 2916</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l02917" name="l02917"></a><span class="lineno"> 2917</span> </div>
-<div class="line"><a id="l02918" name="l02918"></a><span class="lineno"> 2918</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l02918" name="l02918"></a><span class="lineno"> 2918</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 40, 5, 5, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l02919" name="l02919"></a><span class="lineno"> 2919</span> </div>
 <div class="line"><a id="l02920" name="l02920"></a><span class="lineno"> 2920</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l02921" name="l02921"></a><span class="lineno"> 2921</span> </div>
@@ -3106,7 +3106,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02945" name="l02945"></a><span class="lineno"> 2945</span>    phytomer_parameters.internode.pitch = 10;</div>
 <div class="line"><a id="l02946" name="l02946"></a><span class="lineno"> 2946</span>    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(14, 220);</div>
 <div class="line"><a id="l02947" name="l02947"></a><span class="lineno"> 2947</span>    phytomer_parameters.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l02948" name="l02948"></a><span class="lineno"> 2948</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2556, 0.3240, 0.0672);</div>
+<div class="line"><a id="l02948" name="l02948"></a><span class="lineno"> 2948</span>    phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.2556, 0.3240, 0.0672);</div>
 <div class="line"><a id="l02949" name="l02949"></a><span class="lineno"> 2949</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l02950" name="l02950"></a><span class="lineno"> 2950</span>    phytomer_parameters.internode.radial_subdivisions = 14;</div>
 <div class="line"><a id="l02951" name="l02951"></a><span class="lineno"> 2951</span> </div>
@@ -3116,7 +3116,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02955" name="l02955"></a><span class="lineno"> 2955</span>    phytomer_parameters.petiole.length = 0.25;</div>
 <div class="line"><a id="l02956" name="l02956"></a><span class="lineno"> 2956</span>    phytomer_parameters.petiole.taper = 0.25;</div>
 <div class="line"><a id="l02957" name="l02957"></a><span class="lineno"> 2957</span>    phytomer_parameters.petiole.curvature.uniformDistribution(-250,0);</div>
-<div class="line"><a id="l02958" name="l02958"></a><span class="lineno"> 2958</span>    phytomer_parameters.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.4, 0.46, 0.15);</div>
+<div class="line"><a id="l02958" name="l02958"></a><span class="lineno"> 2958</span>    phytomer_parameters.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.4, 0.46, 0.15);</div>
 <div class="line"><a id="l02959" name="l02959"></a><span class="lineno"> 2959</span>    phytomer_parameters.petiole.length_segments = 5;</div>
 <div class="line"><a id="l02960" name="l02960"></a><span class="lineno"> 2960</span> </div>
 <div class="line"><a id="l02961" name="l02961"></a><span class="lineno"> 2961</span>    phytomer_parameters.leaf.leaves_per_petiole = 9;</div>
@@ -3197,7 +3197,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03036" name="l03036"></a><span class="lineno"> 3036</span> </div>
 <div class="line"><a id="l03037" name="l03037"></a><span class="lineno"> 3037</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l03038" name="l03038"></a><span class="lineno"> 3038</span> </div>
-<div class="line"><a id="l03039" name="l03039"></a><span class="lineno"> 3039</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, 50, 10, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03039" name="l03039"></a><span class="lineno"> 3039</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 50, 10, 5, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l03040" name="l03040"></a><span class="lineno"> 3040</span> </div>
 <div class="line"><a id="l03041" name="l03041"></a><span class="lineno"> 3041</span>    plant_instances.at(plantID).max_age = 175;</div>
 <div class="line"><a id="l03042" name="l03042"></a><span class="lineno"> 3042</span> </div>
@@ -3239,7 +3239,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03078" name="l03078"></a><span class="lineno"> 3078</span>    phytomer_parameters_walnut.petiole.radius = 0.0015;</div>
 <div class="line"><a id="l03079" name="l03079"></a><span class="lineno"> 3079</span>    phytomer_parameters_walnut.petiole.length_segments = 5;</div>
 <div class="line"><a id="l03080" name="l03080"></a><span class="lineno"> 3080</span>    phytomer_parameters_walnut.petiole.radial_subdivisions = 3;</div>
-<div class="line"><a id="l03081" name="l03081"></a><span class="lineno"> 3081</span>    phytomer_parameters_walnut.petiole.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
+<div class="line"><a id="l03081" name="l03081"></a><span class="lineno"> 3081</span>    phytomer_parameters_walnut.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.61,0.5,0.24);</div>
 <div class="line"><a id="l03082" name="l03082"></a><span class="lineno"> 3082</span> </div>
 <div class="line"><a id="l03083" name="l03083"></a><span class="lineno"> 3083</span>    phytomer_parameters_walnut.leaf.leaves_per_petiole = 5;</div>
 <div class="line"><a id="l03084" name="l03084"></a><span class="lineno"> 3084</span>    phytomer_parameters_walnut.leaf.pitch.uniformDistribution(-40,0);</div>
@@ -3282,7 +3282,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03121" name="l03121"></a><span class="lineno"> 3121</span>    <span class="comment">// Proleptic shoots</span></div>
 <div class="line"><a id="l03122" name="l03122"></a><span class="lineno"> 3122</span>    ShootParameters shoot_parameters_proleptic(context_ptr-&gt;getRandomGenerator());</div>
 <div class="line"><a id="l03123" name="l03123"></a><span class="lineno"> 3123</span>    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_walnut;</div>
-<div class="line"><a id="l03124" name="l03124"></a><span class="lineno"> 3124</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
+<div class="line"><a id="l03124" name="l03124"></a><span class="lineno"> 3124</span>    shoot_parameters_proleptic.phytomer_parameters.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.3,0.2,0.2);</div>
 <div class="line"><a id="l03125" name="l03125"></a><span class="lineno"> 3125</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = WalnutPhytomerCreationFunction;</div>
 <div class="line"><a id="l03126" name="l03126"></a><span class="lineno"> 3126</span>    <span class="comment">// shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = WalnutPhytomerCallbackFunction;</span></div>
 <div class="line"><a id="l03127" name="l03127"></a><span class="lineno"> 3127</span>    shoot_parameters_proleptic.max_nodes = 30;</div>
@@ -3355,7 +3355,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03194" name="l03194"></a><span class="lineno"> 3194</span> </div>
 <div class="line"><a id="l03195" name="l03195"></a><span class="lineno"> 3195</span>    <a class="code hl_function" href="class_plant_architecture.html#a81e64c850e1b35cf2b3eca2d8205dfcf" title="Makes the specified plant enter a dormant state.">makePlantDormant</a>(plantID);</div>
 <div class="line"><a id="l03196" name="l03196"></a><span class="lineno"> 3196</span> </div>
-<div class="line"><a id="l03197" name="l03197"></a><span class="lineno"> 3197</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03197" name="l03197"></a><span class="lineno"> 3197</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 165, -1, 3, 7, 20, 200, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l03198" name="l03198"></a><span class="lineno"> 3198</span> </div>
 <div class="line"><a id="l03199" name="l03199"></a><span class="lineno"> 3199</span>    plant_instances.at(plantID).max_age = 1095;</div>
 <div class="line"><a id="l03200" name="l03200"></a><span class="lineno"> 3200</span> </div>
@@ -3388,7 +3388,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03227" name="l03227"></a><span class="lineno"> 3227</span>    phytomer_parameters_wheat.internode.pitch = 0;</div>
 <div class="line"><a id="l03228" name="l03228"></a><span class="lineno"> 3228</span>    phytomer_parameters_wheat.internode.phyllotactic_angle.uniformDistribution(67,77);</div>
 <div class="line"><a id="l03229" name="l03229"></a><span class="lineno"> 3229</span>    phytomer_parameters_wheat.internode.radius_initial = 0.001;</div>
-<div class="line"><a id="l03230" name="l03230"></a><span class="lineno"> 3230</span>    phytomer_parameters_wheat.internode.color = <a class="code hl_function" href="group__vectors.html#gae5b981fa224fe6f30b850467ec655c0b" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.27,0.31,0.16);</div>
+<div class="line"><a id="l03230" name="l03230"></a><span class="lineno"> 3230</span>    phytomer_parameters_wheat.internode.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.27,0.31,0.16);</div>
 <div class="line"><a id="l03231" name="l03231"></a><span class="lineno"> 3231</span>    phytomer_parameters_wheat.internode.length_segments = 1;</div>
 <div class="line"><a id="l03232" name="l03232"></a><span class="lineno"> 3232</span>    phytomer_parameters_wheat.internode.radial_subdivisions = 6;</div>
 <div class="line"><a id="l03233" name="l03233"></a><span class="lineno"> 3233</span>    phytomer_parameters_wheat.internode.max_floral_buds_per_petiole = 0;</div>
@@ -3458,7 +3458,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03297" name="l03297"></a><span class="lineno"> 3297</span> </div>
 <div class="line"><a id="l03298" name="l03298"></a><span class="lineno"> 3298</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l03299" name="l03299"></a><span class="lineno"> 3299</span> </div>
-<div class="line"><a id="l03300" name="l03300"></a><span class="lineno"> 3300</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03300" name="l03300"></a><span class="lineno"> 3300</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, 4, 10, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l03301" name="l03301"></a><span class="lineno"> 3301</span> </div>
 <div class="line"><a id="l03302" name="l03302"></a><span class="lineno"> 3302</span>    plant_instances.at(plantID).max_age = 365;</div>
 <div class="line"><a id="l03303" name="l03303"></a><span class="lineno"> 3303</span> </div>
