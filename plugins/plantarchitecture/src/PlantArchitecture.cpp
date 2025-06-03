@@ -424,7 +424,14 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
             plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
         }else if( state == BUD_FRUITING ){ //adding a fruit
             float fruit_cost = calculateFruitConstructionCosts(fbud);
-            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+            fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
+            if (plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC > fruit_cost)
+            {
+                plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+            }else
+            {
+                setFloralBudState(BUD_DEAD, fbud);
+            }
         }
     }
 
