@@ -1418,6 +1418,8 @@ struct Shoot {
 
     [[nodiscard]] bool sampleVegetativeBudBreak_carb(uint node_index) const;
 
+    [[nodiscard]] bool sampleVegetativeBudBreak_carb( uint node_index ) const;
+
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
      * \param[in] dt Time step in days
