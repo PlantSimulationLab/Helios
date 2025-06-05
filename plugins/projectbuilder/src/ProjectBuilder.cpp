@@ -770,18 +770,18 @@ void ProjectBuilder::record(){
                     radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
                     //
                     // Bounding boxes for all primitive types
-                    // for (std::string band_group_ : band_group_names){
+                    for (std::string band_group_ : band_group_names){
                         for (std::string primitive_name : primitive_names){
                             if (!primitive_name.empty()){
                                 primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                             }
                             if (bounding_boxes_map.find(primitive_name) != bounding_boxes_map.end())
-                                radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                                // radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], band_group_ + std::to_string(i), image_dir + rig_label + '/');
+                                // radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                                radiation->writeImageBoundingBoxes_ObjectData( cameralabel, "plantID", bounding_boxes_map[primitive_name], band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
                             // radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
                             // radiation->writeImageBoundingBoxes_ObjectData();
                         }
-                    // }
+                    }
                     //
                 }
             }
@@ -806,6 +806,11 @@ void ProjectBuilder::buildFromXML(){
     // if (enable_plantarchitecture){
     #ifdef ENABLE_PLANT_ARCHITECTURE
         plantarchitecture = new PlantArchitecture(context);
+    #ifdef ENABLE_RADIATION_MODEL
+    plantarchitecture->optionalOutputObjectData(std::vector<std::string>{"plantID", "leafID", "peduncleID",
+                                                                        "closedflowerID", "openflowerID", "fruitID",
+                                                                        "rank", "age", "carbohydrate_concentration"});
+    #endif
         std::cout << "Loaded PlantArchitecture plugin." << std::endl;
     // }else{
     #else
@@ -2761,12 +2766,19 @@ void ProjectBuilder::visualize(){
                     if (ImGui::Button("Update Canopy")){
                         updateCanopy(current_canopy);
                         refreshVisualization();
+                        canopy_dict[current_canopy].is_dirty = false;
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Delete Canopy")){
                         deleteCanopy(current_canopy);
                         updatePrimitiveTypes();
                         refreshVisualization();
+                    }
+                    if (canopy_dict[current_canopy].is_dirty){
+                        ImGui::SameLine();
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // Red text
+                        ImGui::Text("update required");
+                        ImGui::PopStyleColor();
                     }
                     ImGui::SetNextItemWidth(100);
                     std::string prev_canopy_name = canopy_dict[current_canopy].label;
@@ -2790,7 +2802,9 @@ void ProjectBuilder::visualize(){
                     // ####### PLANT LIBRARY NAME ####### //
                     ImGui::SetNextItemWidth(250);
                     // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+                    std::string prev_lib = canopy_dict[current_canopy].library_name_verbose;
                     dropDown("Plant Library###dropdown", canopy_dict[current_canopy].library_name_verbose, plant_types_verbose);
+                    if (canopy_dict[current_canopy].library_name_verbose != prev_lib) canopy_dict[current_canopy].is_dirty = true;
                     canopy_dict[current_canopy].library_name = plant_type_lookup[canopy_dict[current_canopy].library_name_verbose];
                     // ######### CANOPY DATA GROUP ####### //
                     ImGui::SetNextItemWidth(100);
