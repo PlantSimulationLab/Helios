@@ -1006,50 +1006,6 @@ void ProjectBuilder::buildFromXML(){
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
         }
-        // OBJ BLOCK
-        for (int i = 0; i < obj_files.size(); i++){
-            object new_object;
-            std::vector<uint> new_UUIDs;
-            std::string new_obj_file = obj_files[i];
-            if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
-                new_UUIDs = context->loadOBJ(new_obj_file.c_str());
-            } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
-                new_UUIDs = context->loadPLY(new_obj_file.c_str());
-            } else {
-                std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
-            }
-            // check for MTL file
-            std::filesystem::path mtl_path(new_obj_file);
-            mtl_path.replace_extension("mtl");
-            if (std::filesystem::exists(mtl_path)){
-                new_object.use_texture_file = true;
-            } else{
-                new_object.use_texture_file = false;
-                context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
-            }
-            context->scalePrimitive(new_UUIDs, obj_scales[i]);
-            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].x), "x");
-            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].y), "y");
-            context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].z), "z");
-            context->translatePrimitive(new_UUIDs, obj_positions[i]);
-            obj_UUIDs.push_back(new_UUIDs);
-            new_object.index = obj_idx;
-            obj_idx++;
-            new_object.name = obj_names[i];
-            new_object.file = obj_files[i];
-            new_object.data_group = obj_data_groups[i];
-            new_object.UUIDs = new_UUIDs;
-            new_object.position = obj_positions[i];
-            new_object.prev_position = obj_positions[i];
-            new_object.orientation = obj_orientations[i];
-            new_object.prev_orientation = obj_orientations[i];
-            new_object.scale = obj_scales[i];
-            new_object.prev_scale = obj_scales[i];
-            new_object.color = obj_colors[i];
-            new_object.prev_color = obj_colors[i];
-            new_object.is_dirty = false;
-            objects_dict[new_object.name] = new_object;
-        }
         // RIG BLOCK
         // *** Loading any XML files needed for cameras *** //
         for (auto &xml_file : camera_xml_library_files) {
@@ -2045,7 +2001,7 @@ void ProjectBuilder::visualize(){
                     float offset = base_offset * depth;
 
                     if (currently_dragging_type == "canopy"){
-                        canopy_origins[canopy_labels_dict[currently_dragging]] += drag_distance * offset * (up_dir + right_dir);
+                        canopy_dict[currently_dragging].origin += drag_distance * offset * (up_dir + right_dir);
                     } else if (currently_dragging_type == "rig"){
                         camera_positions[rig_dict[currently_dragging]] += drag_distance * offset * (up_dir + right_dir);
                     }
@@ -2056,7 +2012,7 @@ void ProjectBuilder::visualize(){
             }
             int object_window_count = 0;
             for (auto current_label : canopy_labels_set){
-                vec3 canopy_origin_ = canopy_origins[canopy_labels_dict[current_label]];
+                vec3 canopy_origin_ = canopy_dict[current_label].origin;
                 origin_position = glm::vec4(canopy_origin_.x, canopy_origin_.y, canopy_origin_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
                 // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
@@ -2790,174 +2746,163 @@ void ProjectBuilder::visualize(){
                 }
             // if (enable_plantarchitecture){
             #ifdef ENABLE_PLANT_ARCHITECTURE
-                // CANOPY TAB
-                if (ImGui::BeginTabItem("Canopy")){
-                    current_tab = "Canopy";
-                    if (ImGui::BeginCombo("##combo", current_canopy.c_str()))
-                    {
-                        for (auto canopy_label_ : canopy_labels_set){
-                            bool is_selected = (current_canopy == canopy_label_);
-                            if (ImGui::Selectable(canopy_label_.c_str(), is_selected))
-                                current_canopy = canopy_label_;
-                            if (is_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
+            // CANOPY TAB
+            if (ImGui::BeginTabItem("Canopy")){
+                current_tab = "Canopy";
+                dropDown("##canopy_combo", current_canopy, canopy_labels_set);
+                ImGui::SameLine();
+                if (ImGui::Button("Add Canopy")){
+                    addCanopy();
+                }
+                if (!current_canopy.empty()){
+                    if (ImGui::Button("Update Canopy")){
+                        updateCanopy(current_canopy);
+                        refreshVisualization();
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("Add Canopy")){
-                        addCanopy();
+                    if (ImGui::Button("Delete Canopy")){
+                        deleteCanopy(current_canopy);
+                        updatePrimitiveTypes();
+                        refreshVisualization();
                     }
-                    if (!current_canopy.empty()){
-                        if (ImGui::Button("Update Canopy")){
-                            updateCanopy(current_canopy);
-                            refreshVisualization();
+                    ImGui::SetNextItemWidth(100);
+                    std::string prev_canopy_name = canopy_dict[current_canopy].label;
+                    ImGui::InputText("##canopy_name", &canopy_dict[current_canopy].label);
+                    if (canopy_dict[current_canopy].label != prev_canopy_name && canopy_labels_set.find(canopy_dict[current_canopy].label) == canopy_labels_set.end() && !canopy_dict[current_canopy].label.empty()){
+                        canopy temp = canopy_dict[current_canopy];
+                        current_canopy = canopy_dict[prev_canopy_name].label;
+                        std::map<std::string, canopy>::iterator current_canopy_iter = canopy_dict.find(prev_canopy_name);
+                        if (current_canopy_iter != canopy_dict.end()){
+                            canopy_dict.erase(current_canopy_iter);
                         }
-                        ImGui::SameLine();
-                        if (ImGui::Button("Delete Canopy")){
-                            deleteCanopy(current_canopy);
-                            updatePrimitiveTypes();
-                            refreshVisualization();
-                        }
-                        ImGui::SetNextItemWidth(100);
-                        std::string prev_canopy_name = canopy_labels[canopy_labels_dict[current_canopy]];
-                        ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[current_canopy]]);
-                        if (canopy_labels[canopy_labels_dict[current_canopy]] != prev_canopy_name && canopy_labels_dict.find(canopy_labels[canopy_labels_dict[current_canopy]]) == canopy_labels_dict.end() && !canopy_labels[canopy_labels_dict[current_canopy]].empty()){
-                            int temp = canopy_labels_dict[current_canopy];
-                            current_canopy = canopy_labels[canopy_labels_dict[current_canopy]];
-                            std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
-                            if (current_canopy_iter != canopy_labels_dict.end()){
-                                canopy_labels_dict.erase(current_canopy_iter);
-                            }
-                            canopy_labels_dict[current_canopy] = temp;
+                        canopy_dict[current_canopy] = temp;
 
-                            canopy_labels_set.erase(prev_canopy_name);
-                            canopy_labels_set.insert(current_canopy);
-                        } else{
-                            canopy_labels[canopy_labels_dict[current_canopy]] = prev_canopy_name;
+                        canopy_labels_set.erase(prev_canopy_name);
+                        canopy_labels_set.insert(current_canopy);
+                    } else{
+                        canopy_dict[current_canopy].label = prev_canopy_name;
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Canopy Name");
+                    // ####### PLANT LIBRARY NAME ####### //
+                    ImGui::SetNextItemWidth(250);
+                    // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+                    dropDown("Plant Library###dropdown", canopy_dict[current_canopy].library_name_verbose, plant_types_verbose);
+                    canopy_dict[current_canopy].library_name = plant_type_lookup[canopy_dict[current_canopy].library_name_verbose];
+                    // ######### CANOPY DATA GROUP ####### //
+                    ImGui::SetNextItemWidth(100);
+                    std::string prev_canopy_data_group = canopy_dict[current_canopy].data_group;
+                    ImGui::InputText("##canopy_data_group", &canopy_dict[current_canopy].data_group);
+                    if (canopy_dict[current_canopy].data_group == "All" || canopy_dict[current_canopy].data_group.empty()){
+                        canopy_dict[current_canopy].data_group = prev_canopy_data_group;
+                    }
+                    if (!canopy_dict[current_canopy].data_group.empty() && prev_canopy_data_group != canopy_dict[current_canopy].data_group){
+                        std::string new_data_group = canopy_dict[current_canopy].data_group;
+                        std::vector<uint> canopy_primID_vec;
+                        for (int i = 0; i < canopy_dict[current_canopy].IDs.size(); i++){
+                            std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_dict[current_canopy].IDs[i]);
+                            canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
                         }
-                        ImGui::SameLine();
-                        ImGui::Text("Canopy Name");
-                        // ####### PLANT LIBRARY NAME ####### //
-                        ImGui::SetNextItemWidth(250);
-                        // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
-                        dropDown("Plant Library###dropdown", plant_library_names_verbose[canopy_labels_dict[current_canopy]], plant_types_verbose);
-                        plant_library_names[canopy_labels_dict[current_canopy]] = plant_type_lookup[plant_library_names_verbose[canopy_labels_dict[current_canopy]]];
-                        // ######### CANOPY DATA GROUP ####### //
-                        ImGui::SetNextItemWidth(100);
-                        std::string prev_canopy_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
-                        ImGui::InputText("##canopy_data_group", &canopy_data_groups[canopy_labels_dict[current_canopy]]);
-                        if (canopy_data_groups[canopy_labels_dict[current_canopy]] == "All" || canopy_data_groups[canopy_labels_dict[current_canopy]].empty()){
-                            canopy_data_groups[canopy_labels_dict[current_canopy]] = prev_canopy_data_group;
-                        }
-                        if (!canopy_data_groups[canopy_labels_dict[current_canopy]].empty() && prev_canopy_data_group != canopy_data_groups[canopy_labels_dict[current_canopy]]){
-                            std::string new_data_group = canopy_data_groups[canopy_labels_dict[current_canopy]];
-                            std::vector<uint> canopy_primID_vec;
-                            for (int i = 0; i < canopy_IDs[canopy_labels_dict[current_canopy]].size(); i++){
-                                std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_IDs[canopy_labels_dict[current_canopy]][i]);
-                                canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
+                        context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("Data Group");
+                    // ####### CANOPY ORIGIN ####### //
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##canopy_origin_x", &canopy_dict[current_canopy].origin.x);
+                    randomizePopup("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.x));
+                    randomizerParams("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##canopy_origin_y", &canopy_dict[current_canopy].origin.y);
+                    randomizePopup("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.y));
+                    randomizerParams("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    ImGui::InputFloat("##canopy_origin_z", &canopy_dict[current_canopy].origin.z);
+                    randomizePopup("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.z));
+                    randomizerParams("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Canopy Origin");
+                    // ####### PLANT COUNT ####### //
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("##plant_count_x", &canopy_dict[current_canopy].plant_count.x);
+                    canopy_dict[current_canopy].plant_count.x = std::max(canopy_dict[current_canopy].plant_count.x, 1);
+                    randomizePopup("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.x));
+                    randomizerParams("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("##plant_count_y", &canopy_dict[current_canopy].plant_count.y);
+                    canopy_dict[current_canopy].plant_count.y = std::max(canopy_dict[current_canopy].plant_count.y, 1);
+                    randomizePopup("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.y));
+                    randomizerParams("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Plant Count");
+                    // ####### PLANT SPACING ####### //
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##plant_spacing_x", &canopy_dict[current_canopy].plant_spacing.x);
+                    randomizePopup("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.x));
+                    randomizerParams("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##plant_spacing_y", &canopy_dict[current_canopy].plant_spacing.y);
+                    randomizePopup("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.y));
+                    randomizerParams("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Plant Spacing");
+                    // ####### PLANT AGE ####### //
+                    ImGui::SetNextItemWidth(80);
+                    ImGui::InputFloat("Plant Age", &canopy_dict[current_canopy].age);
+                    randomizePopup("plant_age_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].age));
+                    randomizerParams("plant_age_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    // ####### GROUND CLIPPING HEIGHT ####### //
+                    ImGui::SetNextItemWidth(80);
+                    ImGui::InputFloat("Ground Clipping Height", &canopy_dict[current_canopy].ground_clipping_height);
+                    randomizePopup("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].ground_clipping_height));
+                    randomizerParams("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx));
+                    ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+                    if (ImGui::Button("Save Canopy to OBJ/PLY File")){
+                        std::string new_obj_file = save_as_file_dialog(std::vector<std::string>{"OBJ", "PLY"});
+                        if (!new_obj_file.empty()){
+                            std::string file_extension = new_obj_file;
+                            size_t last_obj_file = file_extension.rfind('.');
+                            if (last_obj_file != std::string::npos){
+                                file_extension = file_extension.substr(last_obj_file + 1);
                             }
-                            context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Data Group");
-                        // ####### CANOPY ORIGIN ####### //
-                        obj curr_plant = obj{canopy_labels_dict[current_canopy], true};
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[current_canopy]].x);
-                        randomizePopup("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].x));
-                        randomizerParams("canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels_dict[current_canopy]].y);
-                        randomizePopup("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].y));
-                        randomizerParams("canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels_dict[current_canopy]].z);
-                        randomizePopup("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&canopy_origins[canopy_labels_dict[current_canopy]].z));
-                        randomizerParams("canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Canopy Origin");
-                        // ####### PLANT COUNT ####### //
-                        ImGui::SetNextItemWidth(100);
-                        ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels_dict[current_canopy]].x);
-                        plant_counts[canopy_labels_dict[current_canopy]].x = std::max(plant_counts[canopy_labels_dict[current_canopy]].x, 1);
-                        randomizePopup("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].x));
-                        randomizerParams("plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(100);
-                        ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels_dict[current_canopy]].y);
-                        plant_counts[canopy_labels_dict[current_canopy]].y = std::max(plant_counts[canopy_labels_dict[current_canopy]].y, 1);
-                        randomizePopup("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_counts[canopy_labels_dict[current_canopy]].y));
-                        randomizerParams("plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Plant Count");
-                        // ####### PLANT SPACING ####### //
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels_dict[current_canopy]].x);
-                        randomizePopup("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].x));
-                        randomizerParams("plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels_dict[current_canopy]].y);
-                        randomizePopup("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_spacings[canopy_labels_dict[current_canopy]].y));
-                        randomizerParams("plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Plant Spacing");
-                        // ####### PLANT AGE ####### //
-                        ImGui::SetNextItemWidth(80);
-                        ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels_dict[current_canopy]]);
-                        randomizePopup("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&plant_ages[canopy_labels_dict[current_canopy]]));
-                        randomizerParams("plant_age_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        // ####### GROUND CLIPPING HEIGHT ####### //
-                        ImGui::SetNextItemWidth(80);
-                        ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels_dict[current_canopy]]);
-                        randomizePopup("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]), createTaggedPtr(&ground_clipping_heights[canopy_labels_dict[current_canopy]]));
-                        randomizerParams("ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy]));
-                        ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_labels_dict[current_canopy])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        if (ImGui::Button("Save Canopy to OBJ/PLY File")){
-                            std::string new_obj_file = save_as_file_dialog(std::vector<std::string>{"OBJ", "PLY"});
-                            if (!new_obj_file.empty()){
-                                std::string file_extension = new_obj_file;
-                                size_t last_obj_file = file_extension.rfind('.');
-                                if (last_obj_file != std::string::npos){
-                                    file_extension = file_extension.substr(last_obj_file + 1);
+                            if (file_extension == "obj" || file_extension == "ply"){
+                                if (!std::filesystem::exists(new_obj_file)){
+                                    // Create file
+                                    std::ofstream outFile(new_obj_file);
                                 }
-                                if (file_extension == "obj" || file_extension == "ply"){
-                                    if (!std::filesystem::exists(new_obj_file)){
-                                        // Create file
-                                        std::ofstream outFile(new_obj_file);
-                                    }
-                                    if (!save_plants_individually){
-                                        saveCanopy(new_obj_file, canopy_IDs[canopy_labels_dict[current_canopy]],
-                                                    canopy_origins[canopy_labels_dict[current_canopy]], file_extension);
-                                    } else{
-                                        saveCanopy(new_obj_file, canopy_IDs[canopy_labels_dict[current_canopy]],
-                                                    individual_plant_locations[canopy_labels_dict[current_canopy]], file_extension);
-                                    }
+                                if (!save_plants_individually){
+                                    saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs,
+                                                canopy_dict[current_canopy].origin, file_extension);
                                 } else{
-                                    // Needs to be a obj or ply file
-                                    std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
+                                    saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs,
+                                                canopy_dict[current_canopy].individual_plant_locations, file_extension);
                                 }
                             } else{
-                                // Not a valid file
-                                std::cout << "Not a valid file." << std::endl;
+                                // Needs to be a obj or ply file
+                                std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
                             }
+                        } else{
+                            // Not a valid file
+                            std::cout << "Not a valid file." << std::endl;
                         }
-                        ImGui::SameLine();
-                        ImGui::Checkbox("Save plants individually", &save_plants_individually);
                     }
-                    ImGui::EndTabItem();
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Save plants individually", &save_plants_individually);
                 }
+                ImGui::EndTabItem();
+            }
             // } //PLANT_ARCHITECTURE
             #endif //PLANT_ARCHITECTURE
             #ifdef ENABLE_RADIATION_MODEL
@@ -4334,6 +4279,7 @@ void ProjectBuilder::xmlSetValues(){
         obj_colors.push_back(curr_obj.color);
         obj_data_groups.push_back(curr_obj.data_group);
     }
+    //
     setNodeLabels("label", "object", obj_names_set);
     xmlSetValues("file", "object", obj_files, obj_names_dict);
     xmlSetValues("position", "object", obj_positions, obj_names_dict);
@@ -4348,6 +4294,33 @@ void ProjectBuilder::xmlSetValues(){
     if (node){
         node.parent().remove_child(node);
     }
+    // Refresh lists
+    plant_ages.clear();
+    ground_clipping_heights.clear();
+    canopy_labels.clear();
+    plant_library_names.clear();
+    plant_library_names_verbose.clear();
+    canopy_IDs.clear();
+    individual_plant_locations.clear();
+    plant_spacings.clear();
+    plant_counts.clear();
+    canopy_origins.clear();
+    canopy_data_groups.clear();
+    for (std::string canopy_name : canopy_labels_set){
+        canopy curr_canopy = canopy_dict[canopy_name];
+        plant_ages.push_back(curr_canopy.age);
+        ground_clipping_heights.push_back(curr_canopy.ground_clipping_height);
+        canopy_labels.push_back(curr_canopy.label);
+        plant_library_names.push_back(curr_canopy.library_name);
+        plant_library_names_verbose.push_back(curr_canopy.library_name_verbose);
+        canopy_IDs.push_back(curr_canopy.IDs);
+        individual_plant_locations.push_back(curr_canopy.individual_plant_locations);
+        plant_spacings.push_back(curr_canopy.plant_spacing);
+        plant_counts.push_back(curr_canopy.plant_count);
+        canopy_origins.push_back(curr_canopy.origin);
+        canopy_data_groups.push_back(curr_canopy.data_group);
+    }
+    //
     setNodeLabels("label", "canopy_block", canopy_labels_set);
     xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
     xmlSetValue("plant_count", "canopy_block", plant_count);
@@ -4361,7 +4334,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("plant_library_name", "canopy_block", plant_library_names, canopy_labels_dict);
     xmlSetValues("plant_age", "canopy_block", plant_ages, canopy_labels_dict);
     xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights, canopy_labels_dict);
-    xmlSetValues("data_group", "canopy", canopy_data_groups, canopy_labels_dict);
+    xmlSetValues("data_group", "canopy_block", canopy_data_groups, canopy_labels_dict);
     // RIG BLOCK
     // Delete from XML doc
     helios = xmldoc.child("helios");
@@ -4556,6 +4529,54 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("data_group", "object", obj_data_groups);
     obj_colors.clear();
     xmlGetValues("color", "object", obj_colors);
+
+    for (auto& obj : objects_dict){
+        deleteObject(obj.second.name);
+    }
+    objects_dict.clear();
+    for (int i = 0; i < obj_files.size(); i++){
+        object new_object;
+        std::vector<uint> new_UUIDs;
+        std::string new_obj_file = obj_files[i];
+        if( std::filesystem::path(new_obj_file).extension() == ".obj" ){
+            new_UUIDs = context->loadOBJ(new_obj_file.c_str());
+        } else if ( std::filesystem::path(new_obj_file).extension() == ".ply" ){
+            new_UUIDs = context->loadPLY(new_obj_file.c_str());
+        } else {
+            std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
+        }
+        // check for MTL file
+        std::filesystem::path mtl_path(new_obj_file);
+        mtl_path.replace_extension("mtl");
+        if (std::filesystem::exists(mtl_path)){
+            new_object.use_texture_file = true;
+        } else{
+            new_object.use_texture_file = false;
+            context->setPrimitiveColor(new_UUIDs, obj_colors[i]);
+        }
+        context->scalePrimitive(new_UUIDs, obj_scales[i]);
+        context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].x), "x");
+        context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].y), "y");
+        context->rotatePrimitive(new_UUIDs, deg2rad(obj_orientations[i].z), "z");
+        context->translatePrimitive(new_UUIDs, obj_positions[i]);
+        obj_UUIDs.push_back(new_UUIDs);
+        new_object.index = obj_idx;
+        obj_idx++;
+        new_object.name = obj_names[i];
+        new_object.file = obj_files[i];
+        new_object.data_group = obj_data_groups[i];
+        new_object.UUIDs = new_UUIDs;
+        new_object.position = obj_positions[i];
+        new_object.prev_position = obj_positions[i];
+        new_object.orientation = obj_orientations[i];
+        new_object.prev_orientation = obj_orientations[i];
+        new_object.scale = obj_scales[i];
+        new_object.prev_scale = obj_scales[i];
+        new_object.color = obj_colors[i];
+        new_object.prev_color = obj_colors[i];
+        new_object.is_dirty = false;
+        objects_dict[new_object.name] = new_object;
+    }
     // CANOPY BLOCK
     canopy_labels.clear();
     canopy_labels_dict = getNodeLabels("label", "canopy_block", canopy_labels);
@@ -4586,8 +4607,29 @@ void ProjectBuilder::xmlGetValues(){
     xmlGetValues("ground_clipping_height", "canopy_block", ground_clipping_heights);
     canopy_data_groups.clear();
     xmlGetValues("data_group", "canopy_block", canopy_data_groups);
-    #ifdef ENABLE_RADIATION_MODEL
+
+    canopy_dict.clear();
+    for (int i = 0; i < canopy_labels.size(); i++){
+        canopy new_canopy;
+        new_canopy.idx = canopy_idx;
+        canopy_idx++;
+        new_canopy.age = plant_ages[i];
+        new_canopy.ground_clipping_height = ground_clipping_heights[i];
+        new_canopy.label = canopy_labels[i];
+        new_canopy.library_name = plant_library_names[i];
+        new_canopy.library_name_verbose = plant_library_names_verbose[i];
+        new_canopy.IDs = canopy_IDs[i];
+        new_canopy.individual_plant_locations = individual_plant_locations[i];
+        new_canopy.plant_spacing = plant_spacings[i];
+        new_canopy.plant_count = plant_counts[i];
+        new_canopy.origin = canopy_origins[i];
+        new_canopy.data_group = canopy_data_groups[i];
+        new_canopy.is_dirty = false;
+        canopy_dict[new_canopy.label] = new_canopy;
+    }
+
     // RIG BLOCK
+    #ifdef ENABLE_RADIATION_MODEL
     rig_labels.clear();
     rig_labels_set.clear();
     rig_dict = getNodeLabels("label", "rig", rig_labels);
@@ -4920,57 +4962,58 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id){
         refreshVisualization();
     }
     ImGui::SetNextItemWidth(100);
-    std::string prev_canopy_name = canopy_labels[canopy_labels_dict[curr_canopy_name]];
-    ImGui::InputText("##canopy_name", &canopy_labels[canopy_labels_dict[curr_canopy_name]]);
-    if (canopy_labels[canopy_labels_dict[curr_canopy_name]] != prev_canopy_name && canopy_labels_dict.find(canopy_labels[canopy_labels_dict[curr_canopy_name]]) == canopy_labels_dict.end() && !canopy_labels[canopy_labels_dict[curr_canopy_name]].empty()){
-        int temp = canopy_labels_dict[curr_canopy_name];
-        curr_canopy_name = canopy_labels[canopy_labels_dict[curr_canopy_name]];
-        std::map<std::string, int>::iterator current_canopy_iter = canopy_labels_dict.find(prev_canopy_name);
-        if (current_canopy_iter != canopy_labels_dict.end()){
-            canopy_labels_dict.erase(current_canopy_iter);
+    std::string prev_canopy_name = canopy_dict[curr_canopy_name].label;
+    ImGui::InputText("##canopy_name", &canopy_dict[curr_canopy_name].label);
+    if (canopy_dict[curr_canopy_name].label != prev_canopy_name && canopy_labels_set.find(canopy_dict[curr_canopy_name].label) == canopy_labels_set.end() && !canopy_dict[curr_canopy_name].label.empty()){
+        canopy temp = canopy_dict[curr_canopy_name];
+        curr_canopy_name = canopy_dict[curr_canopy_name].label;
+        std::map<std::string, canopy>::iterator current_canopy_iter = canopy_dict.find(prev_canopy_name);
+        if (current_canopy_iter != canopy_dict.end()){
+            canopy_dict.erase(current_canopy_iter);
         }
-        canopy_labels_dict[curr_canopy_name] = temp;
+        canopy_dict[curr_canopy_name] = temp;
 
         canopy_labels_set.erase(prev_canopy_name);
-        canopy_labels_set.insert(canopy_labels[canopy_labels_dict[curr_canopy_name]]);
+        canopy_labels_set.insert(canopy_dict[curr_canopy_name].label);
     } else{
-        canopy_labels[canopy_labels_dict[curr_canopy_name]] = prev_canopy_name;
+        canopy_dict[curr_canopy_name].label = prev_canopy_name;
     }
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat("##canopy_origin_x", &canopy_origins[canopy_labels_dict[curr_canopy_name]].x);
+    ImGui::InputFloat("##canopy_origin_x", &canopy_dict[curr_canopy_name].origin.x);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat("##canopy_origin_y", &canopy_origins[canopy_labels_dict[curr_canopy_name]].y);
+    ImGui::InputFloat("##canopy_origin_y", &canopy_dict[curr_canopy_name].origin.y);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
-    ImGui::InputFloat("##canopy_origin_z", &canopy_origins[canopy_labels_dict[curr_canopy_name]].z);
+    ImGui::InputFloat("##canopy_origin_z", &canopy_dict[curr_canopy_name].origin.z);
     ImGui::SameLine();
     ImGui::Text("Canopy Origin");
     // ####### PLANT COUNT ####### //
     ImGui::SetNextItemWidth(100);
-    ImGui::InputInt("##plant_count_x", &plant_counts[canopy_labels_dict[curr_canopy_name]].x);
+    ImGui::InputInt("##plant_count_x", &canopy_dict[curr_canopy_name].plant_count.x);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(100);
-    ImGui::InputInt("##plant_count_y", &plant_counts[canopy_labels_dict[curr_canopy_name]].y);
+    ImGui::InputInt("##plant_count_y", &canopy_dict[curr_canopy_name].plant_count.y);
     ImGui::SameLine();
     ImGui::Text("Plant Count");
     // ####### PLANT SPACING ####### //
     ImGui::SetNextItemWidth(50);
-    ImGui::InputFloat("##plant_spacing_x", &plant_spacings[canopy_labels_dict[curr_canopy_name]].x);
+    ImGui::InputFloat("##plant_spacing_x", &canopy_dict[curr_canopy_name].plant_spacing.x);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(50);
-    ImGui::InputFloat("##plant_spacing_y", &plant_spacings[canopy_labels_dict[curr_canopy_name]].y);
+    ImGui::InputFloat("##plant_spacing_y", &canopy_dict[curr_canopy_name].plant_spacing.y);
     ImGui::SameLine();
     ImGui::Text("Plant Spacing");
     // ####### PLANT LIBRARY NAME ####### //
-    ImGui::SetNextItemWidth(80);
-    ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[curr_canopy_name]]);
+    ImGui::SetNextItemWidth(250);
+    dropDown("Plant Library###dropdown", canopy_dict[curr_canopy_name].library_name_verbose, plant_types_verbose);
+    canopy_dict[curr_canopy_name].library_name = plant_type_lookup[canopy_dict[curr_canopy_name].library_name_verbose];
     // ####### PLANT AGE ####### //
     ImGui::SetNextItemWidth(80);
-    ImGui::InputFloat("Plant Age", &plant_ages[canopy_labels_dict[curr_canopy_name]]);
+    ImGui::InputFloat("Plant Age", &canopy_dict[curr_canopy_name].age);
     // ####### GROUND CLIPPING HEIGHT ####### //
     ImGui::SetNextItemWidth(80);
-    ImGui::InputFloat("Ground Clipping Height", &ground_clipping_heights[canopy_labels_dict[curr_canopy_name]]);
+    ImGui::InputFloat("Ground Clipping Height", &canopy_dict[curr_canopy_name].ground_clipping_height);
     #endif //PLANT_ARCHITECTURE
 }
 
@@ -5640,11 +5683,10 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string& selected, st
 
 void ProjectBuilder::deleteCanopy(const std::string &canopy){
     #ifdef ENABLE_PLANT_ARCHITECTURE
-    int delete_idx = canopy_labels_dict[canopy];
-    for (auto plant_instance : canopy_IDs[delete_idx]){
+    for (auto plant_instance : canopy_dict[canopy].IDs){
         plantarchitecture->deletePlantInstance(plant_instance);
     }
-    canopy_labels_dict.erase(canopy);
+    canopy_dict.erase(canopy);
     canopy_labels_set.erase(canopy);
     if (!canopy_labels_set.empty() && current_canopy == canopy){
         current_canopy = *canopy_labels_set.begin();
@@ -5671,17 +5713,16 @@ void ProjectBuilder::deleteObject(const std::string& obj){
 
 void ProjectBuilder::updateCanopy(const std::string &canopy){
     #ifdef ENABLE_PLANT_ARCHITECTURE
-    int update_idx = canopy_labels_dict[canopy];
-    for (auto plant_instance : canopy_IDs[update_idx]){
+    for (auto plant_instance : canopy_dict[canopy].IDs){
         plantarchitecture->deletePlantInstance(plant_instance);
     }
-    plantarchitecture->loadPlantModelFromLibrary( plant_library_names[update_idx] );
-    plantarchitecture->enableGroundClipping( ground_clipping_height );
+    plantarchitecture->loadPlantModelFromLibrary( canopy_dict[canopy].library_name );
+    plantarchitecture->enableGroundClipping( canopy_dict[canopy].ground_clipping_height );
 
-    std::vector<uint> new_canopy_IDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_origins[update_idx], plant_spacings[update_idx],
-                                                                                        plant_counts[update_idx], plant_ages[update_idx]);
+    std::vector<uint> new_canopy_IDs = plantarchitecture->buildPlantCanopyFromLibrary( canopy_dict[canopy].origin, canopy_dict[canopy].plant_spacing,
+                                                                                        canopy_dict[canopy].plant_count, canopy_dict[canopy].age);
     std::vector<vec3> curr_plant_locations = plantarchitecture->getPlantBasePosition(new_canopy_IDs);
-    individual_plant_locations.push_back(curr_plant_locations);
+    canopy_dict[canopy].individual_plant_locations = curr_plant_locations;
 
     leaf_UUIDs = plantarchitecture->getAllLeafUUIDs();
     primitive_UUIDs["leaf"] = leaf_UUIDs;
@@ -5703,7 +5744,7 @@ void ProjectBuilder::updateCanopy(const std::string &canopy){
     primitive_UUIDs["sepal"] = sepal_UUIDs;
     primitive_UUIDs["flower"] = flower_UUIDs;
 
-    canopy_IDs[canopy_labels_dict[canopy]] = new_canopy_IDs;
+    canopy_dict[canopy].IDs = new_canopy_IDs;
     #endif
 }
 
@@ -5713,22 +5754,27 @@ void ProjectBuilder::addCanopy(){
     std::string default_canopy_label = "canopy";
     std::string new_canopy_label = "canopy_0";
     int count = 0;
-    while (canopy_labels_dict.find(new_canopy_label) != canopy_labels_dict.end()){
+    while (canopy_dict.find(new_canopy_label) != canopy_dict.end()){
         count++;
         new_canopy_label = default_canopy_label + "_" + std::to_string(count);
     }
-    canopy_labels_dict.insert({new_canopy_label, canopy_labels.size()});
+    canopy new_canopy;
+    new_canopy.idx = canopy_idx;
     canopy_labels_set.insert(new_canopy_label);
-    canopy_origins.push_back(canopy_origin);
-    canopy_data_groups.push_back("");
-    plant_counts.push_back(plant_count);
-    plant_spacings.push_back(plant_spacing);
-    plant_library_names.push_back(plant_library_name);
-    plant_library_names_verbose.push_back(plant_library_name_verbose);
-    plant_ages.push_back(plant_age);
-    ground_clipping_heights.push_back(ground_clipping_height);
-    canopy_labels.push_back(new_canopy_label);
-    canopy_IDs.push_back(std::vector<unsigned int>{});
+    canopy_idx++;
+    new_canopy.age = plant_age;
+    new_canopy.ground_clipping_height = ground_clipping_height;
+    new_canopy.label = new_canopy_label;
+    new_canopy.library_name = plant_library_name;
+    new_canopy.library_name_verbose = plant_library_name_verbose;
+    new_canopy.IDs = std::vector<unsigned int>{};
+    new_canopy.individual_plant_locations = std::vector<vec3>{};
+    new_canopy.plant_spacing = plant_spacing;
+    new_canopy.plant_count = plant_count;
+    new_canopy.origin = canopy_origin;
+    new_canopy.data_group = "";
+    canopy_dict[new_canopy.label] = new_canopy;
+
     current_canopy = new_canopy_label;
 }
 
