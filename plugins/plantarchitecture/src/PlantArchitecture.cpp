@@ -496,10 +496,20 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
 
             // if the shoot type does not require dormancy, bud should be set to active
             if (!shoot_parameters.growth_requires_dormancy ) {
-                if ( sampleVegetativeBudBreak(phytomer->shoot_index.x) ) { //randomly sample bud
-                    phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
-                }else {
-                    phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                if (plantarchitecture_ptr->carbon_model_enabled )
+                {
+                    if ( sampleVegetativeBudBreak_carb(phytomer->shoot_index.x) ) { //randomly sample bud
+                        phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
+                    }else {
+                        phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                    }
+                }else
+                {
+                    if ( sampleVegetativeBudBreak(phytomer->shoot_index.x) ) { //randomly sample bud
+                        phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
+                    }else {
+                        phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                    }
                 }
             }
         }
@@ -604,12 +614,24 @@ void Shoot::breakDormancy() {
         for (auto &petiole: phytomer->axillary_vegetative_buds) {
             for (auto &vbud: petiole) {
                 if (vbud.state != BUD_DEAD) {
-                    if ( sampleVegetativeBudBreak(phytomer_ind) ) {
-                        //randomly sample bud
-                        phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
-                    }else {
-                        phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                    if (plantarchitecture_ptr->carbon_model_enabled )
+                    {
+                        if ( sampleVegetativeBudBreak_carb(phytomer_ind) ) {
+                            //randomly sample bud
+                            phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
+                        }else {
+                            phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                        }
+                    }else
+                    {
+                        if ( sampleVegetativeBudBreak(phytomer_ind) ) {
+                            //randomly sample bud
+                            phytomer->setVegetativeBudState(BUD_ACTIVE, vbud);
+                        }else {
+                            phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                        }
                     }
+
                 }
             }
         }
@@ -2280,8 +2302,15 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     if ( context_ptr->doesObjectExist(shoot->internode_tube_objID) ) {
         context_ptr->setObjectData( shoot->internode_tube_objID, "leaf_area", leaf_area );
     }
+    float phytomer_age = phytomer->age;
+    float girth_area_factor = shoot->shoot_parameters.girth_area_factor.val();
+    if (phytomer_age > 365)
+    {
+           girth_area_factor = shoot->shoot_parameters.girth_area_factor.val() * 365 / phytomer_age;
+    }
 
-    float internode_area = phytomer->parent_shoot_ptr->shoot_parameters.girth_area_factor.val() * leaf_area * 1e-4;
+
+    float internode_area = girth_area_factor * leaf_area * 1e-4;
     phytomer->parent_shoot_ptr->shoot_parameters.girth_area_factor.resample();
 
     float phytomer_radius = sqrtf(internode_area / PI_F);
@@ -3615,7 +3644,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
             // breaking dormancy
             if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
-                shoot->phyllochron_counter = shoot->phyllochron_instantaneous;
+                shoot->phyllochron_counter = 0;
                 shoot->breakDormancy();
             }
 
@@ -3709,6 +3738,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
             int node_index = 0;
             for (auto &phytomer: shoot->phytomers) {
+
                 //scale internode length
                 if (phytomer->current_internode_scale_factor < 1) {
                     float dL_internode = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;

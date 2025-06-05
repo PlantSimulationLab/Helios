@@ -252,7 +252,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 8.f;
+    shoot_parameters_trunk.girth_area_factor = 10.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 1;
@@ -267,11 +267,11 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 30;
-    shoot_parameters_proleptic.max_nodes_per_season = 20;
-    shoot_parameters_proleptic.phyllochron_min = 3;
-    shoot_parameters_proleptic.elongation_rate_max = 0.2;
-    shoot_parameters_proleptic.girth_area_factor = 7.5;
+    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.max_nodes_per_season = 15;
+    shoot_parameters_proleptic.phyllochron_min = 1;
+    shoot_parameters_proleptic.elongation_rate_max = 0.3;
+    shoot_parameters_proleptic.girth_area_factor = 8.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
@@ -281,10 +281,10 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_proleptic.insertion_angle_decay_rate = 15;
     shoot_parameters_proleptic.internode_length_max = 0.02;
     shoot_parameters_proleptic.internode_length_min = 0.002;
-    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
     shoot_parameters_proleptic.fruit_set_probability = 0.4;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
-    shoot_parameters_proleptic.max_terminal_floral_buds = 4;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 3;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
     shoot_parameters_proleptic.determinate_shoot_growth = false;
@@ -298,7 +298,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     shoot_parameters_sylleptic.phytomer_parameters.leaf.pitch.uniformDistribution(-45, -20);
     shoot_parameters_sylleptic.insertion_angle_tip = 0;
     shoot_parameters_sylleptic.insertion_angle_decay_rate = 0;
-    shoot_parameters_sylleptic.phyllochron_min = 3;
+    shoot_parameters_sylleptic.phyllochron_min = 1;
     shoot_parameters_sylleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_sylleptic.gravitropic_curvature= 600;
     shoot_parameters_sylleptic.internode_length_max = 0.02;
@@ -310,7 +310,7 @@ void PlantArchitecture::initializeAlmondTreeShoots(){
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
 //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 25;
+    shoot_parameters_scaffold.max_nodes = 15;
     shoot_parameters_scaffold.gravitropic_curvature = 150;
     shoot_parameters_scaffold.internode_length_max = 0.02;
     shoot_parameters_scaffold.tortuosity = 1.;
@@ -443,7 +443,7 @@ void PlantArchitecture::initializeAppleTreeShoots(){
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
     shoot_parameters_proleptic.girth_area_factor = 5.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(450,500);
