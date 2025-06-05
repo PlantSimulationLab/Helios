@@ -770,15 +770,18 @@ void ProjectBuilder::record(){
                     radiation->writeNormDepthImage( cameralabel, "normdepth" + std::to_string(i), 3, image_dir + rig_label + '/');
                     //
                     // Bounding boxes for all primitive types
-                    for (std::string primitive_name : primitive_names){
-                        if (!primitive_name.empty()){
-                            primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                    // for (std::string band_group_ : band_group_names){
+                        for (std::string primitive_name : primitive_names){
+                            if (!primitive_name.empty()){
+                                primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
+                            }
+                            if (bounding_boxes_map.find(primitive_name) != bounding_boxes_map.end())
+                                radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                                // radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], band_group_ + std::to_string(i), image_dir + rig_label + '/');
+                            // radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
+                            // radiation->writeImageBoundingBoxes_ObjectData();
                         }
-                        if (bounding_boxes_map.find(primitive_name) != bounding_boxes_map.end())
-                            radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                        // radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                        // radiation->writeImageBoundingBoxes_ObjectData();
-                    }
+                    // }
                     //
                 }
             }
@@ -2045,7 +2048,7 @@ void ProjectBuilder::visualize(){
                 object_window_count++;
             }
             for (auto current_label : rig_labels_set){
-                vec3 camera_position_ = camera_positions[rig_dict[current_label]];
+                vec3 camera_position_ = camera_position_vec[rig_dict[current_label]][0];
                 origin_position = glm::vec4(camera_position_.x, camera_position_.y, camera_position_.z, 1.0);
                 origin_position = perspectiveTransformationMatrix * origin_position;
                 // ImGui::SetNextWindowSize(ImVec2(150, 10), ImGuiCond_Always);
