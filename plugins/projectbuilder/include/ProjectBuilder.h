@@ -206,13 +206,19 @@ struct bandGroup{
 
 //! Canopy struct
 struct canopy{
+ int idx;
+ float age;
+ float ground_clipping_height;
  std::string label;
- std::vector<uint> UUIDs;
+ std::string library_name;
+ std::string library_name_verbose;
+ std::vector<uint> IDs;
  std::vector<helios::vec3> individual_plant_locations;
  helios::vec2 plant_spacing;
  helios::int2 plant_count;
  helios::vec3 origin;
  std::string data_group;
+ bool is_dirty;
 };
 
 //! Object struct
@@ -1201,8 +1207,14 @@ class ProjectBuilder {
     //! Set of all object structs
     std::map<std::string, object> objects_dict;
 
+    //! Set of all canopy structs
+    std::map<std::string, canopy> canopy_dict;
+
     //! Object index, applies a unique index to each object
     int obj_idx = 0;
+
+    //! Canopy index, applies a unique index to each canopy
+    int canopy_idx = 0;
 
     //! Indices of objects that need to be updated
     std::set<int> dirty_objects = {};
