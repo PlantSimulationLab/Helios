@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -767,7 +767,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>    <span class="keywordtype">float</span> gM = variables[3];</div>
 <div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keywordtype">int</span> TPUflag = int(variables[4]);</div>
 <div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span> </div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>    <span class="keywordtype">float</span> R = 0.0083144598;   <span class="comment">//molar gas constant (kJ/K/mol)</span></div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = 0.0083144598;   <span class="comment">//molar gas constant (kJ/K/mol)</span></div>
 <div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    <span class="keywordtype">float</span> O = 213.5; <span class="comment">//ambient oxygen concentration (mmol/mol)</span></div>
 <div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <span class="keywordtype">float</span> c_Gamma = 19.02;</div>
 <div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    <span class="keywordtype">float</span> dH_Gamma = 37.83;</div>
@@ -776,7 +776,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    <span class="keywordtype">float</span> c_Ko = 20.30;</div>
 <div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <span class="keywordtype">float</span> dH_Ko = 36.38;</div>
 <div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span> </div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordtype">float</span> invDiffRT = (1.f / 298.15f - 1.f / TL) / R;</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordtype">float</span> invDiffRT = (1.f / 298.15f - 1.f / TL) / <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
 <div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span> </div>
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    <span class="keywordflow">if</span> (modelcoeffs.Vcmax &gt; 0) {</div>
 <div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>        Vcmax = modelcoeffs.Vcmax * expf(modelcoeffs.dH_Vcmax * (invDiffRT));</div>
@@ -807,9 +807,9 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    theta = respondToTemperature(&amp;modelcoeffs.thetaTempResponse, TL);</div>
 <div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span> </div>
 <div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span> </div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="keywordtype">float</span> Gamma_star = exp(c_Gamma - dH_Gamma / (R * TL));</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordtype">float</span> Kc = exp(c_Kc - dH_Kc / (R * TL));</div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>    <span class="keywordtype">float</span> Ko = exp(c_Ko - dH_Ko / (R * TL));</div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="keywordtype">float</span> Gamma_star = exp(c_Gamma - dH_Gamma / (<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * TL));</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordtype">float</span> Kc = exp(c_Kc - dH_Kc / (<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * TL));</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>    <span class="keywordtype">float</span> Ko = exp(c_Ko - dH_Ko / (<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * TL));</div>
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <span class="keywordtype">float</span> Kco = Kc * (1.f + O / Ko);</div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span> </div>
 <div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    <span class="comment">//thetaJ^2 + -(alphaQ+Jmax)J + alphaQJmax = 0</span></div>
@@ -860,7 +860,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span><span class="keywordtype">float</span> PhotosynthesisModel::respondToTemperature(<span class="keyword">const</span> <a class="code hl_struct" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> *params,</div>
 <div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>                                                <span class="keywordtype">float</span> T_in_Kelvin) {</div>
 <div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    <span class="keywordtype">float</span> T = T_in_Kelvin;</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>    <span class="keywordtype">float</span> R = 0.0083144598f;</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = 0.0083144598f;</div>
 <div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <span class="keywordtype">float</span> v25 = params-&gt;value_at_25C;</div>
 <div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    <span class="keywordtype">float</span> dHa = params-&gt;dHa;</div>
 <div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    <span class="keywordtype">float</span> dHd = params-&gt;dHd;</div>
@@ -869,9 +869,9 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>        <span class="keywordflow">return</span> v25;</div>
 <div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>        <span class="keywordtype">float</span> logterm = logf(dHd / dHa - 1.f);</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        <span class="keywordtype">float</span> t1 = 1.f + expf(dHd / R * (1.f / Topt - 1.f / 298.15f) - logterm);</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        <span class="keywordtype">float</span> t2 = 1.f + expf(dHd / R * (1.f / Topt - 1.f / T) - logterm);</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        <span class="keywordflow">return</span> v25 * exp(dHa / R * (1.f / 298.15f - 1.f / T)) * t1 / t2;</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        <span class="keywordtype">float</span> t1 = 1.f + expf(dHd / <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * (1.f / Topt - 1.f / 298.15f) - logterm);</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        <span class="keywordtype">float</span> t2 = 1.f + expf(dHd / <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * (1.f / Topt - 1.f / T) - logterm);</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        <span class="keywordflow">return</span> v25 * exp(dHa / <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * (1.f / 298.15f - 1.f / T)) * t1 / t2;</div>
 <div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    }</div>
 <div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>}</div>
 <div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span> </div>

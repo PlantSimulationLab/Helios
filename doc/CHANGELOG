@@ -2211,3 +2211,41 @@ The radiation model has been re-designed, with the following primary additions:
 
 Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
 Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
+
+[1.3.33] 2025-06-08
+
+*Context*
+- Added Context::getDirtyUUIDs() and Context::getDeletedUUIDs().
+- dirty_flag was not being properly set to true in Primitive::setTransformationMatrix.
+- validateOutputPath() function should have been marked [[nodiscard]].
+- Fixed out of bounds error in helios::vecmult().
+- Patch for helios::deblank() to avoid possible buffer overflow issues.
+- Patch for helios::separate_string_by_delimiter() so it always returns the final token and works when no delimiter is found.
+- Added a robust file-extension check in helios::readPNGAlpha() to handle filenames without dots safely.
+
+*Visualizer*
+- Changed GeometryHandler::allocateBufferSize() to be general for any primitive type rather than being specific for rectangles and triangles in a single call.
+- Added GeometryHandler::doesGeometryExist(), GeometryHandler::getAllGeometryIDs(), GeometryHandler::getPrimitiveCount(), and GeometryHandler::getDeleteCount().
+- The visualizer now only updates Context geometry that has changed since Context::markGeometryClean() was last called.
+- Some errors were fixed in the defragmentation routine.
+- Visualizer::printWindow() was not properly validating the output file. It now auto-appends .jpeg if no file extension is given, and properly validates the output file path.
+
+*Radiation*
+- Inside RadiationModel::updateGeometry(), removal of primitives deleted from Context changed from using std::erase() to swap-and-pop to improve performance.
+
+*Energy Balance*
+- Output primitive data 'storage_flux' moved to optional output primtitive data.
+- Net radiation flux added as optional output primitive data.
+- Added a simple air temperature and humidity transport model that calculates the evolution of a spatially uniform air temperature and humidity based on an energy balance.
+
+*Radiation Model*
+- Added specular reflectance scaling factor option, which is enabled by setting the primitive data value "specular_scale".
+
+*Plant Architecture*
+- Updates to carbohydrate model to prevent shoot concentrations from going negative at the beginning of the simulation. Credit to Ethan Frehner for this update.
+
+*Project Builder*
+- Several updates including changing how canopies are handled, and improving the rig tab. Credit to Sean Banks for this update.
+
+Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
+Co-authored by: Sean Banks <smbanx@users.noreply.github.com>

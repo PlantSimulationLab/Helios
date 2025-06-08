@@ -10,6 +10,7 @@ usage() {
     echo "  --visbuildonly   Build only, do not run visualizer samples"
     echo "  --memcheck       Enable memory checking tools (requires leaks on macOS or valgrind on Linux)"
     echo "  --debugbuild     Build with Debug configuration"
+    echo "  --verbose        Show full build/compile output"
     echo
     exit 1
 }
@@ -21,6 +22,7 @@ TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptic
 TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture"
 
 BUILD_TYPE="Release"
+OUTPUT_REDIRECT=" &>/dev/null"
 
 cd ../samples || exit 1
 
@@ -68,6 +70,10 @@ while [ $# -gt 0 ]; do
     BUILD_TYPE="Debug"
     ;;
 
+  --verbose)
+      unset OUTPUT_REDIRECT
+      ;;
+
   --help|-h)
     usage
     ;;
@@ -95,7 +101,7 @@ if [ "${MEMCHECK}" == "ON" ];then
 fi
 
 # Check if cmake command is available
-if ! command -v cmake &> /dev/null; then
+if ! command -v cmake &>/dev/null; then
   echo "ERROR: cmake command not found. Please install cmake and make sure it's in your PATH."
   exit 1
 fi
@@ -130,7 +136,7 @@ else
 
     echo -ne "Building project creation script test..."
 
-    cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" &>/dev/null
+    eval cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${OUTPUT_REDIRECT}
 
     if (($? == 0)); then
       echo -e "\r\x1B[32mBuilding project creation script test...done.\x1B[39m"
@@ -141,7 +147,7 @@ else
 
     echo -ne "Compiling project creation script test..."
 
-    cmake --build ./ --target temp &>/dev/null
+    eval cmake --build ./ --target temp ${OUTPUT_REDIRECT}
 
     if (($? == 0)); then
       if [ -e "temp" ]; then
@@ -158,9 +164,9 @@ else
     echo -ne "Running project creation script test..."
 
     if [[ "${OSTYPE}" == "msys"* ]];then
-      ./temp.exe &>/dev/null
+      eval ./temp.exe ${OUTPUT_REDIRECT}
     else
-      ./temp &>/dev/null
+      eval ./temp ${OUTPUT_REDIRECT}
     fi
 
     if (($? == 0)); then
@@ -194,7 +200,7 @@ for i in "${SAMPLES[@]}"; do
 
   echo -ne "Building sample ${i}..."
 
-  cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" &>/dev/null
+  eval cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${OUTPUT_REDIRECT}
 
   if (($? == 0)); then
     echo -e "\r\x1B[32mBuilding sample ${i}...done.\x1B[39m"
@@ -208,7 +214,7 @@ for i in "${SAMPLES[@]}"; do
 
   echo -ne "Compiling sample ${i}..."
 
-  cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" &>/dev/null
+  eval cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" ${OUTPUT_REDIRECT}
 
   if (($? == 0)); then
     if [ -e "${i}" ]; then
@@ -239,9 +245,9 @@ for i in "${SAMPLES[@]}"; do
   echo -ne "Running sample ${i}..."
 
   if [[ "${OSTYPE}" == "msys"* ]];then
-    "./${i}.exe" &>/dev/null
+    eval "./${i}.exe" ${OUTPUT_REDIRECT}
   else
-    "./${i}" &>/dev/null
+    eval "./${i}" ${OUTPUT_REDIRECT}
   fi
 
   if (($? == 0)); then
@@ -267,9 +273,9 @@ for i in "${SAMPLES[@]}"; do
     echo -ne "Running memcheck for sample ${i}..."
 
     if [[ "${OSTYPE}" == "darwin"* ]];then
-      leaks --atExit -- "./${i}" &>/dev/null
+      eval leaks --atExit -- "./${i}" ${OUTPUT_REDIRECT}
     else
-      valgrind --leak-check=full --error-exitcode=1 "./${i}" &>/dev/null
+      eval valgrind --leak-check=full --error-exitcode=1 "./${i}" ${OUTPUT_REDIRECT}
     fi
 
     if (($? == 0)); then

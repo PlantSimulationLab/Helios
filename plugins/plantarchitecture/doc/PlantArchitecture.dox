@@ -39,7 +39,7 @@
 \subsection PlantArchOutputData Optional Output Object Data
 
 <table>
-    <tr><th>Primitive Data Label</th><th>Data Type</th><th>Description</th></tr>
+    <tr><th>Object Data Label</th><th>Data Type</th><th>Description</th></tr>
     <tr><td>plantID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of plant the primitive belongs to (used for image labeling).</td></tr>
     <tr><td>leafID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of leaf the primitive belongs to (used for image labeling).</td></tr>
     <tr><td>peduncleID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles.</td></tr>

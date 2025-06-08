@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -645,7 +645,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span> </div>
 <div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>    <span class="keywordtype">void</span> render(<span class="keywordtype">bool</span> shadow) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span> </div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    <span class="keywordtype">void</span> setupPlot();</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    <span class="keywordtype">void</span> transferBufferData();</div>
 <div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span></div>
 <div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    [[nodiscard]] uint registerTextureImage( <span class="keyword">const</span> std::string &amp;texture_file );</div>
 <div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span></div>
@@ -662,7 +662,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>    std::string colorPrimitivesByObjectData, colorPrimitivesByData;</div>
 <div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>    std::map&lt;uint, uint&gt; colorPrimitives_UUIDs, colorPrimitives_objIDs;</div>
 <div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
-<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>    std::vector&lt;int&gt; contextPrimitiveIDs;</div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>    std::vector&lt;uint&gt; contextUUIDs_build;</div>
 <div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span> </div>
 <div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    std::vector&lt;float&gt; depth_buffer_data;</div>
 <div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span> </div>
@@ -750,7 +750,7 @@ $(function(){initNavTree('_visualizer_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span></div>
 <div class="line"><a id="l01158" name="l01158"></a><span class="lineno"> 1158</span>    <span class="keywordtype">float</span> camera_FOV;</div>
 <div class="line"><a id="l01159" name="l01159"></a><span class="lineno"> 1159</span> </div>
-<div class="line"><a id="l01160" name="l01160"></a><span class="lineno"> 1160</span>    <span class="keywordtype">bool</span> contextGeomNeedsUpdate;</div>
+<div class="line"><a id="l01160" name="l01160"></a><span class="lineno"> 1160</span>    <span class="keywordtype">bool</span> build_all_context_geometry = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l01161" name="l01161"></a><span class="lineno"> 1161</span> </div>
 <div class="line"><a id="l01162" name="l01162"></a><span class="lineno"> 1162</span>    <span class="keywordtype">bool</span> primitiveColorsNeedUpdate;</div>
 <div class="line"><a id="l01163" name="l01163"></a><span class="lineno"> 1163</span> </div>

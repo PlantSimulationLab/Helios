@@ -278,44 +278,46 @@ public:
 
     //! Add optional output primitive data values to the Context
     /**
-        * \param[in] label Name of primitive data (e.g., "reflectivity", "transmissivity")
+      * \param[in] label Name of primitive data (e.g., "reflectivity", "transmissivity")
      */
     void optionalOutputPrimitiveData( const char* label );
 
     //! Sets variable directRayCount, the number of rays to be used in direct radiation model.
     /**
-        \param[in] N Number of rays
-        \note Default is 100 rays/primitive.
+     * \param[in] label Label used to reference the band
+     * \param[in] N Number of rays
+     * \note Default is 100 rays/primitive.
     */
     void setDirectRayCount(const std::string &label, size_t N );
 
     //! Sets variable diffuseRayCount, the number of rays to be used in diffuse (ambient) radiation model.
     /**
-        \param[in] N Number of rays
-        \note Default is 1000 rays/primitive.
+     * \param[in] label Label used to reference the band
+     * \param[in] N Number of rays
+     * \note Default is 1000 rays/primitive.
     */
     void setDiffuseRayCount(const std::string &label, size_t N );
 
     //! Diffuse (ambient) radiation flux
     /** Diffuse component of radiation incident on a horizontal surface above all geometry in the domain.
-        \param[in] label Label used to reference the band
-        \param[in] flux Radiative flux
+     * \param[in] label Label used to reference the band
+     * \param[in] flux Radiative flux
     */
     void setDiffuseRadiationFlux(const std::string &label, float flux );
 
     //! Extinction coefficient of diffuse ambient radiation
     /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When K=0 the ambient distribution is uniform, which is the default setting
-        \param[in] label Label used to reference the radiative band
-        \param[in] K Extinction coefficient value
-        \param[in] peak_dir Unit vector pointing in the direction of the peak in diffuse radiation (this is usually the sun direction)
+     * \param[in] label Label used to reference the radiative band
+     * \param[in] K Extinction coefficient value
+     * \param[in] peak_dir Unit vector pointing in the direction of the peak in diffuse radiation (this is usually the sun direction)
     */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::vec3 &peak_dir );
 
     //! Extinction coefficient of diffuse ambient radiation
     /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When K=0 the ambient distribution is uniform, which is the default setting
-        \param[in] label Label used to reference the radiative band
-        \param[in] K Extinction coefficient value
-        \param[in] peak_dir Spherical direction of the peak in diffuse radiation (this is usually the sun direction)
+     * \param[in] label Label used to reference the radiative band
+     * \param[in] K Extinction coefficient value
+     * \param[in] peak_dir Spherical direction of the peak in diffuse radiation (this is usually the sun direction)
     */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::SphericalCoord &peak_dir );
 
@@ -329,9 +331,11 @@ public:
     //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
     /**
      * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \param[in] wavelength_min Lower bounding wavelength for wave band
+     * \param[in] wavelength_max Upper bounding wavelength for wave band
      * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
-    void setDiffuseSpectrumIntegral( float spectrum_integral, float wavelength1, float wavelength2);
+    void setDiffuseSpectrumIntegral( float spectrum_integral, float wavelength_min, float wavelength_max);
 
     //! Set the integral of the diffuse spectral flux distribution across all possible wavelengths (=∫Sdλ)
     /**
@@ -345,9 +349,11 @@ public:
     /**
      * \param[in] band_label Label used to reference the band
      * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \param[in] wavelength_min Lower bounding wavelength for wave band
+     * \param[in] wavelength_max Upper bounding wavelength for wave band
      * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
     */
-    void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength1, float wavelength2);
+    void setDiffuseSpectrumIntegral( const std::string &band_label, float spectrum_integral, float wavelength_min, float wavelength_max);
 
     //! Add a spectral radiation band to the model
     /**
@@ -421,7 +427,6 @@ public:
     //! Add an external source of radiation that emits from the surface of a sphere.
     /**
      * \param[in] position (x,y,z) position of the center of the sphere radiation source
-     * \param[in] direction Spherical coordinate pointing in the direction of the sphere normal
      * \param[in] radius Radius of the sphere radiation source
      * \return Source identifier
      */
@@ -483,9 +488,11 @@ public:
     /**
      * \param[in] source_ID ID of source
      * \param[in] source_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
+     * \param[in] wavelength_min Lower bounding wavelength for wave band
+     * \param[in] wavelength_max Upper bounding wavelength for wave band
      * \note This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral
     */
-    void setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength1, float wavelength2);
+    void setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength_min, float wavelength_max);
 
     //! Set the flux of radiation source for this band.
     /**
@@ -505,7 +512,7 @@ public:
 
     //! Get the flux of radiation source for this band
     /**
-     * \param[in] sourceID Identifier of radiation source
+     * \param[in] source_ID Identifier of radiation source
      * \param[in] band_label Label used to reference the band
      * \return Radiative flux normal to the direction of radiation propagation
      */
@@ -513,49 +520,49 @@ public:
 
     //! Set the position/direction of radiation source based on a Cartesian vector
     /**
-     * \param[in] ID Identifier of radiation source
+     * \param[in] source_ID Identifier of radiation source
      * \param[in] position If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source.
      */
     void setSourcePosition(uint source_ID, const helios::vec3 &position );
 
     //! Set the position/direction of radiation source based on a spherical vector
     /**
-     * \param[in] ID Identifier of radiation source
+     * \param[in] source_ID Identifier of radiation source
      * \param[in] position If point source - (radius,elevation,azimuth) position of the radiation source. If collimated source - (elevation,azimuth) vector pointing toward the source (radius is ignored).
      */
     void setSourcePosition(uint source_ID, const helios::SphericalCoord &position );
 
     //! Get the position/direction of radiation source
     /**
-      * \param[in] ID Identifier of radiation source
+      * \param[in] source_ID Identifier of radiation source
       * \return If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source.
      */
     helios::vec3 getSourcePosition(uint source_ID )const;
 
     //! Set the spectral distribution of a radiation source according to a vector of wavelength-intensity pairs.
     /**
-     * \param[in] ID Identifier of radiation source.
+     * \param[in] source_ID Identifier of radiation source.
      * \param[in] spectrum Vector containing spectral intensity data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity (.y).
      */
     void setSourceSpectrum(uint source_ID, const std::vector<helios::vec2> &spectrum );
 
     //! Set the spectral distribution of multiple radiation sources according to a vector of wavelength-intensity pairs.
     /**
-     * \param[in] ID Vector of radiation source identifiers.
+     * \param[in] source_ID Vector of radiation source identifiers.
      * \param[in] spectrum Vector containing spectral intensity data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity (.y).
      */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::vector<helios::vec2> &spectrum );
 
     //! Set the spectral distribution of a radiation source based on global data of wavelength-intensity pairs.
     /**
-      * \param[in] ID Identifier of radiation source.
+      * \param[in] source_ID Identifier of radiation source.
       * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
     void setSourceSpectrum(uint source_ID, const std::string &spectrum_label );
 
     //! Set the spectral distribution of multiple radiation sources based on global data of wavelength-intensity pairs.
     /**
-      * \param[in] ID Vector of radiation source identifiers.
+      * \param[in] source_ID Vector of radiation source identifiers.
       * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
     */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label );
@@ -596,11 +603,11 @@ public:
     //! Integrate a spectral distribution between two wavelength bounds
     /**
      * \param[in] object_spectrum Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
-     * \param[in] wavelength1 Wavelength for lower bounds of integration
-     * \param[in] wavelength2 Wavelength for upper bounds of integration
-     * \return Integral of spectral data from wavelength1 to wavelength2
+     * \param[in] wavelength_min Wavelength for lower bounds of integration
+     * \param[in] wavelength_max Wavelength for upper bounds of integration
+     * \return Integral of spectral data from wavelength_min to wavelength_max
      */
-    float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const;
+    float integrateSpectrum( const std::vector<helios::vec2> &object_spectrum, float wavelength_min, float wavelength_max ) const;
 
     //! Integrate a spectral distribution across all wavelengths
     /**
@@ -613,11 +620,11 @@ public:
     /**
      * \param[in] source_ID Identifier of a radiation source.
      * \param[in] object_spectrum Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
-     * \param[in] wavelength1 Wavelength for lower bounds of integration
-     * \param[in] wavelength2 Wavelength for upper bounds of integration
+     * \param[in] wavelength_min Wavelength for lower bounds of integration
+     * \param[in] wavelength_max Wavelength for upper bounds of integration
      * \return Integral of product of source energy spectrum and spectral data from minimum to maximum wavelength
      */
-    float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2 ) const;
+    float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength_min, float wavelength_max ) const;
 
     //! Integrate the product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
     /**
@@ -639,11 +646,11 @@ public:
     //! Integrate a source spectral distribution between two wavelength bounds
     /**
      * \param[in] source_ID Identifier of a radiation source.
-     * \param[in] wavelength1 Wavelength for lower bounds of integration
-     * \param[in] wavelength2 Wavelength for upper bounds of integration
-     * \return Integral of spectral data from wavelength1 to wavelength2
+     * \param[in] wavelength_min Wavelength for lower bounds of integration
+     * \param[in] wavelength_max Wavelength for upper bounds of integration
+     * \return Integral of spectral data from wavelength_min to wavelength_max
      */
-    float integrateSourceSpectrum( uint source_ID, float wavelength1, float wavelength2 ) const;
+    float integrateSourceSpectrum( uint source_ID, float wavelength_min, float wavelength_max ) const;
 
     //! Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum.
     /**
@@ -655,7 +662,7 @@ public:
 
     //! Scale an entire spectrum by a constant factor. Performs scaling in-place.
     /**
-     * \param[in] _global_data_label Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
+     * \param[in] global_data_label Label of global data containing spectral data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity/reflectivity/transmissivity (.y).
      * \param[in] scale_factor Scaling factor.
     */
     void scaleSpectrum( const std::string &global_data_label, float scale_factor ) const;
@@ -901,9 +908,9 @@ public:
      * \param[in] camera Label for camera to be queried
      * \param[in] bands Vector of labels for radiative bands to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
-     * \param[in] flux_to_pixel_conversion OPTIONAL: A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] flux_to_pixel_conversion [optional] A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
      */
     void writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
 
@@ -913,7 +920,7 @@ public:
      * \param[in] bands Vector of labels for radiative bands to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] image_path Path to directory where images should be saved
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
     void writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
@@ -922,8 +929,8 @@ public:
      * \param[in] camera Label for camera to be queried
      * \param[in] band Label for radiative band to be written
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
     void writeCameraImageData(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
@@ -932,8 +939,8 @@ public:
      * \param[in] cameralabel Label of target camera
      * \param[in] primitive_data_label Name of the primitive data label
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      * \param[in] padvalue Pad value for the empty pixels
     */
     void writePrimitiveDataLabelMap(const std::string &cameralabel, const std::string &primitive_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
@@ -943,8 +950,8 @@ public:
      * \param[in] cameralabel Label of target camera
      * \param[in] object_data_label Name of the object data label
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      * \param[in] padvalue Pad value for the empty pixels
     */
     void writeObjectDataLabelMap(const std::string &cameralabel, const std::string &object_data_label, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float padvalue = NAN);
@@ -953,8 +960,8 @@ public:
     /**
      * \param[in] cameralabel Label of target camera
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
     void writeDepthImageData(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
@@ -963,8 +970,8 @@ public:
      * \param[in] cameralabel Label of target camera
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] max_depth Maximum depth value for normalization (e.g., the depth of the sky)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
     void writeNormDepthImage(const std::string &cameralabel, const std::string &imagefile_base, float max_depth, const std::string &image_path = "./", int frame = -1);
 
@@ -974,8 +981,9 @@ public:
      * \param[in] primitive_data_label Name of the primitive data label. Primitive data must have type of 'uint' or 'int'.
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] imagefile_base Name for base of output files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] append_label_file [optional] If true, the label file will be appended to the existing file. If false, the label file will be overwritten. By default, it is false.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
     void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false, int frame = -1);
 
@@ -985,8 +993,9 @@ public:
      * \param[in] object_data_label Name of the object data label. Object data must have type of 'uint' or 'int'.
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] imagefile_base Name for base of output files (will also include the camera label and a frame number in the file name)
-     * \param[in] image_path OPTIONAL: Path to directory where images should be saved. By default, it will be placed in the current working directory.
-     * \param[in] frame OPTIONAL: A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] append_label_file [optional] If true, the label file will be appended to the existing file. If false, the label file will be overwritten. By default, it is false.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
     */
     void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false, int frame = -1);
 
@@ -1007,7 +1016,6 @@ public:
      * \param[in] scalefactor Scale factor for calibrated camera spectral response
      * \param[in] truevalues True image values of the color board
      * \param[in] calibratedmark Mark of the calibrated camera spectral response
-     * \param[in] learningrate Learning rate for calibration
     */
     void calibrateCamera(const std::string &orginalcameralabel, const std::vector<std::string> &sourcelabels,
                          const std::vector<std::string>& cameraresponselabels, const std::vector<std::string> &bandlabels, const float scalefactor,
@@ -1015,11 +1023,10 @@ public:
 
     //! Calibrate camera
     /**
-     * \param[in] orginalcameralabel Label of camera to be used for simulation
+     * \param[in] originalcameralabel Label of camera to be used for simulation
      * \param[in] scalefactor Scale factor for calibrated camera spectral response
      * \param[in] truevalues True image values of the color board
      * \param[in] calibratedmark Mark of the calibrated camera spectral response
-     * \param[in] learningrate Learning rate for calibration
     */
     void calibrateCamera(const std::string &originalcameralabel, const float scalefactor,
                          const std::vector<std::vector<float>> &truevalues, const std::string &calibratedmark);
@@ -1451,7 +1458,17 @@ protected:
     //! Primitive specular reflection exponent - RTvariable
     RTvariable specular_exponent_RTvariable;
 
+    //! Primitive specular reflection scale coefficient - RTbuffer
+    RTbuffer specular_scale_RTbuffer;
+    //! Primitive specular reflection scale coefficient - RTvariable
+    RTvariable specular_scale_RTvariable;
+
     //! Flag indicating whether specular reflection is enabled - RTvariable
+    /**
+     * = 0 -> specular reflection is disabled
+     * = 1 -> specular reflection is enabled with scale coefficient of 1.0
+     * = 2 -> specular reflection is enabled with per-primitive scale coefficient specified
+     */
     RTvariable specular_reflection_enabled_RTvariable;
 
     //! Primitive type - RTbuffer object

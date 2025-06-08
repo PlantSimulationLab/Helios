@@ -416,7 +416,6 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     camera_FOV = 45;
 
     context = nullptr;
-    contextGeomNeedsUpdate = false;
     primitiveColorsNeedUpdate = false;
 
     isWatermarkVisible = true;
@@ -567,7 +566,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    GLfloat borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     // enable hardware depth comparison
@@ -843,17 +842,24 @@ void Visualizer::printWindow() {
 
 void Visualizer::printWindow(const char *outfile) const {
     std::string outfile_str = outfile;
-    validateOutputPath(outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"});
+
+    std::string ext = getFileExtension(outfile_str);
+    if ( ext.empty() ) {
+        outfile_str += ".jpeg";
+    }
+
+    if ( !validateOutputPath(outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"}) ) {
+        helios_runtime_error("ERROR (Visualizer::printWindow): Output path is not valid or does not have a valid image extension (.jpeg, .jpg).");
+    }
 
     write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, window, message_flag);
 }
 
 void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint width_pixels, uint height_pixels) {
-
-    if ( pixel_data.empty() ) {
+    if (pixel_data.empty()) {
         helios_runtime_error("ERROR (Visualizer::displayImage): Pixel data was empty.");
     }
-    if ( pixel_data.size() != 4 * width_pixels * height_pixels ) {
+    if (pixel_data.size() != 4 * width_pixels * height_pixels) {
         helios_runtime_error("ERROR (Visualizer::displayImage): Pixel data size does not match the given width and height. Argument 'pixel_data' must have length of 4*width_pixels*height_pixels.");
     }
 
@@ -861,7 +867,7 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
     geometry_handler.clearAllGeometry();
 
     //Register the data as a texture
-    uint textureID = registerTextureImage( pixel_data, helios::make_uint2(width_pixels, height_pixels) );
+    uint textureID = registerTextureImage(pixel_data, helios::make_uint2(width_pixels, height_pixels));
 
     //Figure out size to render
     vec2 image_size;
@@ -869,33 +875,31 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
     float window_aspect = float(Wdisplay) / float(Hdisplay);
     if (data_aspect > window_aspect) {
         // fill width, shrink height
-        image_size = make_vec2( 1.0f, window_aspect / data_aspect );
-    }else {
+        image_size = make_vec2(1.0f, window_aspect / data_aspect);
+    } else {
         // fill height, shrink width
-        image_size = make_vec2( data_aspect / window_aspect, 1.0f );
+        image_size = make_vec2(data_aspect / window_aspect, 1.0f);
     }
 
-    constexpr vec3 center(0.5,0.5,0);
+    constexpr vec3 center(0.5, 0.5, 0);
     const std::vector vertices{
         center + make_vec3(-0.5f * image_size.x, -0.5f * image_size.y, 0.f),
         center + make_vec3(+0.5f * image_size.x, -0.5f * image_size.y, 0.f),
         center + make_vec3(+0.5f * image_size.x, +0.5f * image_size.y, 0.f),
         center + make_vec3(-0.5f * image_size.x, +0.5f * image_size.y, 0.f)
     };
-    const std::vector<vec2> uvs{ {0, 0}, {1, 0}, {1, 1}, {0, 1} };
+    const std::vector<vec2> uvs{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
     size_t UUID = geometry_handler.sampleUUID();
     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, vertices, RGBA::black, uvs, textureID, false, false, COORDINATES_WINDOW_NORMALIZED, true, false);
 
     hideWatermark();
     plotInteractive();
-
 }
 
 
-void Visualizer::displayImage( const std::string &file_name ) {
-
-    if ( !validateTextureFile(file_name) ) {
+void Visualizer::displayImage(const std::string &file_name) {
+    if (!validateTextureFile(file_name)) {
         helios_runtime_error("ERROR (Visualizer::displayImage): File " + file_name + " does not exist or is not a valid image file.");
     }
 
@@ -908,8 +912,7 @@ void Visualizer::displayImage( const std::string &file_name ) {
         read_JPEG_file(file_name.c_str(), image_data, image_width, image_height);
     }
 
-    displayImage( image_data, image_width, image_height );
-
+    displayImage(image_data, image_width, image_height);
 }
 
 void Visualizer::getWindowPixelsRGB(uint *buffer) const {
@@ -956,7 +959,6 @@ void Visualizer::getDepthMap(float *buffer) {
     for (size_t i = 0; i < depth_pixels.size(); ++i) {
         buffer[i] = depth_pixels[i];
     }
-
 }
 
 void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels) {
@@ -1000,11 +1002,11 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
     //normalize data and invert the color space so white=closest, black = furthest
     float depth_min = std::numeric_limits<float>::max();
     float depth_max = std::numeric_limits<float>::min();
-    for ( auto depth : depth_buffer_data ) {
-        if ( depth < depth_min ) {
+    for (auto depth: depth_buffer_data) {
+        if (depth < depth_min) {
             depth_min = depth;
         }
-        if ( depth > depth_max ) {
+        if (depth > depth_max) {
             depth_max = depth;
         }
     }
@@ -1015,7 +1017,6 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
     }
 
     //\todo This is not working. Basically the same code works in the plotDepthMap() method, but for some reason doesn't seem to yield the correct float values.
-
 }
 
 void Visualizer::getWindowSize(uint &width, uint &height) const {
@@ -1031,10 +1032,10 @@ void Visualizer::getFramebufferSize(uint &width, uint &height) const {
 void Visualizer::clearGeometry() {
     geometry_handler.clearAllGeometry();
 
-    contextPrimitiveIDs.clear();
+    contextUUIDs_build.clear();
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
-    contextPrimitiveIDs.clear();
+    contextUUIDs_build.clear();
     depth_buffer_data.clear();
     colorbar_min = 0;
     colorbar_max = 0;
@@ -1043,10 +1044,9 @@ void Visualizer::clearGeometry() {
 void Visualizer::clearContextGeometry() {
     geometry_handler.clearContextGeometry();
 
-    contextPrimitiveIDs.clear();
+    contextUUIDs_build.clear();
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
-    contextPrimitiveIDs.clear();
     depth_buffer_data.clear();
     colorbar_min = 0;
     colorbar_max = 0;
@@ -1066,14 +1066,13 @@ void Visualizer::showWatermark() {
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
-
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
-    float nearPlane = std::max(0.1f,  0.05f * dist);   // avoid 0
+    float nearPlane = std::max(0.1f, 0.05f * dist); // avoid 0
     float farPlane;
-    if ( shadow ) {
-        farPlane  = 2.0f  * dist;
-    }else {
-        farPlane  = 100.0f  * dist;
+    if (shadow) {
+        farPlane = 2.0f * dist;
+    } else {
+        farPlane = 100.0f * dist;
     }
     cameraProjectionMatrix = glm::perspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane, farPlane);
     cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
@@ -1331,15 +1330,15 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
     uint textureID = registerTextureGlyph(glyph);
 
     const std::vector<vec2> uvs{
-            {0, 0},
-            {1, 0},
-            {1, 1},
-            {0, 1}
+        {0, 0},
+        {1, 0},
+        {1, 1},
+        {0, 1}
     };
 
     //Disable shadows for glyphs
     CoordinateSystem coordFlag2 = coordFlag;
-    if ( coordFlag == COORDINATES_CARTESIAN ) {
+    if (coordFlag == COORDINATES_CARTESIAN) {
         coordFlag2 = scast<CoordinateSystem>(2);
     }
 
@@ -1569,86 +1568,80 @@ void Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivi
 }
 
 std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivisions, const char *texture_file) {
-
     float thetaStart = -0.1f * PI_F;
 
     float dtheta = (0.5f * PI_F - thetaStart) / float(Ndivisions - 1);
     float dphi = 2.f * PI_F / float(Ndivisions - 1);
 
     std::vector<size_t> UUIDs;
-    UUIDs.reserve( 2u * Ndivisions * Ndivisions );
+    UUIDs.reserve(2u * Ndivisions * Ndivisions);
 
     vec3 cart;
 
     //top cap
-    for( int j=0; j<Ndivisions; j++ ){
+    for (int j = 0; j < Ndivisions; j++) {
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
+        vec3 v0 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
+        vec3 v1 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j) * dphi));
+        vec3 v2 = center + radius * cart;
 
-        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*PI_F, 0 ) );
-        vec3 v0 = center + radius*cart;
-        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*PI_F-dtheta, float(j+1)*dphi ) );
-        vec3 v1 = center + radius*cart;
-        cart = sphere2cart( make_SphericalCoord(1.f, 0.5f*PI_F-dtheta, float(j)*dphi ) );
-        vec3 v2 = center + radius*cart;
-
-        vec3 n0 = v0-center;
+        vec3 n0 = v0 - center;
         n0.normalize();
-        vec3 n1 = v1-center;
+        vec3 n1 = v1 - center;
         n1.normalize();
-        vec3 n2 = v2-center;
+        vec3 n2 = v2 - center;
         n2.normalize();
 
-        vec2 uv0 = make_vec2( 1.f - atan2f( sinf((float(j)+0.5f)*dphi), -cosf((float(j)+0.5f)*dphi) )/(2.f*PI_F) - 0.5f, 1.f - n0.z*0.5f - 0.5f );
-        vec2 uv1 = make_vec2( 1.f - atan2f( n1.x, -n1.y )/(2.f*PI_F) - 0.5f, 1.f - n1.z*0.5f - 0.5f );
-        vec2 uv2 = make_vec2( 1.f - atan2f( n2.x, -n2.y )/(2.f*PI_F) - 0.5f, 1.f - n2.z*0.5f - 0.5f );
+        vec2 uv0 = make_vec2(1.f - atan2f(sinf((float(j) + 0.5f) * dphi), -cosf((float(j) + 0.5f) * dphi)) / (2.f * PI_F) - 0.5f, 1.f - n0.z * 0.5f - 0.5f);
+        vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
+        vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
 
-        if( j==Ndivisions-1 ){
+        if (j == Ndivisions - 1) {
             uv2.x = 1;
         }
 
-        UUIDs.push_back( addTriangle( v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)) );
-
+        UUIDs.push_back(addTriangle(v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)));
     }
 
     //middle
-    for( int j=0; j<Ndivisions; j++ ){
-        for( int i=0; i<Ndivisions-1; i++ ){
+    for (int j = 0; j < Ndivisions; j++) {
+        for (int i = 0; i < Ndivisions - 1; i++) {
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j) * dphi));
+            vec3 v0 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i + 1) * dtheta, float(j) * dphi));
+            vec3 v1 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i + 1) * dtheta, float(j + 1) * dphi));
+            vec3 v2 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j + 1) * dphi));
+            vec3 v3 = center + radius * cart;
 
-            cart = sphere2cart( make_SphericalCoord(1.f, float(i)*dtheta, float(j)*dphi ) );
-            vec3 v0 = center + radius*cart;
-            cart = sphere2cart( make_SphericalCoord(1.f, float(i+1)*dtheta, float(j)*dphi ) );
-            vec3 v1 = center + radius*cart;
-            cart = sphere2cart( make_SphericalCoord(1.f, float(i+1)*dtheta, float(j+1)*dphi ) );
-            vec3 v2 = center + radius*cart;
-            cart = sphere2cart( make_SphericalCoord(1.f, float(i)*dtheta, float(j+1)*dphi ) );
-            vec3 v3 = center + radius*cart;
-
-            vec3 n0 = v0-center;
+            vec3 n0 = v0 - center;
             n0.normalize();
-            vec3 n1 = v1-center;
+            vec3 n1 = v1 - center;
             n1.normalize();
-            vec3 n2 = v2-center;
+            vec3 n2 = v2 - center;
             n2.normalize();
-            vec3 n3 = v3-center;
+            vec3 n3 = v3 - center;
             n3.normalize();
 
-            vec2 uv0 = make_vec2( 1.f - atan2f( n0.x, -n0.y )/(2.f*PI_F) - 0.5f, 1.f - n0.z*0.5f - 0.5f );
-            vec2 uv1 = make_vec2( 1.f - atan2f( n1.x, -n1.y )/(2.f*PI_F) - 0.5f, 1.f - n1.z*0.5f - 0.5f );
-            vec2 uv2 = make_vec2( 1.f - atan2f( n2.x, -n2.y )/(2.f*PI_F) - 0.5f, 1.f - n2.z*0.5f - 0.5f );
-            vec2 uv3 = make_vec2( 1.f - atan2f( n3.x, -n3.y )/(2.f*PI_F) - 0.5f, 1.f - n3.z*0.5f - 0.5f );
+            vec2 uv0 = make_vec2(1.f - atan2f(n0.x, -n0.y) / (2.f * PI_F) - 0.5f, 1.f - n0.z * 0.5f - 0.5f);
+            vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
+            vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
+            vec2 uv3 = make_vec2(1.f - atan2f(n3.x, -n3.y) / (2.f * PI_F) - 0.5f, 1.f - n3.z * 0.5f - 0.5f);
 
-            if( j==Ndivisions-1 ){
+            if (j == Ndivisions - 1) {
                 uv2.x = 1;
                 uv3.x = 1;
             }
 
-            UUIDs.push_back( addTriangle( v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)) );
-            UUIDs.push_back( addTriangle( v0, v2, v3, texture_file, uv0, uv2, uv3, scast<CoordinateSystem>(2)) );
-
+            UUIDs.push_back(addTriangle(v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)));
+            UUIDs.push_back(addTriangle(v0, v2, v3, texture_file, uv0, uv2, uv3, scast<CoordinateSystem>(2)));
         }
     }
 
     return UUIDs;
-
 }
 
 std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const vec3 &center, const SphericalCoord &rotation, const RGBcolor &fontcolor, uint fontsize, const char *fontname, CoordinateSystem coordinate_system) {
@@ -2109,8 +2102,9 @@ Colormap Visualizer::getCurrentColormap() const {
 }
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
-    std::vector<uint> UUIDs = context_ptr->getAllUUIDs();
-    buildContextGeometry(context_ptr, UUIDs);
+    context = context_ptr;
+
+    build_all_context_geometry = true;
 }
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::vector<uint> &UUIDs) {
@@ -2118,42 +2112,60 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
         std::cerr << "WARNING (Visualizer::buildContextGeometry): There is no Context geometry to build...exiting." << std::endl;
         return;
     }
-    if (!colorPrimitives_UUIDs.empty() || !colorPrimitives_objIDs.empty()) {
-        std::cerr << "WARNING (Visualizer::buildContextGeometry): Existing Context geometry already exists in the Visualizer and will not be removed. You may have intended to call Visualizer::clearGeometry() first to clear old Context geometry." << std::endl;
-    }
 
     context = context_ptr;
-    contextGeomNeedsUpdate = true;
 
-    contextPrimitiveIDs.insert(contextPrimitiveIDs.begin(), UUIDs.begin(), UUIDs.end());
+    build_all_context_geometry = false;
+    contextUUIDs_build = UUIDs;
 
-    //Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
-        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
-
-            vec3 center_sph;
-            vec2 xbounds, ybounds, zbounds;
-            float radius;
-            context->getDomainBoundingSphere(UUIDs, center_sph, radius);
-            context->getDomainBoundingBox(UUIDs, xbounds, ybounds, zbounds);
-            camera_lookat_center = make_vec3(0.5 * (xbounds.x + xbounds.y), 0.5 * (ybounds.x + ybounds.y), 0.5 * (zbounds.x + zbounds.y));
-            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * radius, 20.f * PI_F / 180.f, 0));
-        }
-    }
 }
 
 void Visualizer::buildContextGeometry_private() {
-    contextGeomNeedsUpdate = false;
+
+    //If building all context geometry, get all dirty UUIDs from the Context (including ones that were deleted)
+    if ( build_all_context_geometry ) {
+        contextUUIDs_build = context->getDirtyUUIDs(true);
+    }
+
+    //Populate contextUUIDs_needupdate based on dirty primitives in the Context
+    std::vector<uint> contextUUIDs_needupdate;
+    contextUUIDs_needupdate.reserve(contextUUIDs_build.size());
+
+    for (uint UUID : contextUUIDs_build) {
+
+        //Check if primitives in contextUUIDs_build have since been deleted from the Context. If so, remove them from contextUUIDs_build and from the geometry handler
+        if (!context->doesPrimitiveExist(UUID)) {
+            auto it = std::find(contextUUIDs_build.begin(), contextUUIDs_build.end(), UUID);
+            if (it != contextUUIDs_build.end()) {
+                // swap-and-pop delete from contextUUIDs_build
+                *it = contextUUIDs_build.back();
+                contextUUIDs_build.pop_back();
+                // delete from the geometry handler
+                if ( geometry_handler.doesGeometryExist(UUID) ) {
+                    geometry_handler.deleteGeometry(UUID);
+                }
+            }
+        }
+        //check if the primitive is dirty, if so, add it to contextUUIDs_needupdate
+        else{
+            contextUUIDs_needupdate.push_back(UUID);
+        }
+
+    }
+
+    if ( contextUUIDs_needupdate.empty() ) {
+        return;
+    }
 
     if (!colorPrimitivesByData.empty()) {
         if (colorPrimitives_UUIDs.empty()) { //load all primitives
-            for (uint UUID: contextPrimitiveIDs) {
+            for (uint UUID: contextUUIDs_build) {
                 if (context->doesPrimitiveExist(UUID)) {
                     colorPrimitives_UUIDs[UUID] = UUID;
                 }
             }
         } else { //double check that primitives exist
-            for (uint UUID: contextPrimitiveIDs) {
+            for (uint UUID: contextUUIDs_build) {
                 if (!context->doesPrimitiveExist(UUID)) {
                     auto it = colorPrimitives_UUIDs.find(UUID);
                     colorPrimitives_UUIDs.erase(it);
@@ -2193,15 +2205,15 @@ void Visualizer::buildContextGeometry_private() {
 
     //------ Colormap ------//
 
-    uint psize = contextPrimitiveIDs.size();
+    uint psize = contextUUIDs_needupdate.size();
     if (message_flag) {
         if (psize > 0) {
             if (psize >= 1e3 && psize < 1e6) {
-                std::cout << "Adding " << psize / 1e3 << "K Context primitives to visualizer...." << std::flush;
+                std::cout << "updating " << psize / 1e3 << "K Context primitives to visualizer...." << std::flush;
             } else if (psize >= 1e6) {
-                std::cout << "Adding " << psize / 1e6 << "M Context primitives to visualizer...." << std::flush;
+                std::cout << "updating " << psize / 1e6 << "M Context primitives to visualizer...." << std::flush;
             } else {
-                std::cout << "Adding " << psize << " Context primitives to visualizer...." << std::flush;
+                std::cout << "updating " << psize << " Context primitives to visualizer...." << std::flush;
             }
         } else {
             std::cout << "WARNING (Visualizer::buildContextGeometry): No primitives were found in the Context..." << std::endl;
@@ -2209,6 +2221,7 @@ void Visualizer::buildContextGeometry_private() {
     }
 
     //figure out colorbar range
+    // \todo Figure out how to avoid doing this when not necessary
 
     colormap_current.setRange(colorbar_min, colorbar_max);
     if (colorbar_min == 0 && colorbar_max == 0) { //range was not set by user, use full range of values
@@ -2216,7 +2229,7 @@ void Visualizer::buildContextGeometry_private() {
         colorbar_min = std::numeric_limits<float>::max();
         colorbar_max = std::numeric_limits<float>::lowest();
 
-        for (uint UUID: contextPrimitiveIDs ) {
+        for (uint UUID: contextUUIDs_build) {
             float colorValue = -9999;
             if (!colorPrimitivesByData.empty()) {
                 if (colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()) {
@@ -2299,10 +2312,12 @@ void Visualizer::buildContextGeometry_private() {
     //add primitives
 
     size_t patch_count = context->getPatchCount();
+    geometry_handler.allocateBufferSize(patch_count, GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
     size_t triangle_count = context->getTriangleCount();
-    geometry_handler.allocateBufferSize(patch_count, triangle_count);
+    geometry_handler.allocateBufferSize(triangle_count, GeometryHandler::GEOMETRY_TYPE_TRIANGLE);
 
-    for (unsigned int UUID: contextPrimitiveIDs) {
+    for (unsigned int UUID: contextUUIDs_needupdate ) {
+
         if (!context->doesPrimitiveExist(UUID)) {
             std::cerr << "WARNING (Visualizer::buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
             continue;
@@ -2387,7 +2402,7 @@ void Visualizer::buildContextGeometry_private() {
         }
 
         int textureID = -1;
-        if ( !texture_file.empty() ) {
+        if (!texture_file.empty()) {
             textureID = registerTextureImage(texture_file);
         }
 
@@ -2436,22 +2451,22 @@ void Visualizer::buildContextGeometry_private() {
             std::vector<vec3> v_vertices = context->getPrimitiveVertices(UUID);
 
             //bottom
-            const std::vector<vec3> bottom_vertices{ v_vertices.at(0), v_vertices.at(1), v_vertices.at(2), v_vertices.at(3) };
+            const std::vector<vec3> bottom_vertices{v_vertices.at(0), v_vertices.at(1), v_vertices.at(2), v_vertices.at(3)};
 
             //top
-            const std::vector<vec3> top_vertices{ v_vertices.at(4), v_vertices.at(5), v_vertices.at(6), v_vertices.at(7) };
+            const std::vector<vec3> top_vertices{v_vertices.at(4), v_vertices.at(5), v_vertices.at(6), v_vertices.at(7)};
 
             //-x
-            const std::vector<vec3> mx_vertices{ v_vertices.at(0), v_vertices.at(3), v_vertices.at(7), v_vertices.at(4) };
+            const std::vector<vec3> mx_vertices{v_vertices.at(0), v_vertices.at(3), v_vertices.at(7), v_vertices.at(4)};
 
             //+x
-            const std::vector<vec3> px_vertices{ v_vertices.at(1), v_vertices.at(2), v_vertices.at(6), v_vertices.at(5) };
+            const std::vector<vec3> px_vertices{v_vertices.at(1), v_vertices.at(2), v_vertices.at(6), v_vertices.at(5)};
 
             //-y
-            const std::vector<vec3> my_vertices{ v_vertices.at(0), v_vertices.at(1), v_vertices.at(5), v_vertices.at(4) };
+            const std::vector<vec3> my_vertices{v_vertices.at(0), v_vertices.at(1), v_vertices.at(5), v_vertices.at(4)};
 
             //+y
-            const std::vector<vec3> py_vertices{ v_vertices.at(2), v_vertices.at(3), v_vertices.at(7), v_vertices.at(6) };
+            const std::vector<vec3> py_vertices{v_vertices.at(2), v_vertices.at(3), v_vertices.at(7), v_vertices.at(6)};
 
             //Voxel does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
@@ -2488,9 +2503,6 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
-    if(message_flag) {
-        std::cout << "done." << std::endl;
-    }
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name) {
@@ -2616,8 +2628,7 @@ float dx_m = 0.0;
 float dy_m = 0.0;
 float dscroll = 0.0;
 
-glm::mat4 Visualizer::computeShadowDepthMVP( ) const {
-
+glm::mat4 Visualizer::computeShadowDepthMVP() const {
     glm::vec3 lightDir = -glm::normalize(glm_vec3(light_direction));
 
     const float margin = 0.01;
@@ -2633,7 +2644,7 @@ glm::mat4 Visualizer::computeShadowDepthMVP( ) const {
         glm::vec4(+1, +1, +1, 1), glm::vec4(-1, +1, +1, 1)
     };
 
-    glm::mat4 invCam = glm::inverse( this->perspectiveTransformationMatrix );
+    glm::mat4 invCam = glm::inverse(this->perspectiveTransformationMatrix);
 
     std::array<glm::vec3, 8> frustumWs;
     for (std::size_t i = 0; i < 8; i++) {
@@ -2691,17 +2702,31 @@ glm::mat4 Visualizer::computeShadowDepthMVP( ) const {
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
     if (message_flag) {
-        std::cout << "Generating interactive plot..." << std::endl;
+        std::cout << "Generating interactive plot..." << std::flush;
     }
 
 
     //Update the Context geometry (if needed)
-    if (contextGeomNeedsUpdate) {
+    if ( true ) {
         buildContextGeometry_private();
     } else {
         colormap_current.setRange(colorbar_min, colorbar_max);
     }
 
+    //Set the view to fit window
+    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
+        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
+
+            vec3 center_sph;
+            vec2 xbounds, ybounds, zbounds;
+            vec3 radius;
+            geometry_handler.getDomainBoundingSphere(center_sph, radius);
+            float R = radius.magnitude();
+            geometry_handler.getDomainBoundingBox(xbounds, ybounds, zbounds);
+            camera_lookat_center = make_vec3(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y), 0.5f * (zbounds.x + zbounds.y));
+            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * R, 20.f * PI_F / 180.f, 0));
+        }
+    }
 
     //Update
     if (colorbar_flag == 2) {
@@ -2716,7 +2741,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
     }
 
-    setupPlot();
+    transferBufferData();
 
     assert(checkerrors());
 
@@ -2737,7 +2762,6 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     glfwShowWindow((GLFWwindow *) window);
 
     do {
-
         if (shadow_flag) {
             assert(checkerrors());
             // Depth buffer for shadows
@@ -2817,6 +2841,10 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
     camera_output.push_back(camera_eye_location);
     camera_output.push_back(camera_lookat_center);
+
+    if (message_flag) {
+        std::cout << "done." << std::endl;
+    }
 
     return camera_output;
 }
@@ -2933,13 +2961,13 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     Hframebuffer = height;
 }
 
-void Visualizer::setupPlot() {
+void Visualizer::transferBufferData() {
+    //\todo Re-work this so that it only transfers data that has changed.
 
     assert(checkerrors());
 
     int i = 0;
     for (const auto &geometry_type: GeometryHandler::all_geometry_types) {
-
         // 1st attribute buffer : vertex positions
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(i));
         glBufferData(GL_ARRAY_BUFFER, geometry_handler.getVertexData_ptr(geometry_type)->size() * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
@@ -3032,10 +3060,13 @@ void Visualizer::setupPlot() {
 
     for (const auto &[textureID, texture]: texture_manager) {
         GLenum externalFormat = 0;
-        switch(texture.num_channels) {
-            case 1: externalFormat = GL_RED;   break;
-            case 3: externalFormat = GL_RGB;   break;
-            case 4: externalFormat = GL_RGBA;  break;
+        switch (texture.num_channels) {
+            case 1: externalFormat = GL_RED;
+                break;
+            case 3: externalFormat = GL_RGB;
+                break;
+            case 4: externalFormat = GL_RGBA;
+                break;
             default:
                 throw std::runtime_error("unsupported channel count");
         }
@@ -3048,9 +3079,8 @@ void Visualizer::setupPlot() {
             texture.texture_data.data() // pointer to pixel data
         );
 
-        uv_rescale.at(textureID*2 + 0) = float(texture.texture_resolution.x) / float(maximum_texture_size.x);
-        uv_rescale.at(textureID*2 + 1) = float(texture.texture_resolution.y) / float(maximum_texture_size.y);
-
+        uv_rescale.at(textureID * 2 + 0) = float(texture.texture_resolution.x) / float(maximum_texture_size.x);
+        uv_rescale.at(textureID * 2 + 1) = float(texture.texture_resolution.y) / float(maximum_texture_size.y);
     }
 
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -3058,7 +3088,7 @@ void Visualizer::setupPlot() {
     glUniform1i(glGetUniformLocation(primaryShader.shaderID, "textureSampler"), 0);
 
     // Set up (u,v) rescaling
-    glBindBuffer(GL_TEXTURE_BUFFER, uv_rescale_buffer );
+    glBindBuffer(GL_TEXTURE_BUFFER, uv_rescale_buffer);
     glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat), uv_rescale.data(), GL_STATIC_DRAW);
     glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RG32F, uv_rescale_buffer);
@@ -3081,7 +3111,7 @@ void Visualizer::render(bool shadow) const {
 
     // Look up the currently loaded shader
     GLint current_shader_program = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &current_shader_program );
+    glGetIntegerv(GL_CURRENT_PROGRAM, &current_shader_program);
 
     // Bind our texture array
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
@@ -3099,7 +3129,6 @@ void Visualizer::render(bool shadow) const {
     assert(checkerrors());
 
     if (triangle_count > 0) {
-
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(triangle_ind));
         glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
@@ -3134,7 +3163,6 @@ void Visualizer::render(bool shadow) const {
     //--- Rectangles---//
 
     if (rectangle_count > 0) {
-
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(rectangle_ind));
         glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
@@ -3253,10 +3281,25 @@ void Visualizer::plotUpdate(bool hide_window) {
     }
 
     //Update the Context geometry (if needed)
-    if (contextGeomNeedsUpdate) {
+    if ( true ) {
         buildContextGeometry_private();
     } else {
         colormap_current.setRange(colorbar_min, colorbar_max);
+    }
+
+    //Set the view to fit window
+    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
+        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
+
+            vec3 center_sph;
+            vec2 xbounds, ybounds, zbounds;
+            vec3 radius;
+            geometry_handler.getDomainBoundingSphere(center_sph, radius);
+            float R = radius.magnitude();
+            geometry_handler.getDomainBoundingBox(xbounds, ybounds, zbounds);
+            camera_lookat_center = make_vec3(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y), 0.5f * (zbounds.x + zbounds.y));
+            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * R, 20.f * PI_F / 180.f, 0));
+        }
     }
 
     //Update
@@ -3271,7 +3314,7 @@ void Visualizer::plotUpdate(bool hide_window) {
         addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
     }
 
-    setupPlot();
+    transferBufferData();
 
     bool shadow_flag = false;
     for (const auto &model: primaryLightingModel) {
@@ -3359,13 +3402,12 @@ void Visualizer::plotUpdate(bool hide_window) {
 }
 
 void Visualizer::updateDepthBuffer() {
-
     //Update the Context geometry (if needed)
-    if (contextGeomNeedsUpdate) {
+    if ( true ) {
         buildContextGeometry_private();
     }
 
-    setupPlot();
+    transferBufferData();
 
     // Depth buffer for shadows
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
@@ -3394,7 +3436,7 @@ void Visualizer::updateDepthBuffer() {
     depth_buffer_data.resize(Wframebuffer * Hframebuffer);
 
     glfwSwapBuffers((GLFWwindow *) window);
-    glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data() );
+    glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data());
 
     //depending on the active frame buffer, we may get all zero data and need to swap it again.
     bool zeros = true;
@@ -3406,13 +3448,12 @@ void Visualizer::updateDepthBuffer() {
     if (zeros) {
         glfwSwapBuffers((GLFWwindow *) window);
 
-        glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data() );
+        glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data());
     }
 
     assert(checkerrors());
 
     // Updates this->depth_buffer_data()
-
 }
 
 void Visualizer::plotDepthMap() {
@@ -3425,11 +3466,11 @@ void Visualizer::plotDepthMap() {
     //normalize data, flip in y direction, and invert the color space so white=closest, black = furthest
     float depth_min = std::numeric_limits<float>::max();
     float depth_max = std::numeric_limits<float>::min();
-    for ( auto depth : depth_buffer_data ) {
-        if ( depth < depth_min ) {
+    for (auto depth: depth_buffer_data) {
+        if (depth < depth_min) {
             depth_min = depth;
         }
-        if ( depth > depth_max ) {
+        if (depth > depth_max) {
             depth_max = depth;
         }
     }
@@ -3481,14 +3522,13 @@ Visualizer::Texture::Texture(const std::string &texture_file, uint textureID, co
     texture_data = std::move(image_data);
 
     //If the texture image is too large, resize it
-    if ( texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y ) {
+    if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
     }
-
 }
 
-Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helios::uint2 &maximum_texture_size ) : textureID(textureID) {
+Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helios::uint2 &maximum_texture_size) : textureID(textureID) {
     assert(glyph_ptr != nullptr);
 
     glyph = *glyph_ptr;
@@ -3504,17 +3544,15 @@ Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helio
     }
 
     //If the texture image is too large, resize it
-    if ( texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y ) {
+    if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
     }
 
     num_channels = 1;
-
 }
 
-Visualizer::Texture::Texture( const std::vector<unsigned char> &pixel_data, uint textureID, const helios::uint2 &image_resolution, const helios::uint2 &maximum_texture_size ) : textureID(textureID) {
-
+Visualizer::Texture::Texture(const std::vector<unsigned char> &pixel_data, uint textureID, const helios::uint2 &image_resolution, const helios::uint2 &maximum_texture_size) : textureID(textureID) {
 #ifdef HELIOS_DEBUG
     assert( pixel_data.size() == 4u*image_resolution.x*image_resolution.y, "ERROR: Invalid texture size." );
 #endif
@@ -3524,15 +3562,13 @@ Visualizer::Texture::Texture( const std::vector<unsigned char> &pixel_data, uint
     num_channels = 4;
 
     //If the texture image is too large, resize it
-    if ( texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y ) {
+    if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
     }
-
 }
 
 void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolution) {
-
     int old_width = texture_resolution.x;
     int old_height = texture_resolution.y;
     int new_width = new_image_resolution.x;
@@ -3541,8 +3577,8 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
     std::vector<unsigned char> new_data(new_width * new_height * num_channels);
 
     // map each new pixel to a floating-point src coordinate
-    float x_ratio = scast<float>(old_width)  / scast<float>(new_width);
-    float y_ratio = scast<float>(old_height)  / scast<float>(new_height);
+    float x_ratio = scast<float>(old_width) / scast<float>(new_width);
+    float y_ratio = scast<float>(old_height) / scast<float>(new_height);
 
     for (int y = 0; y < new_height; ++y) {
         float srcY = y * y_ratio;
@@ -3563,13 +3599,12 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
                 float p01 = texture_data[(y1 * old_width + x0) * num_channels + c];
                 float p11 = texture_data[(y1 * old_width + x1) * num_channels + c];
 
-                float top    = p00 * (1.f - dx) + p10 * dx;
+                float top = p00 * (1.f - dx) + p10 * dx;
                 float bottom = p01 * (1.f - dx) + p11 * dx;
-                float value  = top * (1.f - dy) + bottom * dy;
+                float value = top * (1.f - dy) + bottom * dy;
 
-                    new_data[(y * new_width + x) * num_channels + c] =
-                        scast<unsigned char>( clamp(std::round(value + 0.5f), 0.f, 255.f) );
-
+                new_data[(y * new_width + x) * num_channels + c] =
+                        scast<unsigned char>(clamp(std::round(value + 0.5f), 0.f, 255.f));
             }
         }
     }

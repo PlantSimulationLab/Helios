@@ -18,6 +18,23 @@
 
 #include "Context.h"
 
+// -- constants -- //
+
+//! specific heat capacity of air at constant pressure, J mol⁻¹ K⁻¹
+const float cp_air_mol = 29.25f;
+//! latent heat of vaporization of water at 300 K, J mol⁻¹
+const float lambda_mol = 44000.f;
+//! von Karman constant, dimensionless
+const float von_Karman_constant = 0.41f;
+//! Gas constant, J mol⁻¹ K⁻¹
+const float R = 8.314462618f;
+
+inline float esat_Pa(float T_K) {
+    float Tc = T_K - 273.15f;
+    // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
+    return 611.0f * expf(17.502f * Tc / (Tc + 240.97f));
+}
+
 //! Energy balance model class
 /** This model computes surface temperatures based on a local energy balance */
 class EnergyBalanceModel{
@@ -75,6 +92,37 @@ public:
      */
     void addRadiationBand( const std::vector<std::string> &bands );
 
+    //! Enable the air energy balance model, which computes the average air temperature and water vapor mole fraction based on the energy balance of the air layer in the canopy
+    /**
+     * Calling this version of enableAirEnergyBalance() will compute the canopy height based on a bounding box of all primitives in the Context, or the UUIDs based to evaluateAirEnergyBalance().
+     * It also assumes that the reference height for ambient air temperature, humidity, and wind speed is at the canopy top.
+     * This routine sets primitive data 'air_temperature' and 'air_humidity' to the average air temperature and humidity in the canopy for all primitives.
+     */
+    void enableAirEnergyBalance();
+
+    //! Enable the air energy balance model, which computes the average air temperature and water vapor mole fraction based on the energy balance of the air layer in the canopy
+    /**
+     * This routine sets primitive data 'air_temperature' and 'air_humidity' to the average air temperature and humidity in the canopy for all primitives.
+     * \param[in] canopy_height_m Height of the canopy in meters.
+     * \param[in] reference_height_m Height at which the ambient air temperature, humidity, and wind speed are measured in meters.
+     */
+    void enableAirEnergyBalance( float canopy_height_m, float reference_height_m );
+
+    //! Advance the air energy balance over time for all primitives in the Context
+    /**
+     * \param[in] dt_sec Time step in seconds.
+     * \param[in] time_advance_sec Total time to advance the model in seconds (T must be greater than or equal to dt).
+     */
+    void evaluateAirEnergyBalance( float dt_sec, float time_advance_sec );
+
+    //! Advance the air energy balance over time for primitives specified by UUIDs
+    /**
+     * \param[in] UUIDs Universal unique identifiers for primitives that should be included in the air energy balance calculations.
+     * \param[in] dt_sec Time step in seconds.
+     * \param[in] time_advance_sec Total time to advance the model in seconds (T must be greater than or equal to dt).
+     */
+    void evaluateAirEnergyBalance( const std::vector<uint> &UUIDs, float dt_sec, float time_advance_sec );
+
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)
@@ -86,11 +134,13 @@ public:
 
     //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
     /**
-     * \params[in] UUIDs Universal unique identifiers for report
+     * \param[in] UUIDs Universal unique identifiers for report
      */
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 
 private:
+
+    void evaluateSurfaceEnergyBalance( const std::vector<uint> &UUIDs, float dt );
 
     //! Copy of a pointer to the context
     helios::Context* context;
@@ -122,6 +172,15 @@ private:
     //! Default surface humidity if it was not specified in the context
     float surface_humidity_default;
 
+    bool air_energy_balance_enabled;
+
+    //! Dimensions of the canopy (x, y, z) in meters
+    helios::vec3 canopy_dimensions;
+
+    float canopy_height_m;
+    float reference_height_m;
+
+    //! Flag controlling whether messages are printed to standard output
     bool message_flag;
 
     //! Names of radiation bands to be included in absorbed all-wave radiation flux

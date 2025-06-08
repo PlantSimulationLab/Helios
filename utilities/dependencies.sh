@@ -28,7 +28,7 @@
 #
 ################################################
 
-DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq" "pybind11") # Base PATH dependencies
+DEPENDENCIES_PATH=("gcc" "g++" "cmake" "wget" "jq") # Base PATH dependencies
 
 # Run bash script as root
 if command -v nvcc &> /dev/null; then
@@ -91,6 +91,7 @@ if [[ "$(uname -s)" == *"MINGW"* || "$(uname -s)" == *"CYGWIN"* ]]; then
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "Installing $MODE dependencies for macOS host...\n"
     PACKAGE_MANAGER="brew"
+    DEPENDENCIES_PATH+=("pybind11")
     if [[ "$MODE" == "all" || "$MODE" == "cuda" || "$MODE" == "vis" ]]; then
         DEPENDENCIES_PATH+=("Caskroom" "cask")
     fi
@@ -128,7 +129,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         exit 1
     fi
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
-        DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev" "python3-dev")
+        DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev" "python3-dev" "pybind11-dev")
     fi
     FLAG="-y"
     export DEBIAN_FRONTEND=noninteractive # Avoid timezone prompts

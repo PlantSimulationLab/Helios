@@ -102,7 +102,8 @@ rtBuffer<float, 1> rho, tau;
 rtBuffer<float, 1> rho_cam, tau_cam;
 
 rtBuffer<float, 1> specular_exponent;
-rtDeclareVariable( bool, specular_reflection_enabled,, );
+rtBuffer<float, 1> specular_scale;
+rtDeclareVariable( unsigned int, specular_reflection_enabled,, );
 
 //Output buffers
 rtBuffer<float, 1>   radiation_in;

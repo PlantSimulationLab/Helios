@@ -34,17 +34,16 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
     float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
 
     //Sensible heat flux
-    float cp = 29.25f; //Molar specific heat of air. Units: J/mol
-    float QH = cp*gH*(T-Ta); // (see Campbell and Norman Eq. 6.8)
+    float QH = cp_air_mol*gH*(T-Ta); // (see Campbell and Norman Eq. 6.8)
 
     //Latent heat flux
-    float es = 611.f*exp(17.502f*(T-273.f)/((T-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
+    float es = 611.0f * expf(17.502f * (T-273.f) / (T - 273.f + 240.97f));
     float gM = 1.08f*gH*gS*(stomatal_sidedness/(1.08f*gH+gS*stomatal_sidedness) + (1.f-stomatal_sidedness)/(1.08f*gH+gS*(1.f-stomatal_sidedness)));
     if( gH==0 && gS==0 ){//if somehow both go to zero, can get NaN
         gM = 0;
     }
-    float lambda = 44000.f; //Latent heat of vaporization for water. Units: J/mol
-    float QL = gM*lambda*(es-ea*surfacehumidity)/pressure;
+
+    float QL = gM*lambda_mol*(es-ea*surfacehumidity)/pressure;
 
     //Storage heat flux
     float storage = 0.f;
@@ -114,41 +113,18 @@ __global__ void solveEnergyBalance( uint Nprimitives, float* To, float* R, float
 
 }
 
-void EnergyBalanceModel::run(){
-    run( context->getAllUUIDs() );
-}
+void EnergyBalanceModel::evaluateSurfaceEnergyBalance( const std::vector<uint> &UUIDs, float dt ){
 
-void EnergyBalanceModel::run( float dt ){
-    run( context->getAllUUIDs(), dt );
-}
-
-void EnergyBalanceModel::run( const std::vector<uint> &UUIDs ){
-    run( UUIDs, 0.f);
-}
-
-
-void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
-
-    if( message_flag ){
-        std::cout << "Running energy balance model..." << std::flush;
-    }
-
-    // Check that some primitives exist in the context
-
-    uint Nprimitives = UUIDs.size();
-
-    if( Nprimitives==0 ){
-        std::cerr << "WARNING (EnergyBalanceModel::run): No primitives have been added to the context.  There is nothing to simulate. Exiting..." << std::endl;
-        return;
-    }
-
-    //---- Sum up to get total absorbed radiation across all bands ----//
+//---- Sum up to get total absorbed radiation across all bands ----//
 
     // Look through all flux primitive data in the context and sum them up in vector Rn.  Each element of Rn corresponds to a primitive.
 
-    if( radiation_bands.size()==0 ){
+    if( radiation_bands.empty() ){
         helios::helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation bands were found.");
     }
+
+
+    const uint Nprimitives = UUIDs.size();
 
     std::vector<float> Rn;
     Rn.resize(Nprimitives,0);
@@ -285,7 +261,7 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
         }
 
         //Air vapor pressure
-        float esat = 611.f*exp(17.502f*(Ta[u]-273.f)/((Ta[u]-273.f)+240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals
+        float esat = esat_Pa(Ta[u]);
         ea[u] = hr*esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
 
         //Air pressure
@@ -440,37 +416,40 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaMemcpy(T, d_T, Nprimitives*sizeof(float), cudaMemcpyDeviceToHost) );
 
     for( uint u=0; u<Nprimitives; u++ ){
-        size_t p = UUIDs.at(u);
+        size_t UUID = UUIDs.at(u);
 
         if( T[u]!=T[u] ){
             T[u] = temperature_default;
         }
 
-        context->setPrimitiveData(p,"temperature",T[u]);
+        context->setPrimitiveData(UUID,"temperature",T[u]);
 
-        float QH = 29.25*gH[u]*(T[u]-Ta[u]);
-        context->setPrimitiveData(p,"sensible_flux",QH);
+        float QH = cp_air_mol*gH[u]*(T[u]-Ta[u]);
+        context->setPrimitiveData(UUID,"sensible_flux",QH);
 
-        float es = 611.f*exp(17.502f*(T[u]-273.f)/((T[u]-273.f)+240.97f));
+        float es = esat_Pa(T[u]);
         float gM = 1.08f*gH[u]*gS[u]*(stomatal_sidedness[u]/(1.08f*gH[u]+gS[u]*stomatal_sidedness[u]) + (1.f-stomatal_sidedness[u])/(1.08f*gH[u]+gS[u]*(1.f-stomatal_sidedness[u])));
         if( gH[u]==0 && gS[u]==0 ){//if somehow both go to zero, can get NaN
             gM = 0;
         }
-        float QL = 44000*gM*(es-ea[u])/pressure[u];
-        context->setPrimitiveData(p,"latent_flux",QL);
+        float QL = lambda_mol*gM*(es-ea[u])/pressure[u];
+        context->setPrimitiveData(UUID,"latent_flux",QL);
 
-        float storage=0.f;
-        if ( dt>0){
-            storage=heatcapacity[u]*(T[u]-To[u])/dt;
-        }
-        context->setPrimitiveData(p,"storage_flux", storage);
-
-        for( int i=0; i<output_prim_data.size(); i++ ){
-            if( output_prim_data.at(i) == "boundarylayer_conductance_out" ){
-                context->setPrimitiveData(p,"boundarylayer_conductance_out",gH[u]);
-            }else if( output_prim_data.at(i) == "vapor_pressure_deficit" ){
+        for( const auto &data_label : output_prim_data ){
+            if( data_label == "boundarylayer_conductance_out" ){
+                context->setPrimitiveData(UUID,"boundarylayer_conductance_out",gH[u]);
+            }else if( data_label == "vapor_pressure_deficit" ){
                 float vpd = (es-ea[u])/pressure[u];
-                context->setPrimitiveData(p,"vapor_pressure_deficit",vpd);
+                context->setPrimitiveData(UUID,"vapor_pressure_deficit",vpd);
+            }else if( data_label == "net_radiation_flux" ){
+                float Rnet = R[u] - float(Nsides[u])*eps[u]*5.67e-8F*std::pow(T[u],4);
+                context->setPrimitiveData(UUID,"net_radiation_flux",Rnet);
+            }else if( data_label == "storage_flux" ){
+                float storage=0.f;
+                if ( dt>0){
+                    storage=heatcapacity[u]*(T[u]-To[u])/dt;
+                }
+                context->setPrimitiveData(UUID,"storage_flux", storage);
             }
         }
 
@@ -506,10 +485,6 @@ void EnergyBalanceModel::run( const std::vector<uint> &UUIDs, float dt ){
     CUDA_CHECK_ERROR( cudaFree(d_heatcapacity) );
     CUDA_CHECK_ERROR( cudaFree(d_surfacehumidity) );
     CUDA_CHECK_ERROR( cudaFree(d_T) );
-
-    if( message_flag ){
-        std::cout << "done." << std::endl;
-    }
 
 }
 

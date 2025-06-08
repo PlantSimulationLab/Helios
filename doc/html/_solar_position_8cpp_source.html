@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -638,10 +638,10 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>    <span class="keywordtype">float</span> R_calc_horiz = R_calc_Wm2*cosf(<a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>());</div>
 <div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span> </div>
 <div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>    <span class="keywordtype">float</span> fdiff = fmin(fmax(0, 1.f-(R_meas - R_calc_horiz) / (R_calc_horiz)), 1);</div>
-<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>    <span class="keywordtype">float</span> R = R_calc_Wm2 * R_meas / R_calc_horiz;</div>
+<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = R_calc_Wm2 * R_meas / R_calc_horiz;</div>
 <div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span> </div>
 <div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span>    <span class="keywordflow">if</span>( fdiff&gt;0.001 &amp;&amp; R_calc_horiz&gt;1.f ){</div>
-<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>        R_calc_Wm2 = R;</div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>        R_calc_Wm2 = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
 <div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span>        fdiff_calc = fdiff;</div>
 <div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>    }</div>
 <div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span> </div>

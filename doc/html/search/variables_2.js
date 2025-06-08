@@ -12,9 +12,9 @@ var searchData=
   ['carbohydrate_5fabortion_5fthreshold_9',['carbohydrate_abortion_threshold',['../struct_carbohydrate_parameters.html#ab80588f969b966de5339d7289472e14b',1,'CarbohydrateParameters']]],
   ['carbohydrate_5fgrowth_5fthreshold_10',['carbohydrate_growth_threshold',['../struct_carbohydrate_parameters.html#abb26904cdff549509a609b3a926e343c',1,'CarbohydrateParameters']]],
   ['carbohydrate_5fphyllochron_5fthreshold_11',['carbohydrate_phyllochron_threshold',['../struct_carbohydrate_parameters.html#a4a5afd9ffffc95b4fcacb99bbe13278e',1,'CarbohydrateParameters']]],
-  ['carbohydrate_5fphyllochron_5fthreshold_5flow_12',['carbohydrate_phyllochron_threshold_low',['../struct_carbohydrate_parameters.html#a16a5808c8e86f210f6bcedcaab767179',1,'CarbohydrateParameters']]],
+  ['carbohydrate_5fpruning_5fthreshold_12',['carbohydrate_pruning_threshold',['../struct_carbohydrate_parameters.html#a2940b52729f3cb3d6e4dcb952a04fb25',1,'CarbohydrateParameters']]],
   ['carbohydrate_5ftransfer_5fthreshold_13',['carbohydrate_transfer_threshold',['../struct_carbohydrate_parameters.html#a974a032f59874798e23a506d348b17d9',1,'CarbohydrateParameters']]],
-  ['carbon_5fconductance_14',['carbon_conductance',['../struct_carbohydrate_parameters.html#ac518f998536ff7d43b89dd2bada147e5',1,'CarbohydrateParameters']]],
+  ['carbohydrate_5fvegetative_5fbreak_5fthreshold_14',['carbohydrate_vegetative_break_threshold',['../struct_carbohydrate_parameters.html#a2f07c1c1aa55c05cba30c1eb696ef62b',1,'CarbohydrateParameters']]],
   ['center_15',['center',['../struct_aerial_scan_metadata.html#a8aaa9b231aca939a27d438bdf203699c',1,'AerialScanMetadata']]],
   ['cluster_5fheight_5fmax_16',['cluster_height_max',['../struct_base_grape_vine_parameters.html#a400d6647ac782d95810095028b3fc896',1,'BaseGrapeVineParameters']]],
   ['cluster_5fheight_5fmax_5fspread_17',['cluster_height_max_spread',['../struct_base_grape_vine_parameters.html#a953ff61ba4aafb94fea7965b9034595d',1,'BaseGrapeVineParameters']]],
@@ -32,6 +32,7 @@ var searchData=
   ['cordon_5fradius_5fspread_29',['cordon_radius_spread',['../struct_base_grape_vine_parameters.html#ac9906e333606068b757f6a5bf0b529ad',1,'BaseGrapeVineParameters']]],
   ['cordon_5fspacing_30',['cordon_spacing',['../struct_split_grapevine_parameters.html#a6d65cd7d6a101ce083020c08f7237dcb',1,'SplitGrapevineParameters']]],
   ['cordon_5fspacing_5fspread_31',['cordon_spacing_spread',['../struct_split_grapevine_parameters.html#abe4c3510d79f5543ea86ec9d4c5baf81',1,'SplitGrapevineParameters']]],
-  ['crown_5fheight_32',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
-  ['crown_5fradius_33',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
+  ['cp_5fair_5fmol_32',['cp_air_mol',['../_energy_balance_model_8h.html#a5767dfcbe1d56f6adad8a6e3dfc25e53',1,'EnergyBalanceModel.h']]],
+  ['crown_5fheight_33',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
+  ['crown_5fradius_34',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
 ];

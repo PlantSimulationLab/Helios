@@ -319,6 +319,7 @@ void Primitive::getTransformationMatrix(float (&T)[16]) const {
 
 void Primitive::setTransformationMatrix(float (&T)[16]) {
     std::memcpy(transform, T, 16 * sizeof(float));
+    dirty_flag = true;
 }
 
 float Patch::getArea() const {
@@ -1975,6 +1976,33 @@ std::vector<uint> Context::getAllUUIDs() const {
         UUIDs.push_back(UUID);
     }
     return UUIDs;
+}
+
+std::vector<uint> Context::getDirtyUUIDs(bool include_deleted_UUIDs) const {
+
+    size_t dirty_count = std::count_if(
+        primitives.begin(), primitives.end(),
+        [&](auto const &kv){ return isPrimitiveDirty(kv.first); }
+    );
+
+    std::vector<uint> dirty_UUIDs;
+    dirty_UUIDs.reserve(dirty_count);
+    for (const auto &[UUID, primitive]: primitives) {
+        if (!primitive->dirty_flag || primitive->ishidden ) {
+            continue;
+        }
+        dirty_UUIDs.push_back(UUID);
+    }
+
+    if ( include_deleted_UUIDs ) {
+        dirty_UUIDs.insert( dirty_UUIDs.end(), dirty_deleted_primitives.begin(), dirty_deleted_primitives.end() );
+    }
+
+    return dirty_UUIDs;
+}
+
+std::vector<uint> Context::getDeletedUUIDs() const {
+    return dirty_deleted_primitives;
 }
 
 void Context::hidePrimitive(uint UUID) const {

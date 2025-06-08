@@ -513,17 +513,13 @@ void helios::matmult(const float ML[16], const float MR[16], float (&T)[16]) {
 }
 
 void helios::vecmult(const float M[16], const helios::vec3 &v3, helios::vec3 &result) {
-    float v[4];
-    v[0] = v3.x;
-    v[1] = v3.y;
-    v[2] = v3.z;
-    v[3] = 1.f;
+    float v[4] = {v3.x, v3.y, v3.z, 1.f};
 
     float V[4] = {0.f};
 
-    for (int j = 0; j < 4; j++) {
-        for (int k = 0; k < 4; k++) {
-            V[j] = V[j] + v[k] * M[k + 4 * j];
+    for (int i = 0; i < 4; ++i) {
+        for (int k = 0; k < 4; ++k) {
+            V[i] += M[4 * i + k] * v[k];
         }
     }
 
@@ -534,10 +530,11 @@ void helios::vecmult(const float M[16], const helios::vec3 &v3, helios::vec3 &re
 
 void helios::vecmult(const float M[16], const float v[3], float (&result)[3]) {
     float V[4] = {0.f};
+    float v4[4] = {v[0], v[1], v[2], 1.f};
 
     for (int j = 0; j < 4; j++) {
         for (int k = 0; k < 4; k++) {
-            V[j] = V[j] + v[k] * M[k + 4 * j];
+            V[j] = V[j] + v4[k] * M[k + 4 * j];
         }
     }
 
@@ -960,18 +957,14 @@ std::string helios::parse_xml_tag_string(const pugi::xml_node &node, const std::
 }
 
 std::string helios::deblank(const char *input) {
-    int i, j;
-    char output[255];
-    std::strcpy(output, input);
-    for (i = 0, j = 0; i < strlen(input); i++, j++) {
-        if (input[i] != ' ')
-            output[j] = input[i];
-        else
-            j--;
+    std::string out;
+    out.reserve(std::strlen(input));
+    for (const char *p = input; *p; ++p) {
+        if (*p != ' ') {
+            out.push_back(*p);
+        }
     }
-    output[j] = 0;
-    std::string output_c = output;
-    return output_c;
+    return out;
 }
 
 std::string helios::deblank(const std::string &input) {
@@ -997,18 +990,15 @@ std::string helios::trim_whitespace(const std::string &input) {
 std::vector<std::string> helios::separate_string_by_delimiter(const std::string &inputstring, const std::string &delimiter) {
     std::vector<std::string> separated_string;
 
-    if (inputstring.find(delimiter, 0) == std::string::npos) {
-        return separated_string;
+    size_t pos = 0;
+    size_t found;
+    while ((found = inputstring.find(delimiter, pos)) != std::string::npos) {
+        separated_string.push_back(trim_whitespace(inputstring.substr(pos, found - pos)));
+        pos = found + delimiter.size();
     }
 
-    size_t p = 0;
-    size_t p0 = 0;
-    while (p < inputstring.size() - 1) {
-        p = inputstring.find(delimiter, p0);
-        separated_string.push_back(trim_whitespace(inputstring.substr(p0, p - p0)));
-
-        p0 = p + 1;
-    }
+    // add the remaining part (including case of no delimiter found)
+    separated_string.push_back(trim_whitespace(inputstring.substr(pos)));
 
     return separated_string;
 }
@@ -1444,7 +1434,13 @@ bool helios::PNGHasAlpha(const char *filename) {
 }
 
 std::vector<std::vector<bool> > helios::readPNGAlpha(const std::string &filename) {
-    if (const std::string &fn = filename; fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG") {
+    const std::string &fn = filename;
+    auto dot = fn.find_last_of('.');
+    if (dot == std::string::npos) {
+        helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " has no extension.");
+    }
+    std::string ext = fn.substr(dot + 1);
+    if (ext != "png" && ext != "PNG") {
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 

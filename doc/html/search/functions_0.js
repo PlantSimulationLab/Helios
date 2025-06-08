@@ -66,7 +66,7 @@ var searchData=
   ['aerialscanmetadata_63',['AerialScanMetadata',['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata']]],
   ['aggregateprimitivedataproduct_64',['aggregatePrimitiveDataProduct',['../classhelios_1_1_context.html#a66b69dc68ed0a21353485eff97257047',1,'helios::Context']]],
   ['aggregateprimitivedatasum_65',['aggregatePrimitiveDataSum',['../classhelios_1_1_context.html#aad6f828c598f574cab637a263562bea2',1,'helios::Context']]],
-  ['allocatebuffersize_66',['allocateBufferSize',['../class_geometry_handler.html#a2c17a9ba7cb9dec8d9c6338eeb65fcbb',1,'GeometryHandler']]],
+  ['allocatebuffersize_66',['allocateBufferSize',['../class_geometry_handler.html#a29108f6eba6919900cb65e326d000c3b',1,'GeometryHandler']]],
   ['appendphytomer_67',['appendPhytomer',['../struct_shoot.html#a624619a8a5106774aa25dc99ba06cd41',1,'Shoot']]],
   ['appendphytomertoshoot_68',['appendPhytomerToShoot',['../class_plant_architecture.html#a122fad48603e2e0f2fe6d870c691bfd1',1,'PlantArchitecture']]],
   ['appendshoot_69',['appendShoot',['../class_plant_architecture.html#a25a69b3eee4eab6501a8bedc777b8c55',1,'PlantArchitecture']]],

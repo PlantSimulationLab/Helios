@@ -57,11 +57,15 @@ void PlantArchitecture::initializeCarbohydratePool(float carbohydrate_concentrat
             float shoot_volume = shoot->calculateShootInternodeVolume();
             //set carbon pool
             shoot->carbohydrate_pool_molC = shoot_volume * carbohydrate_concentration_molC_m3;
+            context_ptr->setObjectData( shoot->internode_tube_objID, "carbohydrate_concentration", carbohydrate_concentration_molC_m3);
+
         }
     }
 }
 
 void PlantArchitecture::initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3) {
+
+    //Make sure that the plant exists in the context
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::initializePlantCarbohydratePool): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (carbohydrate_concentration_molC_m3 < 0) {
@@ -95,6 +99,7 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
         auto shoot_tree = &plant_instance.shoot_tree;
 
         for (auto &shoot: *shoot_tree) {
+            //Set cumulative photosynthesis of dormant shoots equal to zero.
             if (shoot->isdormant) {
                 for (const auto &phytomer: shoot->phytomers) {
                     for (const auto &leaf_objID: flatten(phytomer->leaf_objIDs)) {
@@ -111,10 +116,9 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
                             float leaf_A = 0.f;
                             if (context_ptr->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                                 context_ptr->getPrimitiveData(UUID, "net_photosynthesis", leaf_A);
-                                //std::cout<< "leaf photosynthesis mol C: "<< leaf_A<<std::endl;
                             }
 
-                            float new_hourly_photo = leaf_A * lUUID_area * 3600.f * 1e-6f; //hourly net photosynthesis (mol C) from umol CO2 m-2 sec-1
+                            float new_hourly_photo = leaf_A * lUUID_area * 3600.f* 1e-6f;; //hourly net photosynthesis (mol C) from umol CO2 m-2 sec-1
                             //std::cout<< "hourly photosynthesis mol C: "<< new_hourly_photo<<std::endl;
                             float current_net_photo = 0.f;
                             if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
@@ -134,30 +138,45 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
 void PlantArchitecture::accumulateShootPhotosynthesis() const {
     uint A_prim_data_missing = 0;
 
-    for (const auto &[plantID, plant_instance]: plant_instances) {
+    for( auto &[plantID, plant_instance]: plant_instances ){
+
         const auto shoot_tree = &plant_instance.shoot_tree;
 
         for (const auto &shoot: *shoot_tree) {
+            uint shootID = shoot->ID;
             float net_photosynthesis = 0;
+            float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
 
-            for (const auto &phytomer: shoot->phytomers) {
-                for (const auto &leaf_objID: flatten(phytomer->leaf_objIDs)) {
-                    for (uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
-                        if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
-                            float A;
-                            context_ptr->getPrimitiveData(UUID, "cumulative_net_photosynthesis", A);
-                            net_photosynthesis += A;
-                            context_ptr->setPrimitiveData(UUID, "cumulative_net_photosynthesis", 0.f);
-                        } else {
-                            A_prim_data_missing++;
+            if (shoot->isdormant) {
+                for (const auto &phytomer: shoot->phytomers) {
+                    for (const auto &leaf_objID: flatten(phytomer->leaf_objIDs)) {
+                        for (uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
                             context_ptr->setPrimitiveData(UUID, "cumulative_net_photosynthesis", 0.f);
                         }
                     }
                 }
+            } else {
+                for (const auto &phytomer: shoot->phytomers) {
+                    for (const auto &leaf_objID: flatten(phytomer->leaf_objIDs)) {
+                        for (uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
+                            if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
+                                float A;
+                                context_ptr->getPrimitiveData(UUID, "cumulative_net_photosynthesis", A);
+                                net_photosynthesis += A;
+                                context_ptr->setPrimitiveData(UUID, "cumulative_net_photosynthesis", 0.f);
+                            } else {
+                                A_prim_data_missing++;
+                                context_ptr->setPrimitiveData(UUID, "cumulative_net_photosynthesis", 0.f);
+                            }
+                        }
+                    }
+                }
             }
-
-            shoot->carbohydrate_pool_molC += net_photosynthesis;
-            //std::cout<< "Net photosynthesis"<< net_photosynthesis<<std::endl;
+            if (net_photosynthesis >= 0.f) {
+                shoot->carbohydrate_pool_molC += net_photosynthesis;
+                //std::cout<< "Net photosynthesis"<< net_photosynthesis<<std::endl;
+            }
+            context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
         }
     }
 
@@ -176,14 +195,14 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(float dt) const {
 
         for (auto &shoot: *shoot_tree) {
             if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                if (shoot->isdormant) {
+                if(shoot->isdormant && shoot->old_shoot_volume >= 0.f) {
                     shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw *
                             carbohydrate_params.stem_maintainance_respiration_rate * 0.2f * dt; //remove shoot maintenance respiration
                     shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw *
                             carbohydrate_params.root_maintainance_respiration_rate / carbohydrate_params.shoot_root_ratio * 0.2f * dt; //remove root maintenance respiration portion
-                } else {
+                }else if(shoot->old_shoot_volume >= 0.f){
                     shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw *
-                            carbohydrate_params.stem_maintainance_respiration_rate / carbohydrate_params.shoot_root_ratio * dt; //remove shoot maintenance respiration
+                            carbohydrate_params.stem_maintainance_respiration_rate * dt; //remove shoot maintenance respiration
                     shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw *
                             carbohydrate_params.root_maintainance_respiration_rate / carbohydrate_params.shoot_root_ratio * dt; //remove root maintenance respiration portion
                 }
@@ -202,16 +221,25 @@ void PlantArchitecture::subtractShootGrowthCarbon() {
 
         for (const auto &shoot: *shoot_tree) {
             float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
+            uint parentID = shoot->parent_shoot_ID;
 
             for (int p = 0; p < shoot->phytomers.size(); p++) {
                 float phytomer_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->calculatePhytomerVolume(p);
-                float density_dynamic = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->age / carbohydrate_params.maturity_age;
+                    float phytomer_age = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->age;
+                    float density_dynamic = phytomer_age/carbohydrate_params.maturity_age;
+                    //Clamp dynamic carbon density between minimum value and density at full maturity
                 float rho_cw_dynamic = rho_cw * std::clamp(density_dynamic, carbohydrate_params.initial_density_ratio, 1.f); //Carbon density of the stem for the given phytomer (mol C / m^3 wood)
-                float phytomer_growth_carbon_demand = rho_cw_dynamic * (phytomer_volume - plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->old_phytomer_volume); //Structural carbon - mol C / m^3 wood
+                    float phytomer_growth_carbon_demand = 0.f;
+                    if (plant_instances.at(plantID).shoot_tree.at(shoot->ID)->old_shoot_volume >= 0.f)
+                    {
+                        phytomer_growth_carbon_demand = rho_cw_dynamic*( phytomer_volume - plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->old_phytomer_volume); //Structural carbon - mol C / m^3 wood
                 shoot->carbohydrate_pool_molC -= phytomer_growth_carbon_demand; //Subtract construction carbon from the shoot's carbon pool
                 shoot->carbohydrate_pool_molC -= phytomer_growth_carbon_demand / carbohydrate_params.shoot_root_ratio; //Subtract construction carbon for the roots from the carbon pool
+                    }
+
                 plant_instances.at(plantID).shoot_tree.at(shoot->ID)->phytomers.at(p)->old_phytomer_volume = phytomer_volume; //Update the old volume of the phytomer
             }
+            //Update shoot's carbohydrate_concentration value (mol C / m^-3)
             if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
                 context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
             }
@@ -247,26 +275,43 @@ void PlantArchitecture::checkCarbonPool_abortOrgans(float dt) {
             uint shootID = shoot->ID;
 
             float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shootID)->calculateShootInternodeVolume();
+            //Establish a working carbon pool to see if you could stay above the carbon threshold by aborting fruits.
             float working_carb_pool = shoot->carbohydrate_pool_molC;
-            if (dt > carbohydrate_params.bud_death_threshold_days * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt) {
-                shoot->days_with_negative_carbon_balance += carbohydrate_params.bud_death_threshold_days * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt / 2.f;
-                //Make sure you have at least two timesteps before starting to abort buds
+            if (dt > carbohydrate_params.bud_death_threshold_days)
+            {
+                shoot->days_with_negative_carbon_balance += dt/2; //Make sure you have at least two timesteps before starting to abort buds
             } else {
                 shoot->days_with_negative_carbon_balance += dt;
             }
 
-            if (shoot->carbohydrate_pool_molC > carbohydrate_params.carbohydrate_abortion_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume) {
+            //No need to mess with anything if you already have a carbon surplus
+            if(shoot->carbohydrate_pool_molC > carbohydrate_params.carbohydrate_abortion_threshold*carbohydrate_params.stem_density * shoot_volume /C_molecular_wt) {
                 shoot->days_with_negative_carbon_balance = 0;
                 goto shoot_balanced;
             }
-            if (shoot->days_with_negative_carbon_balance > carbohydrate_params.branch_death_threshold_days * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt) {
+            //Prevent any shoots from reaching negative carbon values: instant death
+            if (shoot->carbohydrate_pool_molC < 0.f)
+            {
                 pruneBranch(plantID, shootID, 0);
                 goto shoot_balanced;
             }
-            if (shoot->days_with_negative_carbon_balance <= carbohydrate_params.bud_death_threshold_days * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt) {
+            if (shoot->sumShootLeafArea() == 0.f && shoot->sumChildVolume() == 0.f && shoot->isdormant == false)
+            {
+                pruneBranch(plantID, shootID, 0);
+                goto shoot_balanced;
+            }
+            //Prune branches that can't stay above a sustainable threshold
+            if (shoot->carbohydrate_pool_molC < carbohydrate_params.carbohydrate_pruning_threshold*carbohydrate_params.stem_density * shoot_volume /C_molecular_wt && shoot->days_with_negative_carbon_balance > carbohydrate_params.branch_death_threshold_days)
+            {
+                pruneBranch(plantID, shootID, 0);
+                goto shoot_balanced;
+            }
+            //Keep track of how many days the shoot has been below the threshold
+            if(shoot->days_with_negative_carbon_balance <= carbohydrate_params.bud_death_threshold_days) {
                 continue;
             }
 
+            //Loop over fruiting buds and abort them one at a time until you would be able to stay above the threshold
             const auto phytomers = &shoot->phytomers;
 
             bool living_buds = true;
@@ -297,7 +342,7 @@ void PlantArchitecture::checkCarbonPool_abortOrgans(float dt) {
                             phytomer->setFloralBudState(BUD_DEAD, fbud);
                             //Kill a floral bud to eliminate it as a future sink
 
-                            if (working_carb_pool > carbohydrate_params.carbohydrate_abortion_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt) {
+                            if (working_carb_pool > carbohydrate_params. carbohydrate_abortion_threshold*carbohydrate_params.stem_density*shoot_volume/C_molecular_wt ) {
                                 goto shoot_balanced;
                             } //If the amount of carbon you've eliminated by aborting flower buds would have given you a positive carbon balance, move on to the next shoot
 
@@ -329,19 +374,10 @@ void PlantArchitecture::checkCarbonPool_adjustPhyllochron(float dt) {
 
             float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shootID)->calculateShootInternodeVolume();
 
-            if (shoot->carbohydrate_pool_molC > carbohydrate_params.carbohydrate_phyllochron_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume) {
-                if (shoot->phyllochron_instantaneous > shoot->shoot_parameters.phyllochron_min.val() * shoot->phyllochron_recovery * dt) {
-                    shoot->phyllochron_instantaneous = shoot->phyllochron_instantaneous / (shoot->phyllochron_recovery * dt);
-                } else {
-                    shoot->phyllochron_instantaneous = shoot->shoot_parameters.phyllochron_min.val();
-                }
-            } else if (shoot->carbohydrate_pool_molC < carbohydrate_params.carbohydrate_phyllochron_threshold_low * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume) {
-                shoot->phyllochron_instantaneous = shoot->shoot_parameters.phyllochron_min.val() * 5.f;
-            } else {
-                if (shoot->phyllochron_instantaneous <= shoot->shoot_parameters.phyllochron_min.val() * 5.f) {
-                    shoot->phyllochron_instantaneous = shoot->phyllochron_instantaneous * shoot->phyllochron_increase;
-                }
-            }
+            float phyllochron_carbon_ratio = shoot->carbohydrate_pool_molC / (carbohydrate_params.carbohydrate_phyllochron_threshold*carbohydrate_params.stem_density * shoot_volume /C_molecular_wt);
+
+            shoot->phyllochron_instantaneous = std::fmax(shoot->shoot_parameters.phyllochron_min.val(), shoot->phyllochron_min / (phyllochron_carbon_ratio*dt));
+
         }
     }
 }
@@ -352,6 +388,60 @@ void PlantArchitecture::checkCarbonPool_transferCarbon(float dt) {
         const auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
 
+        //Transfer carbon from parent shoots to distal child shoots (gradient-driven flux)
+        for (const auto &shoot_inner: *shoot_tree) {
+            if (!shoot_inner) {
+                continue; // Skip null shoots
+            }
+            uint shootID_inner = shoot_inner->ID;
+            float shoot_volume_inner = plant_instances.at(plantID).shoot_tree.at(shootID_inner)->calculateShootInternodeVolume();
+            float shoot_carb_pool_molC_inner = shoot_inner->carbohydrate_pool_molC;
+            float shoot_carb_conc_inner = shoot_carb_pool_molC_inner / shoot_volume_inner;
+            if (shoot_inner->carbohydrate_pool_molC > carbohydrate_params.carbohydrate_transfer_threshold * shoot_volume_inner * carbohydrate_params.stem_density / C_molecular_wt) {
+                float totalChildVolume = shoot_inner->sumChildVolume(0);
+                if (totalChildVolume <= 0.0f) {
+                    continue;
+                }
+                //Determine carbon pool (mol C) available for transfer from parent shoot.
+                float available_fraction_of_carb = (shoot_inner->carbohydrate_pool_molC - carbohydrate_params.carbohydrate_transfer_threshold * shoot_volume_inner * carbohydrate_params.stem_density / C_molecular_wt) / shoot_inner->
+                                                   carbohydrate_pool_molC;
+
+                for (int p = 0; p < shoot_inner->phytomers.size(); p++) {
+                    //call recursively for child shoots
+                    if (shoot_inner->childIDs.find(p) != shoot_inner->childIDs.end()) {
+                        for (int child_shoot_ID: shoot_inner->childIDs.at(p)) {
+                            float child_volume = plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->sumChildVolume(0) +
+                                                 plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
+                            float child_ratio = child_volume / totalChildVolume;
+
+                            float child_shoot_volume = plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
+
+                            if (child_shoot_volume > 0) {
+                                float child_shoot_carb_pool_molC = shoot_tree_ptr->at(child_shoot_ID)->carbohydrate_pool_molC;
+                                float child_shoot_carb_conc = child_shoot_carb_pool_molC / child_shoot_volume;
+                                //Only tranfer carbon if the parent shoot has greater carbon concentration than the child shoot.
+                                if (shoot_carb_conc_inner > child_shoot_carb_conc) {
+                                    float transfer_volume = shoot_volume_inner;
+                                    if (child_shoot_volume < shoot_volume_inner) {
+                                        transfer_volume = child_shoot_volume;
+                                    }
+                                    float delta_C = shoot_carb_conc_inner - child_shoot_carb_conc;
+                                    float transfer_mol_C_demand = delta_C * child_ratio * transfer_volume * carbohydrate_params.carbon_conductance_up * dt;
+
+                                    float transfer_mol_C = std::clamp(transfer_mol_C_demand, 0.f, shoot_inner->carbohydrate_pool_molC * available_fraction_of_carb * child_ratio);
+
+                                    //Mass-balance transfer of carbon between shoots
+                                    plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->carbohydrate_pool_molC += transfer_mol_C;
+                                    shoot_inner->carbohydrate_pool_molC -= transfer_mol_C;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Transfer carbon from distal child shoots to parent shoots (gradient-driven flux)
         for (const auto &shoot: *shoot_tree) {
             if (!shoot) {
                 continue; // Skip null shoots
@@ -365,85 +455,25 @@ void PlantArchitecture::checkCarbonPool_transferCarbon(float dt) {
                 continue;
             }
 
-            float shoot_radius = plant_instances.at(plantID).shoot_tree.at(shootID)->shoot_internode_radii.front().front();
-            float shoot_cross_sectional_area = M_PI * pow(shoot_radius, 2);
             float shoot_carb_pool_molC = shoot->carbohydrate_pool_molC;
             float shoot_carb_conc = shoot_carb_pool_molC / shoot_volume;
 
-            if (shoot_carb_pool_molC > carbohydrate_params.carbohydrate_transfer_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume) {
-                float available_fraction_of_carb = (shoot->carbohydrate_pool_molC - carbohydrate_params.carbohydrate_transfer_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume) /
-                                                   shoot->carbohydrate_pool_molC;
+            //Only transfer carbon if child shoot has greater carbon concentration than parent
+            if (shoot_carb_pool_molC > carbohydrate_params.carbohydrate_transfer_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt) {
+                float available_fraction_of_carb = (shoot->carbohydrate_pool_molC - carbohydrate_params.carbohydrate_transfer_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt) / shoot->carbohydrate_pool_molC;
                 if (parentID < 10000000) {
-                    float parent_shoot_volume = shoot_tree_ptr->at(parentID)->calculateShootInternodeVolume();
-                    if (parent_shoot_volume <= 0.0f) {
-                        continue;
-                    }
+                    float parent_shoot_volume = plant_instances.at(plantID).shoot_tree.at(parentID)->calculateShootInternodeVolume();
 
-                    float parent_shoot_carb_pool_molC = shoot_tree_ptr->at(parentID)->carbohydrate_pool_molC;
+                    float parent_shoot_carb_pool_molC = plant_instances.at(plantID).shoot_tree.at(parentID)->carbohydrate_pool_molC;
                     float parent_shoot_carb_conc = parent_shoot_carb_pool_molC / parent_shoot_volume;
 
-                    if (shoot_carb_conc > parent_shoot_carb_conc) {
-                        float delta_C = shoot_carb_conc - parent_shoot_carb_conc;
-                        float transfer_mol_C_demand = delta_C * available_fraction_of_carb * shoot_volume * carbohydrate_params.carbon_conductance * dt;
-                        // Ensure only available carbon is transferred
-                        float transfer_mol_C = std::clamp(transfer_mol_C_demand, 0.f, shoot->carbohydrate_pool_molC * available_fraction_of_carb);
-
-                        //std::cout<< "Carbon transferred: " << transfer_mol_C << " of " << shoot->carbohydrate_pool_molC*available_fraction_of_carb<< "   " << shootID << "to" << parentID <<  std::endl;
-
-                        shoot_tree_ptr->at(parentID)->carbohydrate_pool_molC += transfer_mol_C;
-                        shoot->carbohydrate_pool_molC -= transfer_mol_C;
-                    }
-                }
-            }
-        }
-
-        for (const auto &shoot_inner: *shoot_tree) {
-            if (!shoot_inner) {
-                continue; // Skip null shoots
-            }
-            uint shootID_inner = shoot_inner->ID;
-            float shoot_volume_inner = plant_instances.at(plantID).shoot_tree.at(shootID_inner)->calculateShootInternodeVolume();
-            float shoot_carb_pool_molC_inner = shoot_inner->carbohydrate_pool_molC;
-            float shoot_carb_conc_inner = shoot_carb_pool_molC_inner / shoot_volume_inner;
-            if (shoot_inner->carbohydrate_pool_molC > carbohydrate_params.carbohydrate_transfer_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt * shoot_volume_inner) {
-                float totalChildVolume = shoot_inner->sumChildVolume(0);
-                if (totalChildVolume <= 0.0f) {
-                    continue;
-                }
-                float available_fraction_of_carb = (shoot_inner->carbohydrate_pool_molC - carbohydrate_params.carbohydrate_transfer_threshold * carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt *
-                                                    shoot_volume_inner) / shoot_inner->carbohydrate_pool_molC;
-
-                for (int p = 0; p < shoot_inner->phytomers.size(); p++) {
-                    //call recursively for child shoots
-                    if (shoot_inner->childIDs.find(p) != shoot_inner->childIDs.end()) {
-                        for (int child_shoot_ID: shoot_inner->childIDs.at(p)) {
-                            float child_volume = plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->sumChildVolume(0) +
-                                                 plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
-                            float child_ratio = child_volume / totalChildVolume;
-
-                            float child_shoot_volume = plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->calculateShootInternodeVolume();
-
-                            float child_shoot_radius = plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->shoot_internode_radii.front().front();
-                            float child_shoot_cross_sectional_area = M_PI * pow(child_shoot_radius, 2);
-
-                            if (child_shoot_volume > 0) {
-                                float child_shoot_carb_pool_molC = shoot_tree_ptr->at(child_shoot_ID)->carbohydrate_pool_molC;
-                                float child_shoot_carb_conc = child_shoot_carb_pool_molC / child_shoot_volume;
-                                if (shoot_carb_conc_inner > child_shoot_carb_conc) {
-                                    float delta_C = shoot_carb_conc_inner - child_shoot_carb_conc;
-                                    float transfer_mol_C_demand = delta_C * available_fraction_of_carb * child_ratio * child_shoot_cross_sectional_area * carbohydrate_params.carbon_conductance * dt;
-
-                                    float transfer_mol_C = std::clamp(transfer_mol_C_demand, 0.f, shoot_inner->carbohydrate_pool_molC * available_fraction_of_carb * child_ratio);
-
-                                    //std::cout<< "Carbon transferred: " << transfer_mol_C << " of " << shoot_inner->carbohydrate_pool_molC*available_fraction_of_carb<< "   " << shootID_inner <<"to"<<child_shoot_ID<<  std::endl;
-
-
-                                    shoot_tree_ptr->at(child_shoot_ID)->carbohydrate_pool_molC += transfer_mol_C;
-                                    shoot_inner->carbohydrate_pool_molC -= transfer_mol_C;
-                                }
-                            }
-                        }
-                    }
+                    float delta_C = shoot_carb_conc - parent_shoot_carb_conc;
+                    float transfer_mol_C_demand = delta_C * shoot_volume * carbohydrate_params.carbon_conductance_down * dt;
+                    // Ensure only available carbon is transferred
+                    float transfer_mol_C = std::clamp(transfer_mol_C_demand, 0.f, shoot->carbohydrate_pool_molC * available_fraction_of_carb);
+                    // Mass balance transfer of C (mol) from child to parent shoot
+                    plant_instances.at(plantID).shoot_tree.at(parentID)->carbohydrate_pool_molC += transfer_mol_C;
+                    shoot->carbohydrate_pool_molC -= transfer_mol_C;
                 }
             }
         }
@@ -452,6 +482,7 @@ void PlantArchitecture::checkCarbonPool_transferCarbon(float dt) {
 
 
 void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry) {
+    //Slow Radial growth of shoots if their carbon concentration falls below a sustainable threshold
     const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
 
     if (plant_instances.find(plantID) == plant_instances.end()) {
@@ -475,33 +506,76 @@ void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint 
         context_ptr->setObjectData(shoot->internode_tube_objID, "leaf_area", leaf_area);
     }
 
-    if (leaf_area > 0.) {
-        float internode_area = phytomer->parent_shoot_ptr->shoot_parameters.girth_area_factor.val() * leaf_area * 1e-4;
-        phytomer->parent_shoot_ptr->shoot_parameters.girth_area_factor.resample();
+    float phytomer_age = phytomer->age;
+    float girth_area_factor = shoot->shoot_parameters.girth_area_factor.val();
+    if (phytomer_age > 365) {
+        girth_area_factor = shoot->shoot_parameters.girth_area_factor.val() * 365 / phytomer_age;
+    }
 
-        float phytomer_radius = sqrtf(internode_area / PI_F);
 
-        float rho_cw = carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt; //Density of carbon in almond wood (mol C m^-3)
-        float max_shoot_volume = internode_area * shoot->calculateShootLength();
-        float current_shoot_volume = shoot->calculateShootInternodeVolume();
-        float max_carbon_demand = (max_shoot_volume - current_shoot_volume) * rho_cw; //(mol C)
+    float internode_area = girth_area_factor * leaf_area * 1e-4;
+    phytomer->parent_shoot_ptr->shoot_parameters.girth_area_factor.resample();
 
-        if (max_carbon_demand > 0.) {
-            float threshold_carbon_pool = carbohydrate_params.carbohydrate_growth_threshold * current_shoot_volume * rho_cw; //(mol C)
+    float phytomer_radius = sqrtf(internode_area / PI_F);
 
-            auto &segment = shoot->shoot_internode_radii.at(node_number);
-            for (float &radius: segment) {
-                if (phytomer_radius > radius) { //radius should only increase
-                    if (shoot->carbohydrate_pool_molC > threshold_carbon_pool && phytomer->age > 0) {
-                        float carbon_availability_ratio = std::clamp((shoot->carbohydrate_pool_molC - threshold_carbon_pool) / max_carbon_demand, 0.f, 1.f);
-                        radius = radius + carbon_availability_ratio * (phytomer_radius - radius);
-                    }
-                }
+    float rho_cw = carbohydrate_params.stem_density * carbohydrate_params.stem_carbon_percentage / C_molecular_wt; //Density of carbon in almond wood (mol C m^-3)
+    float max_shoot_volume = internode_area * shoot->calculateShootLength();
+    float current_shoot_volume = shoot->calculateShootInternodeVolume();
+    float max_carbon_demand = (max_shoot_volume - current_shoot_volume) * rho_cw; //(mol C)
+
+            float threshold_carbon_pool = carbohydrate_params.carbohydrate_growth_threshold * current_shoot_volume * carbohydrate_params.stem_density / C_molecular_wt; //(mol C)
+
+        auto &segment = shoot->shoot_internode_radii.at(node_number);
+        for (float &radius: segment) {
+            if (phytomer_radius > radius) { //radius should only increase
+                        float carbon_availability_ratio = std::clamp((shoot->carbohydrate_pool_molC - threshold_carbon_pool) / max_carbon_demand, .05f, 1.f);
+                        radius = radius + carbon_availability_ratio * 0.5 * (phytomer_radius - radius);
             }
 
-            if (update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii));
-            }
+
+        if (update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+            context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii));
         }
     }
+}
+
+
+bool Shoot::sampleVegetativeBudBreak_carb(uint node_index) const {
+    const CarbohydrateParameters &carbohydrate_params = plantarchitecture_ptr->plant_instances.at(plantID).carb_parameters;
+    float shoot_volume = calculateShootInternodeVolume();
+
+    if (node_index >= phytomers.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::sampleVegetativeBudBreak): Invalid node index. Node index must be less than the number of phytomers on the shoot.");
+    }
+
+    float probability_min = plantarchitecture_ptr->shoot_types.at(this->shoot_type_label).vegetative_bud_break_probability_min.val();
+    float probability_max = 1.f;
+    float probability_decay = plantarchitecture_ptr->shoot_types.at(this->shoot_type_label).vegetative_bud_break_probability_decay_rate.val();
+
+    if (carbohydrate_pool_molC < carbohydrate_params.carbohydrate_vegetative_break_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt) {
+        probability_max = carbohydrate_pool_molC / (carbohydrate_params.carbohydrate_vegetative_break_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt);
+    }
+
+    float bud_break_probability;
+    if (!shoot_parameters.growth_requires_dormancy && probability_decay < 0) {
+        bud_break_probability = probability_min;
+    } else if (probability_decay > 0) { //probability maximum at apex
+        bud_break_probability = std::fmax(probability_min, probability_max - probability_decay * float(this->current_node_number - node_index - 1));
+    } else if (probability_decay < 0) { //probability maximum at base
+        bud_break_probability = std::fmax(probability_min, probability_max - fabs(probability_decay) * float(node_index));
+    } else {
+        if (probability_decay == 0.f) {
+            bud_break_probability = probability_min;
+        } else {
+            bud_break_probability = probability_max;
+        }
+    }
+
+    bool bud_break = true;
+    if (context_ptr->randu() > bud_break_probability) {
+        bud_break = false;
+    }
+
+    return bud_break;
+
 }

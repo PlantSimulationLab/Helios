@@ -41,7 +41,7 @@ var NAVTREE =
       [ "Aerial LiDAR", "_aerial_li_d_a_r_doc.html#AerialLiDARDoc", null ],
       [ "Photosynthesis Models", "_photosynthesis_doc.html#PhotosynthesisDoc", null ],
       [ "Stomatal Conductance Models", "_stomatal_doc.html#StomatalDoc", null ],
-      [ "Solar Positoin and Fluxes Model", "_solar_position_doc.html#SolarPositionDoc", null ],
+      [ "Solar Position and Fluxes Model", "_solar_position_doc.html#SolarPositionDoc", null ],
       [ "Voxel Intersection", "_voxel_intersection_doc.html#VoxelIntersectionDoc", null ],
       [ "Plant Architecture", "_plant_architecture_doc.html#PlantArchitectureDoc", null ],
       [ "Canopy Generator", "_canopy_generator_doc.html#CanopyGeneratorDoc", null ],
@@ -65,6 +65,7 @@ var NAVTREE =
       [ "Globals", "globals.html", [
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
+        [ "Variables", "globals_vars.html", null ],
         [ "Enumerations", "globals_enum.html", null ]
       ] ]
     ] ]
@@ -74,7 +75,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"global_8cpp_source.html"
+"dir_fceca22ca0920a3e9321d273c935ca85.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';
