@@ -167,6 +167,8 @@ var classhelios_1_1_context =
     [ "getConeObjectSubdivisionCount", "classhelios_1_1_context.html#a1ff97eb95d5896e096156320f5bd5ff0", null ],
     [ "getConeObjectVolume", "classhelios_1_1_context.html#af6c1c571171be2604822a8df44d2349c", null ],
     [ "getDate", "classhelios_1_1_context.html#a95dd5bc221cd8bcb4efabd0122d59b4f", null ],
+    [ "getDeletedUUIDs", "classhelios_1_1_context.html#a219bb34b541a979dc6f9c6a88bfc1467", null ],
+    [ "getDirtyUUIDs", "classhelios_1_1_context.html#a62f4159eb6328016af392d20f0bdb446", null ],
     [ "getDiskObjectCenter", "classhelios_1_1_context.html#a213aea1539e0bb38965cf2953b1831df", null ],
     [ "getDiskObjectPointer", "classhelios_1_1_context.html#a17c1256a1f57fbae1f34e04b66b76ca8", null ],
     [ "getDiskObjectSize", "classhelios_1_1_context.html#acee51918d3ee1d9892e5a51106a625d9", null ],

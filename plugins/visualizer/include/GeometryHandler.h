@@ -57,11 +57,11 @@ public:
      *
      * This calls the std::vector::reserve() method to pre-allocate space in the geometry buffers for the specified number of patches and triangles.
      *
-     * \param[in] patch_count Number of patches to allocate space for
-     * \param[in] triangle_count Number of triangles to allocate space for
+     * \param[in] primitive_count Number of patches to allocate space for
+     * \param geometry_type
      */
 
-    void allocateBufferSize(size_t patch_count, size_t triangle_count);
+    void allocateBufferSize(size_t primitive_count, VisualizerGeometryType geometry_type);
 
     /**
      * \brief Adds a geometric element to the geometry handler using provided vertices, color, UV mapping, and texture details.
@@ -92,6 +92,12 @@ public:
      */
     void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color,
                      const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color, bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size = 0);
+
+    [[nodiscard]] bool doesGeometryExist(size_t UUID) const;
+
+    [[nodiscard]] std::vector<size_t> getAllGeometryIDs() const;
+
+    [[nodiscard]] size_t getPrimitiveCount( bool include_deleted = true ) const;
 
     /**
      * \brief Retrieves the count of rectangles in the geometry handler.
@@ -313,6 +319,8 @@ public:
      * \return A constant pointer to a vector of integers representing the coordinate flag data for the given geometry type.
      */
     [[nodiscard]] const std::vector<int>* getCoordinateFlagData_ptr(VisualizerGeometryType geometry_type) const;
+
+    [[nodiscard]] bool getDeleteFlag( size_t UUID ) const;
 
     /**
      * \brief Marks a geometry resource identified by its unique UUID for deletion.

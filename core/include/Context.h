@@ -2662,6 +2662,19 @@ public:
     //!Get all primitive UUIDs currently in the Context
     [[nodiscard]] std::vector<uint> getAllUUIDs() const;
 
+    //! Get all primitive UUIDs that are marked dirty.
+    /**
+     * \param[in] include_deleted_UUIDs [optional] If true, deleted UUIDs are included in the returned vector.
+     * \return Vector of UUIDs for primitives that are marked dirty
+     */
+    [[nodiscard]] std::vector<uint> getDirtyUUIDs(bool include_deleted_UUIDs = false) const;
+
+    //! Get all primitive UUIDs that were deleted since the Context was last marked clean.
+    /**
+     * \return Vector of UUIDs for primitives that were deleted since the Context was last marked clean
+     */
+    [[nodiscard]] std::vector<uint> getDeletedUUIDs() const;
+
     //! Hide primitive in the Context such that its UUID is not returned in Context::getAllUUIDs()
     /**
      * \param[in] UUID Primitive UUID to hide

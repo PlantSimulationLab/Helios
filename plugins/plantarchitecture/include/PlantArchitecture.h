@@ -279,17 +279,17 @@ struct CarbohydrateParameters {
     //! fraction of the dry weight of internode made up by carbon in mature shoot
     float stem_carbon_percentage = 0.4559;
     //! age at which stem reaches physiological maturity (days)
-    float maturity_age = 365;
+    float maturity_age = 180;
     //! starting fraction of the final stem carbon density in new growth
-    float initial_density_ratio = 0.1;
+    float initial_density_ratio = 0.2;
     //! ratio of shoot internode dry weight to root dry weight
-    float shoot_root_ratio = 3;
+    float shoot_root_ratio = 4.5;
 
     // -- Leaf Growth Parameters -- //
     //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
     float SLA = 2.5e-2;
     //! fraction of leaf dry weight made up by carbon
-    float leaf_carbon_percentage = 0.444;
+    float leaf_carbon_percentage = 0.4444;
 
     // -- Flower Growth Parameters -- //
     //! carbon cost to produce a flower (mol C flower^-1)
@@ -310,27 +310,29 @@ struct CarbohydrateParameters {
     float growth_respiration_fraction = 0.28;
 
     // -- Organ Abortion Thresholds -- //
-    //! carbohydrate concentration threshold to abort a shoot as a fraction of the molar density of the stem
-    float carbohydrate_abortion_threshold = 0.05;
+    //! carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem
+    float carbohydrate_abortion_threshold = 0.1;
+    //! carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem
+    float carbohydrate_pruning_threshold = 0.01;
     //! threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
     float bud_death_threshold_days = 2;
     //! threshold time (days) to abort a shoot (shoot is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
     float branch_death_threshold_days = 5;
 
     // -- Phyllochron Adjustment Parameters -- //
-    //! carbohydrate concentration threshold to reduce phyllochron as a fraction of the molar density of the stem
-    float carbohydrate_phyllochron_threshold = 0.1;
-    //! carbohydrate concentration threshold [what?] as a fraction of the molar density of the stem
-    float carbohydrate_phyllochron_threshold_low = 0.05;
+    //! carbohydrate concentration threshold to reduce phyllochron as a fraction of g C/ g DW in the stem
+    float carbohydrate_phyllochron_threshold = 0.05;
+    //! carbohydrate concentration threshold to reduce vegetative bud break probability as a fraction of g C/ g DW in the stem
+    float carbohydrate_vegetative_break_threshold = 0.15;
 
-    //! carbohydrate concentration threshold for radial growth as a fraction of the molar density of the stem
+    //! carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem
     float carbohydrate_growth_threshold = 0.1;
 
     // -- Carbon Transfer Parameters -- //
-    //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of the molar density of the stem
-    float carbohydrate_transfer_threshold = 0.1;
-    //! [what?]
-    float carbon_conductance = 0.8;
+    //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem
+    float carbohydrate_transfer_threshold = 0.05;
+    float carbon_conductance_down = 0.9;//<= 1.0
+    float carbon_conductance_up = carbon_conductance_down/5; //Conductance of carbon from parent to child shoots << conductance from child to parent
 };
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
@@ -1265,8 +1267,27 @@ protected:
 
     void updateInflorescence(FloralBud &fbud);
 
+    /**
+     * Calculate the total carbon cost (mol C) required for the construction of a phytomer's total leaf area.
+     * Carbon construction cost is calculated per area basis using the leaf carbon percentage and specific leaf area (SLA) of the plant instance.
+     * \return The total carbon construction cost of the phytomer's leaf area (mol C).
+    */
     [[nodiscard]] float calculatePhytomerConstructionCosts() const;
+
+    /**
+     * Calculate the total carbon cost (mol C) of constructing the flowers for a given FloralBud object.
+     * Iterates over all flower object IDs stored in the FloralBud instance and accumulates the total construction cost.
+     *
+     * \param[in] fbud References a FloralBud object that contains inflorescence object IDs.
+     * \return The total flower carbon construction cost (mol C).
+    */
     [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud) const;
+
+    /**
+     * Calculate the carbohydrate construction cost of fruits (mol C) by comparing volume change between timesteps.
+     * \param[in] fbud References a FloralBud object that contains inflorescence object IDs.
+     * \return The total fruit carbon construction cost (mol C).
+     */
     [[nodiscard]] float calculateFruitConstructionCosts(const FloralBud &fbud) const;
 
     friend struct Shoot;
@@ -1312,6 +1333,8 @@ struct Shoot {
      * \return True if the vegetative bud should break into a new shoot
      */
     [[nodiscard]] bool sampleVegetativeBudBreak( uint node_index ) const;
+
+    [[nodiscard]] bool sampleVegetativeBudBreak_carb( uint node_index ) const;
 
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
@@ -1407,8 +1430,8 @@ struct Shoot {
     float carbohydrate_pool_molC = 0;  // mol C
     float old_shoot_volume = 0;
 
-    float phyllochron_increase = 2;
-    float phyllochron_recovery = phyllochron_increase * 1.5f;
+    float phyllochron_increase = 5;
+    float phyllochron_recovery = phyllochron_increase;
 
     float days_with_negative_carbon_balance = 0;
 

@@ -1573,10 +1573,12 @@ void RadiationModel::initializeOptiX() {
     //specular reflection exponent buffer
     addBuffer( "specular_exponent", specular_exponent_RTbuffer, specular_exponent_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
 
+    //specular reflection scale coefficient buffer
+    addBuffer( "specular_scale", specular_scale_RTbuffer, specular_scale_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1 );
+
     //number of external radiation sources
     RT_CHECK_ERROR( rtContextDeclareVariable( OptiX_Context, "specular_reflection_enabled", &specular_reflection_enabled_RTvariable ) );
-    uint8_t boolf = false;
-    RT_CHECK_ERROR( rtVariableSetUserData( specular_reflection_enabled_RTvariable, sizeof(bool), &boolf ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( specular_reflection_enabled_RTvariable, 0 ) );
 
     //primitive transformation matrix buffer
     addBuffer( "transform_matrix", transform_matrix_RTbuffer, transform_matrix_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 2 );
@@ -2022,12 +2024,14 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     //remove any primitive UUIDs that don't exist or have zero area
     for (std::size_t u = context_UUIDs.size(); u-- > 0;) {
         if( !context->doesPrimitiveExist( context_UUIDs.at(u) ) ){
-            context_UUIDs.erase( context_UUIDs.begin()+u );
+            context_UUIDs[u] = context_UUIDs.back();
+            context_UUIDs.pop_back();
             continue;
         }
         float area = context->getPrimitiveArea(context_UUIDs.at(u));
         if( (area==0 || std::isnan(area) ) && context->getObjectType(context->getPrimitiveParentObjectID(context_UUIDs.at(u)))!=OBJECT_TYPE_TILE ){
-            context_UUIDs.erase( context_UUIDs.begin()+u );
+            context_UUIDs[u] = context_UUIDs.back();
+            context_UUIDs.pop_back();
         }
     }
 
@@ -2084,8 +2088,6 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
     patch_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > triangle_vertices;
     triangle_vertices.reserve(Nprimitives);
-    std::vector<std::vector<optix::float3> > disk_vertices;
-    disk_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > tile_vertices;
     tile_vertices.reserve(Nprimitives);
     std::vector<std::vector<optix::float3> > voxel_vertices;
@@ -2180,11 +2182,12 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
             }
 
             std::vector<vec3> vertices = context->getTileObjectPointer(parentID)->getVertices();
-            std::vector<optix::float3> v(4);
-            v.at(0) = optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z);
-            v.at(1) = optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z);
-            v.at(2) = optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z);
-            v.at(3) = optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z);
+            std::vector<optix::float3> v{
+                optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z),
+                optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z),
+                optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z),
+                optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z)
+            };
             tile_vertices.push_back(v);
 
             helios::int2 subdiv = context->getTileObjectPointer(parentID)->getSubdivisionCount();
@@ -2204,11 +2207,12 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
             }
 
             std::vector<vec3> vertices = context->getPrimitiveVertices(p);
-            std::vector<optix::float3> v(4);
-            v.at(0) = optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z);
-            v.at(1) = optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z);
-            v.at(2) = optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z);
-            v.at(3) = optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z);
+            std::vector<optix::float3> v{
+                optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z),
+                optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z),
+                optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z),
+                optix::make_float3(vertices.at(3).x,vertices.at(3).y,vertices.at(3).z),
+            };
             patch_vertices.push_back(v);
             object_subdivisions.push_back( optix::make_int2(1,1) );
             patch_UUID.push_back( primitiveID.at(u) );
@@ -2223,10 +2227,11 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
             }
 
             std::vector<vec3> vertices = context->getPrimitiveVertices(p);
-            std::vector<optix::float3> v(3);
-            v.at(0) = optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z);
-            v.at(1) = optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z);
-            v.at(2) = optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z);
+            std::vector<optix::float3> v{
+                optix::make_float3(vertices.at(0).x,vertices.at(0).y,vertices.at(0).z),
+                optix::make_float3(vertices.at(1).x,vertices.at(1).y,vertices.at(1).z),
+                optix::make_float3(vertices.at(2).x,vertices.at(2).y,vertices.at(2).z)
+            };
             triangle_vertices.push_back(v);
             object_subdivisions.push_back( optix::make_int2(1,1) );
             triangle_UUID.push_back( primitiveID.at(u) );
@@ -2242,9 +2247,10 @@ void RadiationModel::updateGeometry( const std::vector<uint>& UUIDs ){
 
             helios::vec3 center = context->getVoxelCenter(p);
             helios::vec3 size = context->getVoxelSize(p);
-            std::vector<optix::float3> v;
-            v.push_back( optix::make_float3(center.x-0.5f*size.x, center.y-0.5f*size.y, center.z-0.5f*size.z ) );
-            v.push_back( optix::make_float3(center.x+0.5f*size.x, center.y+0.5f*size.y, center.z+0.5f*size.z ) );
+            std::vector<optix::float3> v{
+                optix::make_float3(center.x-0.5f*size.x, center.y-0.5f*size.y, center.z-0.5f*size.z ),
+                optix::make_float3(center.x+0.5f*size.x, center.y+0.5f*size.y, center.z+0.5f*size.z )
+            };
             voxel_vertices.push_back(v);
             object_subdivisions.push_back( optix::make_int2(1,1) );
             voxel_UUID.push_back( primitiveID.at(u) );
@@ -3108,24 +3114,41 @@ void RadiationModel::updateRadiativeProperties() {
     // Specular reflection exponent
     std::vector<float> specular_exponent;
     specular_exponent.resize(Nprimitives, 0.f);
-    bool specular_enabled = false;
+    std::vector<float> specular_scale;
+    specular_scale.resize(Nprimitives, 0.f);
+    bool specular_exponent_specified = false;
+    bool specular_scale_specified = false;
     for (size_t u = 0; u < Nprimitives; u++) {
 
         uint UUID = context_UUIDs.at(u);
 
         if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType(UUID, "specular_exponent") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "specular_exponent", specular_exponent.at(u));
-            specular_enabled = true;
+            specular_exponent_specified = true;
         } else {
             specular_exponent.at(u) = -1.f;
         }
 
+        if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType(UUID, "specular_scale") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "specular_scale", specular_scale.at(u));
+            specular_scale_specified = true;
+        } else {
+            specular_scale.at(u) = 0.f;
+        }
+
     }
 
-    if ( specular_enabled ) {
+    uint specular_enabled = 0;
+    if ( specular_exponent_specified ) {
         initializeBuffer1Df(specular_exponent_RTbuffer, specular_exponent);
+        if ( specular_scale_specified ) {
+            initializeBuffer1Df(specular_scale_RTbuffer, specular_scale);
+            specular_enabled = 2;
+        }else {
+            specular_enabled = 1;
+        }
     }
-    RT_CHECK_ERROR( rtVariableSetUserData( specular_reflection_enabled_RTvariable, sizeof(bool), &specular_enabled ) );
+    RT_CHECK_ERROR( rtVariableSet1ui( specular_reflection_enabled_RTvariable, specular_enabled ) );
 
     radiativepropertiesneedupdate = false;
 

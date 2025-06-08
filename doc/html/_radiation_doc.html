@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -337,7 +337,9 @@ Input Primitive Data</h2>
 <tr>
 <td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>specular_exponent </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value controlling the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
+<td>specular_exponent </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value controlling the spread of specular reflection distribution in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
+<tr>
+<td>specular_scale </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value that scales the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>1.0  </td></tr>
 </table>
 <p><br  />
 </p>
@@ -606,19 +608,20 @@ Adding a Radiation Camera</h3>
 </div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to RadiationModel::addBand().</p>
 <h3><a class="anchor" id="RadCamSpecular"></a>
 Radiation Camera Specular Reflection</h3>
-<p>The specular exponent is a measure of how "shiny" the surface is. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.</p>
-<p>Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.</p>
+<p>Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.</p>
+<p>Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.</p>
 <p>The strength of specular reflection is calculated according to the following equation:</p>
 <p class="formulaDsp">
-\[    I_{spec} = I_{s} \big| \vec{n}_p \cdot \vec{n}_s \big| \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
+\[    I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
 \]
 </p>
-<p>where \(I_{spec}\) is the specular flux contribution, \(I_s\) is the outgoing flux of the sampled primitive, \(\vec{n}_p\) is the surface normal, \(\vec{n}_s\) is the source direction, \(\vec{n}_{ray}\) is the ray direction, and \(k\) is the specular exponent. \(\vec{n}_{spec}\) is the specular reflection direction, which is calculated as:</p>
+<p>where \(I_{spec}\) is the specular flux contribution, \(I_s\) is the outgoing flux of the sampled primitive, \(k_s\) is the specular scaling coefficient, \(\vec{n}_p\) is the surface normal, \(\vec{n}_s\) is the source direction, \(\vec{n}_{ray}\) is the ray direction, and \(k\) is the specular exponent. \(\vec{n}_{spec}\) is the specular reflection direction, which is calculated as:</p>
 <p class="formulaDsp">
 \[    \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
 \]
 </p>
-<p>The figure below shows the effect of different specular exponents on the simulated camera image.</p>
+<p>By default, \(k_s\) is set to 1.0. The primitive data "specular_exponent" must be set in order to enable specular reflection (if it is not set, the value of primitive data "specular_scale" will be ignored).</p>
+<p>The figure below shows the effect of different specular exponents on the simulated camera image ( \(k_s = 1\) for all images).</p>
 <div class="image">
 <img src="specular_exponent_comparison.png" alt=""/>
 </div>

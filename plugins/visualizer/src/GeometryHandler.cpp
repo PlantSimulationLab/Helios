@@ -15,28 +15,20 @@ Copyright (C) 2016-2025 Brian Bailey
 
 #include "GeometryHandler.h"
 
-void GeometryHandler::allocateBufferSize( size_t patch_count, size_t triangle_count ) {
+void GeometryHandler::allocateBufferSize(size_t primitive_count, VisualizerGeometryType geometry_type) {
 
-    std::array<VisualizerGeometryType,2> geometry_types = { GEOMETRY_TYPE_RECTANGLE, GEOMETRY_TYPE_TRIANGLE };
-    for ( const auto &geometry_type : geometry_types ) {
-        const char vertex_count = getVertexCount( geometry_type );
-        size_t primitive_count = 0;
-        if ( geometry_type == GEOMETRY_TYPE_RECTANGLE ) {
-            primitive_count = patch_count;
-        } else if ( geometry_type == GEOMETRY_TYPE_TRIANGLE ) {
-            primitive_count = triangle_count;
-        }
-        face_index_data[geometry_type].reserve( primitive_count );
-        vertex_data[geometry_type].reserve(primitive_count * vertex_count * 3);
-        normal_data[geometry_type].reserve(primitive_count * vertex_count * 3);
-        color_data[geometry_type].reserve(primitive_count * 4);
-        uv_data[geometry_type].reserve(primitive_count * vertex_count * 2);
-        texture_flag_data[geometry_type].reserve(primitive_count);
-        texture_ID_data[geometry_type].reserve(primitive_count);
-        coordinate_flag_data[geometry_type].reserve(primitive_count);
-        delete_flag_data[geometry_type].reserve(primitive_count);
-        context_geometry_flag_data[geometry_type].reserve(primitive_count);
-    }
+    char vertex_count = getVertexCount( geometry_type );
+
+    face_index_data[geometry_type].reserve( face_index_data[geometry_type].size() + primitive_count );
+    vertex_data[geometry_type].reserve(vertex_data[geometry_type].size() + primitive_count * vertex_count * 3);
+    normal_data[geometry_type].reserve(normal_data[geometry_type].size() + primitive_count * vertex_count * 3);
+    color_data[geometry_type].reserve(color_data[geometry_type].size() + primitive_count * 4);
+    uv_data[geometry_type].reserve(uv_data[geometry_type].size() + primitive_count * vertex_count * 2);
+    texture_flag_data[geometry_type].reserve( texture_flag_data[geometry_type].size() + primitive_count);
+    texture_ID_data[geometry_type].reserve(texture_ID_data[geometry_type].size() + primitive_count);
+    coordinate_flag_data[geometry_type].reserve(coordinate_flag_data[geometry_type].size() + primitive_count);
+    delete_flag_data[geometry_type].reserve(delete_flag_data[geometry_type].size() + primitive_count);
+    context_geometry_flag_data[geometry_type].reserve(context_geometry_flag_data[geometry_type].size() + primitive_count);
 
 }
 
@@ -54,7 +46,11 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType& geo
 
     std::vector<helios::vec3> vertices_copy = vertices; // make a copy so it can be modified
 
-    registerUUID( UUID, geometry_type );
+    bool geometry_is_new = false;
+    if ( !doesGeometryExist(UUID) ) {
+        registerUUID( UUID, geometry_type );
+        geometry_is_new = true;
+    }
 
     if( coordinate_system == 0 ){ //No vertex transformation (i.e., identity matrix)
 
@@ -66,123 +62,203 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType& geo
 
     }
 
-    int face_index = static_cast<int>(visible_flag_data[geometry_type].size());
+    size_t vertex_index = UUID_map.at(UUID).vertex_index;
+    size_t normal_index = UUID_map.at(UUID).normal_index;
+    size_t uv_index = UUID_map.at(UUID).uv_index;
+    size_t color_index = UUID_map.at(UUID).color_index;
+    size_t texture_flag_index = UUID_map.at(UUID).texture_flag_index;
+    size_t texture_ID_index = UUID_map.at(UUID).texture_ID_index;
 
     for ( char i=0; i<vertex_count; i++ ) {
 
-        face_index_data[geometry_type].push_back( face_index );
+        if ( geometry_is_new ) {
+            face_index_data[geometry_type].push_back( static_cast<int>(visible_flag_data[geometry_type].size()) );
 
-        vertex_data[geometry_type].push_back( vertices_copy.at(i).x );
-        vertex_data[geometry_type].push_back( vertices_copy.at(i).y );
-        vertex_data[geometry_type].push_back( vertices_copy.at(i).z );
+            vertex_data[geometry_type].push_back(vertices_copy.at(i).x);
+            vertex_data[geometry_type].push_back(vertices_copy.at(i).y);
+            vertex_data[geometry_type].push_back(vertices_copy.at(i).z);
+        }else {
+            //face index doesn't need to be updated
+
+            vertex_data[geometry_type].at( vertex_index) = vertices_copy.at(i).x;
+            vertex_data[geometry_type].at( vertex_index+1) = vertices_copy.at(i).y;
+            vertex_data[geometry_type].at( vertex_index+2) = vertices_copy.at(i).z;
+            vertex_index += 3;
+        }
 
         if ( ( geometry_type == GEOMETRY_TYPE_TRIANGLE || geometry_type == GEOMETRY_TYPE_RECTANGLE ) && !uvs.empty() ) { //if (u, v)'s are provided, color triangle based on texture map image
 
-            uv_data[geometry_type].push_back( uvs.at(i).x );
-            uv_data[geometry_type].push_back( 1.f - uvs.at(i).y );
+            if ( geometry_is_new ) {
+                uv_data[geometry_type].push_back(uvs.at(i).x);
+                uv_data[geometry_type].push_back(1.f - uvs.at(i).y);
 
-            if ( i==0 ) { //only need to do this one time
-                if ( has_glyph_texture ) {
-                    texture_flag_data[geometry_type].push_back( 3 ); // 3 means use RGB for color and red channel of texture for alpha
-                }else if ( override_texture_color ) { //if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                    texture_flag_data[geometry_type].push_back( 2 ); // 2 means use RGB for color and texture transparency for alpha
-                }else {
-                    texture_flag_data[geometry_type].push_back( 1 ); // 1 means use texture for color and transparency for alpha
+                if (i == 0) { //only need to do this one time
+                    if (has_glyph_texture) {
+                        texture_flag_data[geometry_type].push_back(3); // 3 means use RGB for color and red channel of texture for alpha
+                    } else if (override_texture_color) { //if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
+                        texture_flag_data[geometry_type].push_back(2); // 2 means use RGB for color and texture transparency for alpha
+                    } else {
+                        texture_flag_data[geometry_type].push_back(1); // 1 means use texture for color and transparency for alpha
+                    }
+                    texture_ID_data[geometry_type].push_back(textureID);
                 }
-                texture_ID_data[geometry_type].push_back( textureID );
+            }else {
+                uv_data[geometry_type].at(uv_index) = uvs.at(i).x;
+                uv_data[geometry_type].at(uv_index+1) = 1.f - uvs.at(i).y;
+                uv_index += 2;
+
+                if ( i==0 ) { //only need to do this one time
+                    if ( has_glyph_texture ) {
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
+                    }else if ( override_texture_color ) { //if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 2; // 2 means use RGB for color and texture transparency for alpha
+                    }else {
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 1; // 1 means use texture for color and transparency for alpha
+                    }
+                    texture_flag_index++;
+                    texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
+                    texture_ID_index++;
+
+                }
             }
         } else { //if (u,v)'s are not provided, color primitive based on RGB color
-            uv_data[geometry_type].push_back( 0.f );
-            uv_data[geometry_type].push_back( 0.f );
 
-            if ( i==0 ) { //only need to do this one time
-                if ( has_glyph_texture ) {
-                    texture_flag_data[geometry_type].push_back( 3 ); // 3 means use RGB for color and red channel of texture for alpha
-                    texture_ID_data[geometry_type].push_back( textureID );
-                }else {
-                    texture_flag_data[geometry_type].push_back( 0 ); // 0 means use RGB color
-                    texture_ID_data[geometry_type].push_back( 0 );
+            if ( geometry_is_new ) {
+                uv_data[geometry_type].push_back( 0.f );
+                uv_data[geometry_type].push_back( 0.f );
+
+                if ( i==0 ) { //only need to do this one time
+                    if ( has_glyph_texture ) {
+                        texture_flag_data[geometry_type].push_back( 3 ); // 3 means use RGB for color and red channel of texture for alpha
+                        texture_ID_data[geometry_type].push_back( textureID );
+                    }else {
+                        texture_flag_data[geometry_type].push_back( 0 ); // 0 means use RGB color
+                        texture_ID_data[geometry_type].push_back( 0 );
+                    }
+                }
+            }else{
+                uv_data[geometry_type].at(uv_index) = 0.f;
+                uv_data[geometry_type].at(uv_index+1) = 0.f;
+                uv_index += 2;
+
+                if ( i==0 ) { //only need to do this one time
+                    if ( has_glyph_texture ) {
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
+                        texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
+                    }else {
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 0; // 0 means use RGB color
+                        texture_ID_data[geometry_type].at(texture_ID_index) = 0 ;
+                    }
+                    texture_flag_index++;
+                    texture_ID_index++;
                 }
             }
         }
     }
 
     helios::vec3 normal;
-    if ( geometry_type == GEOMETRY_TYPE_TRIANGLE || geometry_type == GEOMETRY_TYPE_RECTANGLE ) {
-        normal = normalize( cross( vertices_copy.at(1) - vertices_copy.at(0), vertices_copy.at(2) - vertices_copy.at(0) ) );
+    if (geometry_type == GEOMETRY_TYPE_TRIANGLE || geometry_type == GEOMETRY_TYPE_RECTANGLE) {
+        normal = normalize(cross(vertices_copy.at(1) - vertices_copy.at(0), vertices_copy.at(2) - vertices_copy.at(0)));
     }
-    normal_data[geometry_type].push_back( normal.x );
-    normal_data[geometry_type].push_back( normal.y );
-    normal_data[geometry_type].push_back( normal.z );
+    if ( geometry_is_new ) {
+        normal_data[geometry_type].push_back(normal.x);
+        normal_data[geometry_type].push_back(normal.y);
+        normal_data[geometry_type].push_back(normal.z);
 
-    color_data[geometry_type].push_back( color.r );
-    color_data[geometry_type].push_back( color.g );
-    color_data[geometry_type].push_back( color.b );
-    color_data[geometry_type].push_back( color.a );
+        color_data[geometry_type].push_back(color.r);
+        color_data[geometry_type].push_back(color.g);
+        color_data[geometry_type].push_back(color.b);
+        color_data[geometry_type].push_back(color.a);
 
-    coordinate_flag_data[geometry_type].push_back( coordinate_system );
+        coordinate_flag_data[geometry_type].push_back(coordinate_system);
 
-    visible_flag_data[geometry_type].push_back( visible_flag );
+        visible_flag_data[geometry_type].push_back(visible_flag);
 
-    delete_flag_data[geometry_type].push_back( false );
+        delete_flag_data[geometry_type].push_back(false);
 
-    context_geometry_flag_data[geometry_type].push_back( iscontextgeometry );
+        context_geometry_flag_data[geometry_type].push_back(iscontextgeometry);
+    }else {
+        normal_data[geometry_type].at(normal_index) = normal.x;
+        normal_data[geometry_type].at(normal_index+1) = normal.y;
+        normal_data[geometry_type].at(normal_index+2) = normal.z;
+
+        color_data[geometry_type].at(color_index) = color.r;
+        color_data[geometry_type].at(color_index+1) = color.g;
+        color_data[geometry_type].at(color_index+2) = color.b;
+        color_data[geometry_type].at(color_index+3) = color.a;
+    }
 
 }
 
-[[nodiscard]] size_t GeometryHandler::getRectangleCount( bool include_deleted ) const {
+bool GeometryHandler::doesGeometryExist(size_t UUID) const {
+    return (UUID_map.find(UUID) != UUID_map.end());
+}
+
+std::vector<size_t> GeometryHandler::getAllGeometryIDs() const {
+    std::vector<size_t> result;
+    result.reserve(UUID_map.size());
+    for ( const auto&[UUID, primitivemap] : UUID_map ) {
+        if ( getDeleteFlag(UUID) ) {
+            // Only include non-deleted geometries
+            continue;
+        }
+        result.push_back(UUID);
+    }
+    return result;
+}
+
+size_t GeometryHandler::getPrimitiveCount( bool include_deleted ) const {
+    size_t count = 0;
     if ( include_deleted ) {
-        return vertex_data.at(GEOMETRY_TYPE_RECTANGLE).size()/12;
+        for ( auto &type : all_geometry_types ) {
+            count += delete_flag_data.at(type).size();
+        }
+        return count;
     }
 
-    size_t count = 0;
-    for (const auto delete_flag : delete_flag_data.at(GEOMETRY_TYPE_RECTANGLE) ) {
-        if ( !delete_flag ) {
-            count++;
-        }
+    for ( auto &type : all_geometry_types ) {
+        count += std::count(delete_flag_data.at(type).begin(), delete_flag_data.at(type).end(), false);
     }
+    return count;
+}
+
+[[nodiscard]] size_t GeometryHandler::getRectangleCount( bool include_deleted ) const {
+    VisualizerGeometryType type = GEOMETRY_TYPE_RECTANGLE;
+    if ( include_deleted ) {
+        return delete_flag_data.at(type).size();
+    }
+
+    size_t count = std::count(delete_flag_data.at(type).begin(), delete_flag_data.at(type).end(), false);
     return count;
 }
 
 [[nodiscard]] size_t GeometryHandler::getTriangleCount( bool include_deleted ) const {
+    VisualizerGeometryType type = GEOMETRY_TYPE_TRIANGLE;
     if ( include_deleted ) {
-        return vertex_data.at(GEOMETRY_TYPE_TRIANGLE).size()/9;
+        return delete_flag_data.at(type).size();
     }
 
-    size_t count = 0;
-    for (const auto delete_flag : delete_flag_data.at(GEOMETRY_TYPE_TRIANGLE) ) {
-        if ( !delete_flag ) {
-            count++;
-        }
-    }
+    size_t count = std::count(delete_flag_data.at(type).begin(), delete_flag_data.at(type).end(), false);
     return count;
 }
 
 [[nodiscard]] size_t GeometryHandler::getPointCount( bool include_deleted ) const {
+    VisualizerGeometryType type = GEOMETRY_TYPE_POINT;
     if ( include_deleted ) {
-        return vertex_data.at(GEOMETRY_TYPE_POINT).size()/3;
+        return delete_flag_data.at(type).size();
     }
 
-    size_t count = 0;
-    for (const auto delete_flag : delete_flag_data.at(GEOMETRY_TYPE_POINT) ) {
-        if ( !delete_flag ) {
-            count++;
-        }
-    }
+    size_t count = std::count(delete_flag_data.at(type).begin(), delete_flag_data.at(type).end(), false);
     return count;
 }
 
 [[nodiscard]] size_t GeometryHandler::getLineCount( bool include_deleted ) const {
+    VisualizerGeometryType type = GEOMETRY_TYPE_LINE;
     if ( include_deleted ) {
-        return vertex_data.at(GEOMETRY_TYPE_LINE).size()/6;
+        return delete_flag_data.at(type).size();
     }
 
-    size_t count = 0;
-    for (const auto delete_flag : delete_flag_data.at(GEOMETRY_TYPE_LINE) ) {
-        if ( !delete_flag ) {
-            count++;
-        }
-    }
+    size_t count = std::count(delete_flag_data.at(type).begin(), delete_flag_data.at(type).end(), false);
     return count;
 }
 
@@ -521,6 +597,18 @@ const std::vector<int>* GeometryHandler::getCoordinateFlagData_ptr(VisualizerGeo
     return &coordinate_flag_data.at(geometry_type);
 }
 
+bool GeometryHandler::getDeleteFlag( size_t UUID ) const {
+#ifdef HELIOS_DEBUG
+    assert( UUID_map.find(UUID) != UUID_map.end() );
+#endif
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+
+    const size_t delete_flag_ind = index_map.delete_flag_index;
+
+    return delete_flag_data.at(index_map.geometry_type).at( delete_flag_ind );
+}
+
 void GeometryHandler::deleteGeometry( size_t UUID ) {
 
 #ifdef HELIOS_DEBUG
@@ -529,14 +617,13 @@ void GeometryHandler::deleteGeometry( size_t UUID ) {
 
     const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
 
-    delete_flag_data.at(index_map.geometry_type).at(index_map.vertex_index) = true;
-    visible_flag_data.at(index_map.geometry_type).at(index_map.vertex_index) = false;
+    delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) = true;
+    visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index) = false;
 
     deleted_primitive_count ++;
 
     if ( deleted_primitive_count>10000 ) {
         defragmentBuffers();
-        deleted_primitive_count = 0;
     }
 
 }
@@ -567,6 +654,8 @@ void GeometryHandler::clearAllGeometry() {
         delete_flag_data.at(geometry_type).clear();
     }
 
+    UUID_map.clear();
+
     deleted_primitive_count = 0;
 
 }
@@ -579,6 +668,7 @@ void GeometryHandler::clearContextGeometry() {
         }
 
         for ( size_t i=0; i<context_geometry_flag_data.at(geometry_type).size(); i++ ) {
+            assert (context_geometry_flag_data.at(geometry_type).size() == delete_flag_data.at(geometry_type).size());
             if ( context_geometry_flag_data.at(geometry_type).at(i) ) {
                 delete_flag_data.at(geometry_type).at(i) = true;
                 // visible_flag_data.at(geometry_type).at(i) = false;
@@ -713,7 +803,6 @@ void GeometryHandler::defragmentBuffers() {
             const size_t v1 = static_cast<size_t>(vcount);
             const size_t v3 = static_cast<size_t>(vcount) * 3;
             const size_t v2 = static_cast<size_t>(vcount) * 2;
-            const size_t v4 = static_cast<size_t>(vcount) * 4;
 
             // Record new base indices
             const size_t fi = newFace.size();
@@ -729,9 +818,7 @@ void GeometryHandler::defragmentBuffers() {
             const size_t dfi = newDeleteFlag.size();
 
             // Copy raw data
-            newFace.insert(newFace.end(),
-                             oldFace.begin() + prim.face_index_index,
-                             oldFace.begin() + prim.face_index_index + v1);
+            newFace.insert( newFace.end(), vcount, scast<int>(newVisible.size()) ); //the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.
 
             newVertex.insert(newVertex.end(),
                              oldVertex.begin() + prim.vertex_index,
@@ -739,7 +826,7 @@ void GeometryHandler::defragmentBuffers() {
 
             newNormal.insert(newNormal.end(),
                              oldNormal.begin() + prim.normal_index,
-                             oldNormal.begin() + prim.normal_index + v3);
+                             oldNormal.begin() + prim.normal_index + 3);
 
             newUV.insert(newUV.end(),
                          oldUV.begin() + prim.uv_index,
@@ -747,7 +834,7 @@ void GeometryHandler::defragmentBuffers() {
 
             newColor.insert(newColor.end(),
                             oldColor.begin() + prim.color_index,
-                            oldColor.begin() + prim.color_index + v4);
+                            oldColor.begin() + prim.color_index + 4);
 
             newTexFlag.push_back(oldTexFlag[prim.texture_flag_index]);
             newTexID.push_back(oldTexID[prim.texture_ID_index]);

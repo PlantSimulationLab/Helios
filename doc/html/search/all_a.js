@@ -110,7 +110,7 @@ var searchData=
   ['aggregateprimitivedataproduct_107',['aggregatePrimitiveDataProduct',['../classhelios_1_1_context.html#a66b69dc68ed0a21353485eff97257047',1,'helios::Context']]],
   ['aggregateprimitivedatasum_108',['aggregatePrimitiveDataSum',['../classhelios_1_1_context.html#aad6f828c598f574cab637a263562bea2',1,'helios::Context']]],
   ['al_202011_20optimality_20based_20model_109',['Medlyn et al. (2011) Optimality-Based Model',['../_stomatal_doc.html#MoptTheory',1,'']]],
-  ['allocatebuffersize_110',['allocateBufferSize',['../class_geometry_handler.html#a2c17a9ba7cb9dec8d9c6338eeb65fcbb',1,'GeometryHandler']]],
+  ['allocatebuffersize_110',['allocateBufferSize',['../class_geometry_handler.html#a29108f6eba6919900cb65e326d000c3b',1,'GeometryHandler']]],
   ['ambient_20longwave_20flux_111',['Ambient Longwave Flux',['../_solar_position_doc.html#LWTheory',1,'']]],
   ['ambient_20sources_112',['Adding Diffuse/Ambient Sources',['../_radiation_doc.html#AmbSource',1,'']]],
   ['an_20api_113',['What is an API?',['../_overview.html#whatisAPI',1,'']]],

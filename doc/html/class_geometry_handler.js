@@ -8,7 +8,7 @@ var class_geometry_handler =
     ] ],
     [ "GeometryHandler", "class_geometry_handler.html#ae30bb732f2f45937a37644b7dc4395c5", null ],
     [ "addGeometry", "class_geometry_handler.html#a9edc7d1e8d58fa82e729407df568c058", null ],
-    [ "allocateBufferSize", "class_geometry_handler.html#a2c17a9ba7cb9dec8d9c6338eeb65fcbb", null ],
+    [ "allocateBufferSize", "class_geometry_handler.html#a29108f6eba6919900cb65e326d000c3b", null ],
     [ "clearAllGeometry", "class_geometry_handler.html#a099f5cea95062380926b0e4df146917b", null ],
     [ "clearContextGeometry", "class_geometry_handler.html#a3d3d451e0ba63d291904218c5d5ba015", null ],
     [ "deleteGeometry", "class_geometry_handler.html#a0c480775a4eda80bb96d01f6dd1e0893", null ],

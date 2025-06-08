@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -344,12 +344,12 @@ Getting the Solar Flux</h2>
 <div class="line">    <span class="keywordtype">float</span> zenith = sun.getSunZenith(); <span class="comment">//zenithal angle (radians)</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//Calculate solar flux</span></div>
-<div class="line">    <span class="keywordtype">float</span> R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
-<div class="line">    <span class="keywordtype">float</span> R_horiz = R*cos(zenith);  <span class="comment">//flux on horizontal surface</span></div>
+<div class="line">    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
+<div class="line">    <span class="keywordtype">float</span> R_horiz = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*cos(zenith);  <span class="comment">//flux on horizontal surface</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">float</span> f_diff = sun.getDiffuseFraction( 101000, 300, 0.6, 0.05 ); <span class="comment">//fraction of diffuse radiation</span></div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> R_dir = R*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
+<div class="line">    <span class="keywordtype">float</span> R_dir = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
 </div><!-- fragment --><h3><a class="anchor" id="SolarFluxTurb"></a>
@@ -402,12 +402,12 @@ Incorporating the effects of clouds</h3>
 <div class="line">       <span class="keywordtype">float</span> Patm_Pa = context.queryTimeseriesData( <span class="stringliteral">&quot;Patm_Pa&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">       <span class="comment">//Calculate solar flux</span></div>
-<div class="line">       <span class="keywordtype">float</span> R = sun.getSolarFlux( Patm_Pa, Tair_K, humidity_rel, turbidity ); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
+<div class="line">       <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sun.getSolarFlux( Patm_Pa, Tair_K, humidity_rel, turbidity ); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
 <div class="line"> </div>
 <div class="line">       <span class="keywordtype">float</span> f_diff = sun.getDiffuseFraction( Patm_Pa, Tair_K, humidity_rel, turbidity ); <span class="comment">//fraction of diffuse radiation</span></div>
 <div class="line"> </div>
-<div class="line">       <span class="keywordtype">float</span> R_dir = R*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
-<div class="line">       <span class="keywordtype">float</span> R_diff = R*f_diff; <span class="comment">//diffuse component of flux (W/m^2)</span></div>
+<div class="line">       <span class="keywordtype">float</span> R_dir = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
+<div class="line">       <span class="keywordtype">float</span> R_diff = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*f_diff; <span class="comment">//diffuse component of flux (W/m^2)</span></div>
 <div class="line"> </div>
 <div class="line">   }</div>
 <div class="line">}</div>

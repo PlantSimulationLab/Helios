@@ -977,7 +977,7 @@ namespace helios {
      * \param[in] allowable_file_extensions Vector of allowable file extensions. If the output_directory is a file, it must have one of these extensions.
      * \return True if directory/file was valid, false otherwise
      */
-    bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
+    [[nodiscard]] bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**

@@ -113,7 +113,6 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><td>temperature <td>Kelvin <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive surface temperature.
  <tr><td>sensible\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Sensible heat flux.
  <tr><td>latent\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Latent heat flux.
- <tr><td>storage\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Storage heat flux.
  </table>
 
  \subsection EBOptionalOutputData Optional Output Primitive Data
@@ -122,6 +121,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
  <tr><td>boundarylayer\_conductance\_out <td>mol air/m<sup>2</sup>-s <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
  <tr><td>vapor\_pressure\_deficit <td>mol/mol <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Surface vapor pressure deficit.
+ <tr><td>storage\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Storage heat flux.
+ <tr><td>net\_radiation\_flux <td>W/m<sup>2</sup> <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Primitive net radiation flux (absorption minus emission).
  </table>
 
  \section EBUse Using the Energy Balance Model Plug-in

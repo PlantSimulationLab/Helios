@@ -311,7 +311,7 @@ RT_PROGRAM void closest_hit_camera() {
             //specular reflection
 
            double strength_spec = 0;
-           if( specular_reflection_enabled && specular_exponent[objID] > 0.f ) {
+           if( specular_reflection_enabled > 0 && specular_exponent[objID] > 0.f ) {
                for( int rr=0; rr<Nsources; rr++ ) {
 
                    //light direction
@@ -335,7 +335,11 @@ RT_PROGRAM void closest_hit_camera() {
 
                    //specular reflection
                    float exponent = specular_exponent[objID];
-                   strength_spec += spec * pow( max(0.f,dot(specular_direction,normal)), exponent)*(exponent+2.f)/(double(launch_dim.x)*2.f*M_PI); //launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
+                   double scale_coefficient = 1.0;
+                   if( specular_reflection_enabled == 2 ){ //if we are using the scale coefficient
+                       scale_coefficient = specular_scale[objID];
+                   }
+                   strength_spec += spec * scale_coefficient * pow( max(0.f,dot(specular_direction,normal)), exponent)*(exponent+2.f)/(double(launch_dim.x)*2.f*M_PI); //launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
                }
             }
 

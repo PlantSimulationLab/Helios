@@ -979,7 +979,7 @@ private:
 
     void render(bool shadow) const;
 
-    void setupPlot();
+    void transferBufferData();
 
     /**
      * \brief Registers a texture file and obtains its unique texture ID.
@@ -1028,7 +1028,7 @@ private:
     std::string colorPrimitivesByObjectData, colorPrimitivesByData;
     std::map<uint, uint> colorPrimitives_UUIDs, colorPrimitives_objIDs;
 
-    std::vector<int> contextPrimitiveIDs;
+    std::vector<uint> contextUUIDs_build;
 
     std::vector<float> depth_buffer_data;
 
@@ -1157,7 +1157,7 @@ private:
     //!Field of view of the camera in degrees
     float camera_FOV;
 
-    bool contextGeomNeedsUpdate;
+    bool build_all_context_geometry = false;
 
     bool primitiveColorsNeedUpdate;
 

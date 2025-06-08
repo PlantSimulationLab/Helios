@@ -17,7 +17,7 @@
       <tab type="user" visible="yes" url="@ref AerialLiDARDoc" title="Aerial LiDAR"/>
       <tab type="user" visible="yes" url="@ref PhotosynthesisDoc" title="Photosynthesis Models"/>
       <tab type="user" visible="yes" url="@ref StomatalDoc" title="Stomatal Conductance Models"/>
-      <tab type="user" visible="yes" url="@ref SolarPositionDoc" title="Solar Positoin and Fluxes Model"/>
+      <tab type="user" visible="yes" url="@ref SolarPositionDoc" title="Solar Position and Fluxes Model"/>
       <tab type="user" visible="yes" url="@ref VoxelIntersectionDoc" title="Voxel Intersection"/>
       <tab type="user" visible="yes" url="@ref PlantArchitectureDoc" title="Plant Architecture"/>
       <tab type="user" visible="yes" url="@ref CanopyGeneratorDoc" title="Canopy Generator"/>

@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.32</span>
+       <span id="projectnumber">&#160;v1.3.33</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -388,7 +388,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    phytomer_parameters_almond.leaf.prototype_scale = 0.08;</div>
 <div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    phytomer_parameters_almond.leaf.prototype = leaf_prototype;</div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    phytomer_parameters_almond.peduncle.length = 0.005;</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    phytomer_parameters_almond.peduncle.length = 0.002;</div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    phytomer_parameters_almond.peduncle.radius = 0.0005;</div>
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    phytomer_parameters_almond.peduncle.pitch = 80;</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    phytomer_parameters_almond.peduncle.roll = 90;</div>
@@ -400,7 +400,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    phytomer_parameters_almond.inflorescence.roll = 0;</div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    phytomer_parameters_almond.inflorescence.flower_prototype_scale = 0.04;</div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    phytomer_parameters_almond.inflorescence.flower_prototype_function = AlmondFlowerPrototype;</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    phytomer_parameters_almond.inflorescence.fruit_prototype_scale = 0.06;</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    phytomer_parameters_almond.inflorescence.fruit_prototype_scale = 0.04;</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    phytomer_parameters_almond.inflorescence.fruit_prototype_function = AlmondFruitPrototype;</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="comment">// ---- Shoot Parameters ---- //</span></div>
@@ -413,11 +413,11 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;</div>
 <div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;</div>
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    shoot_parameters_trunk.max_nodes = 20;</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    shoot_parameters_trunk.girth_area_factor = 8.f;</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    shoot_parameters_trunk.girth_area_factor = 10.f;</div>
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;</div>
 <div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    shoot_parameters_trunk.vegetative_bud_break_time = 0;</div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    shoot_parameters_trunk.tortuosity = 1;</div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    shoot_parameters_trunk.internode_length_max = 0.05;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    shoot_parameters_trunk.internode_length_max = 0.04;</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    shoot_parameters_trunk.internode_length_decay_rate = 0;</div>
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    shoot_parameters_trunk.defineChildShootTypes({<span class="stringliteral">&quot;scaffold&quot;</span>},{1});</div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
@@ -428,11 +428,11 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;</div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    shoot_parameters_proleptic.max_nodes = 50;</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    shoot_parameters_proleptic.max_nodes_per_season = 30;</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    shoot_parameters_proleptic.phyllochron_min = 2.5;</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    shoot_parameters_proleptic.elongation_rate_max = 0.20;</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    shoot_parameters_proleptic.girth_area_factor = 7.5;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    shoot_parameters_proleptic.max_nodes = 20;</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    shoot_parameters_proleptic.max_nodes_per_season = 15;</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    shoot_parameters_proleptic.phyllochron_min = 1;</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    shoot_parameters_proleptic.elongation_rate_max = 0.3;</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    shoot_parameters_proleptic.girth_area_factor = 8.f;</div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.15;</div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;</div>
 <div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    shoot_parameters_proleptic.vegetative_bud_break_time = 0;</div>
@@ -440,12 +440,12 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    shoot_parameters_proleptic.tortuosity = 3;</div>
 <div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution( 25, 30);</div>
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    shoot_parameters_proleptic.insertion_angle_decay_rate = 15;</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    shoot_parameters_proleptic.internode_length_max = 0.03;</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    shoot_parameters_proleptic.internode_length_min = 0.004;</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;</div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    shoot_parameters_proleptic.fruit_set_probability = 0.5;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    shoot_parameters_proleptic.internode_length_max = 0.02;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    shoot_parameters_proleptic.internode_length_min = 0.002;</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    shoot_parameters_proleptic.internode_length_decay_rate = 0.002;</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    shoot_parameters_proleptic.fruit_set_probability = 0.4;</div>
 <div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    shoot_parameters_proleptic.max_terminal_floral_buds = 4;</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    shoot_parameters_proleptic.max_terminal_floral_buds = 3;</div>
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    shoot_parameters_proleptic.flowers_require_dormancy = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    shoot_parameters_proleptic.growth_requires_dormancy = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    shoot_parameters_proleptic.determinate_shoot_growth = <span class="keyword">false</span>;</div>
@@ -459,10 +459,10 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a035fd0a57c899087e2948196c2d250e2" title="Stores parameters related to a phytomer in the shoot.">phytomer_parameters</a>.<a class="code hl_variable" href="struct_phytomer_parameters.html#a2c495bf169f2ab7f28305c82947f4476" title="Parameters defining the characteristics of a leaf.">leaf</a>.pitch.uniformDistribution(-45, -20);</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#aac56cf0d2bb7c8ba8c6df5988bd9efe6" title="Angle (deg) of the child shoot with respect to the parent shoot at the tip of the parent shoot.">insertion_angle_tip</a> = 0;</div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a451f15d619ebbf33bdf192a2397b79e9" title="Rate (deg/node) at which the child insertion angle increases moving down the parent shoot.">insertion_angle_decay_rate</a> = 0;</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#ade621b64b2d75ea13a9702529aab8118" title="Minimum time (days) between the emergence of successive phytomers along the shoot.">phyllochron_min</a> = 2;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#ade621b64b2d75ea13a9702529aab8118" title="Minimum time (days) between the emergence of successive phytomers along the shoot.">phyllochron_min</a> = 1;</div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a4a8af02c66f9f111f03b0b35600db969" title="Minimum probability that a bud will break and form a new shoot.">vegetative_bud_break_probability_min</a> = 0.1;</div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a0c6730cd4779996e142fd955cc5c8feb" title="Gravitropic curvature (deg/m); positive values curve the shoot upward toward vertical.">gravitropic_curvature</a>= 600;</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a> = 0.06;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a> = 0.02;</div>
 <div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a5f31f2a0f9d1c0213adc266057d45d4f" title="Flag indicating whether flower buds require a winter dormancy period to emerge.">flowers_require_dormancy</a> = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    shoot_parameters_sylleptic.<a class="code hl_variable" href="struct_shoot_parameters.html#a8bbe95d907caaa7a2b4456e2b97ec7c2" title="Flag indicating whether vegetative buds require a winter dormancy period to emerge.">growth_requires_dormancy</a> = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    shoot_parameters_sylleptic.<a class="code hl_function" href="struct_shoot_parameters.html#abe788751264457e68195515231484d15" title="Defines shoot types for child shoots with their associated probabilities.">defineChildShootTypes</a>({<span class="stringliteral">&quot;proleptic&quot;</span>},{1.0});</div>
@@ -471,9 +471,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;</div>
 <div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span><span class="comment">//    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;</span></div>
 <div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#a035fd0a57c899087e2948196c2d250e2" title="Stores parameters related to a phytomer in the shoot.">phytomer_parameters</a>.<a class="code hl_variable" href="struct_phytomer_parameters.html#afd92e77a87bec17a845f81d146600b39" title="Parameters defining the characteristics of an internode.">internode</a>.radial_subdivisions = 10;</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#a1b7d4d745d7c738837be69221785905e" title="Maximum number of nodes/phytomers along a shoot.">max_nodes</a> = 40;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#a1b7d4d745d7c738837be69221785905e" title="Maximum number of nodes/phytomers along a shoot.">max_nodes</a> = 15;</div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#a0c6730cd4779996e142fd955cc5c8feb" title="Gravitropic curvature (deg/m); positive values curve the shoot upward toward vertical.">gravitropic_curvature</a> = 150;</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a> = 0.04;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a> = 0.02;</div>
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    shoot_parameters_scaffold.<a class="code hl_variable" href="struct_shoot_parameters.html#a5c7b984627bdcc6711c71e6e19778a85" title="Standard deviation (deg · m⁻⁰·⁵) controlling random wiggle (tortuosity) along the shoot.">tortuosity</a> = 1.;</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    shoot_parameters_scaffold.<a class="code hl_function" href="struct_shoot_parameters.html#abe788751264457e68195515231484d15" title="Defines shoot types for child shoots with their associated probabilities.">defineChildShootTypes</a>({<span class="stringliteral">&quot;proleptic&quot;</span>},{1.0});</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
@@ -495,8 +495,8 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span> </div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span><span class="comment">//    enableEpicormicChildShoots(plantID,&quot;sylleptic&quot;,0.001);</span></div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span> </div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    uint uID_trunk = <a class="code hl_function" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6" title="Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...">addBaseStemShoot</a>(plantID, 19, make_AxisRotation(context_ptr-&gt;randu(0.f, 0.05f * M_PI), context_ptr-&gt;randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.04, 1.f, 1.f, 0, <span class="stringliteral">&quot;trunk&quot;</span>);</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <a class="code hl_function" href="class_plant_architecture.html#a122fad48603e2e0f2fe6d870c691bfd1" title="Add a new phytomer at the terminal bud of a shoot.">appendPhytomerToShoot</a>( plantID, uID_trunk, shoot_types.at(<span class="stringliteral">&quot;trunk&quot;</span>).phytomer_parameters, 0, 0.01, 1, 1);</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    uint uID_trunk = <a class="code hl_function" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6" title="Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...">addBaseStemShoot</a>(plantID, 19, make_AxisRotation(context_ptr-&gt;randu(0.f, 0.05f * M_PI), context_ptr-&gt;randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.03, 1.f, 1.f, 0, <span class="stringliteral">&quot;trunk&quot;</span>);</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <a class="code hl_function" href="class_plant_architecture.html#a122fad48603e2e0f2fe6d870c691bfd1" title="Add a new phytomer at the terminal bud of a shoot.">appendPhytomerToShoot</a>( plantID, uID_trunk, shoot_types.at(<span class="stringliteral">&quot;trunk&quot;</span>).phytomer_parameters, 0.01, 0.01, 1, 1);</div>
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span> </div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    plant_instances.at(plantID).shoot_tree.at(uID_trunk)-&gt;meristem_is_alive = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span> </div>

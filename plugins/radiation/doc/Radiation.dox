@@ -122,9 +122,17 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      <td>specular\_exponent</td>
      <td>N/A</td>
      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
-     <td>Value controlling the strength of specular reflection in simulated camera images.</td>
+     <td>Value controlling the spread of specular reflection distribution in simulated camera images.</td>
      <td>N/A</td>
      <td>-1 (specular reflection disabled)</td>
+   </tr>
+   <tr>
+     <td>specular\_scale</td>
+     <td>N/A</td>
+     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>Value that scales the strength of specular reflection in simulated camera images.</td>
+     <td>N/A</td>
+     <td>1.0</td>
    </tr>
  </table>	
  
@@ -572,23 +580,25 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsubsection RadCamSpecular Radiation Camera Specular Reflection
 
- The specular exponent is a measure of how "shiny" the surface is. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.
+ Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.
 
- Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.
+ Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.
 
  The strength of specular reflection is calculated according to the following equation:
 
  \f[
-    I_{spec} = I_{s} \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
+    I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
  \f]
 
- where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the outgoing flux of the sampled primitive, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
+ where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the outgoing flux of the sampled primitive, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
 
  \f[
     \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
  \f]
 
- The figure below shows the effect of different specular exponents on the simulated camera image.
+ By default, \f$k_s\f$ is set to 1.0. The primitive data "specular_exponent" must be set in order to enable specular reflection (if it is not set, the value of primitive data "specular_scale" will be ignored).
+
+ The figure below shows the effect of different specular exponents on the simulated camera image (\f$k_s = 1\f$ for all images).
 
  \image html specular_exponent_comparison.png
 

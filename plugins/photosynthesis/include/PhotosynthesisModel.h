@@ -561,7 +561,7 @@ public:
 
     //! Print a report detailing usage of default input values based on a subset of primitive UUIDs
     /**
-     * \params[in] UUIDs Universal unique identifiers for report
+     * \param[in] UUIDs Universal unique identifiers for report
      */
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 
