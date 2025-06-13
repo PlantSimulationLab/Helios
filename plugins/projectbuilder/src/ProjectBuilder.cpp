@@ -450,14 +450,14 @@ void ProjectBuilder::updatePrimitiveTypes(){
     primitive_names.clear();
     primitive_names_set.clear();
     primitive_UUIDs.clear();
-    primitive_continuous.clear();
-    primitive_values.clear();
-    primitive_spectra.clear();
+    // primitive_continuous.clear();
+    // primitive_values.clear();
+    // primitive_spectra.clear();
     //
     primitive_names.push_back("All");
     primitive_names_set.insert("All");
-    primitive_continuous.insert({"All", {false, false, false}});
-    primitive_spectra.insert({"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}});
+    // primitive_continuous.insert({"All", {false, false, false}});
+    // primitive_spectra.insert({"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}});
     for (auto &primitive_UUID : allUUIDs){
         std::string default_value;
         if(context->doesPrimitiveDataExist(primitive_UUID, "object_label")){
@@ -470,32 +470,33 @@ void ProjectBuilder::updatePrimitiveTypes(){
                 std::vector<uint> new_UUIDs;
                 // primitive_addresses[default_value] = &new_UUIDs;
                 primitive_UUIDs.insert({default_value, new_UUIDs});
-                // primitive_continuous[default_value] = primitive_continuous["All"];
+            }
+            primitive_UUIDs[default_value].push_back(primitive_UUID);
+            if ( primitive_continuous.find(default_value) == primitive_continuous.end() ){
                 primitive_continuous.insert({default_value, {false, false, false}});
                 for (std::string band : bandlabels){
                     primitive_values[band].insert({default_value, {reflectivity, transmissivity, emissivity}});
                 }
                 primitive_spectra.insert({default_value, {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}});
             }
-            primitive_UUIDs[default_value].push_back(primitive_UUID);
         }
         current_primitive = "All";
     }
-    for (auto it = bounding_boxes.begin(); it != bounding_boxes.end(); /* no increment here */) {
-        if (primitive_names_set.find(it->first) == primitive_names_set.end()) {
-            it = bounding_boxes.erase(it);
-        }else {
-            ++it;
-        }
-    }
-    for (auto& prim : primitive_names_set){
-        if (prim == "All"){
-            continue;
-        }
-        if (bounding_boxes.find(prim) == bounding_boxes.end()){
-            bounding_boxes[prim] = false;
-        }
-    }
+    // for (auto it = bounding_boxes.begin(); it != bounding_boxes.end(); /* no increment here */) {
+    //     if (primitive_names_set.find(it->first) == primitive_names_set.end()) {
+    //         it = bounding_boxes.erase(it);
+    //     }else {
+    //         ++it;
+    //     }
+    // }
+    // for (auto& prim : primitive_names_set){
+    //     if (prim == "All"){
+    //         continue;
+    //     }
+    //     if (bounding_boxes.find(prim) == bounding_boxes.end()){
+    //         bounding_boxes[prim] = false;
+    //     }
+    // }
     //context->setPrimitiveData
     // context->setPrimitiveData(); type uint or int
 }
@@ -698,6 +699,18 @@ void ProjectBuilder::record(){
         }
         std::filesystem::create_directory(image_dir);
         std::cout << "Saving images to " << image_dir << std::endl;
+        // Create classes.names file
+        std::ofstream classes_names_file(image_dir + "classes.names");
+        if (classes_names_file.is_open()) {
+            std::vector< std::string > classes(bounding_boxes_map.size());
+            for ( auto& bbox_pair : bounding_boxes_map ){
+                classes[bbox_pair.second] = bbox_pair.first;
+            }
+            for ( std::string cls : classes ){
+                classes_names_file << cls << std::endl;
+            }
+        }
+        //
         std::vector<uint> temp_lights{};
         for (std::string rig_label : rig_labels_set){
             int rig_index = rig_dict[rig_label];
@@ -775,13 +788,11 @@ void ProjectBuilder::record(){
                             if (!primitive_name.empty()){
                                 primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                             }
-                            if (bounding_boxes_map.find(primitive_name) != bounding_boxes_map.end())
-                                // radiation->writeImageBoundingBoxes( cameralabel, "object_number", bounding_boxes_map[primitive_name], "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                                radiation->writeImageBoundingBoxes_ObjectData( cameralabel, "plantID", bounding_boxes_map[primitive_name], band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
-                            // radiation->writeImageBoundingBoxes( cameralabel, primitive_name, 0, "bbox_" + primitive_name + std::to_string(i), image_dir + rig_label + '/');
-                            // radiation->writeImageBoundingBoxes_ObjectData();
                         }
+                        for ( auto& box_pair : bounding_boxes_map )
+                            radiation->writeImageBoundingBoxes_ObjectData( cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
                     }
+
                     //
                 }
             }
@@ -908,21 +919,21 @@ void ProjectBuilder::buildFromXML(){
     if (enable_plantarchitecture){
         // context->getGlobalData( "ground_UUIDs", ground_UUIDs );
         // context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
-        for (std::string primitive_name : primitive_names){
-            if (primitive_name != "All" && primitive_name != "all"){
-                bounding_boxes[primitive_name] = false;
-                std::string primitive_name_lower = primitive_name;
-                primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
-                std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
-                if ( context->doesGlobalDataExist( primitive_UUIDs_name.c_str() ) ){
-                    context->getGlobalData( primitive_UUIDs_name.c_str(), primitive_UUIDs[primitive_name] );
-                    std::vector<uint> primitive_UUIDs_ = primitive_UUIDs[primitive_name];
-                    if ( !primitive_UUIDs_.empty()){
-                        context->setPrimitiveData(primitive_UUIDs[primitive_name], "object_label", primitive_name_lower);
-                    }
-                }
-            }
-        }
+        // for (std::string primitive_name : primitive_names){
+        //     if (primitive_name != "All" && primitive_name != "all"){
+        //         bounding_boxes[primitive_name] = false;
+        //         std::string primitive_name_lower = primitive_name;
+        //         primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
+        //         std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
+        //         if ( context->doesGlobalDataExist( primitive_UUIDs_name.c_str() ) ){
+        //             context->getGlobalData( primitive_UUIDs_name.c_str(), primitive_UUIDs[primitive_name] );
+        //             std::vector<uint> primitive_UUIDs_ = primitive_UUIDs[primitive_name];
+        //             if ( !primitive_UUIDs_.empty()){
+        //                 context->setPrimitiveData(primitive_UUIDs[primitive_name], "object_label", primitive_name_lower);
+        //             }
+        //         }
+        //     }
+        // }
         ground_UUIDs = primitive_UUIDs["ground"];
         leaf_UUIDs = primitive_UUIDs["leaf"];
         // assert( !ground_UUIDs.empty() );
@@ -2278,6 +2289,7 @@ void ProjectBuilder::visualize(){
                 visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
                     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
                 visualizer->plotUpdate();
+                updatePrimitiveTypes();
                 updateSpectra();
                 updateCameras(); //TODO: figure out why this causes an error
                 record();
@@ -5917,16 +5929,16 @@ void ProjectBuilder::setBoundingBoxObjects(){
             idx++;
         }
     }
-    std::vector<uint> all_UUIDs = context->getAllUUIDs();
-    context->clearPrimitiveData(all_UUIDs, "object_number");
-    for (auto &UUID : all_UUIDs){
-        if (!context->doesPrimitiveDataExist(UUID, "object_label")) continue;
-        std::string obj_label;
-        context->getPrimitiveData(UUID, "object_label", obj_label);
-        if (bounding_boxes_map.find(obj_label) != bounding_boxes_map.end()){
-            context->setPrimitiveData(UUID, "object_number", HELIOS_TYPE_UINT, 1, &bounding_boxes_map[obj_label]);
-        }
-    }
+    // std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    // context->clearPrimitiveData(all_UUIDs, "object_number");
+    // for (auto &UUID : all_UUIDs){
+    //     if (!context->doesPrimitiveDataExist(UUID, "object_label")) continue;
+    //     std::string obj_label;
+    //     context->getPrimitiveData(UUID, "object_label", obj_label);
+    //     if (bounding_boxes_map.find(obj_label) != bounding_boxes_map.end()){
+    //         context->setPrimitiveData(UUID, "object_number", HELIOS_TYPE_UINT, 1, &bounding_boxes_map[obj_label]);
+    //     }
+    // }
 }
 
 
