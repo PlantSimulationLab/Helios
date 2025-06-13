@@ -398,7 +398,9 @@ class ProjectBuilder {
                                                 "peduncle", "petal", "pedicel", "fruit"};
 
     //! Bounding boxes
-    std::map<std::string, bool> bounding_boxes;
+    std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
+                                                  {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
+                                                  {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
