@@ -2,7 +2,7 @@ name: Build and Run on Linux
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "actions-testing" ]
   pull_request:
     branches: [ "master" ]
 
