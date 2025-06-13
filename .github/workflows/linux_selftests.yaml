@@ -22,7 +22,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2a
+          aws-region: us-west-2
       - run: |
           aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
           aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
@@ -68,7 +68,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2a
+          aws-region: us-west-2
       - run: |
           aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
           aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
