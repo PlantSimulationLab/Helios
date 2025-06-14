@@ -33,6 +33,11 @@ __device__ float evaluateEnergyBalance( float T, float R, float Qother, float ep
     //Outgoing emission flux
     float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
 
+    // Added by sbanks from previous commit
+    float cp_air_mol = 29.25f; //Molar specific heat of air. Units: J/mol
+    float lambda_mol = 44000.f; //Latent heat of vaporization for water. Units: J/mol
+    //
+
     //Sensible heat flux
     float QH = cp_air_mol*gH*(T-Ta); // (see Campbell and Norman Eq. 6.8)
 
