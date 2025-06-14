@@ -2545,13 +2545,6 @@ void ProjectBuilder::visualize(){
                         ImGui::InputInt2("Number of Tiles", temp);
                         num_tiles.x = temp[0];
                         num_tiles.y = temp[1];
-                        // ####### SUBPATCHES ####### //
-                        ImGui::SetNextItemWidth(60);
-                        temp[0] = subpatches.x;
-                        temp[1] = subpatches.y;
-                        ImGui::InputInt2("Subpatches", temp);
-                        subpatches.x = temp[0];
-                        subpatches.y = temp[1];
                     }
 
                     ImGui::EndTabItem();
@@ -5849,8 +5842,8 @@ void ProjectBuilder::updateGround(){
         context->translatePrimitive( ground_UUIDs, domain_origin );
         ground_objID = context->addPolymeshObject( ground_UUIDs );
     }else if( !ground_texture_file.empty() && ground_flag == 1 && use_ground_texture ){
-        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+        if (num_tiles.x > 1 || num_tiles.y > 1 || ground_resolution.x > 1 || ground_resolution.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
 
             return;
         }else{
@@ -5863,8 +5856,8 @@ void ProjectBuilder::updateGround(){
         ground_color_.g = ground_color[1];
         ground_color_.b = ground_color[2];
 
-        if (num_tiles.x > 1 || num_tiles.y > 1 || subpatches.x > 1 || subpatches.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, subpatches, ground_texture_file.c_str(), 0.f );
+        if (num_tiles.x > 1 || num_tiles.y > 1 || ground_resolution.x > 1 || ground_resolution.y > 1){
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
             context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
             return;
@@ -5969,6 +5962,7 @@ void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &gr
 
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
 
 }
