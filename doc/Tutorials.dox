@@ -20,7 +20,7 @@
   \section VisualizerTuts Visualizer Plug-In
   - \subpage visualizer_basics_tutorial "Tutorial 7: Visualizer Basics"
   - \subpage visualizer_pdata_tutorial "Tutorial 8: Visualizing Variable and Primitive Data"
-  - Tutorial 9: Customizing_tutorial %Visualizer Configuration
+  - Tutorial 9: Visualizer Configuration
 
   \section RadiationTuts Radiation Model Plug-In
   - \subpage radiation_basics_tutorial "Tutorial 10: Radiation model basics - tree light interception"
@@ -80,7 +80,7 @@
 
   \section build_2 Building, Compiling, and Running
 
-  Before building and compiling, please reference the \ref QuickStart "Getting Started" page to ensure you have installed all required dependent libraries.
+  Before building and compiling, please reference the \ref DependentSoftware "Install and Set-up" page to ensure you have installed all required dependent libraries.
 
   The files needed to build and compile this tutorial are located in the directory "samples/context_selftest".  There is a "CMakeLists.txt" file that contains the information needed to build the project.  There is also the file "main.cpp" which contains the source code for the program that we wrote previously, and there is a directory called "build" which will be used to hold the files and folders for the current build of the code.  Note, however, that the build directory could be placed anywhere and have any name.
 
@@ -143,7 +143,7 @@
 
  There are several vector types commonly used in Helios, which are listed in the table below.  These are essentially C++ structures, that contain several data elements and functions to operate on that data.
 
- One example of these vector types is a vector of three values: \ref helios::vec3.  It contains three elements - x,y,z - and is commonly used to represent 3D coordinates in space.  When working with 3D vectors, there are operations that often need to be performed such as normalizing the vector to unit length, performing a dot product, or adding two vectors.  Thus, there are many built-in funcitons and operations associated with these vector types.
+ One example of these vector types is a vector of three values: \ref helios::vec3.  It contains three elements - x,y,z - and is commonly used to represent 3D coordinates in space.  When working with 3D vectors, there are operations that often need to be performed such as normalizing the vector to unit length, performing a dot product, or adding two vectors.  Thus, there are many built-in functions and operations associated with these vector types.
 
  In this simple tutorial, we will learn how to work with Helios vector types.
 
@@ -156,7 +156,7 @@
    <tr><td>\ref helios::int3 "int3"</td><td>3D vector of integers</td><td>\ref helios::int3::x "x", \ref helios::int3::y "y", \ref helios::int3::z "z"</td><td>none</td><td>\ref helios::make_int3() "make_int3()"</td></tr>
    <tr><td>\ref helios::int4 "int4"</td><td>4D vector of integers</td><td>\ref helios::int4::x "x", \ref helios::int4::y "y", \ref helios::int4::z "z", \ref helios::int4::w "w"</td><td>none</td><td>\ref helios::make_int4() "make_int4()"</td></tr>
    <tr><td>\ref helios::RGBcolor "RGBcolor"</td><td>red-green-blue color code</td><td>\ref helios::RGBcolor::r "r", \ref helios::RGBcolor::g "g", \ref helios::RGBcolor::b "b"</td><td>\ref helios::RGBcolor::scale() "scale()"</td><td>\ref helios::make_RGBcolor() "make_RGBcolor()"</td></tr>
-   <tr>	<td>\ref helios::RGBAcolor "RGBAcolor"</td> <td>red-green-blue-alpha color code</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b", \ref helios::RGBAcolor::a "a"</td><td>\ref helios::RGBAcolor::scale() "scale()", \ref helios::RGBAcolor::clamp() "clamp()"</td><td>\ref helios::make_RGBAcolor() "make_RGBAcolor()"</td> </tr>
+   <tr>	<td>\ref helios::RGBAcolor "RGBAcolor"</td> <td>red-green-blue-alpha color code</td><td>\ref helios::RGBAcolor::r "r", \ref helios::RGBAcolor::g "g", \ref helios::RGBAcolor::b "b", \ref helios::RGBAcolor::a "a"</td><td>\ref helios::RGBAcolor::scale() "scale()", \ref helios::clamp() "clamp()"</td><td>\ref helios::make_RGBAcolor() "make_RGBAcolor()"</td> </tr>
    <tr>	<td>\ref helios::Time "Time"</td><td>Time of day</td><td>\ref helios::Time::second "second", \ref helios::Time::minute "minute", \ref helios::Time::hour "hour"</td><td>none</td><td>\ref helios::make_Time() "make_Time()"</td></tr>
    <tr>	<td>\ref helios::Date "Date"</td><td>Calendar date (MM,DD,YYYY)</td><td>\ref helios::Date::day "day", \ref helios::Date::month "month", \ref helios::Date::year "year"</td><td>\ref helios::Date::JulianDay() "JulianDay()"</td><td>\ref helios::make_Date() "make_Date()"</td></tr>
  </table> 
@@ -189,7 +189,7 @@
 
  \section vec3tut Vector of Floats
 
- Vector types are also available for a 2-element (\ref helios::vec2 "vec2") and 3-element (\ref helios::vec3 "vec3") vector of floats. In addition to the similar elements and creation functions as for integers, we will also demonstrate several built-in funcions and operators.
+ Vector types are also available for a 2-element (\ref helios::vec2 "vec2") and 3-element (\ref helios::vec3 "vec3") vector of floats. In addition to the similar elements and creation functions as for integers, we will also demonstrate several built-in functions and operators.
 
   ~~~~~~{.cpp}
   #include "Context.h"
@@ -309,7 +309,7 @@
    <tr>	<td>\ref helios::Voxel "Voxel"</td> <td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td> </tr>
  </table> 
 
- There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the \ref Context::addPatch( vec3, vec2 ) function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.
+ There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the `Context::addPatch()` function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.
 
  \section AddPatch Adding a Patch to the Context
     
@@ -329,7 +329,7 @@
   }
   ~~~~~~
 
- We will then call the \ref helios::Context::addPatch( const vec3& position, const vec2& size ) "addPatch( vec3 position, vec2 size )" function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the addPatch function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a \ref helios::vec3 "vec3", and the size argument is a \ref helios::vec2 "vec2". We will create variables "position" and "size" with types of vec3 and vec2, respectively.  We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.
+  We will then call the `Context::addPatch()` function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a \ref helios::vec3 "vec3", and the size argument is a \ref helios::vec2 "vec2". We will create variables "position" and "size" with types of vec3 and vec2, respectively.  We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.
 
   ~~~~~~{.cpp}
   #include "Visualizer.h" //don't need to include Context.h because it's included in Visualizer.h

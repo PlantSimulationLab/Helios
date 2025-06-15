@@ -63,6 +63,7 @@ var global_8h =
     [ "helios::PNGHasAlpha", "global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64", null ],
     [ "helios::point_distance", "global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754", null ],
     [ "helios::pointInPolygon", "group__functions.html#gaaa7da223bd02271d4f037b9e5305c023", null ],
+    [ "helios::powi", "global_8h.html#a29cdb66817a966ce144b518e9916b105", null ],
     [ "helios::rad2deg", "group__functions.html#ga0b9a2dac200293044d7e2ae1c03a3140", null ],
     [ "helios::randu", "group__functions.html#ga06cb0bc53a3903c6c487dd524bc2315e", null ],
     [ "helios::randu", "group__functions.html#gad8ccb7b3d22876e477b80d5c2bdb94c1", null ],

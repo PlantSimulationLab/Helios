@@ -148,19 +148,39 @@ std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centreloc
 //    context->setGlobalData((labelname+"_raw").c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
 //}
 
-// Add default color board (DKC-RPO) with spectral reflectivity values
 std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
+
+    return addDGKColorboard(centrelocation, patchsize, rotationrad);
+}
+
+std::vector<uint> CameraCalibration::addDGKColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
 
     if (!UUIDs_colorboard.empty()){
         context->deletePrimitive(UUIDs_colorboard);
-        std::cout << "WARNING (CameraCalibration::addDefaultColorboard): Existing colorboard has been cleared in order to add default colorboard."<< std::endl;
+        std::cout << "WARNING (CameraCalibration::addDGKColorboard): Existing colorboard has been cleared in order to add colorboard."<< std::endl;
     }
 
     context->loadXML( "plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml", true);
 
-    std::vector<uint> UUIDs = CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_default, spectrumassignment_default);
+    assert( context->doesGlobalDataExist("ColorReference_DGK_01") );
 
-    return UUIDs;
+    return CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_DGK, spectrumassignment_DGK);
+
+}
+
+std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
+
+    if (!UUIDs_colorboard.empty()){
+        context->deletePrimitive(UUIDs_colorboard);
+        std::cout << "WARNING (CameraCalibration::addCalibriteColorboard): Existing colorboard has been cleared in order to add colorboard."<< std::endl;
+    }
+
+    context->loadXML( "plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml", true);
+
+    assert( context->doesGlobalDataExist("ColorReference_Calibrite_01") );
+
+    return CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_Calibrite, spectrumassignment_Calibrite);
+
 }
 
 std::vector<uint> CameraCalibration::getColorBoardUUIDs(){

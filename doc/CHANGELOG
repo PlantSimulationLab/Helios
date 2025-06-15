@@ -2249,3 +2249,26 @@ Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 
 Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
 Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
+
+[1.3.34] 2025-06-15
+
+- Added .clang-format file for consistent code formatting across IDEs and agents.
+- Added AGENTS.md to give some basic instructions for AI agents.
+
+*Context*
+ - Reworked Context::cleanDeletedUUIDs() and Context::cleanDeletedObjectIDs() to erase invalid IDs using iterators, preventing unsigned underflow issues when vectors are empty.
+ - Fixed a loop in Context::loadMTL() that could cause unsigned underflow.
+ - Context::writeOBJ() can now maintain object groups based on the value of the primitive data "object_label".
+ - Context::writeOBJ() was defining normals (if enabled), but they were not being assigned to faces. This has been fixed.
+ - Improved stability of Tube::appendTubeSegment(), Context::addConeObject(), Context::addTubeObject(), and helios::rotatePointAboutLine() to prevent dividing by nearly zero when the vector length is very small.
+ - Added helios::powi() function to calculate integer powers of a number, which is more efficient than using std::pow() for integer exponents and avoids having to do "a = b*b*b*b", for example.
+ - Added methods Context::scaleObjectAboutOrigin() and Context::rotateObjectAboutOrigin() to scale and rotate an object about its origin, which can be set with Context::setObjectOrigin().
+
+ *Radiation*
+ - Added many new camera response spectra to the spectral library (spectral_data/camera_spectral_library.xml).
+ - The spectral labels were not correct for the default DGK colorboard (CameraCalibration::addDefaultColorboard()).
+ - Added the ability to create the Calibrite ColorChecker Classic in the scene. Accordingly added explicit functions CameraCalibration::addDGKColorboard() and CameraCalibration::addCalibriteColorboard() to add the two available color boards.
+ - Added RadiationModel::applyImageProcessingPipeline() to apply a digital camera-like processing pipeline to an image.
+
+ *Plant Architecture*
+ - Added capability to scale petioles of the same internode independently.

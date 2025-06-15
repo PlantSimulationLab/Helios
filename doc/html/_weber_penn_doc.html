@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -476,8 +476,7 @@ Leaf mask</h3>
 <p>The tree model uses a PNG texture mask to visualize leaves. This is a PNG image of the leaf with a transparent background. An example leaf mask is given in the image below. New leaf masks can be created using Gimp fairly easily. Simply find an image of the leaf, open in Gimp, add an alpha channel to the image, use the &lsquo;Fuzzy Select Tool&rsquo; to select the background, then go to Edit-&gt;Clear, and export in .png format. There are many tutorials online describing how to do this in more detail. Note that the leaf should be oriented as shown in the image below for consistency: petiole pointing to the left. Also note that the petiole is typically cropped out of the image.</p>
 <h2><a class="anchor" id="WPTgL"></a>
 User-Defined Leaf Angle Distribution Functions</h2>
-<p>By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '&lt;LeafAngleDist&gt; ... &lt;/LeafAngleDist&gt;'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \(\theta_L=0\) to \(\theta_L=\pi\) rad. <br  />
-</p>
+<p>By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution function can be specified for a given tree type in the tree library XML file using the tag '&lt;LeafAngleDist&gt; ... &lt;/LeafAngleDist&gt;'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \(\theta_L=0\) to \(\theta_L=\pi\) rad.</p>
 <p>Here is an example: Imagine that we wanted to have N=18 discrete leaf angle bins in our leaf angle PDF \(g_L\). The width of one discrete bin would be \(\Delta \theta_L=\pi/18\approx 0.1795\) rad. Each of the 18 bins of our PDF \(g_L\) should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:</p>
 <center> \(\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1\)</center><p>If this condition is not met by the PDF input by the user, the program will ignore it and revert to the default behavior.</p>
 <p>As a simple example, imagine we had only one leaf with an inclination of \(\theta_L=0.1\) rad. This leaf would fall in the first discrete bin of \(g_L\), which would have a value of \(1/\Delta \theta_L\) and all other bins would be zero.</p>

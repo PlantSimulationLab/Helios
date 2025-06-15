@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -197,7 +197,7 @@ C++ Program</h1>
 <p>We will save this file as "main.cpp", which we will reference later when building/compiling.</p>
 <h1><a class="anchor" id="build_2"></a>
 Building, Compiling, and Running</h1>
-<p>Before building and compiling, please reference the Getting Started page to ensure you have installed all required dependent libraries.</p>
+<p>Before building and compiling, please reference the <a class="el" href="_dependent_software.html">Install and Set-up</a> page to ensure you have installed all required dependent libraries.</p>
 <p>The files needed to build and compile this tutorial are located in the directory "samples/context_selftest". There is a "CMakeLists.txt" file that contains the information needed to build the project. There is also the file "main.cpp" which contains the source code for the program that we wrote previously, and there is a directory called "build" which will be used to hold the files and folders for the current build of the code. Note, however, that the build directory could be placed anywhere and have any name.</p>
 <p>To build the project, change into the build directory. Next, use the "cmake" command to build the code. The argument to the cmake command should be an absolute or relative path to the directory that contains the CMakeLists.txt file for the build. Given the directory structure used in this project, the CMakeLists.txt file is up one directory, so the relative path to this directory is "..". The following commands should build the project, assuming you are starting from the base Helios directory:</p>
 <div class="fragment"><div class="line">$ cd samples/context_selftest/build</div>

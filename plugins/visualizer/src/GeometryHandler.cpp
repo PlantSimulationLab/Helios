@@ -41,7 +41,6 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType& geo
 #ifdef HELIOS_DEBUG
     assert( vertices.size() == vertex_count );
     assert( uvs.empty() || uvs.size() == vertex_count );
-    assert( uvs.empty() || !texture.empty() );
 #endif
 
     std::vector<helios::vec3> vertices_copy = vertices; // make a copy so it can be modified
@@ -421,7 +420,7 @@ void GeometryHandler::setUVs( size_t UUID, const std::vector<helios::vec2>& uvs 
     const char vertex_count = getVertexCount( index_map.geometry_type );
 
 #ifdef HELIOS_DEBUG
-    assert( uv.size() == vertex_count );
+    assert( uvs.size() == vertex_count );
 #endif
 
     const size_t uv_ind = index_map.uv_index;

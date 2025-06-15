@@ -167,7 +167,11 @@ vec3 helios::rotatePointAboutLine(const vec3 &point, const vec3 &line_base, cons
     vec3 position;
 
     vec3 tmp = line_direction;
-    tmp.normalize();
+    float mag = tmp.magnitude();
+    if (mag < 1e-6f) {
+        return point;
+    }
+    tmp = tmp / mag;
     const float u = tmp.x;
     const float v = tmp.y;
     const float w = tmp.z;
@@ -272,6 +276,29 @@ float helios::asin_safe(float x) {
     else if (x > 1.0) x = 1.0;
     return asinf(x);
 }
+
+template<typename T>
+T helios::powi(T base, std::size_t exp) {
+    T result = static_cast<T>(1);
+    while (exp > 0) {
+        // If the low bit is set, multiply result by current base
+        if (exp & 1) {
+            result *= base;
+        }
+        // Square the base for the next bit
+        base *= base;
+        // Shift off the processed bit
+        exp >>= 1;
+    }
+    return result;
+}
+
+template float helios::powi(float base, std::size_t exp);
+template double helios::powi(double base, std::size_t exp);
+template int helios::powi(int base, std::size_t exp);
+template uint helios::powi(uint base, std::size_t exp);
+template char helios::powi(char base, std::size_t exp);
+template size_t helios::powi(size_t base, std::size_t exp);
 
 bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2) {
     float ax = q1.x - p1.x; // direction of line a

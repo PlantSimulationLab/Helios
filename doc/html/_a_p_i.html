@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -759,7 +759,7 @@ helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const he
 </ul>
 </td><td><a class="el" href="classhelios_1_1_context.html#a046e855d15fa88088be01adea38a67fd">helios::Context::getPrimitiveTransformationMatrix( uint, float (&amp;)[16] ) const</a> </td></tr>
 </table>
-<p>Some primitives have special functions specific to that type of primitive. For example, one may want to query the length and width of a Patch. These primitive-specific functions are tabulated below. If the type of the primitive corresponding to the UUID passed to the function does not match the primitive type for that function, and error will be thrown (for example passing a Triangle UUID to the function getPatchSize()).</p>
+<p>Some primitives have special functions specific to that type of primitive. For example, one may want to query the length and width of a Patch. These primitive-specific functions are tabulated below. If the type of the primitive corresponding to the UUID passed to the function does not match the primitive type for that function, an error will be thrown (for example passing a Triangle UUID to the function getPatchSize()).</p>
 <table class="doxtable">
 <tr>
 <th>Primitive Type/Property</th><th>Getter Function </th></tr>

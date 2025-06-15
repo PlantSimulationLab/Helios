@@ -37,7 +37,7 @@ var searchData=
   ['disk_5fintersect_34',['disk_intersect',['../primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75',1,'primitiveIntersection.cu']]],
   ['displayimage_35',['displayImage',['../class_visualizer.html#a901569b014e141edd41675a0bac17154',1,'Visualizer::displayImage(const std::vector&lt; unsigned char &gt; &amp;pixel_data, uint width_pixels, uint height_pixels)'],['../class_visualizer.html#a95f8e3cfa7e5ff02b28df493d3a2cbd1',1,'Visualizer::displayImage(const std::string &amp;file_name)']]],
   ['distancefilter_36',['distanceFilter',['../class_aerial_li_d_a_rcloud.html#acc26240eea9ec98c6b354041cd9b9efc',1,'AerialLiDARcloud::distanceFilter()'],['../class_li_d_a_rcloud.html#af21b843806f22fb9bc80e7ef370aee1d',1,'LiDARcloud::distanceFilter()']]],
-  ['distortimage_37',['distortImage',['../struct_camera_calibration.html#a75a0688aa37a6d7706cef4ee4b92dd7f',1,'CameraCalibration']]],
+  ['distortimage_37',['distortImage',['../struct_camera_calibration.html#ae05de1b77f6cdab7a14a5582321f71ad',1,'CameraCalibration']]],
   ['doesbandexist_38',['doesBandExist',['../class_radiation_model.html#a966780925811e3a710a6d91f4ac852fb',1,'RadiationModel']]],
   ['doesglobaldataexist_39',['doesGlobalDataExist',['../classhelios_1_1_context.html#a65ad9cb057b0cb2be3ef2734847608cc',1,'helios::Context']]],
   ['doeshitdataexist_40',['doesHitDataExist',['../class_aerial_li_d_a_rcloud.html#a9b5aa652c94d4dee19a4f956a62f2ab1',1,'AerialLiDARcloud::doesHitDataExist()'],['../class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0',1,'LiDARcloud::doesHitDataExist()']]],

@@ -3554,7 +3554,7 @@ Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helio
 
 Visualizer::Texture::Texture(const std::vector<unsigned char> &pixel_data, uint textureID, const helios::uint2 &image_resolution, const helios::uint2 &maximum_texture_size) : textureID(textureID) {
 #ifdef HELIOS_DEBUG
-    assert( pixel_data.size() == 4u*image_resolution.x*image_resolution.y, "ERROR: Invalid texture size." );
+    assert( pixel_data.size() == 4u*image_resolution.x*image_resolution.y );
 #endif
 
     texture_data = pixel_data;
@@ -3635,7 +3635,7 @@ uint Visualizer::registerTextureImage(const std::string &texture_file) {
 
 uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_data, const helios::uint2 &image_resolution) {
 #ifdef HELIOS_DEBUG
-    assert( !texture_data.empty() && texture_data.size() == 4*image_resolution.x*image_resolution.y, "ERROR: Invalid texture size." );
+    assert( !texture_data.empty() && texture_data.size() == 4*image_resolution.x*image_resolution.y );
 #endif
 
     const uint textureID = texture_manager.size();
@@ -3665,9 +3665,6 @@ uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file
 }
 
 uint Visualizer::registerTextureGlyph(const Glyph *glyph) {
-#ifdef HELIOS_DEBUG
-    assert( validateTextureFile(texture_file) );
-#endif
 
     const uint textureID = texture_manager.size();
 

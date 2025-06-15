@@ -1,11 +1,13 @@
 var struct_camera_calibration =
 [
     [ "GradientDescentParameters", "struct_camera_calibration_1_1_gradient_descent_parameters.html", null ],
+    [ "addCalibriteColorboard", "struct_camera_calibration.html#ab050093228412d637b6ad144504cc022", null ],
     [ "addCheckerboard", "struct_camera_calibration.html#ab101fe425760d29aab58073d626be460", null ],
     [ "addColorboard", "struct_camera_calibration.html#ad1c0a4605b3b3ea355b9f3dee1706ec9", null ],
     [ "addDefaultCheckerboard", "struct_camera_calibration.html#a73e6dfb0a8a3a68beeed498797310702", null ],
     [ "addDefaultColorboard", "struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8", null ],
-    [ "distortImage", "struct_camera_calibration.html#a75a0688aa37a6d7706cef4ee4b92dd7f", null ],
+    [ "addDGKColorboard", "struct_camera_calibration.html#a3bf289a5f6aae45fcdf96266e507b96d", null ],
+    [ "distortImage", "struct_camera_calibration.html#ae05de1b77f6cdab7a14a5582321f71ad", null ],
     [ "getCameraResponseScale", "struct_camera_calibration.html#a18eff4a7ecab1038f27b68c3963a5513", null ],
     [ "GradientDescent", "struct_camera_calibration.html#a5bfbb206b8271b406cda85eb5ae23a1b", null ],
     [ "loadXMLlabeldata", "struct_camera_calibration.html#a0e689ece69868c47a8d6f392dac06d19", null ],
