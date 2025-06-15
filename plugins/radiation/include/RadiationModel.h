@@ -41,19 +41,31 @@ struct CameraProperties{
     float focal_plane_distance;
 
     //! Diameter of the camera lens (lens_diameter = 0 gives a 'pinhole' camera with everything in focus)
-    float lens_diameter = 0.05;
+    float lens_diameter;
 
     //! Camera horizontal field of view in degrees
-    float HFOV = 20.f;
+    float HFOV;
 
     //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
-    float FOV_aspect_ratio = 1.f;
+    float FOV_aspect_ratio;
+
+    // The midgray target parameter defines the linear-light reflectance value (typically 0.18) that the auto-exposure algorithm uses as the scene-average reference when computing its global gain.
+    float exposure_midgray_target;
+
+    // The color correction matrix is a 4×3 linear transform that maps a camera’s raw sensor RGB values into a standardized color space by compensating for its spectral sensitivities and channel cross-talk.
+    std::array<float,12> color_correction_matrix;
 
     CameraProperties(){
         camera_resolution = helios::make_int2(512,512);
         focal_plane_distance = 1;
         lens_diameter = 0.05;
         FOV_aspect_ratio = 1.f;
+        HFOV = 20.f;
+        FOV_aspect_ratio = 1.f;
+        color_correction_matrix = {1,0,0,
+                                      0,1,0,
+                                      0,0,1,
+                                      0,0,0};
     }
 
     bool operator==(const CameraProperties &rhs) const {
@@ -61,7 +73,9 @@ struct CameraProperties{
                focal_plane_distance == rhs.focal_plane_distance &&
                lens_diameter == rhs.lens_diameter &&
                FOV_aspect_ratio == rhs.FOV_aspect_ratio &&
-               HFOV == rhs.HFOV;
+               HFOV == rhs.HFOV &&
+               exposure_midgray_target == rhs.exposure_midgray_target &&
+               color_correction_matrix == rhs.color_correction_matrix;
     }
 
 };
@@ -70,13 +84,18 @@ struct CameraProperties{
 struct RadiationCamera{
 
     //Constructor
-    RadiationCamera(std::string initlabel, const std::vector<std::string> &band_label, const helios::vec3 &initposition, const helios::vec3 &initlookat, const helios::int2 &initresolution, float initlens_diameter, float initfocal_length, float intitHFOV_degrees, float initFOV_aspect_ratio,
-                    uint initantialiasing_samples)
-            : label(std::move(initlabel)), band_labels(band_label), position(initposition), lookat(initlookat), lens_diameter(initlens_diameter), FOV_aspect_ratio(initFOV_aspect_ratio), resolution(initresolution), focal_length(initfocal_length), HFOV_degrees(intitHFOV_degrees), antialiasing_samples(initantialiasing_samples)
+    RadiationCamera(std::string initlabel, const std::vector<std::string> &band_label, const helios::vec3 &initposition, const helios::vec3 &initlookat, const CameraProperties &camera_properties, uint initantialiasing_samples)
+            : label(std::move(initlabel)), band_labels(band_label), position(initposition), lookat(initlookat), antialiasing_samples(initantialiasing_samples)
     {
         for( const auto &band : band_label ){
             band_spectral_response[band] = "uniform";
         }
+        focal_length = camera_properties.focal_plane_distance;
+        resolution = camera_properties.camera_resolution;
+        lens_diameter = camera_properties.lens_diameter;
+        HFOV_degrees = camera_properties.HFOV;
+        FOV_aspect_ratio = camera_properties.FOV_aspect_ratio;
+        color_correction_matrix = camera_properties.color_correction_matrix;
     }
 
     //Label for camera array
@@ -95,6 +114,8 @@ struct RadiationCamera{
     float HFOV_degrees;
     //Ratio of camera horizontal field of view to vertical field of view
     float FOV_aspect_ratio;
+    // The color correction matrix is a 4×3 linear transform that maps a camera’s raw sensor RGB values into a standardized color space by compensating for its spectral sensitivities and channel cross-talk.
+    std::array<float,12> color_correction_matrix;
     //Number of antialiasing samples per pixel
     uint antialiasing_samples;
 
@@ -107,11 +128,87 @@ struct RadiationCamera{
     std::vector<uint> pixel_label_UUID;
     std::vector<float> pixel_depth;
 
+    //! Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0.0 (no clamping applied)
+    void normalizePixels();
+
+    //! Apply auto-exposure scaling to image data to scale the average luminance to a target value.
+    /**
+     * Computes the image’s mean luminance and applies a single uniform gain so that the scene-average luminance becomes the specified grey_target value.
+     *
+     * \param[in] target [optional] Target average luminance value. Default is 18%.
+     */
+    void scaleToGreyTarget( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float target = 0.18f );
+
+    //! Apply auto-white balancing to image data based on Minkowski mean
+    /**
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] p [optional] Minkowski mean parameter. Default is 5.0.
+    */
+    void whiteBalance( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float p = 5.0 );
+
+    //! Apply Reinhard tone mapping curve to image data
+    /**
+     * The Reinhard curve applies a simple global tone mapping to compress high dynamic range into displayable range while preserving chroma.
+     *
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     */
+    void reinhardToneMapping( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label );
+
+    //! Apply local tone flattening to image data
+    /**
+     * Decomposes each pixel’s log-luminance into a blurred “base” and high-frequency “detail,” scales the base contrast toward its mean by the factor α, then recombines detail and base to lift shadows and compress highlights locally before applying the same gain to the RGB channels.
+     *
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] alpha [optional] Weighting factor between 0 and 1 that determines the amount of local tone flattening. 0 means no flattening, and 1 means full flattening. Default is 0.6.
+     */
+    void toneFlatten( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float alpha = 0.6f );
+
+    //! Apply image gain
+    /**
+     * Computes the specified percentile of the per-pixel maximum channel values and multiplies all channels by the reciprocal of that percentile so that it is mapped to full white (1.0).
+     *
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] percentile [optional] Percentile to use for gain computation (e.g., 0.9 for 90th percentile).
+     */
+    void applyGain( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile = 0.95f );
+
+    //! Apply the color correction matrix to image data
+    /**
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     */
+    void applyCCM( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label );
+
+    //! Apply gamma compression to image data
+    /**
+     * Applies the standard sRGB electro-optical transfer function to each channel of a linear-light image—clamping negatives to zero and limiting outputs to [0,1]—thereby encoding the data into display-ready sRGB space.  This final step ensures that pixel values map correctly to human‐perceived brightness on typical monitors.
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+    */
+    void gammaCompress( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label );
+
+    static float luminance(float red, float green, float blue) noexcept {  return 0.2126f*red + 0.7152f*green + 0.0722f*blue; }
+
+    static float toSRGB(float x) noexcept {
+      x = std::fminf(x, 1.0f);
+     return (x <= 0.0031308f) ? 12.92f*x : 1.055f*std::pow(x, 1.0f/2.4f) - 0.055f;
+     return (x <= 0.0031308f) ? 12.92f * x : 1.055f * std::pow(x, 1.0f / 2.0f) - 0.055f;
+    }
+
 };
 
 //! Properties defining a radiation band
 struct RadiationBand{
-public:
 
     //! Constructor
     explicit RadiationBand( std::string a_label, size_t directRayCount_default, size_t diffuseRayCount_default, float diffuseFlux_default, uint scatteringDepth_default, float minScatterEnergy_default ) : label(std::move(a_label)) {
@@ -746,6 +843,17 @@ public:
      */
     void setCameraSpectralResponse( const std::string &camera_label, const std::string &band_label, const std::string &global_data );
 
+    //! Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml).
+    /**
+     * Consult the documentation for available cameras in the library, or examine the file radiation/spectral_data/camera_spectral_library.xml.
+     * The naming convention is that the response data for the band starts with the camera model (e.g., "iPhone11") followed by an underscore, then the band label.
+     * In order for the response to be applied to the camera, the bands must all exist. For example, for iPhone11, there must exist bands "red", "green", and "blue".
+     *
+     * \param[in] camera_label Label for the camera to be set.
+     * \param[in] camera_library_name Name of the camera in the standard camera spectral library (e.g., "iPhone11", "NikonD700", etc.).
+     */
+    void setCameraSpectralResponseFromLibrary( const std::string &camera_label, const std::string &camera_library_name );
+
     //! Set the position of the radiation camera.
     /**
      * \param[in] camera_label Label for the camera to be set.
@@ -903,6 +1011,24 @@ public:
                              const std::vector<std::string>& cameraresponselabels, helios::vec2 wavelengthrange,
                              float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
 
+    //! Apply a digital camera-like processing pipeline to the camera image
+    /**
+     * This only applies to RGB cameras.
+     * 
+     * \param[in] cameralabel Label of camera to be used for processing
+     * \param[in] red_band_label Label of the red band
+     * \param[in] green_band_label Label of the green band
+     * \param[in] blue_band_label Label of the blue band
+     * \param[in] scale_grey_target If true, scale the grey target to 0.18
+     * \param[in] white_balance If true, apply white balance
+     * \param[in] reinhard_map If true, apply Reinhard tone mapping
+     * \param[in] tone_flatten If true, apply tone flattening based on an alpha value of 0.4
+     * \param[in] apply_gain If true, apply gain to the image
+     * \param[in] apply_CCM If true, apply color correction matrix (CCM) to the image
+     * \param[in] gamma_compress If true, apply gamma compression to the image
+    */
+    void applyImageProcessingPipeline( const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, bool scale_grey_target, bool white_balance, bool reinhard_map, bool tone_flatten, bool apply_gain, bool apply_CCM, bool gamma_compress  );
+    
     //! Write camera data for one or more bands to a JPEG image
     /**
      * \param[in] camera Label for camera to be queried
@@ -1186,19 +1312,19 @@ protected:
 
     //! Get 1D array of data for an OptiX buffer of floats
     /**
-        \param[in] "buffer" OptiX buffer object corresponding to 1D array of data
+        \param[in] buffer OptiX buffer object corresponding to 1D array of data
     */
     std::vector<float> getOptiXbufferData( RTbuffer buffer );
 
     //! Get 1D array of data for an OptiX buffer of doubles
     /**
-        \param[in] "buffer" OptiX buffer object corresponding to 1D array of data
+        \param[in] buffer OptiX buffer object corresponding to 1D array of data
     */
     std::vector<double> getOptiXbufferData_d( RTbuffer buffer );
 
     //! Get 1D array of data for an OptiX buffer of unsigned ints
     /**
-        \param[in] "buffer" OptiX buffer object corresponding to 1D array of data
+        \param[in] buffer OptiX buffer object corresponding to 1D array of data
     */
     std::vector<uint> getOptiXbufferData_ui( RTbuffer buffer );
 
@@ -1206,148 +1332,148 @@ protected:
 
     //! Set size of 1D buffer and initialize all elements to zero.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] bsize length of buffer.
     */
     void zeroBuffer1D(RTbuffer &buffer, size_t bsize  );
 
     //! Copy contents of one buffer to another
     /**
-     * \param[in] "buffer" OptiX buffer to copy FROM.
+     * \param[in] buffer OptiX buffer to copy FROM.
      * \param[out] buffer_copy OptiX buffer to copy TO.
     */
     void copyBuffer1D( RTbuffer &buffer, RTbuffer &buffer_copy );
 
     //! Set size of 1D buffer and initialize all elements based on a 1D array of doubles.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dd(RTbuffer &buffer, const std::vector<double> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Df(RTbuffer &buffer, const std::vector<float> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type float2.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dfloat2(RTbuffer &buffer, const std::vector<optix::float2> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type float3.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dfloat3(RTbuffer &buffer, const std::vector<optix::float3> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type float4.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dfloat4(RTbuffer &buffer, const std::vector<optix::float4> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type int.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Di(RTbuffer &buffer, const std::vector<int> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type unsigned int.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dui(RTbuffer &buffer, const std::vector<uint> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type int2.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dint2(RTbuffer &buffer, const std::vector<optix::int2> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type int3.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dint3(RTbuffer &buffer, const std::vector<optix::int3> &array );
     //! Set size of 1D buffer and initialize all elements based on a 1D array of type char.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 1D array used to initialize buffer.
     */
     void initializeBuffer1Dchar(RTbuffer &buffer, const std::vector<char> &array );
     //! Set size of 2D buffer and initialize all elements to zero.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] size length of buffer.
     */
     void zeroBuffer2D(RTbuffer &buffer, optix::int2 bsize  );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of doubles.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dd(RTbuffer &buffer, const std::vector<std::vector<double>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Df(RTbuffer &buffer, const std::vector<std::vector<float>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dfloat2(RTbuffer &buffer, const std::vector<std::vector<optix::float2>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dfloat3(RTbuffer &buffer, const std::vector<std::vector<optix::float3>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dfloat4(RTbuffer &buffer, const std::vector<std::vector<optix::float4>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Di(RTbuffer &buffer, const std::vector<std::vector<int>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dui(RTbuffer &buffer, const std::vector<std::vector<uint>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dint2(RTbuffer &buffer, const std::vector<std::vector<optix::int2>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dint3(RTbuffer &buffer, const std::vector<std::vector<optix::int3>> &array );
     //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 2D array used to initialize buffer.
     */
     void initializeBuffer2Dbool(RTbuffer &buffer, const std::vector<std::vector<bool>> &array );
 
     //! Set size of 3D buffer and initialize all elements based on a 3D array.
     /**
-     * \param[inout] "buffer" OptiX buffer to be initialized.
+     * \param[inout] buffer OptiX buffer to be initialized.
      * \param[in] array 3D array used to initialize buffer.
     */
     template <typename anytype>
@@ -1361,7 +1487,9 @@ protected:
 
     void updateCameraModelPosition(const std::string &cameralabel);
 
+    //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
     std::map<uint,std::vector<uint>> source_model_UUIDs;
+    //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
     std::map<std::string,std::vector<uint>> camera_model_UUIDs;
 
     /* Primary RT API objects */

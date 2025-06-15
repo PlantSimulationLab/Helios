@@ -2028,29 +2028,35 @@ bool Context::isPrimitiveHidden(uint UUID) const {
 }
 
 void Context::cleanDeletedUUIDs(std::vector<uint> &UUIDs) const {
-    for (size_t i = UUIDs.size(); i-- > 0;) {
-        if (!doesPrimitiveExist(UUIDs.at(i))) {
-            UUIDs.erase(UUIDs.begin() + i);
+    for (auto it = UUIDs.begin(); it != UUIDs.end(); ) {
+        if (!doesObjectExist(*it)) {
+            it = UUIDs.erase(it);
+        } else {
+            ++it;
         }
     }
 }
 
 void Context::cleanDeletedUUIDs(std::vector<std::vector<uint> > &UUIDs) const {
-    for (size_t j = UUIDs.size(); j-- > 0;) {
-        for (size_t i = UUIDs.at(j).size(); i-- > 0;) {
-            if (!doesPrimitiveExist(UUIDs.at(j).at(i))) {
-                UUIDs.at(j).erase(UUIDs.at(j).begin() + i);
+    for (auto &vec : UUIDs) {
+        for (auto it = vec.begin(); it != vec.end(); ) {
+            if (!doesObjectExist(*it)) {
+                it = vec.erase(it);
+            } else {
+                ++it;
             }
         }
     }
 }
 
 void Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint> > > &UUIDs) const {
-    for (size_t k = UUIDs.size(); k-- > 0;) {
-        for (size_t j = UUIDs.at(k).size(); j-- > 0;) {
-            for (size_t i = UUIDs.at(k).at(j).size(); i-- > 0;) {
-                if (!doesPrimitiveExist(UUIDs.at(k).at(j).at(i))) {
-                    UUIDs.at(k).at(j).erase(UUIDs.at(k).at(j).begin() + i);
+    for (auto &vec2D : UUIDs) {
+        for (auto &vec : vec2D) {
+            for (auto it = vec.begin(); it != vec.end(); ) {
+                if (!doesObjectExist(*it)) {
+                    it = vec.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
@@ -2707,29 +2713,35 @@ bool Context::areObjectPrimitivesComplete(uint objID) const {
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
-    for (int i = objIDs.size() - 1; i >= 0; i--) {
-        if (!doesObjectExist(objIDs.at(i))) {
-            objIDs.erase(objIDs.begin() + i);
+    for (auto it = objIDs.begin(); it != objIDs.end(); ) {
+        if (!doesObjectExist(*it)) {
+            it = objIDs.erase(it);
+        } else {
+            ++it;
         }
     }
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<std::vector<uint> > &objIDs) const {
-    for (int j = objIDs.size() - 1; j >= 0; j--) {
-        for (int i = objIDs.at(j).size() - 1; i >= 0; i--) {
-            if (!doesObjectExist(objIDs.at(j).at(i))) {
-                objIDs.at(j).erase(objIDs.at(j).begin() + i);
+    for (auto &vec : objIDs) {
+        for (auto it = vec.begin(); it != vec.end(); ) {
+            if (!doesObjectExist(*it)) {
+                it = vec.erase(it);
+            } else {
+                ++it;
             }
         }
     }
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint> > > &objIDs) const {
-    for (int k = objIDs.size() - 1; k >= 0; k--) {
-        for (int j = objIDs.at(k).size() - 1; j >= 0; j--) {
-            for (int i = objIDs.at(k).at(j).size() - 1; i >= 0; i--) {
-                if (!doesObjectExist(objIDs.at(k).at(j).at(i))) {
-                    objIDs.at(k).at(j).erase(objIDs.at(k).at(j).begin() + i);
+    for (auto &vec2D : objIDs) {
+        for (auto &vec : vec2D) {
+            for (auto it = vec.begin(); it != vec.end(); ) {
+                if (!doesObjectExist(*it)) {
+                    it = vec.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
@@ -3025,6 +3037,21 @@ void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radia
     }
 }
 
+void Context::rotateObjectAboutOrigin(uint ObjID, float rotation_radians, const vec3 &rotation_axis_vector) const {
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("ERROR (Context::rotateObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+    }
+#endif
+    getObjectPointer(ObjID)->rotate(rotation_radians, objects.at(ObjID)->object_origin, rotation_axis_vector);
+}
+
+void Context::rotateObjectAboutOrigin(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_axis_vector) const {
+    for (uint ID: ObjIDs) {
+        rotateObject(ID, rotation_radians, objects.at(ID)->object_origin, rotation_axis_vector);
+    }
+}
+
 void Context::scaleObject(uint ObjID, const helios::vec3 &scalefact) const {
 #ifdef HELIOS_DEBUG
     if (!doesObjectExist(ObjID)) {
@@ -3067,6 +3094,21 @@ void Context::scaleObjectAboutPoint(uint ObjID, const helios::vec3 &scalefact, c
 void Context::scaleObjectAboutPoint(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point) const {
     for (uint ID: ObjIDs) {
         scaleObjectAboutPoint(ID, scalefact, point);
+    }
+}
+
+void Context::scaleObjectAboutOrigin(uint ObjID, const helios::vec3 &scalefact) const {
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("ERROR (Context::scaleObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
+    }
+#endif
+    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, objects.at(ObjID)->object_origin);
+}
+
+void Context::scaleObjectAboutOrigin(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
+    for (uint ID: ObjIDs) {
+        scaleObjectAboutPoint(ID, scalefact, objects.at(ID)->object_origin);
     }
 }
 
@@ -3767,7 +3809,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
         if (i == 0) {
             axial_vector = nodes[i + 1] - nodes[i];
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
             if (fabs(axial_vector * initial_radial) > 0.99f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
             }
@@ -3778,7 +3825,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             } else {
                 axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
             }
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
@@ -3880,7 +3932,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
         if (i == 0) {
             axial_vector = nodes[i + 1] - nodes[i];
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
             if (fabs(axial_vector * initial_radial) > 0.99f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
             }
@@ -3891,7 +3948,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             } else {
                 axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
             }
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
@@ -4710,6 +4772,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    tile_new->object_origin = center;
+
     objects[currentObjectID] = tile_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -4805,6 +4869,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    tile_new->object_origin = center;
+
     objects[currentObjectID] = tile_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -4856,7 +4922,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
         if (i == 0) {
             axial_vector = nodes[i + 1] - nodes[i];
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
             if (fabs(axial_vector * initial_radial) > 0.99f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
             }
@@ -4867,7 +4938,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             } else {
                 axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
             }
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
@@ -4920,7 +4996,11 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
     objects[currentObjectID] = tube_new;
     currentObjectID++;
-    return currentObjectID - 1;
+
+    uint objID = currentObjectID - 1;
+    tube_new->object_origin = getObjectCenter(objID);
+
+    return objID;
 }
 
 uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char *texturefile) {
@@ -4975,7 +5055,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
         if (i == 0) {
             axial_vector = nodes[i + 1] - nodes[i];
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
             if (fabs(axial_vector * initial_radial) > 0.99f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
             }
@@ -4986,7 +5071,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             } else {
                 axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
             }
-            axial_vector.normalize();
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
@@ -5053,7 +5143,10 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
     objects[currentObjectID] = tube_new;
     currentObjectID++;
 
-    return currentObjectID - 1;
+    uint objID = currentObjectID - 1;
+    tube_new->object_origin = getObjectCenter(objID);
+
+    return objID;
 }
 
 uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv) {
@@ -5182,6 +5275,8 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    box_new->object_origin = center;
+
     objects[currentObjectID] = box_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -5296,6 +5391,8 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    box_new->object_origin = center;
+
     objects[currentObjectID] = box_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -5374,6 +5471,8 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    disk_new->object_origin = center;
+
     objects[currentObjectID] = disk_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -5436,6 +5535,8 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
+    disk_new->object_origin = center;
+
     objects[currentObjectID] = disk_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -5463,7 +5564,11 @@ uint Context::addPolymeshObject(const std::vector<uint> &UUIDs) {
 
     objects[currentObjectID] = polymesh_new;
     currentObjectID++;
-    return currentObjectID - 1;
+
+    uint objID = currentObjectID - 1;
+    polymesh_new->object_origin = getObjectCenter(objID);
+
+    return objID;
 }
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1) {
@@ -5506,17 +5611,24 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
             vec.z = nodes[i].z - nodes[i - 1].z;
         }
 
+        if (vec.magnitude() < 1e-6f) {
+            vec = make_vec3(0, 0, 1);
+        }
         float norm;
         convec = cross(nvec, vec);
         norm = convec.magnitude();
-        convec.x = convec.x / norm;
-        convec.y = convec.y / norm;
-        convec.z = convec.z / norm;
+        if (norm < 1e-6f) {
+            convec = cross(vec, fabs(vec.x) < 0.9f ? make_vec3(1, 0, 0) : make_vec3(0, 1, 0));
+            norm = std::max(convec.magnitude(), 1e-6f);
+        }
+        convec = convec / norm;
         nvec = cross(vec, convec);
         norm = nvec.magnitude();
-        nvec.x = nvec.x / norm;
-        nvec.y = nvec.y / norm;
-        nvec.z = nvec.z / norm;
+        if (norm < 1e-6f) {
+            nvec = cross(convec, vec);
+            norm = std::max(nvec.magnitude(), 1e-6f);
+        }
+        nvec = nvec / norm;
 
         for (int j = 0; j < Ndivs + 1; j++) {
             normal[j][i].x = cfact[j] * radii[i] * nvec.x + sfact[j] * radii[i] * convec.x;
@@ -5561,7 +5673,11 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
     objects[currentObjectID] = cone_new;
     currentObjectID++;
-    return currentObjectID - 1;
+
+    uint objID = currentObjectID - 1;
+    cone_new->object_origin = getObjectCenter(objID);
+
+    return objID;
 }
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const char *texturefile) {
@@ -5574,7 +5690,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     const std::vector<helios::vec3> nodes{node0, node1};
     const std::vector<float> radii{radius0, radius1};
 
-    vec3 vec, convec;
+    vec3 convec;
     std::vector<float> cfact(Ndivs + 1);
     std::vector<float> sfact(Ndivs + 1);
     std::vector<std::vector<vec3> > xyz, normal;
@@ -5594,7 +5710,9 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
         sfact[j] = sinf(2.f * PI_F * float(j) / float(Ndivs));
     }
 
-    for (int i = 0; i < 2; i++) { //looping over cone segments
+    for (int i = 0; i < 2; i++) {
+        vec3 vec;
+        //looping over cone segments
 
         if (i == 0) {
             vec.x = nodes[i + 1].x - nodes[i].x;
@@ -5606,17 +5724,24 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
             vec.z = nodes[i].z - nodes[i - 1].z;
         }
 
+        if (vec.magnitude() < 1e-6f) {
+            vec = make_vec3(0, 0, 1);
+        }
         float norm;
         convec = cross(nvec, vec);
         norm = convec.magnitude();
-        convec.x = convec.x / norm;
-        convec.y = convec.y / norm;
-        convec.z = convec.z / norm;
+        if (norm < 1e-6f) {
+            convec = cross(vec, fabs(vec.x) < 0.9f ? make_vec3(1, 0, 0) : make_vec3(0, 1, 0));
+            norm = std::max(convec.magnitude(), 1e-6f);
+        }
+        convec = convec / norm;
         nvec = cross(vec, convec);
         norm = nvec.magnitude();
-        nvec.x = nvec.x / norm;
-        nvec.y = nvec.y / norm;
-        nvec.z = nvec.z / norm;
+        if (norm < 1e-6f) {
+            nvec = cross(convec, vec);
+            norm = std::max(nvec.magnitude(), 1e-6f);
+        }
+        nvec = nvec / norm;
 
         for (int j = 0; j < Ndivs + 1; j++) {
             normal[j][i].x = cfact[j] * radii[i] * nvec.x + sfact[j] * radii[i] * convec.x;
@@ -5674,7 +5799,11 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
     objects[currentObjectID] = cone_new;
     currentObjectID++;
-    return currentObjectID - 1;
+
+    uint objID = currentObjectID - 1;
+    cone_new->object_origin = getObjectCenter(objID);
+
+    return objID;
 }
 
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius) {
@@ -7893,6 +8022,15 @@ void Context::setObjectAverageNormal(uint ObjID, const vec3 &origin, const vec3 
 
     // 7) Apply that compensating twist about the same origin
     rotateObject(ObjID, twist, origin, newN);
+}
+
+void Context::setObjectOrigin( uint ObjID, const vec3& origin ) const {
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("ERROR (Context::setObjectOrigin): invalid objectID");
+    }
+#endif
+    objects.at(ObjID)->object_origin = origin;
 }
 
 bool Context::objectHasTexture(uint ObjID) const {

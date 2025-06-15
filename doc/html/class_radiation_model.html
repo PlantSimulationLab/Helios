@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -372,6 +372,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1ea2acedb464217f1acc38f0e05d353f" id="r_a1ea2acedb464217f1acc38f0e05d353f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ea2acedb464217f1acc38f0e05d353f">setCameraSpectralResponse</a> (const std::string &amp;camera_label, const std::string &amp;band_label, const std::string &amp;global_data)</td></tr>
 <tr class="memdesc:a1ea2acedb464217f1acc38f0e05d353f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the spectral response of a camera band based on reference to global data. This function version uses all the global data array to calculate the spectral response.  <br /></td></tr>
 <tr class="separator:a1ea2acedb464217f1acc38f0e05d353f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b20133840298db01f7329f661949eea" id="r_a6b20133840298db01f7329f661949eea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b20133840298db01f7329f661949eea">setCameraSpectralResponseFromLibrary</a> (const std::string &amp;camera_label, const std::string &amp;camera_library_name)</td></tr>
+<tr class="memdesc:a6b20133840298db01f7329f661949eea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml).  <br /></td></tr>
+<tr class="separator:a6b20133840298db01f7329f661949eea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9ec01ae743b29b5a0e9da04b24a7b230" id="r_a9ec01ae743b29b5a0e9da04b24a7b230"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ec01ae743b29b5a0e9da04b24a7b230">setCameraPosition</a> (const std::string &amp;camera_label, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;position)</td></tr>
 <tr class="memdesc:a9ec01ae743b29b5a0e9da04b24a7b230"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the position of the radiation camera.  <br /></td></tr>
 <tr class="separator:a9ec01ae743b29b5a0e9da04b24a7b230"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -431,6 +434,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a63f23da646aac79163c8154ef3a6e93e" id="r_a63f23da646aac79163c8154ef3a6e93e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63f23da646aac79163c8154ef3a6e93e">runRadiationImaging</a> (const std::vector&lt; std::string &gt; &amp;cameralabels, const std::vector&lt; std::string &gt; &amp;sourcelabels, const std::vector&lt; std::string &gt; &amp;bandlabels, const std::vector&lt; std::string &gt; &amp;cameraresponselabels, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> wavelengthrange, float fluxscale=1, float diffusefactor=0.0005, uint scatteringdepth=4)</td></tr>
 <tr class="memdesc:a63f23da646aac79163c8154ef3a6e93e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run radiation imaging simulation.  <br /></td></tr>
 <tr class="separator:a63f23da646aac79163c8154ef3a6e93e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07a2720ece9ce049bee0deb6d16b9576" id="r_a07a2720ece9ce049bee0deb6d16b9576"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a07a2720ece9ce049bee0deb6d16b9576">applyImageProcessingPipeline</a> (const std::string &amp;cameralabel, const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, bool scale_grey_target, bool white_balance, bool reinhard_map, bool tone_flatten, bool apply_gain, bool apply_CCM, bool gamma_compress)</td></tr>
+<tr class="memdesc:a07a2720ece9ce049bee0deb6d16b9576"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply a digital camera-like processing pipeline to the camera image.  <br /></td></tr>
+<tr class="separator:a07a2720ece9ce049bee0deb6d16b9576"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa30ec7ec3b6c3b109e9a9544b890e8de" id="r_aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa30ec7ec3b6c3b109e9a9544b890e8de">writeCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float flux_to_pixel_conversion=1.f)</td></tr>
 <tr class="memdesc:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write camera data for one or more bands to a JPEG image.  <br /></td></tr>
 <tr class="separator:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -471,7 +477,7 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Radiation transport model plugin. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00259">259</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00356">356</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acfcbd32e59e2b2728dabde1c7fa74329" name="acfcbd32e59e2b2728dabde1c7fa74329"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acfcbd32e59e2b2728dabde1c7fa74329">&#9670;&#160;</a></span>RadiationModel()</h2>
@@ -498,7 +504,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Default constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00020">20</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00022">22</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -519,7 +525,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Destructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00061">61</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00063">63</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -542,7 +548,7 @@ Public Member Functions</h2></td></tr>
 <p>Add an external source of collimated radiation (i.e., source at infinite distance with parallel rays) assuming the default direction of (0,0,1) </p>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00305">305</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00307">307</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -570,7 +576,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00311">311</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00313">313</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -598,7 +604,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00315">315</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00317">317</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -637,7 +643,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00455">455</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00457">457</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -665,7 +671,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Unique integer identifier for the band </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00198">198</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00200">200</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -703,7 +709,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00218">218</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00220">220</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -759,7 +765,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01220">1220</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01222">1222</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -815,7 +821,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01188">1188</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01190">1190</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -854,7 +860,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00423">423</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00425">425</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -887,7 +893,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00351">351</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00353">353</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -909,7 +915,7 @@ Public Member Functions</h2></td></tr>
 <p>Add a sphere radiation source that models the sun assuming the default direction of (0,0,1) </p>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00383">383</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00385">385</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -937,7 +943,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00387">387</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00389">389</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -965,7 +971,94 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source identifier </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00391">391</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00393">393</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a07a2720ece9ce049bee0deb6d16b9576" name="a07a2720ece9ce049bee0deb6d16b9576"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07a2720ece9ce049bee0deb6d16b9576">&#9670;&#160;</a></span>applyImageProcessingPipeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::applyImageProcessingPipeline </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>cameralabel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>green_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>scale_grey_target</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>white_balance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>reinhard_map</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>tone_flatten</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>apply_gain</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>apply_CCM</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>gamma_compress</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Apply a digital camera-like processing pipeline to the camera image. </p>
+<p>This only applies to RGB cameras.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of camera to be used for processing </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label of the red band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label of the green band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label of the blue band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scale_grey_target</td><td>If true, scale the grey target to 0.18 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">white_balance</td><td>If true, apply white balance </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">reinhard_map</td><td>If true, apply Reinhard tone mapping </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">tone_flatten</td><td>If true, apply tone flattening based on an alpha value of 0.4 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">apply_gain</td><td>If true, apply gain to the image </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">apply_CCM</td><td>If true, apply color correction matrix (CCM) to the image </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">gamma_compress</td><td>If true, apply gamma compression to the image </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05940">5940</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1004,7 +1097,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01021">1021</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01023">1023</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1037,7 +1130,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The input spectra can have different sizes, but must have matching wavelength values across all spectra. The output spectra will be the size of the overlapping portion of wavelengths. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01100">1100</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01102">1102</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1070,7 +1163,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Projected area fraction G(theta) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04974">4974</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05005">5005</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1132,7 +1225,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05791">5791</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05822">5822</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1176,7 +1269,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05830">5830</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05861">5861</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1208,7 +1301,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00245">245</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00247">247</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1252,7 +1345,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00256">256</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00258">258</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1279,7 +1372,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00488">488</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00490">490</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1300,7 +1393,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Remove the 3D model of the camera from the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00718">718</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00720">720</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1327,7 +1420,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00285">285</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00287">287</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1348,7 +1441,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Remove the 3D model of the light source from the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00701">701</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00703">703</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1370,7 +1463,7 @@ Public Member Functions</h2></td></tr>
 <p>Disable/silence status messages. </p>
 <dl class="section note"><dt>Note</dt><dd>Error messages are still displayed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00065">65</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00067">67</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1397,7 +1490,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00277">277</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00279">279</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1418,7 +1511,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Add a 3D model of the camera to the Context for visualization purposes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00708">708</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00710">710</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1445,7 +1538,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00295">295</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00297">297</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1466,7 +1559,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Add a 3D model of the light source (rectangular, disk, and sphere) to the Context for visualization purposes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00691">691</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00693">693</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1487,7 +1580,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable status messages. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00069">69</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00071">71</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1515,7 +1608,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01165">1165</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01167">1167</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1537,7 +1630,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the labels for all radiation cameras that have been added to the radiation model. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of strings corresponding to each camera label. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01324">1324</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01351">1351</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1565,7 +1658,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Cartesian coordinate of location camera is pointed toward. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01278">1278</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01305">1305</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1593,7 +1686,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Spherical coordinate defining the orientation of the camera. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01301">1301</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01328">1328</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1621,7 +1714,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Cartesian coordinate of camera position. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01255">1255</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01282">1282</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1678,7 +1771,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>scale factor </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05205">5205</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05236">5236</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1706,7 +1799,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Diffuse flux for the band </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00669">669</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00671">671</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1727,7 +1820,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the radiative energy lost to the sky (surroundings) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03863">3863</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03894">3894</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1760,7 +1853,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Radiative flux normal to the direction of radiation propagation </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00559">559</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00561">561</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1788,7 +1881,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>If point source - (x,y,z) position of the radiation source. If collimated source - (nx,ny,nz) unit vector pointing toward the source. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01140">1140</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01142">1142</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1809,7 +1902,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the total absorbed radiation flux summed over all bands for each primitive. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03875">3875</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03906">3906</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1848,7 +1941,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of spectral data from wavelength_min to wavelength_max </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00978">978</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00980">980</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1876,7 +1969,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of spectral data from minimum to maximum wavelength </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00896">896</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00898">898</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1909,7 +2002,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00943">943</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00945">945</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1985,7 +2078,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00903">903</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00905">905</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2055,7 +2148,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00073">73</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00075">75</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2083,7 +2176,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03211">3211</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03242">3242</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2111,7 +2204,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03216">3216</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03247">3247</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2179,7 +2272,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05120">5120</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05151">5151</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2247,7 +2340,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05161">5161</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05192">5192</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2285,7 +2378,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00990">990</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00992">992</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2317,7 +2410,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01002">1002</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01004">1004</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2361,7 +2454,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01014">1014</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01016">1016</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2402,7 +2495,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l04998">4998</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05029">5029</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2434,7 +2527,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01265">1265</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01292">1292</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2466,7 +2559,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01311">1311</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01338">1338</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2498,7 +2591,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01288">1288</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01315">1315</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2530,7 +2623,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01240">1240</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01267">1267</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2569,7 +2662,40 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>If global data in the standard camera spectral library is referenced, the library will be automatically loaded. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01227">1227</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01229">1229</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6b20133840298db01f7329f661949eea" name="a6b20133840298db01f7329f661949eea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b20133840298db01f7329f661949eea">&#9670;&#160;</a></span>setCameraSpectralResponseFromLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationModel::setCameraSpectralResponseFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>camera_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>camera_library_name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml). </p>
+<p>Consult the documentation for available cameras in the library, or examine the file radiation/spectral_data/camera_spectral_library.xml. The naming convention is that the response data for the band starts with the camera model (e.g., "iPhone11") followed by an underscore, then the band label. In order for the response to be applied to the camera, the bands must all exist. For example, for iPhone11, there must exist bands "red", "green", and "blue".</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">camera_label</td><td>Label for the camera to be set. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">camera_library_name</td><td>Name of the camera in the standard camera spectral library (e.g., "iPhone11", "NikonD700", etc.). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01242">1242</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2607,7 +2733,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00104">104</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00106">106</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2645,7 +2771,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00108">108</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00110">110</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2677,7 +2803,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00097">97</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00099">99</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2710,7 +2836,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Default is 1000 rays/primitive. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00090">90</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00092">92</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2742,7 +2868,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00663">663</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00665">665</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2774,7 +2900,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00640">640</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00642">642</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2807,7 +2933,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00159">159</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00161">161</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2852,7 +2978,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00180">180</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00182">182</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2880,7 +3006,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00143">143</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00145">145</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2919,7 +3045,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00151">151</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00153">153</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2952,7 +3078,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Default is 100 rays/primitive. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00083">83</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00085">85</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -2984,7 +3110,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01156">1156</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01158">1158</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3022,7 +3148,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05769">5769</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05800">5800</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3054,7 +3180,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01147">1147</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01149">1149</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3092,7 +3218,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00553">553</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00555">555</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3130,7 +3256,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00537">537</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00539">539</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3162,7 +3288,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01136">1136</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01138">1138</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3194,7 +3320,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01116">1116</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01118">1118</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3226,7 +3352,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00634">634</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00636">636</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3258,7 +3384,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00613">613</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00615">615</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3290,7 +3416,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00619">619</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00621">621</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3322,7 +3448,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00585">585</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00587">587</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3355,7 +3481,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00502">502</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3400,7 +3526,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function will call setSourceFlux() for all bands to update source fluxes based on the new spectrum integral </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00516">516</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l00518">518</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3456,7 +3582,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05003">5003</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05034">5034</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3478,7 +3604,7 @@ Public Member Functions</h2></td></tr>
 <p>Adds all geometric primitives from the Context to OptiX. </p>
 <p>This function should be called anytime Context geometry is created or modified </p><dl class="section note"><dt>Note</dt><dd><a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02012">2012</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02043">2043</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3506,7 +3632,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd><a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02016">2016</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02047">2047</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3562,7 +3688,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01334">1334</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01361">1361</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3612,7 +3738,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01454">1454</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01485">1485</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3656,7 +3782,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05415">5415</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05446">5446</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3718,7 +3844,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05542">5542</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05573">5573</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3780,7 +3906,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05651">5651</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05682">5682</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3830,7 +3956,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01420">1420</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01451">1451</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3880,7 +4006,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05471">5471</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05502">5502</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3936,7 +4062,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05319">5319</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05350">5350</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -3992,7 +4118,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05228">5228</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05259">5259</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>

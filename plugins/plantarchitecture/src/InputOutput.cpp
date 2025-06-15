@@ -35,13 +35,12 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
 
         outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string( rad2deg(phytomer->internode_pitch) ) + "," + std::to_string( rad2deg(phytomer->internode_phyllotactic_angle) ) + ")";
 
-//        for( uint petiole=0; petiole<phytomer->petiole_length.size(); petiole++ ){
-        uint petiole = 0;
+        for( uint petiole=0; petiole<phytomer->petiole_length.size(); petiole++ ){
 
-            outstring += "Petiole(" + std::to_string( phytomer->petiole_length.at(petiole) ) + "," + std::to_string( phytomer->petiole_radii.at(petiole).front() ) + "," + std::to_string( rad2deg(phytomer->petiole_pitch) ) + ")";
+            outstring += "Petiole(" + std::to_string( phytomer->petiole_length.at(petiole) ) + "," + std::to_string( phytomer->petiole_radii.at(petiole).front() ) + "," + std::to_string( rad2deg(phytomer->petiole_pitch.at(petiole)) ) + ")";
 
             //\todo If leaf is compound, just using rotation for the first leaf for now rather than adding multiple 'Leaf()' strings for each leaflet.
-            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front()*phytomer->current_leaf_scale_factor ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
+            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front()*phytomer->current_leaf_scale_factor.at(petiole) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
 
             if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
                 for( int childID: shoot->childIDs.at(node_number) ) {
@@ -49,7 +48,7 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
                 }
             }
 
-//        }
+        }
 
         node_number++;
     }
@@ -487,8 +486,8 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t<petiole>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_length>" << phytomer->petiole_length.at(petiole) << "</petiole_length>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_radius>" << phytomer->petiole_radii.at(petiole).front() << "</petiole_radius>" << std::endl;
-                output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch) << "</petiole_pitch>" << std::endl;
-                output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature << "</petiole_curvature>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch.at(petiole)) << "</petiole_pitch>" << std::endl;
+                output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature.at(petiole) << "</petiole_curvature>" << std::endl;
                 if( phytomer->leaf_rotation.at(petiole).size()==1 ){ //not compound leaf
                     output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
                 }else {
@@ -498,7 +497,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
                 for( uint leaf=0; leaf < phytomer->leaf_rotation.at(petiole).size(); leaf++ ){
                     output_xml << "\t\t\t\t\t\t<leaf>" << std::endl;
-                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole).at(leaf)*phytomer->current_leaf_scale_factor << "</leaf_scale>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole).at(leaf)*phytomer->current_leaf_scale_factor.at(petiole) << "</leaf_scale>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
@@ -696,8 +695,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
                 shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
 
-                float tip_ind = floor(float(leaf_scale.front().size() - 1) / 2.f);
-                shoot_parameters.phytomer_parameters.leaf.prototype_scale = leaf_scale.front().at(tip_ind);
+                shoot_parameters.phytomer_parameters.leaf.prototype_scale = 1.f;//leaf_scale.front().at(tip_ind);
                 shoot_parameters.phytomer_parameters.leaf.pitch = 0;
                 shoot_parameters.phytomer_parameters.leaf.yaw = 0;
                 shoot_parameters.phytomer_parameters.leaf.roll = 0;
@@ -721,9 +719,15 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                     appendPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
                 }
 
-                //rotate leaves
+                //rotate and scale leaves
                 auto phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
                 for( int petiole = 0; petiole<phytomer_ptr->leaf_rotation.size(); petiole++ ){
+
+                    float tip_ind = floor(float(leaf_scale.at(petiole).size() - 1) / 2.f);
+                    phytomer_ptr->setLeafPrototypeScale( petiole, leaf_scale.at(petiole).at(tip_ind) );
+
+                    phytomer_ptr->scaleLeafPrototypeScale( petiole, 5);
+
                     for( int leaf=0; leaf<phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++ ){
                         phytomer_ptr->rotateLeaf(petiole, leaf, make_AxisRotation(deg2rad(leaf_pitch.at(petiole).at(leaf)), deg2rad(leaf_yaw.at(petiole).at(leaf)), deg2rad(-leaf_roll.at(petiole).at(leaf))));
                     }

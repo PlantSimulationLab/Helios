@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -714,6 +714,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const 
 <tr class="memitem:a663c861bc8c0a1f1e7353ced7049c679" id="r_a663c861bc8c0a1f1e7353ced7049c679"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a663c861bc8c0a1f1e7353ced7049c679">setObjectAverageNormal</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;new_normal) const</td></tr>
 <tr class="memdesc:a663c861bc8c0a1f1e7353ced7049c679"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the average normal of a given object in the context.  <br /></td></tr>
 <tr class="separator:a663c861bc8c0a1f1e7353ced7049c679"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf6937e6f5073b3c3f3533ba068f440f" id="r_adf6937e6f5073b3c3f3533ba068f440f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf6937e6f5073b3c3f3533ba068f440f">setObjectOrigin</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;origin) const</td></tr>
+<tr class="memdesc:adf6937e6f5073b3c3f3533ba068f440f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the origin position of the object about which it can be rotated and scaled.  <br /></td></tr>
+<tr class="separator:adf6937e6f5073b3c3f3533ba068f440f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afbdf67c60f6a4efc93cd9526151d5d89" id="r_afbdf67c60f6a4efc93cd9526151d5d89"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbdf67c60f6a4efc93cd9526151d5d89">objectHasTexture</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:afbdf67c60f6a4efc93cd9526151d5d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to check whether an Object has texture data.  <br /></td></tr>
 <tr class="separator:afbdf67c60f6a4efc93cd9526151d5d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1245,6 +1248,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const 
 <tr class="memitem:aa04bebd23f38d5046a9dcfae49d2447c" id="r_aa04bebd23f38d5046a9dcfae49d2447c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa04bebd23f38d5046a9dcfae49d2447c">rotateObject</a> (const std::vector&lt; uint &gt; &amp;ObjIDs, float rotation_radians, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;rotation_origin, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;rotation_axis_vector) const</td></tr>
 <tr class="memdesc:aa04bebd23f38d5046a9dcfae49d2447c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotate multiple compound objects about an arbitrary line (not necessarily passing through the origin) based on a vector of UUIDs.  <br /></td></tr>
 <tr class="separator:aa04bebd23f38d5046a9dcfae49d2447c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab026ab0f2516e40c7d1d0eb1ac64dfcc" id="r_ab026ab0f2516e40c7d1d0eb1ac64dfcc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab026ab0f2516e40c7d1d0eb1ac64dfcc">rotateObjectAboutOrigin</a> (uint ObjID, float rotation_radians, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;rotation_axis_vector) const</td></tr>
+<tr class="memdesc:ab026ab0f2516e40c7d1d0eb1ac64dfcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotate a single compound object about an arbitrary line passing through the objects origin point.  <br /></td></tr>
+<tr class="separator:ab026ab0f2516e40c7d1d0eb1ac64dfcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9267cb2a4cf1f9d0c595471c89590200" id="r_a9267cb2a4cf1f9d0c595471c89590200"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9267cb2a4cf1f9d0c595471c89590200">rotateObjectAboutOrigin</a> (const std::vector&lt; uint &gt; &amp;ObjIDs, float rotation_radians, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;rotation_axis_vector) const</td></tr>
+<tr class="memdesc:a9267cb2a4cf1f9d0c595471c89590200"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotate multiple compound objects about an arbitrary line passing through the objects origin point.  <br /></td></tr>
+<tr class="separator:a9267cb2a4cf1f9d0c595471c89590200"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a523502a99016af268062c3b1edd933fb" id="r_a523502a99016af268062c3b1edd933fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a523502a99016af268062c3b1edd933fb">scaleObject</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scalefact) const</td></tr>
 <tr class="memdesc:a523502a99016af268062c3b1edd933fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions.  <br /></td></tr>
 <tr class="separator:a523502a99016af268062c3b1edd933fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1258,11 +1267,17 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const 
 <tr class="memdesc:ae4156bdecb5615d17a053792a5c9da2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions.  <br /></td></tr>
 <tr class="separator:ae4156bdecb5615d17a053792a5c9da2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaab92ef2795fe99913927eadf8b3adfe" id="r_aaab92ef2795fe99913927eadf8b3adfe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaab92ef2795fe99913927eadf8b3adfe">scaleObjectAboutPoint</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scalefact, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;point) const</td></tr>
-<tr class="memdesc:aaab92ef2795fe99913927eadf8b3adfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions.  <br /></td></tr>
+<tr class="memdesc:aaab92ef2795fe99913927eadf8b3adfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions about an arbitrary point.  <br /></td></tr>
 <tr class="separator:aaab92ef2795fe99913927eadf8b3adfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2f07cd03802df5a7bf1d65a7bec461b4" id="r_a2f07cd03802df5a7bf1d65a7bec461b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f07cd03802df5a7bf1d65a7bec461b4">scaleObjectAboutPoint</a> (const std::vector&lt; uint &gt; &amp;ObjIDs, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scalefact, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;point) const</td></tr>
-<tr class="memdesc:a2f07cd03802df5a7bf1d65a7bec461b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions.  <br /></td></tr>
+<tr class="memdesc:a2f07cd03802df5a7bf1d65a7bec461b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions about an arbitrary point.  <br /></td></tr>
 <tr class="separator:a2f07cd03802df5a7bf1d65a7bec461b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada80438e940acb8d319324838dea767e" id="r_ada80438e940acb8d319324838dea767e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada80438e940acb8d319324838dea767e">scaleObjectAboutOrigin</a> (uint ObjID, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scalefact) const</td></tr>
+<tr class="memdesc:ada80438e940acb8d319324838dea767e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions about its origin point.  <br /></td></tr>
+<tr class="separator:ada80438e940acb8d319324838dea767e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b0990b64f40709c1231344d5b918655" id="r_a5b0990b64f40709c1231344d5b918655"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b0990b64f40709c1231344d5b918655">scaleObjectAboutOrigin</a> (const std::vector&lt; uint &gt; &amp;ObjIDs, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scalefact) const</td></tr>
+<tr class="memdesc:a5b0990b64f40709c1231344d5b918655"><td class="mdescLeft">&#160;</td><td class="mdescRight">Method to scale a compound object in the x-, y- and z-directions about its origin point.  <br /></td></tr>
+<tr class="separator:a5b0990b64f40709c1231344d5b918655"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d0b3a6ca36b02702b06208a735a3b03" id="r_a7d0b3a6ca36b02702b06208a735a3b03"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7d0b3a6ca36b02702b06208a735a3b03">getObjectPrimitiveUUIDs</a> (uint ObjID) const</td></tr>
 <tr class="memdesc:a7d0b3a6ca36b02702b06208a735a3b03"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get primitive UUIDs associated with compound object (single object ID input)  <br /></td></tr>
 <tr class="separator:a7d0b3a6ca36b02702b06208a735a3b03"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1904,7 +1919,7 @@ Static Public Member Functions</h2></td></tr>
 <div class="textblock"><p>Stores the state associated with simulation. </p>
 <p>The Context provides an interface to global information about the application environment. It allows access to application-level operations such as adding geometry, running models, and visualization. After creation, the Context must first be initialized via a call to initializeContext(), after which geometry and models can be added and simulated. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l01973">1973</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l01976">1976</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a652cdcd2eedc8dbd9110bd284c5d5cf0" name="a652cdcd2eedc8dbd9110bd284c5d5cf0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a652cdcd2eedc8dbd9110bd284c5d5cf0">&#9670;&#160;</a></span>Context()</h2>
@@ -1944,7 +1959,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Context destructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06884">6884</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07013">7013</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2253,7 +2268,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08147">8147</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08285">8285</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2297,7 +2312,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08138">8138</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08276">8276</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2336,7 +2351,7 @@ Static Public Member Functions</h2></td></tr>
 </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02700">2700</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02706">2706</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3123,7 +3138,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02727">2727</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02737">2737</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3150,7 +3165,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02717">2717</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02725">2725</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3177,7 +3192,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02709">2709</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02715">2715</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3204,7 +3219,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02048">2048</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02052">2052</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3231,7 +3246,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02038">2038</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02040">2040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3457,7 +3472,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06618">6618</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06747">6747</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3513,7 +3528,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06622">6622</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06751">6751</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3541,7 +3556,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID for copied object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02792">2792</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02804">2804</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3569,7 +3584,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ID for copied object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02803">2803</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02815">2815</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3727,7 +3742,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02440">2440</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02446">2446</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3771,7 +3786,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02419">2419</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02425">2425</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3798,7 +3813,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02362">2362</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02368">2368</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3825,7 +3840,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02381">2381</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02387">2387</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3852,7 +3867,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02400">2400</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02406">2406</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3879,7 +3894,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02770">2770</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02782">2782</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -3906,7 +3921,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02776">2776</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02788">2788</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4028,7 +4043,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07922">7922</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08060">8060</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4096,7 +4111,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02752">2752</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02764">2764</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4384,7 +4399,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02890">2890</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02902">2902</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -4942,7 +4957,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get the IDs for all Compound Objects in the Context. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of IDs for all objects. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02756">2756</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02768">2768</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5006,7 +5021,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08201">8201</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08339">8339</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5041,7 +5056,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04088">4088</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04150">4150</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5076,7 +5091,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08205">8205</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08343">8343</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5111,7 +5126,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08209">8209</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08347">8347</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5146,7 +5161,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08213">8213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08351">8351</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5181,7 +5196,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08249">8249</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08387">8387</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5217,7 +5232,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Dimension of cone object in the axial direction </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08253">8253</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08391">8391</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5257,7 +5272,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08241">8241</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08379">8379</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5292,7 +5307,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08237">8237</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08375">8375</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5332,7 +5347,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08245">8245</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08383">8383</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5367,7 +5382,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08233">8233</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08371">8371</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5402,7 +5417,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04249">4249</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04311">4311</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5437,7 +5452,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08229">8229</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08367">8367</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5472,7 +5487,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08257">8257</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08395">8395</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5604,7 +5619,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08217">8217</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08355">8355</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5639,7 +5654,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04152">4152</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04214">4214</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5674,7 +5689,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08221">8221</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08359">8359</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5709,7 +5724,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08225">8225</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08363">8363</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5756,7 +5771,7 @@ Static Public Member Functions</h2></td></tr>
 </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02267">2267</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02273">2273</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5794,7 +5809,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02263">2263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02269">2269</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5832,7 +5847,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02351">2351</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02357">2357</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -5864,7 +5879,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02340">2340</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02346">2346</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6685,7 +6700,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get names of XML files that are currently loaded. </p>
 <dl class="section return"><dt>Returns</dt><dd>Vector of XML files. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02399">2399</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02244">2244</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -6781,7 +6796,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07798">7798</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07927">7927</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6816,7 +6831,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07802">7802</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07931">7931</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6854,7 +6869,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07951">7951</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08089">8089</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6892,7 +6907,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07946">7946</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08084">8084</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6927,7 +6942,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07824">7824</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07953">7953</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -6957,7 +6972,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get the total number of objects that have been created in the Context. </p>
 <dl class="section return"><dt>Returns</dt><dd>Total number of objects that have been created in the Context </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02748">2748</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02760">2760</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7895,7 +7910,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02739">2739</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02751">2751</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7930,7 +7945,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07820">7820</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07949">7949</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -7965,7 +7980,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03110">3110</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03152">3152</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8000,7 +8015,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03095">3095</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03137">3137</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8035,7 +8050,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03073">3073</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03115">3115</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8070,7 +8085,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07828">7828</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07957">7957</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8102,7 +8117,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07832">7832</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07961">7961</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8137,7 +8152,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03128">3128</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03170">3170</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8246,7 +8261,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04207">4207</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04269">4269</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8281,7 +8296,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08261">8261</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08399">8399</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8316,7 +8331,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06992">6992</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07121">7121</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8354,7 +8369,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07006">7006</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07135">7135</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8392,7 +8407,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07001">7001</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07130">7130</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8427,7 +8442,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07068">7068</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07197">7197</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8462,7 +8477,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07072">7072</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07201">7201</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -8497,7 +8512,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07076">7076</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07205">7205</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9435,7 +9450,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07045">7045</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07174">7174</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9470,7 +9485,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06941">6941</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07070">7070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9505,7 +9520,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06932">6932</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07061">7061</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9541,7 +9556,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Fraction of non-transparent area (=1 if primitive does not have a semi-transparent texture). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07162">7162</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07291">7291</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9577,7 +9592,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Path to texture map file. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07100">7100</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07229">7229</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9613,7 +9628,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Texture image resolution (columns x rows). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07108">7108</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07237">7237</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9649,7 +9664,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Transparency value (0 or 1) for each pixel in primitive texture map. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07128">7128</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07257">7257</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9684,7 +9699,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07116">7116</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07245">7245</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9716,7 +9731,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07049">7049</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07178">7178</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9751,7 +9766,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06894">6894</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07023">7023</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9786,7 +9801,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07063">7063</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07192">7192</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9843,7 +9858,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08098">8098</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08236">8236</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9878,7 +9893,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03576">3576</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03618">3618</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9913,7 +9928,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08102">8102</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08240">8240</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9948,7 +9963,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08106">8106</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08244">8244</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -9983,7 +9998,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08110">8110</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08248">8248</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10018,7 +10033,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03167">3167</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03209">3209</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10053,7 +10068,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03140">3140</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03182">3182</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10090,7 +10105,7 @@ Static Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Center position of a Tile Object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>If the ObjID passed to this method does not correspond to a Tile Object, an error will be thrown. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08074">8074</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08212">8212</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10125,7 +10140,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08086">8086</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08224">8224</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10160,7 +10175,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03491">3491</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03533">3533</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10195,7 +10210,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08078">8078</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08216">8216</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10230,7 +10245,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08082">8082</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08220">8220</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10265,7 +10280,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08090">8090</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08228">8228</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10300,7 +10315,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08094">8094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08232">8232</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10408,7 +10423,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08126">8126</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08264">8264</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10443,7 +10458,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08122">8122</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08260">8260</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10478,7 +10493,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08118">8118</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08256">8256</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10513,7 +10528,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03648">3648</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03690">3690</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10553,7 +10568,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08134">8134</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08272">8272</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10588,7 +10603,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08114">8114</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08252">8252</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10623,7 +10638,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08130">8130</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08268">8268</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10658,7 +10673,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06955">6955</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07084">7084</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10698,7 +10713,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06960">6960</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07089">7089</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10799,7 +10814,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07785">7785</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07914">7914</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -10826,7 +10841,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07768">7768</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07897">7897</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11236,7 +11251,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the object is hidden, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07791">7791</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07920">7920</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11343,7 +11358,7 @@ markGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07158">7158</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07287">7287</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11460,7 +11475,7 @@ markGeometryDirty() </dd></dl>
 
 <p>List all existing timeseries variables. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02253">2253</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02259">2259</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -11492,7 +11507,7 @@ markGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03760">3760</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03547">3547</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11555,7 +11570,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03772">3772</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03559">3559</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11612,7 +11627,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the OBJ model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03764">3764</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03551">3551</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11675,7 +11690,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03768">3768</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03555">3555</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11709,7 +11724,7 @@ markGeometryDirty() </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03378">3378</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03191">3191</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11766,7 +11781,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03390">3390</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03203">3203</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11829,7 +11844,7 @@ markGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03394">3394</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03207">3207</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11887,7 +11902,7 @@ markGeometryDirty() </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03386">3386</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03199">3199</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11939,7 +11954,7 @@ markGeometryDirty() </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive generated from the PLY model </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of blue if no colors are specified in the .ply file </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03382">3382</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03195">3195</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -11989,7 +12004,7 @@ markGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04607">4607</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04444">4444</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -12023,7 +12038,7 @@ markGeometryDirty() </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each primitive loaded from the XML file </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This method is based on the pugi xml parser. See <a href="www.pugixml.org">pugixml.org</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l01217">1217</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l01112">1112</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -12214,7 +12229,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07898">7898</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08036">8036</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12241,7 +12256,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07930">7930</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08068">8068</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12268,7 +12283,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07926">7926</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08064">8064</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12295,7 +12310,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07142">7142</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07271">7271</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12322,7 +12337,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07138">7138</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07267">7267</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12358,7 +12373,7 @@ isGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if transparency channel data exists, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07120">7120</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07249">7249</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12385,7 +12400,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07410">7410</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07539">7539</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12412,7 +12427,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07166">7166</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07295">7295</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12444,7 +12459,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08183">8183</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08321">8321</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12733,7 +12748,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02992">2992</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03004">3004</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12771,7 +12786,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03007">3007</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03019">3019</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12815,7 +12830,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03022">3022</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03034">3034</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12853,7 +12868,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02983">2983</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02995">2995</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12891,7 +12906,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02998">2998</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03010">3010</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -12935,7 +12950,83 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03013">3013</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03025">3025</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9267cb2a4cf1f9d0c595471c89590200" name="a9267cb2a4cf1f9d0c595471c89590200"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9267cb2a4cf1f9d0c595471c89590200">&#9670;&#160;</a></span>rotateObjectAboutOrigin() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::rotateObjectAboutOrigin </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ObjIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rotation_radians</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotation_axis_vector</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Rotate multiple compound objects about an arbitrary line passing through the objects origin point. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjIDs</td><td>Vector of object IDs to translate </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotation_radians</td><td>Rotation angle in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotation_axis_vector</td><td>Vector describing axis about which to rotate </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03049">3049</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab026ab0f2516e40c7d1d0eb1ac64dfcc" name="ab026ab0f2516e40c7d1d0eb1ac64dfcc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab026ab0f2516e40c7d1d0eb1ac64dfcc">&#9670;&#160;</a></span>rotateObjectAboutOrigin() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::rotateObjectAboutOrigin </td>
+          <td>(</td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>ObjID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rotation_radians</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotation_axis_vector</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Rotate a single compound object about an arbitrary line passing through the objects origin point. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Object ID to rotate </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotation_radians</td><td>Rotation angle in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotation_axis_vector</td><td>Vector describing axis about which to rotate </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03040">3040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13207,7 +13298,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03037">3037</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03064">3064</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13239,7 +13330,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03028">3028</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03055">3055</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13271,7 +13362,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03052">3052</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03079">3079</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13303,7 +13394,73 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03043">3043</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03070">3070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5b0990b64f40709c1231344d5b918655" name="a5b0990b64f40709c1231344d5b918655"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b0990b64f40709c1231344d5b918655">&#9670;&#160;</a></span>scaleObjectAboutOrigin() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::scaleObjectAboutOrigin </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ObjIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>scalefact</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Method to scale a compound object in the x-, y- and z-directions about its origin point. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjIDs</td><td>Vector of object IDs to scale </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalefact</td><td>Scaling factor to apply in the x-, y- and z-directions </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>By default the object origin is its center. This can be changed by setting the object origin using the setObjectOrigin method </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03109">3109</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ada80438e940acb8d319324838dea767e" name="ada80438e940acb8d319324838dea767e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada80438e940acb8d319324838dea767e">&#9670;&#160;</a></span>scaleObjectAboutOrigin() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::scaleObjectAboutOrigin </td>
+          <td>(</td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>ObjID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>scalefact</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Method to scale a compound object in the x-, y- and z-directions about its origin point. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Object ID to scale </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalefact</td><td>Scaling factor to apply in the x-, y- and z-directions </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>By default the object origin is its center. This can be changed by setting the object origin using the setObjectOrigin method </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03100">3100</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13331,7 +13488,7 @@ isGeometryDirty() </dd></dl>
       </table>
 </div><div class="memdoc">
 
-<p>Method to scale a compound object in the x-, y- and z-directions. </p>
+<p>Method to scale a compound object in the x-, y- and z-directions about an arbitrary point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ObjIDs</td><td>Vector of object IDs to scale </td></tr>
@@ -13341,7 +13498,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03067">3067</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03094">3094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13369,7 +13526,7 @@ isGeometryDirty() </dd></dl>
       </table>
 </div><div class="memdoc">
 
-<p>Method to scale a compound object in the x-, y- and z-directions. </p>
+<p>Method to scale a compound object in the x-, y- and z-directions about an arbitrary point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Object ID to scale </td></tr>
@@ -13379,7 +13536,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03058">3058</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03085">3085</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13623,7 +13780,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08156">8156</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08294">8294</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13655,7 +13812,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08174">8174</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08312">8312</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -13702,7 +13859,7 @@ isGeometryDirty() </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if tag exists in XML file, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02403">2403</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02248">2248</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -14320,7 +14477,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07846">7846</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07975">7975</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -14352,7 +14509,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07916">7916</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08054">8054</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -14384,7 +14541,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07906">7906</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08044">8044</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -14416,7 +14573,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07912">7912</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08050">8050</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -14448,7 +14605,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07902">7902</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08040">8040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16174,6 +16331,39 @@ isGeometryDirty() </dd></dl>
 
 </div>
 </div>
+<a id="adf6937e6f5073b3c3f3533ba068f440f" name="adf6937e6f5073b3c3f3533ba068f440f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf6937e6f5073b3c3f3533ba068f440f">&#9670;&#160;</a></span>setObjectOrigin()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Context::setObjectOrigin </td>
+          <td>(</td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>ObjID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the origin position of the object about which it can be rotated and scaled. </p>
+<p>Note that this does not change the position of the object in the scene, but rather sets the origin point about which the object can later be rotated and scaled.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ObjID</td><td>Identifier of the object. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>(x,y,z) Coordinates of the new origin point. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08027">8027</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
 <a id="af614872eb351fa3f8dbb46e79cd551e3" name="af614872eb351fa3f8dbb46e79cd551e3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af614872eb351fa3f8dbb46e79cd551e3">&#9670;&#160;</a></span>setObjectTransformationMatrix() <span class="overload">[1/2]</span></h2>
 
@@ -16202,7 +16392,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07840">7840</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07969">7969</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16234,7 +16424,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07836">7836</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07965">7965</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16304,7 +16494,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07094">7094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07223">7223</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16336,7 +16526,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07084">7084</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07213">7213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16368,7 +16558,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07090">7090</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07219">7219</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -16400,7 +16590,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07080">7080</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07209">7209</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18697,7 +18887,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06926">6926</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07055">7055</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18729,7 +18919,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06903">6903</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07032">7032</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18761,7 +18951,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07104">7104</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07233">7233</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18793,7 +18983,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07057">7057</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07186">7186</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18825,7 +19015,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07053">7053</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07182">7182</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18857,7 +19047,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03176">3176</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03218">3218</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -18889,7 +19079,7 @@ isGeometryDirty() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03299">3299</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03341">3341</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19071,7 +19261,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08192">8192</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08330">8330</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19103,7 +19293,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08165">8165</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08303">8303</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19171,7 +19361,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02977">2977</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02989">2989</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19203,7 +19393,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02968">2968</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02980">2980</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19294,7 +19484,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07940">7940</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08078">8078</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19321,7 +19511,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07936">7936</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l08074">8074</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19348,7 +19538,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07152">7152</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07281">7281</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19375,7 +19565,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07148">7148</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l07277">7277</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -19407,7 +19597,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04146">4146</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03912">3912</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19445,7 +19635,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04150">4150</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03916">3916</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19489,7 +19679,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04154">4154</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03920">3920</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19516,7 +19706,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03678">3678</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03472">3472</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19548,7 +19738,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03682">3682</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l03476">3476</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19586,7 +19776,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04528">4528</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04367">4367</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19630,7 +19820,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04532">4532</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l04371">4371</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19662,7 +19852,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02658">2658</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02495">2495</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19700,7 +19890,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02671">2671</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02508">2508</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>
@@ -19738,7 +19928,7 @@ setSunDirection() </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02662">2662</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context__file_i_o_8cpp_source.html#l02499">2499</a> of file <a class="el" href="_context__file_i_o_8cpp_source.html">Context_fileIO.cpp</a>.</p>
 
 </div>
 </div>

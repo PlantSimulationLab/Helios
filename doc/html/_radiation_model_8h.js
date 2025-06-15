@@ -1,7 +1,7 @@
 var _radiation_model_8h =
 [
     [ "CameraProperties", "struct_camera_properties.html", "struct_camera_properties" ],
-    [ "RadiationCamera", "struct_radiation_camera.html", null ],
+    [ "RadiationCamera", "struct_radiation_camera.html", "struct_radiation_camera" ],
     [ "RadiationBand", "struct_radiation_band.html", "struct_radiation_band" ],
     [ "RadiationSource", "struct_radiation_source.html", "struct_radiation_source" ],
     [ "RadiationModel", "class_radiation_model.html", "class_radiation_model" ],

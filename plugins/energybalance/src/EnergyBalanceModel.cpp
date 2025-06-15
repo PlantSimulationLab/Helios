@@ -14,6 +14,7 @@
 */
 
 #include "EnergyBalanceModel.h"
+#include "../include/EnergyBalanceModel.h"
 
 #include "global.h"
 
@@ -412,8 +413,22 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
     float air_moisture_average;
     if ( context->doesGlobalDataExist("air_moisture_average") && context->getGlobalDataType("air_moisture_average") == helios::HELIOS_TYPE_FLOAT ) {
         context->getGlobalData("air_moisture_average", air_moisture_average);
+        std::cerr << "Reading air_moisture_average from global data: " << air_moisture_average << std::endl;
     }else {
         air_moisture_average = air_humidity_reference*esat_Pa(air_temperature_reference)/Patm;
+    }
+
+    float air_temperature_ABL = 0; //initialize to 0 as a flag so that if it's not available from global data, we'll initialize it below
+    if ( context->doesGlobalDataExist("air_temperature_ABL") && context->getGlobalDataType("air_temperature_ABL") == helios::HELIOS_TYPE_FLOAT ) {
+        context->getGlobalData("air_temperature_ABL", air_temperature_ABL);
+    }
+
+    float air_moisture_ABL;
+    if ( context->doesGlobalDataExist("air_moisture_ABL") && context->getGlobalDataType("air_moisture_ABL") == helios::HELIOS_TYPE_FLOAT ) {
+        context->getGlobalData("air_moisture_ABL", air_moisture_ABL);
+        std::cerr << "Reading air_moisture_ABL from global data: " << air_moisture_ABL << std::endl;
+    }else {
+        air_moisture_ABL = air_humidity_reference*esat_Pa(air_temperature_reference)/Patm;
     }
 
     // Get dimensions of canopy volume
@@ -438,14 +453,20 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
     float zo_m = 0.1f*canopy_height_m; // Roughness length for momentum transfer (m)
     float zo_h = 0.01f*canopy_height_m; // Roughness length for heat transfer (m)
 
+    float abl_height_m = 1000.f;
+
     float time=0;
     float air_temperature_old = 0;
     float air_moisture_old = 0;
+    float air_temperature_ABL_old = 0;
+    float air_moisture_ABL_old = 0;
     while ( time<time_advance_sec ) {
         float dt_actual = dt_sec;
         if ( time + dt_actual > time_advance_sec ) {
             dt_actual = time_advance_sec - time; // Adjust the time step to not exceed the total time
         }
+
+        std::cout << "Air moisture average: " << air_moisture_average << std::endl;
 
         // Update the surface energy balance
         this->run(UUIDs);
@@ -463,30 +484,160 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
 
         float rho_air_mol_m3 = Patm / (R * air_temperature_average);; // Molar density of air (mol/m^3).
 
-        // Calculate sensible flux upper boundary condition
-        float ga = std::pow(von_Karman_constant,2)*wind_speed_reference/(std::log((reference_height_m-displacement_height)/zo_m)*std::log((reference_height_m-displacement_height)/zo_h))*rho_air_mol_m3; //aerodynamic conductance (mol/m^2/s).
+        // --- canopy / ABL interface & implicit‐Euler update ---
 
-        // Calculate moisture flux upper boundary condition
-        float air_moisture_reference = esat_Pa(air_temperature_reference)/Patm*air_humidity_reference;
+        // 1) canopy‐scale source fluxes per unit ground area
+        float H_s = sensible_source_flux_W_m3 * canopy_height_m; // W m⁻²
+        float E_s = moisture_source_flux_mol_s_m3 * canopy_height_m; // mol m⁻² s⁻¹
 
-        // Advance air temperature equation
-        // implicit denominator  1 + Δt/hc · g_a/n
-        float denominator_temp = 1.f + (dt_actual * ga) / (rho_air_mol_m3 * canopy_height_m);
-        // RHS numerator
-        float numerator_temp = air_temperature_average + dt_actual / (rho_air_mol_m3 * cp_air_mol * canopy_height_m) * (sensible_source_flux_W_m3 * canopy_height_m + cp_air_mol * ga * air_temperature_reference);
+        // 2) neutral friction velocity for Obukhov length
+        float u_star_neutral = von_Karman_constant * wind_speed_reference
+                               / std::log((reference_height_m - displacement_height) / zo_m);
 
-        // update
+        // 3) Obukhov length L [m]
+        float rho_air_kg_m3 = rho_air_mol_m3 * 0.02896f;
+        float cp_air_kg = cp_air_mol / 0.02896f;
+        float L = 1e6f;
+        if (std::fabs(H_s) > 1e-6f) {
+            L = -rho_air_kg_m3 * cp_air_kg * std::pow(u_star_neutral, 3)
+                * air_temperature_reference
+                / (von_Karman_constant * 9.81f * H_s);
+        }
+
+        // 4) stability functions (Businger–Dyer)
+        auto psi_unstable_u = [&](float zeta) {
+            float x = std::pow(1.f - 16.f * zeta, 0.25f);
+            return 2.f * std::log((1.f + x) / 2.f)
+                   + std::log((1.f + x * x) / 2.f)
+                   - 2.f * std::atan(x)
+                   + 0.5f * M_PI;
+        };
+        auto psi_unstable_h = [&](float zeta) {
+            return 2.f * std::log((1.f + std::sqrt(1.f - 16.f * zeta)) / 2.f);
+        };
+        auto psi_stable = [&](float zeta) {
+            return -5.f * zeta;
+        };
+
+        float zeta_r = (reference_height_m - displacement_height) / L;
+        float psi_m_r = (zeta_r < 0.f)
+                            ? psi_unstable_u(zeta_r)
+                            : psi_stable(zeta_r);
+        float psi_h_r = (zeta_r < 0.f)
+                            ? psi_unstable_h(zeta_r)
+                            : psi_stable(zeta_r);
+
+        // 5) stability‐corrected friction velocity
+        float u_star = von_Karman_constant * wind_speed_reference
+                       / (std::log((reference_height_m - displacement_height) / zo_m) - psi_m_r);
+
+        // 6) Monin–Obukhov scales θ_* and q_*
+        float theta_star = H_s / (rho_air_mol_m3 * cp_air_mol * u_star);
+        float q_star = E_s / (rho_air_mol_m3 * u_star);
+
+        // 7) corrected log‐law lengths
+        float ln_m_corr = std::log((reference_height_m - displacement_height) / zo_m) - psi_m_r;
+        float ln_h_corr = std::log((reference_height_m - displacement_height) / zo_h) - psi_h_r;
+
+        // 8) aerodynamic conductance ga [mol m⁻² s⁻¹]
+        float ga = std::pow(von_Karman_constant, 2) * wind_speed_reference / (ln_m_corr * ln_h_corr) * rho_air_mol_m3;
+
+        // 9) interface values at canopy top (Monin–Obukhov log-law)
+        float air_moisture_reference = esat_Pa(air_temperature_reference) / Patm * air_humidity_reference;
+        float T_int = air_temperature_reference + theta_star / von_Karman_constant * ln_h_corr;
+        float x_int = air_moisture_reference + q_star / von_Karman_constant * ln_h_corr;
+
+        // Cap relative humidity to 100%
+        float x_sat = esat_Pa(T_int)/Patm;
+        if ( x_int > x_sat ) {
+            //std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Air moisture exceeds saturation. Capping to saturation value." << std::endl;
+            x_int = 0.99f*x_sat;
+        }
+
+        // 10) entrainment conductance g_e (mol m⁻² s⁻¹)
+        float H_canopy = sensible_source_flux_W_m3 * canopy_height_m;
+        float g_e;
+        if (air_temperature_ABL == 0.f) {
+            // first‐step equilibrium initialization
+            float w_star0 = H_canopy > 0.f ? std::pow(9.81f * H_canopy * canopy_height_m / (rho_air_mol_m3 * cp_air_mol * air_temperature_reference), 1.f / 3.f) : 0.f;
+            const float A_e = 0.02f;
+            float w_e0 = A_e * w_star0;
+            g_e = rho_air_mol_m3 * w_e0;
+            // initialize ABL state
+            air_temperature_ABL = (ga * air_temperature_average
+                                   + g_e * air_temperature_reference)
+                                  / (ga + g_e);
+            air_moisture_ABL = (ga * air_moisture_average
+                                + g_e * air_moisture_reference)
+                               / (ga + g_e);
+        } else {
+            // ongoing entrainment
+            float w_star = 0.f;
+            if (H_canopy > 0.f) {
+                w_star = std::pow(9.81f * H_canopy * canopy_height_m
+                                  / (rho_air_mol_m3 * cp_air_mol * air_temperature_ABL), 1.f / 3.f);
+            }
+            float u_star_shear = von_Karman_constant * wind_speed_reference
+                                 / std::log((reference_height_m - displacement_height) / zo_m);
+            float w_e = std::fmax(0.01f * w_star, 0.005f * u_star_shear);
+            g_e = rho_air_mol_m3 * w_e;
+        }
+
+        // if ( g_e>0.05 ) {
+        //     std::cerr << "Capping g_e value of " << g_e << std::endl;
+        //     g_e = 0.05f;
+        // }
+        g_e = 2.0;
+
+        // 11) canopy→ABL fluxes
+        float sensible_upper_flux_W_m2 = cp_air_mol * ga * (air_temperature_average - T_int);
+
+        // 12) update canopy‐air temperature (implicit Euler)
+        // numerator: T^n + (Δt / (ρ c_p h_c)) * [H_s + c_p g_a T_int]
+        // denominator: 1 + Δt·g_a/(ρ h_c)
+        float numerator_temp = air_temperature_average
+          + dt_actual
+            / (rho_air_mol_m3 * cp_air_mol * canopy_height_m)
+            * (H_s + cp_air_mol * ga * T_int);
+        float denominator_temp = 1.f
+          + dt_actual * ga / (rho_air_mol_m3 * canopy_height_m);
         air_temperature_average = numerator_temp / denominator_temp;
 
-        // Advance air moisture equation
-        float air_moisture_average_old = air_moisture_average;
-        // factor  f = [1-(1-ε)·x]² / ε   evaluated at the old state
-        float f = std::pow(1.f - (1.f - 0.622f) * air_moisture_average_old, 2) / 0.622f;
-        // implicit denominator  1 + Δt  f  ga / (ρ h_c)
-        float denominator_moist = 1.f + dt_actual * f * ga / (rho_air_mol_m3 * canopy_height_m);
-        // implicit numerator   x_old + Δt  f  (E_s + ga·x_ref / h_c) / (ρ)
-        float numerator_moist = air_moisture_average_old + dt_actual * f * (moisture_source_flux_mol_s_m3 + ga * air_moisture_reference / canopy_height_m) / rho_air_mol_m3;
-        air_moisture_average = numerator_moist / denominator_moist;
+        // 13) update canopy‐air moisture (implicit Euler)
+
+        // --- canopy implicit‐Euler moisture update ---
+        // update: ρh (x_new - x_old)/dt = E_s - E_top
+        float E_top = ga * (air_moisture_average - x_int);
+        float f = std::pow(1.f - (1.f - 0.622f)*air_moisture_average, 2) / 0.622f;
+        float numer_can_x = air_moisture_average + dt_actual * f / (rho_air_mol_m3 * canopy_height_m) * (E_s + ga * x_int);
+        float denom_can_x = 1.f + dt_actual * f * ga/(rho_air_mol_m3*canopy_height_m);
+        air_moisture_average = numer_can_x/denom_can_x;
+
+        // 14) update ABL‐air temperature (implicit Euler)
+        float denom_abl_T = 1.f + dt_actual * (ga + g_e) / (rho_air_mol_m3 * cp_air_mol * abl_height_m);
+        float num_abl_T = air_temperature_ABL
+                          + dt_actual / (rho_air_mol_m3 * cp_air_mol * abl_height_m)
+                          * (sensible_upper_flux_W_m2 + cp_air_mol * g_e * (air_temperature_reference - air_temperature_ABL));
+        air_temperature_ABL = num_abl_T / denom_abl_T;
+
+        // 15) update ABL‐air moisture (implicit Euler)
+        // source into ABL storage
+        //  ρ_ab·h_ab · (x_ab_new - x_ab_old)/dt = E_top - E_e
+        float E_e  = g_e * ( air_moisture_ABL - air_moisture_reference );
+        float numer_abl_x = air_moisture_ABL + dt_actual / (rho_air_mol_m3 * abl_height_m) * ( E_top - E_e );
+        float denom_abl_x = 1.f + dt_actual * (ga + g_e)/ (rho_air_mol_m3 * abl_height_m);
+        air_moisture_ABL = numer_abl_x / denom_abl_x;
+
+        // moisture budget check (mol m⁻² s⁻¹)
+        float canopy_storage = (air_moisture_average - air_moisture_old) * rho_air_mol_m3 * canopy_height_m / dt_actual;
+        float flux_in       = E_s;            // from latent source
+        float flux_out      = E_top;          // to ABL
+        std::cerr << std::fixed
+                  << "CANOPY MOISTURE BUDGET: in="<<flux_in
+                  <<" out="<<flux_out
+                  <<" storage="<<canopy_storage
+                  <<" residual="<<(flux_in - flux_out - canopy_storage)
+                  << std::endl;
 
         // Cap relative humidity to 100%
         float esat = esat_Pa(air_temperature_average)/Patm;
@@ -494,11 +645,87 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
             std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Air moisture exceeds saturation. Capping to saturation value." << std::endl;
             air_moisture_average = 0.99f*esat;
         }
+        esat = esat_Pa(air_temperature_ABL)/Patm;
+        if ( air_moisture_ABL > esat ) {
+            air_moisture_ABL = 0.99f*esat;
+        }
 
         // Check that timestep is not too large based on aerodynamic resistance
         if ( dt_actual > 0.5f*canopy_height_m*rho_air_mol_m3/ga ) {
             std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Time step is too large.  The air energy balance may not converge properly." << std::endl;
         }
+
+        float heat_from_Htop = dt_actual / (rho_air_mol_m3 * cp_air_mol * abl_height_m) * sensible_upper_flux_W_m2;
+        float heat_from_entrainment = dt_actual * g_e * (air_temperature_reference - air_temperature_ABL) / (rho_air_mol_m3 * abl_height_m);
+
+        std::cerr << "ABL ENERGY UPDATE:\n"
+                  << "  T_ABL_n          = " << air_temperature_ABL << "\n"
+                  << "  T_ref            = " << air_temperature_reference << "\n"
+                  << "  g_e              = " << g_e << " mol/m²/s\n"
+                  << "  Heat from H_top  = " << heat_from_Htop << " K\n"
+                  << "  Heat from H_e    = " << heat_from_entrainment << " K\n"
+                  << "  Numerator        = " << num_abl_T << " K\n"
+                  << "  Denominator      = " << denom_abl_T << "\n"
+                  << "  T_ABL_new        = " << (num_abl_T / denom_abl_T) << "\n";
+
+
+#ifdef HELIOS_DEBUG
+
+        // -- check energy consistency -- //
+        H_s    = sensible_source_flux_W_m3 * canopy_height_m;            // W m⁻², canopy source
+        float H_top  = cp_air_mol * ga * (air_temperature_average - T_int);     // W m⁻², canopy→ABL
+        float H_e    = cp_air_mol * g_e * (air_temperature_ABL - air_temperature_reference); // W m⁻², ABL→free atm
+
+        E_s    = moisture_source_flux_mol_s_m3 * canopy_height_m;       // mol m⁻² s⁻¹, canopy source
+        float E_top  = ga * (air_moisture_average - x_int);              // mol m⁻² s⁻¹, canopy→ABL
+        float E_e    = g_e * (air_moisture_ABL  - air_moisture_reference); // mol m⁻² s⁻¹, ABL→free atm
+
+        // Print a concise table of key values
+        std::cout << std::fixed << std::setprecision(5)
+                  << "step="<<time
+                  << "  T_c="<<air_temperature_average
+                  << "  T_int="<<T_int
+                  << "  T_b="<<air_temperature_ABL
+                  << "  H_s="<<H_s
+                  << "  H_top="<<H_top
+                  << "  H_e="<<H_e
+                  << "  E_s="<<E_s
+                  << "  E_top="<<E_top
+                  << "  E_e="<<E_e
+                  << "  psi_m="<<psi_m_r
+                  << "  psi_h="<<psi_h_r
+                  << "  u*="<<u_star
+                  << "  L="<<L
+                  << std::endl;
+
+        // temperature balance
+
+        const float tol = 1e-5f;
+        float S_can = rho_air_mol_m3 * cp_air_mol * canopy_height_m * (air_temperature_average - air_temperature_old) / dt_actual;
+        if (fabs(H_s - H_top - S_can) > tol)
+            std::cerr << "Canopy budget error: " << (H_s - H_top - S_can) << "\n";
+
+        float S_abl = rho_air_mol_m3 * cp_air_mol * abl_height_m  * (air_temperature_ABL - air_temperature_ABL_old) / dt_actual;
+        if (fabs(H_top - H_e - S_abl) > tol)
+            std::cerr << "ABL budget error: " << (H_top - H_e - S_abl) << "\n";
+
+        // moisture balance per unit ground area
+
+        S_can = rho_air_mol_m3 * canopy_height_m * (air_moisture_average - air_moisture_old) / dt_actual;
+
+        const float tol_m = 1e-6f;
+        if (std::fabs(E_s - moisture_upper_flux - S_can) > tol_m) {
+            std::cerr << "CANOPY MOISTURE BUDGET ERROR: " << "E_s - E_up - S_can = " << E_s - moisture_upper_flux - S_can  << " mol/m2/s\n";
+        }
+
+        S_abl = rho_air_mol_m3 * abl_height_m * (air_moisture_ABL - air_moisture_ABL_old) / dt_actual;
+
+        if (std::fabs(moisture_upper_flux - E_e - S_abl) > tol_m) {
+            std::cerr << "ABL MOISTURE BUDGET ERROR: " << "E_up - E_e - S_abl = " << moisture_upper_flux - E_e - S_abl  << " mol/m2/s\n";
+        }
+
+
+#endif
 
         // Set primitive data
         context->setPrimitiveData( UUIDs, "air_temperature", air_temperature_average );
@@ -509,6 +736,14 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
         context->setGlobalData("air_temperature_average", air_temperature_average);
         context->setGlobalData("air_humidity_average", air_humidity);
         context->setGlobalData("air_moisture_average", air_moisture_average);
+
+        context->setGlobalData( "air_temperature_ABL", air_temperature_ABL );
+        float air_humidity_ABL = air_moisture_ABL*Patm/esat_Pa(air_temperature_ABL);
+        context->setGlobalData( "air_humidity_ABL", air_humidity_ABL );
+
+        context->setGlobalData(  "air_temperature_interface", T_int );
+        float air_humidity_interface = x_int*Patm/esat_Pa(T_int);
+        context->setGlobalData( "air_humidity_interface", air_humidity_interface );
 
         context->setGlobalData("aerodynamic_resistance", rho_air_mol_m3/ga);
 
@@ -523,8 +758,10 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
         }
         air_temperature_old = air_temperature_average;
         air_moisture_old = air_moisture_average;
+        air_temperature_ABL_old = air_temperature_ABL;
+        air_moisture_ABL_old = air_moisture_ABL;
 
-        time += dt_sec;
+        time += dt_actual;
 
     }
 

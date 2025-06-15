@@ -59,14 +59,32 @@ struct CameraCalibration{
     */
 //    void setColorboardReflectivity(const uint &UUID, const std::string &filename, const std::string &labelname);
 
-    //! Add default color board (DKC-RPO) with spectral reflectivity values
+    //! Add default color board (DGK-DKK) with spectral reflectivity values
     /**
      * \param[in] centrelocation: Location of the board (vec3 on coordinates x,y,z)
      * \param[in] patchsize: Size of each color patch in color board
      * \param[in] rotationrad: Radians of rotation (vec3 on coordinates x,y,z)
-     * \return A vector of default color board UUIDs.
+     * \return A vector of UUIDs making up the color board patches
     */
     std::vector<uint> addDefaultColorboard(const helios::vec3 &centrelocation, float patchsize = 0.5, const helios::vec3 &rotationrad = helios::make_vec3(0,0,0));
+
+    //! Add DGK-DKK calibration color board
+    /**
+     * \param[in] centrelocation: Location of the board (vec3 on coordinates x,y,z)
+     * \param[in] patchsize: Size of each color patch in color board
+     * \param[in] rotationrad: Radians of rotation (vec3 on coordinates x,y,z)
+     * \return A vector of UUIDs making up the color board patches
+    */
+    std::vector<uint> addDGKColorboard(const helios::vec3 &centrelocation, float patchsize = 0.5, const helios::vec3 &rotationrad = helios::make_vec3(0, 0, 0));
+
+   //! Add Calibrite ColorChecker Classic calibration color board
+    /**
+     * \param[in] centrelocation: Location of the board (vec3 on coordinates x,y,z)
+     * \param[in] patchsize: Size of each color patch in color board
+     * \param[in] rotationrad: Radians of rotation (vec3 on coordinates x,y,z)
+     * \return A vector of UUIDs making up the color board patches
+    */
+    std::vector<uint> addCalibriteColorboard(const helios::vec3 &centrelocation, float patchsize = 0.5, const helios::vec3 &rotationrad = helios::make_vec3(0, 0, 0));
 
     std::vector<uint> getColorBoardUUIDs();
 
@@ -126,34 +144,33 @@ struct CameraCalibration{
 
     //! Preprocess all spectra for modelling.
     /**
-     * \param[in] sourcelabels: Label vector of source spectra.
-     * \param[in] cameralabels: Label vector of camera spectra.
-     * \param[in] objectlabels: Label vector of object spectra.
-     * \param[inout] lowwavelength: Low wavelength boundary.
-     * \param[inout] highwavelength: High wavelength boundary.
-     * \param[in] targetlabel: Label of target spectrum used for interpolation.
+     * \param[in] sourcelabels Label vector of source spectra.
+     * \param[in] cameralabels Label vector of camera spectra.
+     * \param[in] objectlabels Label vector of object spectra.
+     * \param[inout] wavelengthrange Min and max of wavelength boundary.
+     * \param[in] targetlabel Label of target spectrum used for interpolation.
     */
     void preprocessSpectra(const std::vector<std::string>& sourcelabels, const std::vector<std::string>& cameralabels,
                            std::vector<std::string>& objectlabels, helios::vec2 &wavelengthrange, const std::string& targetlabel="");
 
     //! Get distorted image.
     /**
-     * \param[in] cameralabel: Label of camera.
-     * \param[in] bandlabels: Label vector of bands.
-     * \param[in] focalxy: Focal length xy of camera.
-     * \param[in] distCoeffs: Distortion coefficients.
-     * \param[in] camerareoslution: Resolution of camera.
-     * \param[in] camerareoslutionR: Resolution of camera for distortion.
+     * \param[in] cameralabel Label of camera.
+     * \param[in] bandlabels Label vector of bands.
+     * \param[in] focalxy Focal length xy of camera.
+     * \param[in] distCoeffs Distortion coefficients.
+     * \param[in] cameraresolution Resolution of camera.
+     * \param[in] cameraresolution Resolution of camera for distortion.
     */
     void distortImage(const std::string& cameralabel, const std::vector<std::string>& bandlabels, const helios::vec2 &focalxy,
-                      std::vector<double> &distCoeffs, helios::int2 camerareoslution);
+                      std::vector<double> &distCoeffs, helios::int2 cameraresolution);
 
     //! Get camera spectral response scale.
     /**
-     * \param[in] cameralabel: Label of camera.
-     * \param[in] cameraresolution: Resolution of camera.
-     * \param[in] bandlabels: Label vector of bands.
-     * \param[in] truevalues: True color board values.
+     * \param[in] cameralabel Label of camera.
+     * \param[in] cameraresolution Resolution of camera.
+     * \param[in] bandlabels Label vector of bands.
+     * \param[in] truevalues True color board values.
     */
     float getCameraResponseScale(const std::string &cameralabel, const helios::int2 cameraresolution, const std::vector<std::string> &bandlabels,
                        const std::vector<std::vector<float>> &truevalues);
@@ -168,9 +185,9 @@ struct CameraCalibration{
 
     //! Write calibrated camera response spectra.
     /**
-     * \param[in] camerareponselabels: Label vector of original camera response spectra to be written.
-     * \param[in] calibratemark: Calibration mark.
-     * \param[in] scale: Manually adjustable Scaling factor for calibrated camera response spectra.
+     * \param[in] camerareponselabels Label vector of original camera response spectra to be written.
+     * \param[in] calibratemark Calibration mark.
+     * \param[in] scale Manually adjustable Scaling factor for calibrated camera response spectra.
     */
     void writeCalibratedCameraResponses(const std::vector<std::string>& camerareponselabels, const std::string &calibratemark, float scale);
 
@@ -184,8 +201,8 @@ protected:
 
     //! Expand vector for integral.
     /**
-     * \param[in] targetspectrum: Spectrum to be expanded.
-     * \param[in] scale: Scale value for spectrum.
+     * \param[in] targetspectrum Spectrum to be expanded.
+     * \param[in] scale Scale value for spectrum.
      * \return Expanded spectrum.
     */
     std::vector<float> expandSpectrum(const std::vector<helios::vec2>& targetspectrum, float scale);
@@ -197,35 +214,74 @@ protected:
 
     std::vector<uint> UUIDs_white;
 
-    //! Size and RGB values of default color board
-    helios::RGBcolor white_01 = helios::make_RGBcolor(1.f,1.f,1.f);
-    helios::RGBcolor lightgray_02 = helios::make_RGBcolor(0.8,0.8,0.8);
-    helios::RGBcolor mediumlightgray_03 = helios::make_RGBcolor(0.6,0.6,0.6);
-    helios::RGBcolor mediumdarkgray_04 = helios::make_RGBcolor(0.4,0.4,0.4);
-    helios::RGBcolor darkgray_05 = helios::make_RGBcolor(0.2,0.2,0.2);
-    helios::RGBcolor black_06 = helios::make_RGBcolor(0.,0.,0.);
-    helios::RGBcolor red_07 = helios::make_RGBcolor(1,0.1,0);
-    helios::RGBcolor yellow_08 = helios::make_RGBcolor(1,1,0);
-    helios::RGBcolor green_09 = helios::make_RGBcolor(0.4118,0.7490,0.2706);
-    helios::RGBcolor skyblue_10 = helios::make_RGBcolor(0,0.5647,1);
-    helios::RGBcolor darkblue_11 = helios::make_RGBcolor(0.1882,0.2314,0.3608);
-    helios::RGBcolor magenta_12 = helios::make_RGBcolor(1,0,0.5647);
-    helios::RGBcolor brickred_13 = helios::make_RGBcolor(0.7294,0.0118,0.1216);
-    helios::RGBcolor orange_14 = helios::make_RGBcolor(0.9569,0.6,0.0078);
-    helios::RGBcolor teal_15 = helios::make_RGBcolor(0,0.4549,0.7412);
-    helios::RGBcolor mauve_16 = helios::make_RGBcolor(0.66,0.34,0.53);
-    helios::RGBcolor lighttan_17 = helios::make_RGBcolor(0.73,0.60,0.51);
-    helios::RGBcolor darktan_18 = helios::make_RGBcolor(0.66,0.55,0.45);
+    //! RGB values of DGK DKK color board
+    helios::RGBcolor white_DGK_01 = helios::make_RGBcolor(1.f,1.f,1.f);
+    helios::RGBcolor lightgray_DGK_02 = helios::make_RGBcolor(0.8,0.8,0.8);
+    helios::RGBcolor mediumlightgray_DGK_03 = helios::make_RGBcolor(0.6,0.6,0.6);
+    helios::RGBcolor mediumdarkgray_DGK_04 = helios::make_RGBcolor(0.4,0.4,0.4);
+    helios::RGBcolor darkgray_DGK_05 = helios::make_RGBcolor(0.2,0.2,0.2);
+    helios::RGBcolor black_DGK_06 = helios::make_RGBcolor(0.,0.,0.);
+    helios::RGBcolor red_DGK_07 = helios::make_RGBcolor(1,0.1,0);
+    helios::RGBcolor yellow_DGK_08 = helios::make_RGBcolor(1,1,0);
+    helios::RGBcolor green_DGK_09 = helios::make_RGBcolor(0.4118,0.7490,0.2706);
+    helios::RGBcolor skyblue_DGK_10 = helios::make_RGBcolor(0,0.5647,1);
+    helios::RGBcolor darkblue_DGK_11 = helios::make_RGBcolor(0.1882,0.2314,0.3608);
+    helios::RGBcolor magenta_DGK_12 = helios::make_RGBcolor(1,0,0.5647);
+    helios::RGBcolor brickred_DGK_13 = helios::make_RGBcolor(0.7294,0.0118,0.1216);
+    helios::RGBcolor orange_DGK_14 = helios::make_RGBcolor(0.9569,0.6,0.0078);
+    helios::RGBcolor teal_DGK_15 = helios::make_RGBcolor(0,0.4549,0.7412);
+    helios::RGBcolor mauve_DGK_16 = helios::make_RGBcolor(0.66,0.34,0.53);
+    helios::RGBcolor lighttan_DGK_17 = helios::make_RGBcolor(0.73,0.60,0.51);
+    helios::RGBcolor darktan_DGK_18 = helios::make_RGBcolor(0.66,0.55,0.45);
 
-    const std::vector<std::vector<helios::RGBcolor>> colorassignment_default=
-            {{white_01, lightgray_02, mediumlightgray_03, mediumdarkgray_04, darkgray_05, black_06},
-             {red_07, yellow_08, green_09, skyblue_10, darkblue_11, magenta_12},
-             {brickred_13, orange_14, teal_15, mauve_16, lighttan_17, darktan_18}};
+    const std::vector<std::vector<helios::RGBcolor>> colorassignment_DGK =
+            {{white_DGK_01, lightgray_DGK_02, mediumlightgray_DGK_03, mediumdarkgray_DGK_04, darkgray_DGK_05, black_DGK_06},
+             {red_DGK_07, yellow_DGK_08, green_DGK_09, skyblue_DGK_10, darkblue_DGK_11, magenta_DGK_12},
+             {brickred_DGK_13, orange_DGK_14, teal_DGK_15, mauve_DGK_16, lighttan_DGK_17, darktan_DGK_18}};
 
-    const std::vector<std::vector<std::string>> spectrumassignment_default =
-            {{"ColorReference_01", "ColorReference_02", "ColorReference_03", "ColorReference_04", "ColorReference_05", "ColorReference_06"},
-             {"ColorReference_07", "ColorReference_08", "ColorReference_09", "ColorReference_10", "ColorReference_11", "ColorReference_12"},
-             {"ColorReference_13", "ColorReference_14", "ColorReference_15", "ColorReference_16", "ColorReference_17", "ColorReference_18"}};
+    const std::vector<std::vector<std::string>> spectrumassignment_DGK =
+            {{"ColorReference_DGK_01", "ColorReference_DGK_02", "ColorReference_DGK_03", "ColorReference_DGK_04", "ColorReference_DGK_05", "ColorReference_DGK_06"},
+             {"ColorReference_DGK_07", "ColorReference_DGK_08", "ColorReference_DGK_09", "ColorReference_DGK_10", "ColorReference_DGK_11", "ColorReference_DGK_12"},
+             {"ColorReference_DGK_13", "ColorReference_DGK_14", "ColorReference_DGK_15", "ColorReference_DGK_16", "ColorReference_DGK_17", "ColorReference_DGK_18"}};
+
+    //! RGB values of Calibrite ColorChecker Classic color board
+    helios::RGBcolor brown_Calibrite_01 = helios::make_RGBcolor(0.38, 0.25, 0.16);
+    helios::RGBcolor lighttan_Calibrite_02 = helios::make_RGBcolor(0.79, 0.59, 0.54 );
+    helios::RGBcolor bluegray_Calibrite_03 = helios::make_RGBcolor(0.34,	0.43,	0.64	);
+    helios::RGBcolor olive_Calibrite_04 = helios::make_RGBcolor(0.34,	0.43,	0.22	);
+    helios::RGBcolor lavender_Calibrite_05 = helios::make_RGBcolor(0.50,	0.47,	0.70	);
+    helios::RGBcolor bluegreen_Calibrite_06 = helios::make_RGBcolor(0.54,	0.75,	0.72	);
+    helios::RGBcolor orange_Calibrite_07 = helios::make_RGBcolor(0.85,	0.52,	0.24	);
+    helios::RGBcolor midblue_Calibrite_08 = helios::make_RGBcolor(0.22,	0.28,	0.60	);
+    helios::RGBcolor lightred_Calibrite_09 = helios::make_RGBcolor(0.78,	0.30,	0.33	);
+    helios::RGBcolor violet_Calibrite_10 = helios::make_RGBcolor(0.25,	0.14,	0.36	);
+    helios::RGBcolor yellowgreen_Calibrite_11 = helios::make_RGBcolor(0.72,	0.79,	0.32	);
+    helios::RGBcolor lightorange_Calibrite_12 = helios::make_RGBcolor( 0.87,	0.72,	0.27		);
+    helios::RGBcolor blue_Calibrite_13 = helios::make_RGBcolor(0.16,	0.19,	0.48	);
+    helios::RGBcolor green_Calibrite_14 = helios::make_RGBcolor(0.36,	0.61,	0.32	);
+    helios::RGBcolor red_Calibrite_15 = helios::make_RGBcolor(0.65,	0.19,	0.17	);
+    helios::RGBcolor yellow_Calibrite_16 = helios::make_RGBcolor(0.93,	0.86,	0.29	);
+    helios::RGBcolor magenta_Calibrite_17 = helios::make_RGBcolor(0.70,	0.27,	0.58	);
+    helios::RGBcolor lightblue_Calibrite_18 = helios::make_RGBcolor(0.21,	0.48,	0.71	);
+    helios::RGBcolor white_Calibrite_19 = helios::make_RGBcolor(1.0, 1.0, 1.0);
+    helios::RGBcolor lightgray_Calibrite_20 = helios::make_RGBcolor(0.81,	0.81,	0.81	);
+    helios::RGBcolor midlightgray_Calibrite_21 = helios::make_RGBcolor(0.68,	0.68,	0.68	);
+    helios::RGBcolor middarkgray_Calibrite_22 = helios::make_RGBcolor(0.48,	0.48,	0.48	);
+    helios::RGBcolor darkgray_Calibrite_23 = helios::make_RGBcolor(0.27,	0.27,	0.27	);
+    helios::RGBcolor black_Calibrite_24 = helios::make_RGBcolor(0.0, 0.0, 0.0);
+
+    const std::vector<std::vector<helios::RGBcolor>> colorassignment_Calibrite =
+            {{brown_Calibrite_01, lighttan_Calibrite_02, bluegray_Calibrite_03, olive_Calibrite_04, lavender_Calibrite_05, bluegreen_Calibrite_06},
+             {orange_Calibrite_07, midblue_Calibrite_08, lightred_Calibrite_09, violet_Calibrite_10, yellowgreen_Calibrite_11, lightorange_Calibrite_12},
+             {blue_Calibrite_13, green_Calibrite_14, red_Calibrite_15, yellow_Calibrite_16, magenta_Calibrite_17, lightblue_Calibrite_18},
+             {white_Calibrite_19, lightgray_Calibrite_20, midlightgray_Calibrite_21, middarkgray_Calibrite_22, darkgray_Calibrite_23, black_Calibrite_24}};
+
+    const std::vector<std::vector<std::string>> spectrumassignment_Calibrite =
+            {{"ColorReference_Calibrite_01", "ColorReference_Calibrite_02", "ColorReference_Calibrite_03", "ColorReference_Calibrite_04", "ColorReference_Calibrite_05", "ColorReference_Calibrite_06"},
+             {"ColorReference_Calibrite_07", "ColorReference_Calibrite_08", "ColorReference_Calibrite_09", "ColorReference_Calibrite_10", "ColorReference_Calibrite_11", "ColorReference_Calibrite_12"},
+             {"ColorReference_Calibrite_13", "ColorReference_Calibrite_14", "ColorReference_Calibrite_15", "ColorReference_Calibrite_16", "ColorReference_Calibrite_17", "ColorReference_Calibrite_18"},
+             {"ColorReference_Calibrite_19", "ColorReference_Calibrite_20", "ColorReference_Calibrite_21", "ColorReference_Calibrite_22", "ColorReference_Calibrite_23", "ColorReference_Calibrite_24"}};
+
 
 };
 

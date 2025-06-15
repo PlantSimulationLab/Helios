@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -3937,7 +3937,7 @@ $(function(){initNavTree('core_2src_2self_test_8cpp_source.html',''); initResiza
 <div class="line"><a id="l03790" name="l03790"></a><span class="lineno"> 3790</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> scale_factor = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1.5f, 1.5f, 1.5f);</div>
 <div class="line"><a id="l03791" name="l03791"></a><span class="lineno"> 3791</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> point = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0);</div>
 <div class="line"><a id="l03792" name="l03792"></a><span class="lineno"> 3792</span> </div>
-<div class="line"><a id="l03793" name="l03793"></a><span class="lineno"> 3793</span>            context_test.<a class="code hl_function" href="classhelios_1_1_context.html#aaab92ef2795fe99913927eadf8b3adfe" title="Method to scale a compound object in the x-, y- and z-directions.">scaleObjectAboutPoint</a>(ObjID, scale_factor, point);</div>
+<div class="line"><a id="l03793" name="l03793"></a><span class="lineno"> 3793</span>            context_test.<a class="code hl_function" href="classhelios_1_1_context.html#aaab92ef2795fe99913927eadf8b3adfe" title="Method to scale a compound object in the x-, y- and z-directions about an arbitrary point.">scaleObjectAboutPoint</a>(ObjID, scale_factor, point);</div>
 <div class="line"><a id="l03794" name="l03794"></a><span class="lineno"> 3794</span> </div>
 <div class="line"><a id="l03795" name="l03795"></a><span class="lineno"> 3795</span>            <span class="keywordtype">float</span> T[16];</div>
 <div class="line"><a id="l03796" name="l03796"></a><span class="lineno"> 3796</span>            context_test.<a class="code hl_function" href="classhelios_1_1_context.html#af9e972c138b0626cece9eea5f018b418" title="Method to return the Affine transformation matrix of an Object.">getObjectTransformationMatrix</a>(ObjID, T);</div>
@@ -3965,7 +3965,7 @@ $(function(){initNavTree('core_2src_2self_test_8cpp_source.html',''); initResiza
 <div class="line"><a id="l03818" name="l03818"></a><span class="lineno"> 3818</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> scale_factor = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2.0f, 2.0f, 2.0f);</div>
 <div class="line"><a id="l03819" name="l03819"></a><span class="lineno"> 3819</span>            <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> point = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0);</div>
 <div class="line"><a id="l03820" name="l03820"></a><span class="lineno"> 3820</span> </div>
-<div class="line"><a id="l03821" name="l03821"></a><span class="lineno"> 3821</span>            context_test.<a class="code hl_function" href="classhelios_1_1_context.html#aaab92ef2795fe99913927eadf8b3adfe" title="Method to scale a compound object in the x-, y- and z-directions.">scaleObjectAboutPoint</a>(ObjIDs, scale_factor, point);</div>
+<div class="line"><a id="l03821" name="l03821"></a><span class="lineno"> 3821</span>            context_test.<a class="code hl_function" href="classhelios_1_1_context.html#aaab92ef2795fe99913927eadf8b3adfe" title="Method to scale a compound object in the x-, y- and z-directions about an arbitrary point.">scaleObjectAboutPoint</a>(ObjIDs, scale_factor, point);</div>
 <div class="line"><a id="l03822" name="l03822"></a><span class="lineno"> 3822</span> </div>
 <div class="line"><a id="l03823" name="l03823"></a><span class="lineno"> 3823</span>            <span class="keywordflow">for</span> (uint ObjID : ObjIDs) {</div>
 <div class="line"><a id="l03824" name="l03824"></a><span class="lineno"> 3824</span>                <span class="keywordtype">float</span> T[16];</div>

@@ -579,8 +579,11 @@ protected:
     
     //! Affine transformation matrix
     float transform[16];
+
+    //! Origin position of the object about which it can be scaled and rotated
+    helios::vec3 object_origin;
     
-    //! Flag to indicate whether all object primitives are in tact. If any primitives have been deleted, this flag will be set to false.
+    //! Flag to indicate whether all object primitives are intact. If any primitives have been deleted, this flag will be set to false.
     bool primitivesarecomplete = true;
     
     std::map<std::string,HeliosDataType > object_data_types;
@@ -3567,6 +3570,15 @@ public:
      */
     void setObjectAverageNormal(uint ObjID, const vec3& origin, const vec3& new_normal) const;
 
+    //! Set the origin position of the object about which it can be rotated and scaled
+    /**
+     * Note that this does not change the position of the object in the scene, but rather sets the origin point about which the object can later be rotated and scaled.
+     *
+     * \param[in] ObjID Identifier of the object.
+     * \param[in] origin (x,y,z) Coordinates of the new origin point.
+     */
+    void setObjectOrigin( uint ObjID, const vec3& origin ) const;
+
     //! Method to check whether an Object has texture data
     /**
      * \param[in] ObjID Identifier of the object.
@@ -4868,6 +4880,22 @@ public:
      */
     void rotateObject(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_origin, const vec3& rotation_axis_vector ) const;
 
+    //! Rotate a single compound object about an arbitrary line passing through the objects origin point
+    /**
+     * \param[in] ObjID Object ID to rotate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
+     */
+    void rotateObjectAboutOrigin(uint ObjID, float rotation_radians, const vec3& rotation_axis_vector ) const;
+
+    //! Rotate multiple compound objects about an arbitrary line passing through the objects origin point
+    /**
+     * \param[in] ObjIDs Vector of object IDs to translate
+     * \param[in] rotation_radians Rotation angle in radians
+     * \param[in] rotation_axis_vector Vector describing axis about which to rotate
+     */
+    void rotateObjectAboutOrigin(const std::vector<uint>& ObjIDs, float rotation_radians, const vec3& rotation_axis_vector ) const;
+
     //! Method to scale a compound object in the x-, y- and z-directions
     /**
      * \param[in] ObjID Object ID to scale
@@ -4896,7 +4924,7 @@ public:
      */
     void scaleObjectAboutCenter( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact ) const;
 
-    //! Method to scale a compound object in the x-, y- and z-directions
+    //! Method to scale a compound object in the x-, y- and z-directions about an arbitrary point
     /**
      * \param[in] ObjID Object ID to scale
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
@@ -4904,13 +4932,29 @@ public:
      */
     void scaleObjectAboutPoint( uint ObjID, const helios::vec3 &scalefact, const helios::vec3 &point ) const;
 
-    //! Method to scale a compound object in the x-, y- and z-directions
+    //! Method to scale a compound object in the x-, y- and z-directions about an arbitrary point
     /**
      * \param[in] ObjIDs Vector of object IDs to scale
      * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
      * \param[in] point Cartesian coordinate of the point about which to scale
      */
     void scaleObjectAboutPoint( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point ) const;
+
+    //! Method to scale a compound object in the x-, y- and z-directions about its origin point
+    /**
+     * \param[in] ObjID Object ID to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     * \note By default the object origin is its center. This can be changed by setting the object origin using the setObjectOrigin method
+     */
+    void scaleObjectAboutOrigin( uint ObjID, const helios::vec3 &scalefact ) const;
+
+    //! Method to scale a compound object in the x-, y- and z-directions about its origin point
+    /**
+     * \param[in] ObjIDs Vector of object IDs to scale
+     * \param[in] scalefact Scaling factor to apply in the x-, y- and z-directions
+     * \note By default the object origin is its center. This can be changed by setting the object origin using the setObjectOrigin method
+     */
+    void scaleObjectAboutOrigin( const std::vector<uint>& ObjIDs, const helios::vec3 &scalefact ) const;
 
     //! Get primitive UUIDs associated with compound object (single object ID input)
     /**

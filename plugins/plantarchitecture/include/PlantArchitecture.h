@@ -1089,26 +1089,45 @@ public:
      */
     void setInternodeMaxRadius( float internode_radius_max_new );
 
-    //! Set the leaf scale as a fraction of its total fully-elongated scale factor. Value is uniformly applied for all leaves/leaflets and petioles in the phytomer.
+    //! Set the leaf scale as a fraction of its total fully-elongated scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.
+    /**
+     * \param petiole_index Index of the petiole to which the leaf belongs
+     * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
+     */
+    void setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_fraction);
+
+    //! Set the leaf scale as a fraction of its total fully-elongated scale factor for all petioles in the phytomer. Value is uniformly applied for all leaves/leaflets in the phytomer.
     /**
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      */
-    void setLeafScaleFraction(float leaf_scale_factor_fraction );
+    void setLeafScaleFraction(float leaf_scale_factor_fraction);
 
-    //! Set the fully-elongated (maximum) leaf prototype scale. Value is uniformly applied for all leaves/leaflets in the phytomer.
+    //! Set the fully-elongated (maximum) leaf prototype scale. Value is uniformly applied for all leaves/leaflets in the petiole.
+    /**
+     * \param petiole_index Index of the petiole to which the leaf belongs
+     * \param[in] leaf_prototype_scale Leaf scale factor for fully-elongated leaf
+     */
+    void setLeafPrototypeScale(uint petiole_index, float leaf_prototype_scale);
+
+    //! Set the fully-elongated (maximum) leaf prototype scale for all petioles in the phytomer. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
      * \param[in] leaf_prototype_scale Leaf scale factor for fully-elongated leaf
      */
-    void setLeafPrototypeScale( float leaf_prototype_scale );
+    void setLeafPrototypeScale(float leaf_prototype_scale);
 
+    //! Scales the leaf prototype by the given scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
-     * \brief Scales the leaf prototype by the given scale factor.
-     *
-     * For a compound leaf, all leaves are scaled by the same factor.
-     *
+     * This function scales the leaf prototype geometry by the specified factor.
+     * \param petiole_index Index of the petiole to which the leaf belongs
      * \param[in] scale_factor Factor by which to scale the leaf prototype. Values less than 0 are clamped to 0.
      */
-    void scaleLeafPrototypeScale( float scale_factor );
+    void scaleLeafPrototypeScale(uint petiole_index, float scale_factor);
+
+    //! Scales the leaf prototype by the given scale factor for all petioles in the phytomer. Value is uniformly applied for all leaves/leaflets in the petiole.
+    /**
+     * \param[in] scale_factor Factor by which to scale the leaf prototype. Values less than 0 are clamped to 0.
+     */
+    void scaleLeafPrototypeScale(float scale_factor);
 
     /**
      * \brief Sets the scaling fraction for the inflorescence of a floral bud.
@@ -1162,7 +1181,7 @@ public:
      * \param[in] state The desired state to set for the vegetative bud.
      * \param[in,out] vbud Reference to the vegetative bud whose state will be modified.
      */
-    void setVegetativeBudState( BudState state, VegetativeBud &vbud ) const;
+    static void setVegetativeBudState( BudState state, VegetativeBud &vbud ) ;
 
     /**
      * \brief Sets the floral bud state for all non-terminal buds.
@@ -1209,22 +1228,22 @@ public:
     // ---- phytomer data ---- //
 
     //! Coordinates of internode tube segments. Index is tube segment within internode
-    std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole
+    std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole tube
     std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
     float internode_pitch, internode_phyllotactic_angle;
 
-    std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole
+    std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole tube
     std::vector<float> petiole_length; //index is petiole within internode
-    float petiole_pitch;
-    float petiole_curvature;
+    std::vector<float> petiole_pitch; //index is petiole within internode
+    std::vector<float> petiole_curvature; //index is petiole within internode
     std::vector<std::vector<float>> leaf_size_max; //first index is petiole within internode, second index is leaf within petiole
     std::vector<std::vector<AxisRotation>> leaf_rotation; //first index is petiole within internode, second index is leaf within petiole
 
-    std::vector<helios::RGBcolor> internode_colors;
-    std::vector<helios::RGBcolor> petiole_colors;
+    std::vector<helios::RGBcolor> internode_colors; //index is segment within internode tube
+    std::vector<helios::RGBcolor> petiole_colors; //index is segment within petiole tube
 
-    std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole
-    std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole tube
+    std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole tube
 
     PhytomerParameters phytomer_parameters;
 
@@ -1241,7 +1260,7 @@ public:
     bool isdormant = false;
 
     float current_internode_scale_factor = 1;
-    float current_leaf_scale_factor = 1;
+    std::vector<float> current_leaf_scale_factor; //index is petiole within internode
 
     float old_phytomer_volume = 0;
 

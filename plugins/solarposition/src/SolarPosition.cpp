@@ -78,7 +78,7 @@ SphericalCoord SolarPosition::calculateSunDirection( const helios::Time &time, c
 
   h=(LST-12.f)*15.f*rad; //hour angle (rad)
     
-  //solar zentih angle
+  //solar zenith angle
   theta = asin_safe( sin(latitude*rad)*sin(delta) + cos(latitude*rad)*cos(delta)*cos(h) ); //(rad)
 
   assert( theta>-0.5f*M_PI && theta<0.5f*M_PI );

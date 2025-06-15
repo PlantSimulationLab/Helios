@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -229,7 +229,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span> </div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>  h=(LST-12.f)*15.f*rad; <span class="comment">//hour angle (rad)</span></div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    </div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>  <span class="comment">//solar zentih angle</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>  <span class="comment">//solar zenith angle</span></div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>  theta = <a class="code hl_function" href="group__functions.html#gac400d6d37ff2494ec592a9f0a17ee9ab" title="arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">asin_safe</a>( sin(latitude*rad)*sin(delta) + cos(latitude*rad)*cos(delta)*cos(h) ); <span class="comment">//(rad)</span></div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  assert( theta&gt;-0.5f*M_PI &amp;&amp; theta&lt;0.5f*M_PI );</div>
