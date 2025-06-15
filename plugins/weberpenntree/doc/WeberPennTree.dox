@@ -34,7 +34,7 @@
 
  \subsection WPTLibrary The XML Tree Library File
 
- The parameters that define various tree geometries are specified in an XML file, which is loaded by the plug-in. When the WeberPennTree constructor is called, the defalut tree library is loaded. A list of trees in the default library is listed in the table below. Default tree parameters can be modified by the user, or custom tree libraries can be added, which is detailed in Section \ref WPTCustom. An example tree definition is given below. The tree definition is encapsulated by the <WeberPennTree label="...">...</WeberPennTree> tag, where label gives a handle used to reference that specific tree geometry. Other tags define various parameters that determine the structure of the tree, which are detailed in the sections below.
+ The parameters that define various tree geometries are specified in an XML file, which is loaded by the plug-in. When the WeberPennTree constructor is called, the defalut tree library is loaded. A list of trees in the default library is listed in the table below. Default tree parameters can be modified by the user, or custom tree libraries can be added, which is detailed in Section \ref WPTCustom. An example tree definition is given below. The tree definition is encapsulated by the \<WeberPennTree label="..."\>...\</WeberPennTree\> tag, where label gives a handle used to reference that specific tree geometry. Other tags define various parameters that determine the structure of the tree, which are detailed in the sections below.
 
  <!-- convert Pistachio.jpeg -crop 320x360+290+225 foo.jpeg -->
  
@@ -201,7 +201,7 @@
 
   \subsection WPTgL User-Defined Leaf Angle Distribution Functions
 
-  By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution funciton can be specified for a given tree type in the tree library XML file using the tag '<LeafAngleDist> ... </LeafAngleDist>'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \f$\theta_L=0\f$ to \f$\theta_L=\pi\f$ rad.	       
+  By default, the Weber-Penn tree model will create a semi-random leaf angle distribution by rotating leaves around its parent branch according to the parameters set for that particular tree. However, this is typically not realistic for how leaves arrange themselves in nature, and it is often desirable to specify a leaf angle distribution based on actual data. A custom leaf angle (inclination) distribution function can be specified for a given tree type in the tree library XML file using the tag '\<LeafAngleDist\> ... \</LeafAngleDist\>'. The elements within the tag should be probability densities of leaf inclination for discrete angle classes ranging from \f$\theta_L=0\f$ to \f$\theta_L=\pi\f$ rad.
 
   Here is an example: Imagine that we wanted to have N=18 discrete leaf angle bins in our leaf angle PDF \f$g_L\f$. The width of one discrete bin would be \f$\Delta \theta_L=\pi/18\approx 0.1795\f$ rad. Each of the 18 bins of our PDF \f$g_L\f$ should give the probability density that we have a leaf inclination angle that falls within that bin. By definition, the following should hold for our PDF:
 

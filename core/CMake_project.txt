@@ -52,9 +52,11 @@ foreach(PLUGIN ${PLUGINS})
 endforeach(PLUGIN)
 include_directories( "${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIRECTORY}" )
 
-if( CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" )
-    target_compile_definitions(helios PRIVATE HELIOS_DEBUG)
-endif()
+#if( CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" )
+#    add_compile_definitions(HELIOS_DEBUG)
+#endif()
+
+target_compile_definitions(helios PRIVATE  $<$<CONFIG:Debug>:HELIOS_DEBUG>  $<$<CONFIG:RelWithDebInfo>:HELIOS_DEBUG> )
 
 if( ENABLE_OPENMP )
     find_package(OpenMP)

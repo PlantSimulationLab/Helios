@@ -15,6 +15,8 @@
 
 #include "RadiationModel.h"
 
+#include <string>
+
 using namespace helios;
 
 RadiationModel::RadiationModel( helios::Context* context_a ){
@@ -1197,7 +1199,7 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
-    RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties.camera_resolution, camera_properties.lens_diameter, camera_properties.focal_plane_distance, camera_properties.HFOV, camera_properties.FOV_aspect_ratio, antialiasing_samples);
+    RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties, antialiasing_samples);
     if(cameras.find(camera_label)==cameras.end()){
         cameras.emplace(camera_label,camera);
     }
@@ -1232,6 +1234,31 @@ void RadiationModel::setCameraSpectralResponse( const std::string &camera_label,
     }
 
     cameras.at(camera_label).band_spectral_response[band_label] = global_data;
+
+    radiativepropertiesneedupdate = true;
+
+}
+
+void RadiationModel::setCameraSpectralResponseFromLibrary( const std::string &camera_label, const std::string &camera_library_name ) {
+
+    if(cameras.find(camera_label) == cameras.end() ){
+        helios_runtime_error("ERROR (setCameraSpectralResponseFromLibrary): Camera '" + camera_label + "' does not exist.");
+    }
+
+    const auto &band_labels = cameras.at(camera_label).band_labels;
+
+    if ( !context->doesGlobalDataExist("spectral_library_loaded") ) {
+        context->loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
+    }
+
+    for ( const auto &band : band_labels ) {
+        std::string response_spectrum = camera_library_name + "_" + band;
+        if ( !context->doesGlobalDataExist(response_spectrum.c_str()) || context->getGlobalDataType(response_spectrum.c_str()) != HELIOS_TYPE_VEC2 ) {
+            helios_runtime_error("ERROR (setCameraSpectralResponseFromLibrary): Band '" + band + "' referenced in spectral library camera " + camera_library_name + " does not exist for camera '" + camera_label + "'.");
+        }
+
+        cameras.at(camera_label).band_spectral_response[band] = response_spectrum;
+    }
 
     radiativepropertiesneedupdate = true;
 
@@ -1346,23 +1373,27 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     std::vector<std::vector<float> > camera_data(bands.size());
 
-    for (uint b = 0; b < bands.size(); b++) {
+    uint b=0;
+    for ( const auto &band : bands ) {
 
         //check if band exists
-        if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), bands.at(b)) == cameras.at(camera).band_labels.end()) {
-            std::cout << "ERROR (RadiationModel::writeCameraImage): camera " << camera << " band with label " << bands.at(b) << " does not exist. Skipping image write for this camera." << std::endl;
+        if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
+            std::cout << "ERROR (RadiationModel::writeCameraImage): camera " << camera << " band with label " << band << " does not exist. Skipping image write for this camera." << std::endl;
             return;
         }
 
-        std::string global_data_label = "camera_" + camera + "_" + bands.at(b);
+        // std::string global_data_label = "camera_" + camera + "_" + bands.at(b);
+        //
+        // if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        //     std::cout << "ERROR (RadiationModel::writeCameraImage): image data for camera " << camera << ", band " << bands.at(b) << " has not been created. Did you run the radiation model? Skipping image write for this camera." << std::endl;
+        //     return;
+        // }
+        //
+        // context->getGlobalData(global_data_label.c_str(), camera_data.at(b));
 
-        if (!context->doesGlobalDataExist(global_data_label.c_str())) {
-            std::cout << "ERROR (RadiationModel::writeCameraImage): image data for camera " << camera << ", band " << bands.at(b) << " has not been created. Did you run the radiation model? Skipping image write for this camera." << std::endl;
-            return;
-        }
+        camera_data.at(b) = cameras.at(camera).pixel_data.at(band);
 
-        context->getGlobalData(global_data_label.c_str(), camera_data.at(b));
-
+        b++;
     }
 
     std::string frame_str;
@@ -1395,7 +1426,7 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     int2 camera_resolution = cameras.at(camera).resolution;
 
-    std::vector<RGBcolor> pixel_data(camera_resolution.x*camera_resolution.y);
+    std::vector<RGBcolor> pixel_data_RGB(camera_resolution.x*camera_resolution.y);
 
     RGBcolor pixel_color;
     for (uint j = 0; j < camera_resolution.y; j++) {
@@ -1409,11 +1440,11 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
             pixel_color.scale( flux_to_pixel_conversion );
             uint ii = camera_resolution.x - i -1;
             uint jj = camera_resolution.y - j - 1;
-            pixel_data.at(jj * camera_resolution.x + ii) = pixel_color;
+            pixel_data_RGB.at(jj * camera_resolution.x + ii) = pixel_color;
         }
     }
 
-    writeJPEG( outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data );
+    writeJPEG( outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data_RGB );
 
 }
 
@@ -5905,6 +5936,323 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
 
     return cameraresponse;
 }
+
+void RadiationModel::applyImageProcessingPipeline( const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, bool scale_grey_target, bool white_balance, bool reinhard_map, bool tone_flatten, bool apply_gain, bool apply_CCM, bool gamma_compress ) {
+
+    if ( cameras.find(cameralabel) == cameras.end() ) {
+        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
+    }
+    RadiationCamera &camera = cameras.at(cameralabel);
+    if ( camera.pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Image data must have 3 channels (RGB). This camera has " + std::to_string(camera.pixel_data.size()) + " channels.");
+    }
+    if ( camera.pixel_data.find(red_band_label) == camera.pixel_data.end() || camera.pixel_data.find(green_band_label) == camera.pixel_data.end() || camera.pixel_data.find(blue_band_label) == camera.pixel_data.end() ) {
+        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): One or more specified band labels do not exist for the camera pixel data.");
+    }
+
+    camera.normalizePixels();
+
+    if ( scale_grey_target ) {
+        camera.scaleToGreyTarget( red_band_label, green_band_label, blue_band_label, 0.18 );
+    }
+
+    if ( white_balance ) {
+        camera.whiteBalance( red_band_label, green_band_label, blue_band_label, 5.0 );
+    }
+
+    if ( reinhard_map ) {
+        camera.reinhardToneMapping( red_band_label, green_band_label, blue_band_label );
+    }
+
+    if ( tone_flatten ) {
+        camera.toneFlatten( red_band_label, green_band_label, blue_band_label, 0.6f );
+    }
+
+    if ( apply_gain ) {
+        camera.applyGain( red_band_label, green_band_label, blue_band_label, 0.95f );
+    }
+
+    if ( apply_CCM ) {
+        camera.applyCCM( red_band_label, green_band_label, blue_band_label );
+    }
+
+    if ( gamma_compress ) {
+        camera.gammaCompress( red_band_label, green_band_label, blue_band_label );
+    }
+
+}
+
+void RadiationCamera::normalizePixels() {
+
+    float min_P = std::numeric_limits<float>::max();
+    float max_P = 0.0f;
+    for ( const auto &[channel_label, data] : pixel_data ) {
+        for ( float v : data ) {
+            if ( v < min_P) {
+                min_P = v;
+            }
+            if ( v > max_P ) {
+                max_P = v;
+            }
+        }
+    }
+
+    for (auto &[channel_label,data] : pixel_data) {
+        for (float& v : data) {
+            v = (v-min_P) / (max_P - min_P); // Normalize to [0, 1]
+        }
+    }
+
+}
+
+void RadiationCamera::scaleToGreyTarget( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float target ) {
+
+#ifdef HELIOS_DEBUG
+    if( pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationCamera::scaleToGreyTarget): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+    }
+#endif
+
+    const std::size_t N = resolution.x*resolution.y;
+    constexpr float eps = 1e-6f;
+
+    double logSum = 0.0;
+    const auto &data_red = pixel_data.at(red_band_label);
+    const auto &data_green = pixel_data.at(green_band_label);
+    const auto &data_blue = pixel_data.at(blue_band_label);
+    for (std::size_t i = 0; i < N; ++i) {
+        logSum += std::log(luminance(data_red[i], data_green[i], data_blue[i]) + eps);
+    }
+
+    const float Llog = std::exp(logSum / static_cast<double>(N));
+    const float k = target / Llog;
+
+    for (auto &[channel,data] : pixel_data) {
+        for (float& v : data) {
+            v *= k;
+        }
+    }
+
+}
+
+void RadiationCamera::whiteBalance( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float p ) {
+
+#ifdef HELIOS_DEBUG
+    if( pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+    }
+#endif
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+
+    const std::size_t N = data_red.size();
+    if (data_green.size() != N || data_blue.size() != N) {
+        throw std::invalid_argument("All channels must have the same length");
+    }
+    if (p < 1.0f) {
+        throw std::invalid_argument("Minkowski exponent p must satisfy p >= 1");
+    }
+
+    // Compute Minkowski means:
+    // \[ M_R = \Bigl(\frac{1}{N}\sum_{i=1}^{N}R_i^p\Bigr)^{1/p},\quad
+    //    M_G = \Bigl(\frac{1}{N}\sum_{i=1}^{N}G_i^p\Bigr)^{1/p},\quad
+    //    M_B = \Bigl(\frac{1}{N}\sum_{i=1}^{N}B_i^p\Bigr)^{1/p} \]
+    float acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f;
+    for (std::size_t i = 0; i < N; ++i) {
+        acc_r += std::pow(data_red[i],   p);
+        acc_g += std::pow(data_green[i], p);
+        acc_b += std::pow(data_blue[i],  p);
+    }
+    float mean_r_p = acc_r / static_cast<float>(N);
+    float mean_g_p = acc_g / static_cast<float>(N);
+    float mean_b_p = acc_b / static_cast<float>(N);
+
+    float M_R = std::pow(mean_r_p, 1.0f / p);
+    float M_G = std::pow(mean_g_p, 1.0f / p);
+    float M_B = std::pow(mean_b_p, 1.0f / p);
+
+    // Avoid division by zero
+    const float eps = 1e-6f;
+    if (M_R < eps || M_G < eps || M_B < eps) {
+        throw std::runtime_error("Channel Minkowski mean too small");
+    }
+
+    // Compute gray reference:
+    // \[ M = \frac{M_R + M_G + M_B}{3} \]
+    float M = (M_R + M_G + M_B) / 3.0f;
+
+    // Derive per-channel gains:
+    // \[ s_R = M / M_R,\quad s_G = M / M_G,\quad s_B = M / M_B \]
+    helios::vec3 scale;
+    scale.x = M / M_R;
+    scale.y = M / M_G;
+    scale.z = M / M_B;
+
+    // Apply gains to each pixel:
+    // \[ R'_i = s_R\,R_i,\quad G'_i = s_G\,G_i,\quad B'_i = s_B\,B_i \]
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] *= scale.x;
+        data_green[i] *= scale.y;
+        data_blue[i] *= scale.z;
+    }
+}
+
+void RadiationCamera::reinhardToneMapping( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label ) {
+
+#ifdef HELIOS_DEBUG
+    if( pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+    }
+#endif
+
+    const std::size_t N = resolution.x*resolution.y;
+    constexpr float eps = 1e-6f;
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    for (std::size_t i = 0; i < N; ++i) {
+        float R = data_red[i], G = data_green[i], B = data_blue[i];
+        float L = luminance(R,G,B);
+        float s = (L > eps) ? (L / (1.0f + L)) / L : 0.0f;
+
+        data_red[i] = R * s;
+        data_green[i] = G * s;
+        data_blue[i] = B * s;
+    }
+
+}
+
+void RadiationCamera::toneFlatten( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float alpha ) {
+
+#ifdef HELIOS_DEBUG
+    if( pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationCamera::toneFlattening): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+    }
+#endif
+
+    size_t W = resolution.x;
+    size_t H = resolution.y;
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+
+    assert(pixel_data.size()==3 && data_red.size()==W*H);
+
+    const std::size_t N = W*H;
+    constexpr float eps = 1e-6;
+
+    /* --- prepare log‑luminance ----------------------------------- */
+    std::vector<float> logY(N), temp(N);
+    for (std::size_t i=0;i<N;++i) {
+        logY[i] = std::log(luminance(data_red[i],data_green[i],data_blue[i]) + eps);
+    }
+
+    /* --- separable 5‑tap Gaussian (σ≈1) --------------------------- */
+    constexpr float k[5] = {0.06136f, 0.24477f, 0.38774f, 0.24477f, 0.06136f};
+
+    // horizontal pass
+    for (std::size_t y=0;y<H;++y) {
+        for (std::size_t x=0;x<W;++x) {
+            float acc=0.f;
+            for (int n=-2;n<=2;++n){
+                std::size_t xx = std::clamp<int>(int(x)+n,0,int(W-1));
+                acc += k[n+2]*logY[y*W+xx];
+            }
+            temp[y*W+x]=acc;
+        }
+    }
+    // vertical pass
+    for (std::size_t y=0;y<H;++y) {
+        for (std::size_t x=0;x<W;++x) {
+            float acc=0.f;
+            for (int n=-2;n<=2;++n){
+                std::size_t yy = std::clamp<int>(int(y)+n,0,int(H-1));
+                acc += k[n+2]*temp[yy*W+x];
+            }
+            logY[y*W+x]=acc;            // base layer
+        }
+    }
+
+    /* --- mean(base) ---------------------------------------------- */
+    double baseMean=0.0;
+    for (float v: logY) baseMean += v;
+    baseMean /= double(N);
+
+    /* --- recombine base + detail --------------------------------- */
+    for (std::size_t i=0;i<N;++i){
+        float base = logY[i];
+        float Lin  = std::exp(base) - eps;                  // same eps
+        float detail = std::log(luminance(data_red[i],data_green[i],data_blue[i])+eps) - base;
+
+        float Lnew = std::exp(alpha*(base - float(baseMean)) + detail) - eps;
+        float s    = Lnew / (Lin + eps);
+
+        data_red[i] *= s;
+        data_green[i] *= s;
+        data_blue[i] *= s;
+    }
+
+}
+
+void RadiationCamera::applyGain( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile) {
+
+#ifdef HELIOS_DEBUG
+    if( pixel_data.size() != 3 ) {
+        helios_runtime_error("ERROR (RadiationCamera::applyGain): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+    }
+#endif
+
+    const std::size_t N = resolution.x*resolution.y;
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+
+    std::vector<float> luminance_pixel;
+    luminance_pixel.reserve(N);
+    for (std::size_t i=0;i<N;++i) {
+        luminance_pixel.push_back(luminance(data_red[i],data_green[i],data_blue[i]));
+    }
+
+    std::size_t k = std::size_t(percentile*(luminance_pixel.size()-1));
+    std::nth_element(luminance_pixel.begin(), luminance_pixel.begin()+k, luminance_pixel.end());
+    float peak = luminance_pixel[k];
+    float gain = (peak>0.0f)? 1.0f/peak : 1.0f;
+
+    for(auto & [channel, data] : pixel_data) {
+        for(float& v : data) {
+            v*=gain;
+        }
+    }
+
+}
+
+void RadiationCamera::applyCCM( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label ) {
+
+    const std::size_t N = resolution.x*resolution.y;
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    for (std::size_t i = 0; i < N; ++i) {
+        float R = data_red[i], G = data_green[i], B = data_blue[i];
+        data_red[i] = color_correction_matrix[0]*R + color_correction_matrix[1]*G + color_correction_matrix[2]*B + color_correction_matrix[9];
+        data_green[i] = color_correction_matrix[3]*R + color_correction_matrix[4]*G + color_correction_matrix[5]*B + color_correction_matrix[10];
+        data_blue[i] = color_correction_matrix[6]*R + color_correction_matrix[7]*G + color_correction_matrix[8]*B + color_correction_matrix[11];
+    }
+}
+
+void RadiationCamera::gammaCompress( const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label ) {
+    for(auto &[channel, data] : pixel_data) {
+        for(float& v : data) {
+            v=toSRGB(std::fmaxf(0.0f,v));
+        }
+    }
+}
+
 
 void sutilHandleError(RTcontext context, RTresult code, const char* file, int line)
 {

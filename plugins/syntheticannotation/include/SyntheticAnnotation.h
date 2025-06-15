@@ -24,7 +24,7 @@ class SyntheticAnnotation{
 public:
 
     //! Synthetic image annotation plug-in default constructor
-    /** \param[in] "context" Pointer to the Helios context
+    /** \param[in] context Pointer to the Helios context
     */
     explicit SyntheticAnnotation( helios::Context* context );
 

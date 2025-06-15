@@ -650,6 +650,14 @@ namespace helios {
      */
     [[nodiscard]] float asin_safe(float x);
 
+    //! Exponentiation function for integer powers
+    /**
+     * \param[in] base Base to be raised to a power
+     * \param[in] exp Exponent to which the base is raised (must be a non-negative integer)
+     */
+    template<typename T>
+    T powi(T base, std::size_t exp);
+
     //!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2)
     /**
      * \ingroup functions

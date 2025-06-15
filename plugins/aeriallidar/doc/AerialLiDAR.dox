@@ -240,7 +240,7 @@
 
  The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
 
- Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more <grid>...</grid> groups to the XML file.
+ Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more \<grid\>...\</grid\> groups to the XML file.
 
  ```
    <grid>

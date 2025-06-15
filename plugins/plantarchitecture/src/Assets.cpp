@@ -168,7 +168,7 @@ void AlmondPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sh
     if( phytomer->internode_length_max < 0.01 ){ //spurs
         phytomer->setInternodeMaxRadius( 0.005 );
         phytomer->setVegetativeBudState( BUD_DEAD );
-        phytomer->scaleLeafPrototypeScale( 0.8 );
+        phytomer->scaleLeafPrototypeScale( 0.8);
         phytomer->setFloralBudState( BUD_DEAD );
         phytomer->parent_shoot_ptr->shoot_parameters.max_nodes_per_season = 7;
     }
@@ -202,7 +202,7 @@ void ApplePhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint sho
     if( phytomer->internode_length_max < 0.01 ){ //spurs
         phytomer->setInternodeMaxRadius( 0.005 );
         phytomer->setVegetativeBudState( BUD_DEAD );
-        phytomer->scaleLeafPrototypeScale( 0.8 );
+        phytomer->scaleLeafPrototypeScale( 0.8);
         phytomer->setFloralBudState( BUD_DEAD );
         phytomer->parent_shoot_ptr->shoot_parameters.max_nodes_per_season = 6;
     }
@@ -244,7 +244,7 @@ void AsparagusPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint
 
     //blind nodes
     if( shoot_node_index<=2 ){
-        phytomer->scaleLeafPrototypeScale( 0.6 );
+        phytomer->scaleLeafPrototypeScale( 0.6);
         phytomer->setVegetativeBudState( BUD_DEAD );
     }
 
@@ -974,7 +974,7 @@ uint WheatSpikePrototype( helios::Context* context_ptr, uint subdivisions ){
 void WheatPhytomerCreationFunction( std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age ){
 
     //set leaf scale based on position along the shoot
-    float scale = fmin(1.f, 0.7 + 0.3*float(shoot_node_index)/5.f);
+    float scale = std::fmin(1.f, 0.7f + 0.3f*float(shoot_node_index)/5.f);
     phytomer->scaleLeafPrototypeScale(scale);
 
     //set internode length based on position along the shoot

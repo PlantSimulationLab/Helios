@@ -85,7 +85,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.33</span>
+       <span id="projectnumber">&#160;v1.3.34</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -159,7 +159,7 @@ $(function(){initNavTree('context_vectors_tutorial.html',''); initResizable(true
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>There are several vector types commonly used in Helios, which are listed in the table below. These are essentially C++ structures, that contain several data elements and functions to operate on that data.</p>
-<p>One example of these vector types is a vector of three values: <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>. It contains three elements - x,y,z - and is commonly used to represent 3D coordinates in space. When working with 3D vectors, there are operations that often need to be performed such as normalizing the vector to unit length, performing a dot product, or adding two vectors. Thus, there are many built-in funcitons and operations associated with these vector types.</p>
+<p>One example of these vector types is a vector of three values: <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>. It contains three elements - x,y,z - and is commonly used to represent 3D coordinates in space. When working with 3D vectors, there are operations that often need to be performed such as normalizing the vector to unit length, performing a dot product, or adding two vectors. Thus, there are many built-in functions and operations associated with these vector types.</p>
 <p>In this simple tutorial, we will learn how to work with Helios vector types.</p>
 <table class="doxtable">
 <tr>
@@ -179,7 +179,7 @@ $(function(){initNavTree('context_vectors_tutorial.html',''); initResizable(true
 <tr>
 <td><a class="el" href="structhelios_1_1_r_g_bcolor.html">RGBcolor</a></td><td>red-green-blue color code</td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8">r</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#ae002d220d8695538760eee2a6c4e9023">g</a>, <a class="el" href="structhelios_1_1_r_g_bcolor.html#a1b3ba3f5b77ef3082088eff853d4c335">b</a></td><td><a class="el" href="structhelios_1_1_r_g_bcolor.html#a5b7b7b5734588bcf49444997b091f8b6">scale()</a></td><td><a class="el" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef">make_RGBcolor()</a> </td></tr>
 <tr>
-<td><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a> </td><td>red-green-blue-alpha color code</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#a1941a63762f40fe1aabc5bb863a7aa1e">a</a></td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a4d6937733ccdd97cee440a56bd556ff3">scale()</a>, clamp()</td><td><a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a>  </td></tr>
+<td><a class="el" href="structhelios_1_1_r_g_b_acolor.html">RGBAcolor</a> </td><td>red-green-blue-alpha color code</td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df">r</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#ac018f8ed01b4d4128a68ebe42e1e6a00">g</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#aaa86bd3e17f03ffdc182c5c9b67587e3">b</a>, <a class="el" href="structhelios_1_1_r_g_b_acolor.html#a1941a63762f40fe1aabc5bb863a7aa1e">a</a></td><td><a class="el" href="structhelios_1_1_r_g_b_acolor.html#a4d6937733ccdd97cee440a56bd556ff3">scale()</a>, <a class="el" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4">clamp()</a></td><td><a class="el" href="group__vectors.html#gacc4916e29a0757214b7c558c6e5f7cd3">make_RGBAcolor()</a>  </td></tr>
 <tr>
 <td><a class="el" href="structhelios_1_1_time.html">Time</a></td><td>Time of day</td><td><a class="el" href="structhelios_1_1_time.html#a627acedd68e0228600727b867db537dd">second</a>, <a class="el" href="structhelios_1_1_time.html#a744b90da076192b90a3ee4ce2ff3743a">minute</a>, <a class="el" href="structhelios_1_1_time.html#a6ec639cf61cf283c5e999d152d27839f">hour</a></td><td>none</td><td><a class="el" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66">make_Time()</a> </td></tr>
 <tr>
@@ -208,7 +208,7 @@ Vector of Integers</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="vec3tut"></a>
 Vector of Floats</h1>
-<p>Vector types are also available for a 2-element (<a class="el" href="structhelios_1_1vec2.html">vec2</a>) and 3-element (<a class="el" href="structhelios_1_1vec3.html">vec3</a>) vector of floats. In addition to the similar elements and creation functions as for integers, we will also demonstrate several built-in funcions and operators.</p>
+<p>Vector types are also available for a 2-element (<a class="el" href="structhelios_1_1vec2.html">vec2</a>) and 3-element (<a class="el" href="structhelios_1_1vec3.html">vec3</a>) vector of floats. In addition to the similar elements and creation functions as for integers, we will also demonstrate several built-in functions and operators.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
