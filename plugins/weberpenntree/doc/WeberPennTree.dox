@@ -100,9 +100,9 @@
 
  \subsection WPTadd Adding Trees from the Tree Library
 
- The WeberPennTree member function \ref WeberPennTree::buildTree() is used to add and instance of a tree from the library. This function takes two required arguments in addition to one optional argument. The user must specify 1) the label for the tree as defined in the tree library XML file (see above), and 2) the (x,y,z) position to place the tree (note that this position is with respect to the base of the trunk). A third optional argument specifies a scaling factor to apply to the tree, where scale<1 makes the tree smaller, and scale>1 makes the tree bigger. The \ref buildTree function returns a uint that gives an identifier for the particular instance of the tree. This can be used later to reference the tree.
+ The WeberPennTree member function \ref WeberPennTree::buildTree() is used to add and instance of a tree from the library. This function takes two required arguments in addition to one optional argument. The user must specify 1) the label for the tree as defined in the tree library XML file (see above), and 2) the (x,y,z) position to place the tree (note that this position is with respect to the base of the trunk). A third optional argument specifies a scaling factor to apply to the tree, where scale<1 makes the tree smaller, and scale>1 makes the tree bigger. The \ref WeberPennTree::buildTree function returns a uint that gives an identifier for the particular instance of the tree. This can be used later to reference the tree.
 
- The tree building process involves adding primitives to the Helios context that comprise a particular tree geometry. The UUIDs for the primitives that comprise trees can be queried via the functions \ref getTrunkUUIDs(), \ref getBranchUUIDs(), and \ref getLeafUUIDs() along with the identifier of the tree.
+ The tree building process involves adding primitives to the Helios context that comprise a particular tree geometry. The UUIDs for the primitives that comprise trees can be queried via the functions \ref WeberPennTree::getTrunkUUIDs(), \ref WeberPennTree::getBranchUUIDs(), and \ref WeberPennTree::getLeafUUIDs() along with the identifier of the tree.
 
  <table>
  <tr><th>Tree Building Functions</th></tr>

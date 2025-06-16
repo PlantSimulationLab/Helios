@@ -5972,7 +5972,7 @@ public:
      * \param[in] label Name of timeseries variable (e.g., temperature)
      * \param[in] value Value of timeseries data point
      * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::time "Time")
+     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
      * \ingroup timeseries
      */
     void addTimeseriesData(const char* label, float value, const Date &date, const Time &time );
@@ -5989,7 +5989,7 @@ public:
     /**This method interpolates the timeseries data to provide a value at exactly `date' and `time'.  Thus, `date' and `time' must be between the first and last timeseries values.
      * \param[in] label Name of timeseries variable (e.g., temperature)
      * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::time "Time")
+     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
      * \return Value of timeseries data point
      * \ingroup timeseries
      */

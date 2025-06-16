@@ -100,7 +100,7 @@ $ git pull
 
   \section PrereqsHelios Helios Prerequisites
 
-  Before beginning, you will want to familiarize yourself with Helios vector types, which are commonly used in specifying function arguments. These are C++ structures that have two or more data members. For example, a \ref vec3 type has three floating point members: x, y, z. A vec3 is commonly used to represent a Cartesian point in space. More comprehensive information on available vector types is given in Section \ref VecTypes and \ref context_vectors.
+ Before beginning, you will want to familiarize yourself with Helios vector types, which are commonly used in specifying function arguments. These are C++ structures that have two or more data members. For example, a `helios::vec3` type has three floating point members: x, y, z. A vec3 is commonly used to represent a Cartesian point in space. More comprehensive information on available vector types is given in Section \ref VecTypes and \ref context_vectors_tutorial.
 
   It may be useful to familiarize yourself with <a href="https://en.wikipedia.org/wiki/Spherical_coordinate_system">spherical coordinate systems</a>, which is how rotation angles are typically specified. It may also be helpful to familiarize yourself with the <a href="https://en.wikipedia.org/wiki/RGB_color_space">RGB color model</a>, which is how custom colors are specified.
 
@@ -570,9 +570,9 @@ $ git pull
  
  <table>
   <tr><th>Primitive</th><th>Description</th><th>Enumeration</th></tr>
-  <tr><td>\ref ::helios::Primitive::Patch "Patch"</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
-  <tr><td>\ref helios::Triangle "Triangle"</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
-  <tr><td>\ref helios::Voxel "Voxel"</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
+  <tr><td>Patch</td><td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_PATCH "PRIMITIVE_TYPE_PATCH"</td></tr>
+  <tr><td>Triangle</td><td>Triangular polygon specified by its three vertices.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_TRIANGLE "PRIMITIVE_TYPE_TRIANGLE"</td></tr>
+  <tr><td>Voxel</td><td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td><td>\ref helios::PrimitiveType::PRIMITIVE\_TYPE\_VOXEL "PRIMITIVE_TYPE_VOXEL"</td></tr>
  </table>	
  
  \subsection AddingPrims Adding Primitives
@@ -583,7 +583,7 @@ $ git pull
 
  <table>
  <tr><th>Primitive</th><th>Adder function</th></tr>
- <tr><td>\ref helios::Patch "Patch"</td><td>
+ <tr><td>Patch</td><td>
      <ul>
 	<li>\ref helios::Context::addPatch(const helios::vec3 & center, const helios::vec2 & size ) "addPatch( vec3 center, vec2 size )"</li>
 	 <li>\ref helios::Context::addPatch(const helios::vec3 & center, const helios::vec2 & size, const helios::SphericalCoord & rotation  ) "addPatch( vec3 center, vec2 size, SphericalCoord rotation )"</li>
@@ -592,14 +592,14 @@ $ git pull
 	 <li>\ref helios::Context::addPatch(const helios::vec3 & center, const helios::vec2 & size, const helios::SphericalCoord & rotation, const char* texture_file, const helios::vec2 & uv_center, const helios::vec2 & uv_size  ) "addPatch( vec3 center, vec2 size, SphericalCoord rotation, const char* texture_file, vec2 uv_center, vec2 uv_size )"</li>
        </ul>	 
  </td></tr>
- <tr><td>\ref helios::Triangle "Triangle"</td><td>
+ <tr><td>Triangle</td><td>
    	<ul>
 	 <li>\ref helios::Context::addTriangle( const helios::vec3 & vertex0, const helios::vec3 & vertex1, const helios::vec3 & vertex2 ) "addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2 )"</li>
 	 <li>\ref helios::Context::addTriangle( const helios::vec3 & vertex0, const helios::vec3 & vertex1, const helios::vec3 & vertex2, const helios::RGBcolor & color ) "addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, RGBcolor color )"</li>
 	 <li>\ref helios::Context::addTriangle( const helios::vec3 & vertex0, const helios::vec3 & vertex1, const helios::vec3 & vertex2, const char* texture_file, const helios::vec2 & uv0, const helios::vec2 & uv1,const helios::vec2 & uv2 ) "addTriangle( vec3 vertex0, vec3 vertex1, vec3 vertex2, const char* texture_file, vec2 uv0, vec2 uv1, vec2 uv2 )"</li>
        </ul>
    </td></tr>
-   <tr>	<td>\ref helios::Voxel "Voxel"</td><td>
+   <tr>	<td>Voxel</td><td>
        <ul>
 	 <li>\ref helios::Context::addVoxel( const helios::vec3 & center, const helios::vec3 & size ) "addVoxel( vec3 center, vec3 size )"</li>
 	 <li>\ref helios::Context::addVoxel( const helios::vec3 & center, const helios::vec3 & size, const float & rotation ) "addVoxel( vec3 center, vec3 size, float rotation )"</li>
@@ -641,7 +641,7 @@ $ git pull
   context.addPatch( center, size, rotation );
  ~~~~~~
 
- This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5\f$\pi\f$ rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the \ref Primitive::rotate() function (see "Primitive Transformations" section below).
+ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5\f$\pi\f$ rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).
 
  \subsubsection AddingTriangle Adding Triangles
 
@@ -711,9 +711,9 @@ $ git pull
 
  After primitives have been added to the Context, their position, size, and orientation can be further modified through transformations.
 
- The \ref scalePrimitive() function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The \ref translatePrimitive() function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.
+ The \ref helios::Context::scalePrimitive "scalePrimitive()" function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The \ref helios::Context::translatePrimitive "translatePrimitive()" function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.
 
- The \ref rotatePrimitive() function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument. By default, the axis passes through the origin, but there is also an option to specify an arbitrary axis of rotation passing through an arbitrary origin point.
+ The \ref helios::Context::rotatePrimitive "rotatePrimitive()" function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument. By default, the axis passes through the origin, but there is also an option to specify an arbitrary axis of rotation passing through an arbitrary origin point.
 
  It is important to note that the order in which transformations are applied matters. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin (0,0,0), which does not necessarily coincide with the primitive's center if it has been translated.
 
@@ -778,8 +778,8 @@ $ git pull
  <tr><td>Normal Vector</td><td>N/A</td><td>\ref helios::Context::getPrimitiveNormal( uint ) const</td></tr>
  <tr><td>Vertex Coordinates (x,y,z)</td><td>N/A</td><td>\ref helios::Context::getPrimitiveVertices( uint ) const</td></tr>
  <tr><td>Parent Object ID</td><td>N/A</td><td>\ref helios::Context::getPrimitiveParentObjectID( uint ) const</td></tr>
- <tr><td>Diffuse R-G-B color code</td><td><ul><li>\ref helios::Context::setPrimitiveColor( uint, const helios::RGBcolor& )</li><li>\ref helios::Context::setPrimitiveColor( const std::vector<uint>&, const helios::RGBcolor& )</li></ul></td><td>\ref helios::Context::getPrimitiveColor( uint ) const</td></tr>
- <tr><td>Diffuse R-G-B-A color code</td><td><ul><li>\ref helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor& )</li><li>\ref helios::Context::setPrimitiveColor( const std::vector<uint>&, const helios::RGBAcolor& )</li></td><td>\ref helios::Context::getPrimitiveColorRGBA( uint ) const</td></tr>
+ <tr><td>Diffuse R-G-B color code</td><td><ul><li>\ref helios::Context::setPrimitiveColor "setPrimitiveColor()"</li><li>\ref helios::Context::setPrimitiveColor "setPrimitiveColor()"</li></ul></td><td>\ref helios::Context::getPrimitiveColor( uint ) const</td></tr>
+ <tr><td>Diffuse R-G-B-A color code</td><td><ul><li>\ref helios::Context::setPrimitiveColor "setPrimitiveColor()"</li><li>\ref helios::Context::setPrimitiveColor "setPrimitiveColor()"</li></td><td>\ref helios::Context::getPrimitiveColorRGBA( uint ) const</td></tr>
  <tr><td>Affine Transformation Matrix</td><td><ul><li>\ref helios::Context::setPrimitiveTransformationMatrix( uint, float (&)[16] )</li><li>\ref helios::Context::setPrimitiveTransformationMatrix( const std::vector<uint>&, float (&)[16] )</li></ul></td><td>\ref helios::Context::getPrimitiveTransformationMatrix( uint, float (&)[16] ) const</td></tr>
  </table>
  
@@ -1628,7 +1628,7 @@ $ git pull
 
   \section XMLread Reading XML Files
 
-  XML files can be read by the Context via the function \ref Context::loadXML().  This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.
+  XML files can be read by the Context via the function \ref helios::Context::loadXML "Context::loadXML()".  This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context.
   ~~~~~~{.cpp}
    #include "Context.h"
    using namespace helios;
@@ -1646,7 +1646,7 @@ $ git pull
 	
   \subsection PLYread Reading PLY (Stanford Polygon) Files
 
-  The Context can automatically import Stanford .ply files <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">en.wikipedia.org/wiki/PLY_(file_format)</a>.  This is accomplished via the \ref loadPLY() command, as illustrated below. There are several overloaded versions of this function, which allow for various modifications to the PLY model.
+  The Context can automatically import Stanford .ply files <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">en.wikipedia.org/wiki/PLY_(file_format)</a>.  This is accomplished via the \ref helios::Context::loadPLY "loadPLY()" command, as illustrated below. There are several overloaded versions of this function, which allow for various modifications to the PLY model.
 
   ~~~~~~{.cpp}
    #include "Context.h"
@@ -1675,7 +1675,7 @@ $ git pull
 
   There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.
 
-  Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default \ref helios::Context::loadPLY() assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument \ref helios::Context::loadPLY() that can allow you to easily define the up-axis.
+  Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default \ref helios::Context::loadPLY "helios::Context::loadPLY()" assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument \ref helios::Context::loadPLY "helios::Context::loadPLY()" that can allow you to easily define the up-axis.
 
   The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format.  \ref ConvertPLY "This page" gives a tutorial on how to perform such conversions using Blender.
 
@@ -1720,7 +1720,7 @@ $ git pull
 
   \subsection PLYwrite Writing PLY (Stanford Polygon) Files
 
-  The Context has analogous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the \ref writePLY() command, as illustrated below.
+  The Context has analogous files for writing PLY files based on the geometry currently loaded in the Context. This is accomplished via the \ref helios::Context::writePLY "writePLY()" command, as illustrated below.
 
   ~~~~~~{.cpp}
    #include "Context.h"
@@ -1759,7 +1759,7 @@ $ git pull
 
   \section Export Exporting Project to XML File Format
 
-  All geometry and global/primitive data loaded into the Context can be written to an XML file using the \ref Context::writeXML() function, which can be later read back in using the \ref Context::loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.
+  All geometry and global/primitive data loaded into the Context can be written to an XML file using the \ref helios::Context::writeXML "Context::writeXML()" function, which can be later read back in using the \ref helios::Context::loadXML "Context::loadXML()". This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.
 
   An XML file can be written as follows:
 

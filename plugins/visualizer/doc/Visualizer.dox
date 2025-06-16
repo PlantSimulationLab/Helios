@@ -1,7 +1,7 @@
 /*! \page VisualizerDoc %Visualizer Plugin Documentation
 
  \image html Visualizer.png
-
+        <td>\ref Visualizer::buildContextGeometry</td>
  \tableofcontents
 
  <table>
@@ -9,7 +9,7 @@
       <th>Dependencies</th>
       <td>X11/xorg (Mac/Linux)</td>
    </tr>
-   <tr>	
+        <td>\ref Visualizer::buildContextGeometry</td>
       <th>CMakeLists.txt</th>
       <td>set( PLUGINS "visualizer" )</td>
    </tr>
@@ -124,18 +124,7 @@
 
   \subsection Background Window background
 
-  The window background can be set to a constant color via the command \ref Visualizer::setBackgroundColor( RGBcolor color ) "setBackgroundColor( RGBcolor color )".  Alternatively, a three-dimensional `sky' background can be set using the \ref Visualizer::addSkyDomeByCenter "addSkyDomeByCenter" command.  This adds a hemispherical dome with a sky texture image mapped to its surface.  The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory.  The following example shows how to add a sky dome:
-
-  ~~~~~~{.cpp}
-   #include "Visualizer.h"
-	
-   int main(){
-      Visualizer vis( 1200 );
-      vis.addSkyDomeByCenter( 100, make_vec3(0,0,0), 20, "plugins/visualizer/textures/SkyDome_clouds.jpg", 0 );
-   }
-  ~~~~~~
-
-  In the example, we have created a sky dome with a radius of 100 centered at the origin (0,0,0), 20 divisions in the spherical coordinate directions (elevation,azimuth), and on layer 0.
+  The window background can be set to a constant color via the command \ref Visualizer::setBackgroundColor, and on layer 0.
   
   \subsection AddGeom Adding Geometry
 
@@ -151,24 +140,24 @@
       <td>Rectangle</td>
       <td>Rectangular polygon with coplanar vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter</li>
+	  <li>\ref Visualizer::addRectangleByCenter</li>
+	  <li>\ref Visualizer::addRectangleByCenter</li>
+	  <li>\ref Visualizer::addRectangleByCenter</li>
+	  <li>\ref Visualizer::addRectangleByVertices</li>
+	  <li>\ref Visualizer::addRectangleByVertices</li>
+	  <li>\ref Visualizer::addRectangleByVertices</li>
+	  <li>\ref Visualizer::addRectangleByVertices</li>
       </td>
    </tr>
    <tr>	
       <td>Triangle</td>
       <td>Triangular polygon specified by its three vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag )</li>
-      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTriangle</li>
+	  <li>\ref Visualizer::addTriangle</li>
+      <li>\ref Visualizer::addTriangle</li>
+      <li>\ref Visualizer::addTriangle</li>
       </ul>
       </td>
    </tr>
@@ -176,9 +165,9 @@
       <td>Disk</td>
       <td>Ellipsoidal disk.</td>
       <td><ul>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addDiskByCenter</li>
+	  <li>\ref Visualizer::addDiskByCenter</li>
+	  <li>\ref Visualizer::addDiskByCenter</li>
 	</ul>
       </td>
    </tr>
@@ -186,8 +175,8 @@
       <td>Voxel</td>
       <td>Parallelpiped or rectangular prism.</td>
       <td><ul>
-	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addVoxelByCenter</li>
+	  <li>\ref Visualizer::addVoxelByCenter</li>
 	</ul>
       </td>
    </tr>
@@ -195,8 +184,8 @@
       <td>Sphere</td>
       <td>Tessellated sphere composed of triangles.</td>
       <td><ul>
-	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addSphereByCenter</li>
+	  <li>\ref Visualizer::addSphereByCenter</li>
 	</ul>
       </td>
    </tr>
@@ -204,8 +193,8 @@
       <td>Line</td>
       <td>Linear segment between two points.</td>
        <td><ul>
-	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine</li>
+	  <li>\ref Visualizer::addLine</li>
 	</ul>
       </td>
    </tr>
@@ -214,7 +203,7 @@
       <td>Textbox</td>
       <td>Box of text.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTextboxByCenter</li>
 	</ul>
       </td>
    </tr>	
@@ -247,11 +236,11 @@
       <th>Description</th>
    </tr>
    <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context ) "buildContextGeometry( Context* context )"</td>
+      <td>\ref Visualizer::buildContextGeometry</td>
       <td>Add all primitives in the Context to the %Visualizer.</td>
    </tr>
    <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context, const std::vector<uint> &UUIDs ) "buildContextGeometry( Context* context, std::vector<uint> UUIDs )"</td>
+      <td>\ref Visualizer::buildContextGeometry</td>
       <td>Add a subset of primitives in the Context to the %Visualizer.</td>
    </tr>
  </table>
@@ -450,13 +439,7 @@
    </tr>
  </table>
 
-  The colormap to be used is set using the following command \ref setColormap( Ctable colormap_name ), where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
-
-  ~~~~~~{.cpp}
-   vis.setColormap( Visualizer::COLORMAP_HOT );
-  ~~~~~~
-
-  To set a custom color table, the same command is used with the \ref Visualizer::COLORMAP_CUSTOM argument, plus additional arguments that define the custom color table.  These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the `hot' color table is defined:
+  The colormap to be used is set using the following command setColormap a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the `hot' color table is defined:
 
  <table>
    <tr>
@@ -583,42 +566,7 @@
    </tr>
  </table>
 
-  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( vec3 direction ) command, which takes a unit vector pointing toward the light source.  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
-
-  ~~~~~~{.cpp}
-   #include "Visualizer.h"
-	
-   int main(){
-      Visualizer vis( 1200 );
-	
-      vec3 center = make_vec3(0,0,0);
-      vec2 size = make_vec2(1,1);
-      SphericalCoord rotation = make_SphericalCoord(0,0);
-      vis.addRectangleByCenter(center,size,rotation,RGB::red,Visualizer::COORDINATES_CARTESIAN,0);
-
-      vec3 light_direction = make_vec3(1,1,1);
-
-      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
-      vis.setLightDirection( light_direction );
-   }
-  ~~~~~~
-
-  \subsection Options View Options
-
-  The default camera position is at an elevation angle of 20 degrees and to the North, with the camera looking toward the origin.  The distance of the camera from the origin is automatically adjusted to fit all primitives in view.
-
-  There are multiple ways of specifying custom camera views.  One method involves specifying the (x,y,z) position of the camera, and the (x,y,z) position that the camera is looking at. This is accomplished using the command \ref Visualizer::setCameraPosition( vec3 cameraPosition, vec3 lookAt ) "setCameraPosition( vec3 cameraPosition, vec3 lookAt )".
-
-  The other method involves specifying the spherical coordinates of the camera with respect to the (x,y,z) position the camera is looking at.  This is accomplished using the \ref Visualizer::setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt ) "setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt )".
-
-  \image html CameraSchematic.jpeg
-
-  \section VisAcklowledgements Acknowledgements
-
- This plug-in uses all or parts of the following open-sourced software libraries:
-
- The OpenGL Extension Wrangler Library:
- Copyright (C) 2008-2016, Nigel Stewart <nigels[]users sourceforge net>
+  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection 2008-2016, Nigel Stewart <nigels[]users sourceforge net>
  Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>
  Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>
  Copyright (C) 2002, Lev Povalahev
