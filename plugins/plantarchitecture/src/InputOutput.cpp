@@ -720,8 +720,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 }
 
                 //rotate and scale leaves
+                assert( leaf_scale.size() == leaf_pitch.size() );
                 auto phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
-                for( int petiole = 0; petiole<phytomer_ptr->leaf_rotation.size(); petiole++ ){
+                for( int petiole = 0; petiole<leaf_scale.size(); petiole++ ){
 
                     float tip_ind = floor(float(leaf_scale.at(petiole).size() - 1) / 2.f);
                     phytomer_ptr->setLeafPrototypeScale( petiole, leaf_scale.at(petiole).at(tip_ind) );
@@ -729,6 +730,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                     phytomer_ptr->scaleLeafPrototypeScale( petiole, 5);
 
                     for( int leaf=0; leaf<phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++ ){
+                        std::cout << "Rotating leaf " << leaf << " by pitch: " << leaf_pitch.at(petiole).at(leaf) << ", yaw: " << leaf_yaw.at(petiole).at(leaf) << ", roll: " << leaf_roll.at(petiole).at(leaf) << std::endl;
                         phytomer_ptr->rotateLeaf(petiole, leaf, make_AxisRotation(deg2rad(leaf_pitch.at(petiole).at(leaf)), deg2rad(leaf_yaw.at(petiole).at(leaf)), deg2rad(-leaf_roll.at(petiole).at(leaf))));
                     }
                 }

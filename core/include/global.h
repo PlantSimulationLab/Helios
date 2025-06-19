@@ -1069,7 +1069,6 @@ namespace helios {
         }
     };
 
-
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;
     //! Default null vec3 that gives the origin (0,0,0)

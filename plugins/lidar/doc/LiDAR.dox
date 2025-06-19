@@ -515,10 +515,10 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
- <tr><td>\ref LiDARcloud::addHitsToVisualizer( Visualizer * visualizer, const uint pointsize )</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
+ <tr><td>\ref LiDARcloud::addHitsToVisualizer</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
  <tr><td>\ref LiDARcloud::addGridToVisualizer( Visualizer * visualizer )</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
- <tr><td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer )</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
- <tr><td>\ref LiDARcloud::addTrianglesToVisualizer( Visualizer * visualizer, const uint gridcell )</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
+ <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
+ <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
  </table>
 
   The following code sample illustrates how to visualize the point cloud.

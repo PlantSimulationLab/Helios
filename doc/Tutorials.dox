@@ -304,9 +304,9 @@
 
  <table>
    <tr>	<th>Primitive</th><th>Description</th></tr>
-   <tr> <td>\ref helios::Patch "Patch"</td> <td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td> </tr>
-   <tr>	<td>\ref helios::Triangle "Triangle"</td> <td>Triangular polygon specified by its three vertices.</td> </tr>
-   <tr>	<td>\ref helios::Voxel "Voxel"</td> <td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td> </tr>
+   <tr> <td>Patch</td> <td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td> </tr>
+   <tr>	<td>Triangle</td> <td>Triangular polygon specified by its three vertices.</td> </tr>
+   <tr>	<td>Voxel</td> <td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td> </tr>
  </table> 
 
  There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the `Context::addPatch()` function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.
@@ -417,7 +417,7 @@
  
  \section context_primdata_scalar Creating Primitive Data (Scalars)
 
- Adding primitive data that is a single (scalar) value can be accomplished using the \ref Context::addPrimitiveData() "addPrimitiveData()" function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles. 
+ Adding primitive data that is a single (scalar) value can be accomplished using the \ref helios::Context::setPrimitiveData() "setPrimitiveData()" function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles.
 
   ~~~~~~{.cpp}
   #include "Context.h"
@@ -444,7 +444,7 @@
  }
  ~~~~~~
 
- To retrieve the primitive value we set, we can use the \ref Context::getPrimitiveData() "getPrimitiveData()" function as illustrated below.
+ To retrieve the primitive value we set, we can use the \ref helios::Context::getPrimitiveData() "getPrimitiveData()" function as illustrated below.
 
   ~~~~~~{.cpp}
   #include "Context.h"
@@ -527,7 +527,7 @@
 
  \section context_globaldata_intro Introduction to Global Data
 
- Using global data is very similar to using primitive data (see \ref context_primdata), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.
+ Using global data is very similar to using primitive data (see \ref context_primdata_tutorial), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.
 
  A graphical depiction of global data (right box) and primitive data (green boxes) is given in the figure below.
 
@@ -535,7 +535,7 @@
  
  \section context_globaldata_scalar Creating Global Data (Scalars)
 
- Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the \ref Context::addGlobalData() "addGlobalData()" function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data". 
+ Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the \ref helios::Context::setGlobalData() "setGlobalData()" function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data".
 
   ~~~~~~{.cpp}
   #include "Context.h"
@@ -628,7 +628,7 @@
 
  \section vis_step2 Step 2. Add geometry to the Visualizer
 
- There are a variety of ways to add geometry to the Visualizer. Primitives can be manually added to the Visualizer in a similar manner as primitives are added to the Context, with several notable differences. First, there are additional primitive types available in the Visualizer such as lines and points. Second, there are additional arguments that must be specified when adding primitives to the Visualizer, namely the graphics layer associated with the primitive (see \ref Layer) and the coordinate system to be used (see \ref coord).
+ There are a variety of ways to add geometry to the Visualizer. Primitives can be manually added to the Visualizer in a similar manner as primitives are added to the Context, with several notable differences. First, there are additional primitive types available in the Visualizer such as lines and points. Second, there are additional arguments that must be specified when adding primitives to the Visualizer, namely the graphics layer associated with the primitive (see Layer) and the coordinate system to be used (see coordinate system).
 
  Most commonly, we do not wish to manually add geometry to the Visualizer, but rather we simply want to visualize geometry in the Context. There is a simple command that will automatically add all geometry in the Context to the Visualizer: \ref Visualizer::buildContextGeometry(). This function takes a pointer to the Context, which is used to import all geometry. There are other variations on the buildContextGeometry() command that allow for the placement of Context geometry on any layer or to add only a subset of the geometry in the Context (see \ref ContextGeom). In the example below, we add all geometry in the Context to the default layer (layer 0).
 
@@ -938,7 +938,7 @@
 
  \subsection tutorial11_rad 3. Radiation model set-up
 
- The set-up of the radiation model is very similar to the \ref radiation_basics "previous tutorial", except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.
+ The set-up of the radiation model is very similar to the \ref radiation_basics_tutorial "previous tutorial", except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.
 
  \subsection tutorial11_run 4. Run model and process results
 

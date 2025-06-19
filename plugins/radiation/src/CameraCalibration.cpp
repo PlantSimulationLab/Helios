@@ -183,6 +183,21 @@ std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &
 
 }
 
+std::vector<uint> CameraCalibration::addSpyderCHECKRColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
+
+    if (!UUIDs_colorboard.empty()){
+        context->deletePrimitive(UUIDs_colorboard);
+        std::cout << "WARNING (CameraCalibration::addSpyderCHECKRColorboard): Existing colorboard has been cleared in order to add colorboard."<< std::endl;
+    }
+
+    context->loadXML( "plugins/radiation/spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml", true);
+
+    assert( context->doesGlobalDataExist("ColorReference_SpyderCHECKR_01") );
+
+    return CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_SpyderCHECKR, spectrumassignment_SpyderCHECKR);
+
+}
+
 std::vector<uint> CameraCalibration::getColorBoardUUIDs(){
     return UUIDs_colorboard;
 }

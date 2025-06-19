@@ -21,7 +21,7 @@
 #include "Visualizer.h"
 
 //! Structure containing metadata for an aerial scan
-/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
+/** A scan is initialized by providing 1) the origin of the scan, 2) the number of zenithal scan directions, 3) the range of zenithal scan angles, 4) the number of azimuthal scan directions, and 5) the range of azimuthal scan angles. This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There are various functions to query the scan data.
 */
 struct AerialScanMetadata{
 
@@ -187,7 +187,7 @@ class AerialLiDARcloud{
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
     * \param[in] direction Spherical coordinate cooresponding to the scanner ray direction for the hit point.
     * \param[in] color r-g-b color of the hit point
-    * \note If only the (row,column) scan table coordinates are available, use \ref rc2direction() to convert them to a spherical scan direction coordinate.
+    * \note If only the (row,column) scan table coordinates are available, use \ref ScanMetadata::rc2direction() to convert them to a spherical scan direction coordinate.
   */
   void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const helios::RGBcolor color );
 
@@ -370,7 +370,7 @@ class AerialLiDARcloud{
   //! Filter scan by imposing a minimum reflectance value
   /**
    * \param[in] minreflectance Miniimum hit point reflectance value
-   * \note If `reflectance' data was not provided for a hit point when calling \ref Scan::addHitPoint(), the point will not be filtered.
+   * \note If `reflectance' data was not provided for a hit point when calling addHitPoint(), the point will not be filtered.
   */
   void reflectanceFilter( const float minreflectance );
 

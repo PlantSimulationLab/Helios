@@ -53,7 +53,7 @@
  <table>
  <tr><th>Parameters Structure</th><td>\ref HomogeneousCanopyParameters</td></tr>
  <tr><th>Individual Plant Function</th><td>N/A</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( HomogeneousCanopyParameters parameters )</td></tr>
+ <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -79,7 +79,7 @@
  <table>
  <tr><th>Parameters Structure</th><td>\ref SphericalCrownsCanopyParameters</td></tr>
  <tr><th>Individual Plant Function</th><td>N/A</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( SphericalCrownsCanopyParameters parameters )</td></tr>
+ <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -110,7 +110,7 @@
  <table>
   <tr><th>Parameters Structure</th><td>\ref ConicalCrownsCanopyParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>N/A</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( ConicalCrownsCanopyParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -141,8 +141,8 @@
 
  <table>
  <tr><th>Parameters Structure</th><td>\ref VSPGrapevineParameters</td></tr>
- <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineVSP()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( VSPGrapevineParameters parameters )</td></tr>
+ <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineVSP "grapevineVSP()"</td></tr>
+ <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -183,7 +183,7 @@
  <table>
  <tr><th>Parameters Structure</th><td>\ref SplitGrapevineParameters</td></tr>
  <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineSplit()</td></tr>
- <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( SplitGrapevineParameters parameters )</td></tr>
+ <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -226,7 +226,7 @@
  <table>
   <tr><th>Parameters Structure</th><td>\ref UnilateralGrapevineParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineUnilateral()</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( UnilateralGrapevineParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -268,7 +268,7 @@
  <table>
   <tr><th>Parameters Structure</th><td>\ref GobletGrapevineParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::grapevineGoblet()</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( GobletGrapevineParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -310,7 +310,7 @@
  <table>
   <tr><th>Parameters Structure</th><td>\ref StrawberryParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::strawberry()</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( StrawberryParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -345,7 +345,7 @@
  <table>
   <tr><th>Parameters Structure</th><td>\ref WalnutCanopyParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::walnut()</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( WalnutCanopyParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
  </table>
 
  <table>
@@ -397,7 +397,7 @@
   <table>
   <tr><th>Parameters Structure</th><td>\ref SorghumCanopyParameters</td></tr>
   <tr><th>Individual Plant Function</th><td>\ref CanopyGenerator::sorghum()</td></tr>
-  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy( SorghumCanopyParameters parameters )</td></tr>
+  <tr><th>Canopy Build Function</th><td>\ref CanopyGenerator::buildCanopy "buildCanopy()"</td></tr>
   </table>
 
   <table>
@@ -543,7 +543,7 @@
    }
  ~~~~~~
 
- The function \ref grapevineVSP() could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.
+ The function \ref CanopyGenerator::grapevineVSP "grapevineVSP()" could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.
 
  \section CGenBuildCanopy Building a Canopy
 

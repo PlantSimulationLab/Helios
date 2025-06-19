@@ -1,4 +1,4 @@
-# Helios standard CMakeLists.txt file version 1.9
+# Helios standard CMakeLists.txt file version 1.10
 cmake_minimum_required(VERSION 3.15)
 project(helios)
 #-------- USER INPUTS ---------#
@@ -16,4 +16,4 @@ set( SOURCE_FILES "main.cpp" )
 set( PLUGINS "visualizer;radiation" )
 
 #-------- DO NOT MODIFY ---------#
-include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
+include( "${BASE_DIRECTORY}/core/CMake_project.cmake" )

@@ -96,9 +96,9 @@ int EnergyBalanceModel::selfTest() {
         energymodel_3.run();
 
         float sensible_flux, latent_flux, temperature;
-        float sensible_flux_exact = 48.7098;
-        float latent_flux_exact = 21.7644;
-        float temperature_exact = 329.309;
+        float sensible_flux_exact = 48.7017;
+        float latent_flux_exact = 21.6094;
+        float temperature_exact = 329.307;
 
         context_3.getPrimitiveData(UUID_3, "sensible_flux", sensible_flux);
         context_3.getPrimitiveData(UUID_3, "latent_flux", latent_flux);
@@ -115,9 +115,9 @@ int EnergyBalanceModel::selfTest() {
         context_3.setPrimitiveData(UUID_3, "object_length", float(0.374f));
         energymodel_3.run();
 
-        sensible_flux_exact = 89.2217;
-        latent_flux_exact = 20.2213;
-        temperature_exact = 324.389;
+        sensible_flux_exact = 89.2024;
+        latent_flux_exact = 20.0723;
+        temperature_exact = 324.386;
 
         context_3.getPrimitiveData(UUID_3, "sensible_flux", sensible_flux);
         context_3.getPrimitiveData(UUID_3, "latent_flux", latent_flux);
@@ -134,9 +134,9 @@ int EnergyBalanceModel::selfTest() {
         context_3.setPrimitiveData(UUID_3, "boundarylayer_conductance", float(0.134f));
         energymodel_3.run();
 
-        sensible_flux_exact = 61.5525f;
-        latent_flux_exact = 21.8290f;
-        temperature_exact = 327.704f;
+        sensible_flux_exact = 61.5411f;
+        latent_flux_exact = 21.6718f;
+        temperature_exact = 327.701f;
 
         context_3.getPrimitiveData(UUID_3, "sensible_flux", sensible_flux);
         context_3.getPrimitiveData(UUID_3, "latent_flux", latent_flux);

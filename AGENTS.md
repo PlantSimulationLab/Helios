@@ -1,5 +1,6 @@
 ## Code Style
-- Code style should follow the style given in .clang-format. 
+- Code style should follow the style given in .clang-format.
+- Standard C++ library include headers are listed in the file core/include/global.h. Check these includes to make sure you do not add unnecessary includes.
 
 ## Testing
 - Do not try to run utilities/run_samples.sh. It will time out.

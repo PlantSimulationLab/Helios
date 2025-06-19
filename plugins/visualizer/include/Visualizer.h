@@ -243,6 +243,10 @@ private:
 //! Class for visualization of simulation results
 class Visualizer {
 public:
+
+    //! forbid the default constructor
+    Visualizer() = delete;
+
     //! Visualizer constructor
     /**
      * \param[in] Wdisplay Width of the display window in pixels, and assumes default window aspect ratio of 1.25

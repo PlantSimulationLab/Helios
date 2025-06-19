@@ -43,6 +43,7 @@ jobs:
 
   stop-gpu:
     needs: run_samples_linux
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: aws-actions/configure-aws-credentials@v2

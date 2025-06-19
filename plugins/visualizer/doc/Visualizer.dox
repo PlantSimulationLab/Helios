@@ -151,43 +151,33 @@
       <td>Rectangle</td>
       <td>Rectangular polygon with coplanar vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addRectangleByVertices( const std::vector<helios::vec3>& vertices, const helios::RGBcolor &color, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</li>
       </td>
    </tr>
    <tr>	
       <td>Triangle</td>
       <td>Triangular polygon specified by its three vertices.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, CoordinateSystem coordFlag )</li>
-      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, Visualizer::CoordinateSystem coordFlag )</li>
+      <li>\ref Visualizer::addTriangle( const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2, const char* texture_file, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
       </ul>
-      </td>
-   </tr>
-   <tr>	
-      <td>Disk</td>
-      <td>Ellipsoidal disk.</td>
-      <td><ul>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addDiskByCenter( const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag )</li>
-	</ul>
       </td>
    </tr>
    <tr>	
       <td>Voxel</td>
       <td>Parallelpiped or rectangular prism.</td>
       <td><ul>
-	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addVoxelByCenter( const helios::vec3 &center, const helios::vec3 &size, const helios::SphericalCoord &rotation, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
    </tr>
@@ -195,8 +185,8 @@
       <td>Sphere</td>
       <td>Tessellated sphere composed of triangles.</td>
       <td><ul>
-	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &color, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBAcolor &color, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addSphereByCenter( float radius, const helios::vec3 &center, uint Ndivisions, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
    </tr>
@@ -204,8 +194,8 @@
       <td>Line</td>
       <td>Linear segment between two points.</td>
        <td><ul>
-	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
-	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, uint linewidth, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
    </tr>
@@ -214,7 +204,7 @@
       <td>Textbox</td>
       <td>Box of text.</td>
       <td><ul>
-	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &center, const helios::SphericalCoord &rotation, const helios::RGBcolor &fontcolor, uint fontsize, const char* fontname, Visualizer::CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
    </tr>	
@@ -247,11 +237,11 @@
       <th>Description</th>
    </tr>
    <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context ) "buildContextGeometry( Context* context )"</td>
+      <td>\ref Visualizer::buildContextGeometry( helios::Context* context_ptr ) "buildContextGeometry( Context* context_ptr )"</td>
       <td>Add all primitives in the Context to the %Visualizer.</td>
    </tr>
    <tr>	
-      <td>\ref Visualizer::buildContextGeometry( helios::Context* context, const std::vector<uint> &UUIDs ) "buildContextGeometry( Context* context, std::vector<uint> UUIDs )"</td>
+      <td>\ref Visualizer::buildContextGeometry( helios::Context* context_ptr, const std::vector<uint> &UUIDs ) "buildContextGeometry( Context* context_ptr, std::vector<uint> UUIDs )"</td>
       <td>Add a subset of primitives in the Context to the %Visualizer.</td>
    </tr>
  </table>
@@ -583,7 +573,7 @@
    </tr>
  </table>
 
-  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( vec3 direction ) command, which takes a unit vector pointing toward the light source.  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
+  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( const helios::vec3 &direction ) command, which takes a unit vector pointing toward the light source.  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
 
   ~~~~~~{.cpp}
    #include "Visualizer.h"

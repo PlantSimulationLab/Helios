@@ -93,7 +93,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 	    
 	    ind = make_uint3( floorf(float(sz.x-1)*(uvmin.x+uv.x*duv.x)), floorf(float(sz.y-1)*(1.f - uvmin.y - uv.y*duv.y)), maskID[ID] );
 	    if( ind.x>=sz.x || ind.y>=sz.y ){
-	      rtPrintf("ERROR: texture out of bounds.\n");
+	      rtPrintf("ERROR: texture out of bounds. uv = (%f,%f)\n",uv.x,uv.y);
 	    }
 	  }
 	  if( maskdata[ind] ){
@@ -189,7 +189,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
 	  uint3 ind = make_uint3( roundf(float(sz.x-1)*fabs(uv.x)), roundf(float(sz.y-1)*fabs(uv.y)), maskID[ID] );
 	  if( ind.x>=sz.x || ind.y>=sz.y ){
-	    rtPrintf("ERROR: texture out of bounds.\n");
+	      rtPrintf("ERROR: texture out of bounds. uv = (%f,%f)\n",uv.x,uv.y);
 	  }
 	  if( maskdata[ind] ){
 	    if( rtPotentialIntersection( t ) ) {
