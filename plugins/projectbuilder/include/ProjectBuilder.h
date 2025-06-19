@@ -288,6 +288,9 @@ class ProjectBuilder {
     //! User input
     bool user_input;
 
+    //! If true, the context has been updated since the last time the visualizer has been updated
+    bool is_dirty = false;
+
     //! If true, the project has been built and `visualize()` can be run.
     bool built = false;
 
