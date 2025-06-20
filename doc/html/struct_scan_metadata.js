@@ -1,7 +1,7 @@
 var struct_scan_metadata =
 [
     [ "ScanMetadata", "struct_scan_metadata.html#a2f625c96f54068fb8de34b528e7f770d", null ],
-    [ "ScanMetadata", "struct_scan_metadata.html#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4", null ],
+    [ "ScanMetadata", "struct_scan_metadata.html#a444f3e74f9d4843da9c73a9bf95f2fe6", null ],
     [ "direction2rc", "struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611", null ],
     [ "rc2direction", "struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c", null ],
     [ "beamDivergence", "struct_scan_metadata.html#acec69b1556a96236c0702f03b231d008", null ],

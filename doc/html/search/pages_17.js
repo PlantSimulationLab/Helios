@@ -1,10 +1,6 @@
 var searchData=
 [
-  ['unit_20transpiration_20for_20a_20canopy_20of_20spherical_20crowns_0',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'Tutorials']]],
-  ['up_1',['Install and Set-up',['../_dependent_software.html',1,'']]],
-  ['use_20efficiency_20photosyntheses_20per_20unit_20transpiration_20for_20a_20canopy_20of_20spherical_20crowns_2',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'Tutorials']]],
-  ['user_20api_20guide_3',['User/API Guide',['../_a_p_i.html',1,'']]],
-  ['using_20blender_4',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['using_20gimp_5',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['using_20the_20clion_20ide_20with_20helios_6',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]]
+  ['radiation_20model_20basics_20tree_20light_20interception_0',['Tutorial 10: Radiation model basics - tree light interception',['../radiation_basics_tutorial.html',1,'Tutorials']]],
+  ['radiation_20model_20plugin_20documentation_1',['Radiation Model Plugin Documentation',['../_radiation_doc.html',1,'PlugIns']]],
+  ['right_20cuda_20and_20optix_20version_2',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]]
 ];

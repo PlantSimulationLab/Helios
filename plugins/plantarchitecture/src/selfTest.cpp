@@ -29,6 +29,7 @@ int PlantArchitecture::selfTest() {
             std::cout << "Building " << plant_label << " plant model..." << std::flush;
             Context context;
             PlantArchitecture plantarchitecture(&context);
+            plantarchitecture.enableGroundClipping();
             plantarchitecture.loadPlantModelFromLibrary( plant_label );
             plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0,0,0), 5000);
             std::cout << "done." << std::endl;

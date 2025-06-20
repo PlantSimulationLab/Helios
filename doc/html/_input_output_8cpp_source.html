@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -876,32 +878,34 @@ $(function(){initNavTree('_input_output_8cpp_source.html',''); initResizable(tru
 <div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>                }</div>
 <div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span> </div>
 <div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>                <span class="comment">//rotate and scale leaves</span></div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>                <span class="keyword">auto</span> phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)-&gt;phytomers.back();</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>                <span class="keywordflow">for</span>( <span class="keywordtype">int</span> petiole = 0; petiole&lt;phytomer_ptr-&gt;leaf_rotation.size(); petiole++ ){</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span> </div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>                    <span class="keywordtype">float</span> tip_ind = floor(<span class="keywordtype">float</span>(leaf_scale.at(petiole).size() - 1) / 2.f);</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                    phytomer_ptr-&gt;setLeafPrototypeScale( petiole, leaf_scale.at(petiole).at(tip_ind) );</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span> </div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                    phytomer_ptr-&gt;scaleLeafPrototypeScale( petiole, 5);</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span> </div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> leaf=0; leaf&lt;phytomer_ptr-&gt;leaf_rotation.at(petiole).size(); leaf++ ){</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                        phytomer_ptr-&gt;rotateLeaf(petiole, leaf, make_AxisRotation(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(leaf_pitch.at(petiole).at(leaf)), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(leaf_yaw.at(petiole).at(leaf)), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(-leaf_roll.at(petiole).at(leaf))));</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                    }</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>                }</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span> </div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>                phytomer_count++;</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>        } <span class="comment">//phytomers</span></div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span> </div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        } <span class="comment">//shoots</span></div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>                assert( leaf_scale.size() == leaf_pitch.size() );</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>                <span class="keyword">auto</span> phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)-&gt;phytomers.back();</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>                <span class="keywordflow">for</span>( <span class="keywordtype">int</span> petiole = 0; petiole&lt;leaf_scale.size(); petiole++ ){</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span> </div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                    <span class="keywordtype">float</span> tip_ind = floor(<span class="keywordtype">float</span>(leaf_scale.at(petiole).size() - 1) / 2.f);</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>                    phytomer_ptr-&gt;setLeafPrototypeScale( petiole, leaf_scale.at(petiole).at(tip_ind) );</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span> </div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                    phytomer_ptr-&gt;scaleLeafPrototypeScale( petiole, 5);</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span> </div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> leaf=0; leaf&lt;phytomer_ptr-&gt;leaf_rotation.at(petiole).size(); leaf++ ){</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                        std::cout &lt;&lt; <span class="stringliteral">&quot;Rotating leaf &quot;</span> &lt;&lt; leaf &lt;&lt; <span class="stringliteral">&quot; by pitch: &quot;</span> &lt;&lt; leaf_pitch.at(petiole).at(leaf) &lt;&lt; <span class="stringliteral">&quot;, yaw: &quot;</span> &lt;&lt; leaf_yaw.at(petiole).at(leaf) &lt;&lt; <span class="stringliteral">&quot;, roll: &quot;</span> &lt;&lt; leaf_roll.at(petiole).at(leaf) &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>                        phytomer_ptr-&gt;rotateLeaf(petiole, leaf, make_AxisRotation(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(leaf_pitch.at(petiole).at(leaf)), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(leaf_yaw.at(petiole).at(leaf)), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(-leaf_roll.at(petiole).at(leaf))));</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>                    }</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>                }</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span> </div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>                phytomer_count++;</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        } <span class="comment">//phytomers</span></div>
 <div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    } <span class="comment">//plant instances</span></div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        } <span class="comment">//shoots</span></div>
 <div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span> </div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    <span class="keywordflow">if</span>( !quiet ) {</div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    }</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    <span class="keywordflow">return</span> plantIDs;</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span> </div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>}</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    } <span class="comment">//plant instances</span></div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span> </div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    <span class="keywordflow">if</span>( !quiet ) {</div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    }</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>    <span class="keywordflow">return</span> plantIDs;</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span> </div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>}</div>
 </div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

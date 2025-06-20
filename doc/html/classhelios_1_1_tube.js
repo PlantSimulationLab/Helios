@@ -5,6 +5,7 @@ var classhelios_1_1_tube =
     [ "appendTubeSegment", "classhelios_1_1_tube.html#aac259b1a564be7ac9cc11bd14ab8cf82", null ],
     [ "getLength", "classhelios_1_1_tube.html#ad3c194a0f9977e212ac425aefe4032bf", null ],
     [ "getNodeColors", "classhelios_1_1_tube.html#aae753418cb304e97c296240dc9919388", null ],
+    [ "getNodeCount", "classhelios_1_1_tube.html#a1d19658536333e2ef614f46c800ccf56", null ],
     [ "getNodeRadii", "classhelios_1_1_tube.html#a29823b956371d22b35add97fc6831cab", null ],
     [ "getNodes", "classhelios_1_1_tube.html#ab55e8f7d7a948941027f169d714e365b", null ],
     [ "getSegmentVolume", "classhelios_1_1_tube.html#a2966ff764897904282082f23a76756b8", null ],

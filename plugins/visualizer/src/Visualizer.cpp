@@ -134,21 +134,14 @@ int write_JPEG_file(const char *filename, uint width, uint height, void *window,
     std::vector<GLubyte> screen_shot_trans;
     screen_shot_trans.resize(bsize);
 
-    glfwSwapBuffers((GLFWwindow *) window);
+#if defined(__APPLE__)
+    constexpr GLenum read_buf = GL_FRONT;
+#else
+    constexpr GLenum read_buf = GL_BACK;
+#endif
+    glReadBuffer(read_buf);
     glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
-
-    //depending on the active frame buffer, we may get all zero data and need to swap it again.
-    bool zeros = true;
-    for (int i = 0; i < bsize; i++) {
-        if (screen_shot_trans[i] != 0) {
-            zeros = false;
-        }
-    }
-    if (zeros) {
-        glfwSwapBuffers((GLFWwindow *) window);
-
-        glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
-    }
+    glFinish();
 
     struct jpeg_compress_struct cinfo;
 
@@ -570,10 +563,12 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     // enable hardware depth comparison
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
     assert(checkerrors());
+
+    // restore default active texture for subsequent texture setup
+    glActiveTexture(GL_TEXTURE0);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
 
@@ -919,21 +914,14 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
     std::vector<GLubyte> buff;
     buff.resize(3 * Wframebuffer * Hframebuffer);
 
-    glfwSwapBuffers((GLFWwindow *) window);
+#if defined(__APPLE__)
+    constexpr GLenum read_buf = GL_FRONT;
+#else
+    constexpr GLenum read_buf = GL_BACK;
+#endif
+    glReadBuffer(read_buf);
     glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
-
-    //depending on the active frame buffer, we may get all zero data and need to swap it again.
-    bool zeros = true;
-    for (int i = 0; i < 3 * Wframebuffer * Hframebuffer; i++) {
-        if (buff[i] != 0) {
-            zeros = false;
-        }
-    }
-    if (zeros) {
-        glfwSwapBuffers((GLFWwindow *) window);
-
-        glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
-    }
+    glFinish();
 
     //assert( checkerrors() );
 
@@ -2122,9 +2110,13 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
 
 void Visualizer::buildContextGeometry_private() {
 
-    //If building all context geometry, get all dirty UUIDs from the Context (including ones that were deleted)
+    //If building all context geometry, get all dirty UUIDs from the Context
     if ( build_all_context_geometry ) {
-        contextUUIDs_build = context->getDirtyUUIDs(true);
+        bool include_deleted_UUIDs = true;
+        if ( contextUUIDs_build.empty() ) {
+            include_deleted_UUIDs = false;
+        }
+        contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
     }
 
     //Populate contextUUIDs_needupdate based on dirty primitives in the Context
@@ -2782,6 +2774,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
             //bind depth texture
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, depthTexture);
+            glActiveTexture(GL_TEXTURE0);
 
             depthShader.enableTextureMaps();
             depthShader.enableTextureMasks();
@@ -2817,8 +2810,10 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.setLightingModel(primaryLightingModel.at(0));
         primaryShader.setLightIntensity(lightintensity);
 
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
         glUniform1i(primaryShader.shadowmapUniform, 1);
+        glActiveTexture(GL_TEXTURE0);
 
         render(false);
 
@@ -2910,6 +2905,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
         //bind depth texture
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
+        glActiveTexture(GL_TEXTURE0);
 
         depthShader.enableTextureMaps();
         depthShader.enableTextureMasks();
@@ -2945,8 +2941,10 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     primaryShader.setLightingModel(primaryLightingModel.at(0));
     primaryShader.setLightIntensity(lightintensity);
 
+    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(primaryShader.shadowmapUniform, 1);
+    glActiveTexture(GL_TEXTURE0);
 
     render(false);
 
@@ -3114,6 +3112,7 @@ void Visualizer::render(bool shadow) const {
     glGetIntegerv(GL_CURRENT_PROGRAM, &current_shader_program);
 
     // Bind our texture array
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
     assert(checkerrors());
@@ -3345,6 +3344,7 @@ void Visualizer::plotUpdate(bool hide_window) {
         //bind depth texture
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
+        glActiveTexture(GL_TEXTURE0);
 
         depthShader.enableTextureMaps();
         depthShader.enableTextureMasks();
@@ -3381,8 +3381,10 @@ void Visualizer::plotUpdate(bool hide_window) {
     primaryShader.setLightingModel(primaryLightingModel.at(0));
     primaryShader.setLightIntensity(lightintensity);
 
+    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(primaryShader.shadowmapUniform, 1);
+    glActiveTexture(GL_TEXTURE0);
 
     render(false);
 
@@ -3417,6 +3419,7 @@ void Visualizer::updateDepthBuffer() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT32F, Wframebuffer, Hframebuffer, 0,GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glActiveTexture(GL_TEXTURE0);
 
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -3435,21 +3438,14 @@ void Visualizer::updateDepthBuffer() {
 
     depth_buffer_data.resize(Wframebuffer * Hframebuffer);
 
-    glfwSwapBuffers((GLFWwindow *) window);
+#if defined(__APPLE__)
+    constexpr GLenum read_buf = GL_FRONT;
+#else
+    constexpr GLenum read_buf = GL_BACK;
+#endif
+    glReadBuffer(read_buf);
     glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data());
-
-    //depending on the active frame buffer, we may get all zero data and need to swap it again.
-    bool zeros = true;
-    for (int i = 0; i < 3 * Wframebuffer * Hframebuffer; i++) {
-        if (depth_buffer_data[i] != 0) {
-            zeros = false;
-        }
-    }
-    if (zeros) {
-        glfwSwapBuffers((GLFWwindow *) window);
-
-        glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data());
-    }
+    glFinish();
 
     assert(checkerrors());
 
@@ -3616,7 +3612,7 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
 
 uint Visualizer::registerTextureImage(const std::string &texture_file) {
 #ifdef HELIOS_DEBUG
-    assert( validateTextureFile(texture_file) );
+    //assert( validateTextureFile(texture_file) );
 #endif
 
     for (const auto &[textureID, texture]: texture_manager) {

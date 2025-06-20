@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -669,7 +671,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>            <span class="keywordflow">if</span>(add_flags)</div>
 <div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>            {</div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>                <span class="comment">// gapfillMisses_code = 0: original points</span></div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>                <a class="code hl_function" href="class_li_d_a_rcloud.html#a4ad8b12380a24f48ecfbae0ad6b5cfaa" title="Get floating point data value associated with a hit point.">setHitData</a>(r, <span class="stringliteral">&quot;gapfillMisses_code&quot;</span>, 0.0);</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>                <a class="code hl_function" href="class_li_d_a_rcloud.html#a4ad8b12380a24f48ecfbae0ad6b5cfaa" title="Set floating point data value associated with a hit point.">setHitData</a>(r, <span class="stringliteral">&quot;gapfillMisses_code&quot;</span>, 0.0);</div>
 <div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>            }</div>
 <div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span> </div>
 <div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span> </div>
@@ -680,7 +682,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>                <span class="keywordflow">return</span> xyz_filled;</div>
 <div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>            }</div>
 <div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span> </div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>            <span class="keywordtype">double</span> timestamp = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(r,<span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>            <span class="keywordtype">double</span> timestamp = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(r,<span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>            std::vector&lt;double&gt; data;</div>
 <div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>            data.resize(4);</div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>            data.at(0) = float(r);</div>
@@ -702,7 +704,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span> </div>
 <div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>        <span class="comment">//this is to figure out if target indexing uses 0 or 1 offset</span></div>
 <div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>        <span class="keywordflow">if</span>( min_tindex==1 &amp;&amp; <a class="code hl_function" href="class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>) &amp;&amp; <a class="code hl_function" href="class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_count&quot;</span>) ){</div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>            <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>)==0 ){</div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>            <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>)==0 ){</div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>                min_tindex=0;</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>            }</div>
 <div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>        }</div>
@@ -718,7 +720,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span> </div>
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        <span class="comment">//only consider first hits</span></div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>) &amp;&amp; <a class="code hl_function" href="class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_count&quot;</span>) ){</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>            <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>)&gt;min_tindex ){</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>            <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(hit_table.at(r).at(0),<span class="stringliteral">&quot;target_index&quot;</span>)&gt;min_tindex ){</div>
 <div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>                ndup_target ++;</div>
 <div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>                <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>            }</div>
@@ -1231,7 +1233,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l01081" name="l01081"></a><span class="lineno"> 1081</span>                this_scan_xyz.push_back( <a class="code hl_function" href="class_li_d_a_rcloud.html#ac5f234b6200419f10fe82c9abe409cbd" title="Get (x,y,z) coordinate of hit point by index.">getHitXYZ</a>(r) );</div>
 <div class="line"><a id="l01082" name="l01082"></a><span class="lineno"> 1082</span> </div>
 <div class="line"><a id="l01083" name="l01083"></a><span class="lineno"> 1083</span>                <span class="keywordflow">if</span>( <a class="code hl_function" href="class_li_d_a_rcloud.html#aabb8d404b7f3fa00d8281cb6b74f90c0" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(r,<span class="stringliteral">&quot;target_count&quot;</span>) ){</div>
-<div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span>                    this_scan_weight.push_back( 1.f/<span class="keywordtype">float</span>(<a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(r,<span class="stringliteral">&quot;target_count&quot;</span>)) );</div>
+<div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span>                    this_scan_weight.push_back( 1.f/<span class="keywordtype">float</span>(<a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(r,<span class="stringliteral">&quot;target_count&quot;</span>)) );</div>
 <div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>                }<span class="keywordflow">else</span>{</div>
 <div class="line"><a id="l01086" name="l01086"></a><span class="lineno"> 1086</span>                    this_scan_weight.push_back(1.f);</div>
 <div class="line"><a id="l01087" name="l01087"></a><span class="lineno"> 1087</span>                }</div>
@@ -1930,7 +1932,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l01777" name="l01777"></a><span class="lineno"> 1777</span>        uint Nbeams = 0;</div>
 <div class="line"><a id="l01778" name="l01778"></a><span class="lineno"> 1778</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l01779" name="l01779"></a><span class="lineno"> 1779</span>        {</div>
-<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l01781" name="l01781"></a><span class="lineno"> 1781</span>            <span class="keywordflow">if</span>(current_time != previous_time){</div>
 <div class="line"><a id="l01782" name="l01782"></a><span class="lineno"> 1782</span>                Nbeams ++;</div>
 <div class="line"><a id="l01783" name="l01783"></a><span class="lineno"> 1783</span>                previous_time = current_time;</div>
@@ -1942,12 +1944,12 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l01789" name="l01789"></a><span class="lineno"> 1789</span>        }</div>
 <div class="line"><a id="l01790" name="l01790"></a><span class="lineno"> 1790</span> </div>
 <div class="line"><a id="l01791" name="l01791"></a><span class="lineno"> 1791</span>        <span class="comment">// create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam</span></div>
-<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>        uint beam_ID = 0;</div>
 <div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>        std::vector&lt;std::vector&lt;uint&gt;&gt; beam_array(Nbeams);</div>
 <div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>        {</div>
-<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span> </div>
 <div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span>            <span class="keywordflow">if</span>(current_beam == previous_beam)</div>
 <div class="line"><a id="l01800" name="l01800"></a><span class="lineno"> 1800</span>            {</div>
@@ -2089,23 +2091,23 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l01939" name="l01939"></a><span class="lineno"> 1939</span>                    drr += dr[i];</div>
 <div class="line"><a id="l01940" name="l01940"></a><span class="lineno"> 1940</span> </div>
 <div class="line"><a id="l01941" name="l01941"></a><span class="lineno"> 1941</span>                    <span class="keywordflow">if</span>(hit_location[i] == 1){</div>
-<div class="line"><a id="l01942" name="l01942"></a><span class="lineno"> 1942</span>                        R_before = R_before +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
-<div class="line"><a id="l01943" name="l01943"></a><span class="lineno"> 1943</span>                        I_before = I_before + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
+<div class="line"><a id="l01942" name="l01942"></a><span class="lineno"> 1942</span>                        R_before = R_before +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
+<div class="line"><a id="l01943" name="l01943"></a><span class="lineno"> 1943</span>                        I_before = I_before + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
 <div class="line"><a id="l01944" name="l01944"></a><span class="lineno"> 1944</span>                        E_before ++;</div>
 <div class="line"><a id="l01945" name="l01945"></a><span class="lineno"> 1945</span>                    }<span class="keywordflow">else</span> <span class="keywordflow">if</span>(hit_location[i] == 2){</div>
-<div class="line"><a id="l01946" name="l01946"></a><span class="lineno"> 1946</span>                        R_inside = R_inside +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
-<div class="line"><a id="l01947" name="l01947"></a><span class="lineno"> 1947</span>                        I_inside = I_inside + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
+<div class="line"><a id="l01946" name="l01946"></a><span class="lineno"> 1946</span>                        R_inside = R_inside +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
+<div class="line"><a id="l01947" name="l01947"></a><span class="lineno"> 1947</span>                        I_inside = I_inside + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
 <div class="line"><a id="l01948" name="l01948"></a><span class="lineno"> 1948</span>                        E_inside ++;</div>
 <div class="line"><a id="l01949" name="l01949"></a><span class="lineno"> 1949</span>                    }<span class="keywordflow">else</span> <span class="keywordflow">if</span>(hit_location[i] == 3){</div>
-<div class="line"><a id="l01950" name="l01950"></a><span class="lineno"> 1950</span>                        R_after = R_after +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
-<div class="line"><a id="l01951" name="l01951"></a><span class="lineno"> 1951</span>                        I_after = I_after + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
+<div class="line"><a id="l01950" name="l01950"></a><span class="lineno"> 1950</span>                        R_after = R_after +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
+<div class="line"><a id="l01951" name="l01951"></a><span class="lineno"> 1951</span>                        I_after = I_after + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
 <div class="line"><a id="l01952" name="l01952"></a><span class="lineno"> 1952</span>                        E_after ++;</div>
-<div class="line"><a id="l01953" name="l01953"></a><span class="lineno"> 1953</span>                        <span class="keywordflow">if</span>(<a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;target_index&quot;</span>) == 0){ <span class="comment">// if this is the first hitpoint for this beam,</span></div>
+<div class="line"><a id="l01953" name="l01953"></a><span class="lineno"> 1953</span>                        <span class="keywordflow">if</span>(<a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;target_index&quot;</span>) == 0){ <span class="comment">// if this is the first hitpoint for this beam,</span></div>
 <div class="line"><a id="l01954" name="l01954"></a><span class="lineno"> 1954</span>                            W = 1.0;</div>
 <div class="line"><a id="l01955" name="l01955"></a><span class="lineno"> 1955</span>                        }</div>
 <div class="line"><a id="l01956" name="l01956"></a><span class="lineno"> 1956</span>                    }<span class="keywordflow">else</span> <span class="keywordflow">if</span>(hit_location[i] == 4){</div>
-<div class="line"><a id="l01957" name="l01957"></a><span class="lineno"> 1957</span>                        R_miss = R_miss +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
-<div class="line"><a id="l01958" name="l01958"></a><span class="lineno"> 1958</span>                        I_miss = I_miss + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
+<div class="line"><a id="l01957" name="l01957"></a><span class="lineno"> 1957</span>                        R_miss = R_miss +  <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;nRaysHit&quot;</span>);</div>
+<div class="line"><a id="l01958" name="l01958"></a><span class="lineno"> 1958</span>                        I_miss = I_miss + <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;intensity&quot;</span>);</div>
 <div class="line"><a id="l01959" name="l01959"></a><span class="lineno"> 1959</span>                        E_miss ++;</div>
 <div class="line"><a id="l01960" name="l01960"></a><span class="lineno"> 1960</span>                    } <span class="comment">// or this hitpoint / beam did not intersect the voxel and should not be added to the total number of beams for this voxel</span></div>
 <div class="line"><a id="l01961" name="l01961"></a><span class="lineno"> 1961</span> </div>
@@ -4264,7 +4266,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l04107" name="l04107"></a><span class="lineno"> 4107</span>        uint Nbeams = 0;</div>
 <div class="line"><a id="l04108" name="l04108"></a><span class="lineno"> 4108</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l04109" name="l04109"></a><span class="lineno"> 4109</span>        {</div>
-<div class="line"><a id="l04110" name="l04110"></a><span class="lineno"> 4110</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04110" name="l04110"></a><span class="lineno"> 4110</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04111" name="l04111"></a><span class="lineno"> 4111</span>            <span class="keywordflow">if</span>(current_time != previous_time){</div>
 <div class="line"><a id="l04112" name="l04112"></a><span class="lineno"> 4112</span>                Nbeams ++;</div>
 <div class="line"><a id="l04113" name="l04113"></a><span class="lineno"> 4113</span>                previous_time = current_time;</div>
@@ -4276,12 +4278,12 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l04119" name="l04119"></a><span class="lineno"> 4119</span>        }</div>
 <div class="line"><a id="l04120" name="l04120"></a><span class="lineno"> 4120</span> </div>
 <div class="line"><a id="l04121" name="l04121"></a><span class="lineno"> 4121</span>        <span class="comment">// create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam</span></div>
-<div class="line"><a id="l04122" name="l04122"></a><span class="lineno"> 4122</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04122" name="l04122"></a><span class="lineno"> 4122</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04123" name="l04123"></a><span class="lineno"> 4123</span>        uint beam_ID = 0;</div>
 <div class="line"><a id="l04124" name="l04124"></a><span class="lineno"> 4124</span>        std::vector&lt;std::vector&lt;uint&gt;&gt; beam_array(Nbeams);</div>
 <div class="line"><a id="l04125" name="l04125"></a><span class="lineno"> 4125</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l04126" name="l04126"></a><span class="lineno"> 4126</span>        {</div>
-<div class="line"><a id="l04127" name="l04127"></a><span class="lineno"> 4127</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04127" name="l04127"></a><span class="lineno"> 4127</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04128" name="l04128"></a><span class="lineno"> 4128</span> </div>
 <div class="line"><a id="l04129" name="l04129"></a><span class="lineno"> 4129</span>            <span class="keywordflow">if</span>(current_beam == previous_beam)</div>
 <div class="line"><a id="l04130" name="l04130"></a><span class="lineno"> 4130</span>            {</div>
@@ -4713,7 +4715,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l04561" name="l04561"></a><span class="lineno"> 4561</span>        uint Nbeams = 0;</div>
 <div class="line"><a id="l04562" name="l04562"></a><span class="lineno"> 4562</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l04563" name="l04563"></a><span class="lineno"> 4563</span>        {</div>
-<div class="line"><a id="l04564" name="l04564"></a><span class="lineno"> 4564</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04564" name="l04564"></a><span class="lineno"> 4564</span>            <span class="keywordtype">float</span> current_time = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04565" name="l04565"></a><span class="lineno"> 4565</span>            <span class="keywordflow">if</span>(current_time != previous_time){</div>
 <div class="line"><a id="l04566" name="l04566"></a><span class="lineno"> 4566</span>                Nbeams ++;</div>
 <div class="line"><a id="l04567" name="l04567"></a><span class="lineno"> 4567</span>                previous_time = current_time;</div>
@@ -4725,12 +4727,12 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l04573" name="l04573"></a><span class="lineno"> 4573</span>        }</div>
 <div class="line"><a id="l04574" name="l04574"></a><span class="lineno"> 4574</span> </div>
 <div class="line"><a id="l04575" name="l04575"></a><span class="lineno"> 4575</span>        <span class="comment">// create a vector each element of which represents a unique beam and is another vector of the hit point indices of this_scan_xyz that is associated with this beam</span></div>
-<div class="line"><a id="l04576" name="l04576"></a><span class="lineno"> 4576</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04576" name="l04576"></a><span class="lineno"> 4576</span>        <span class="keywordtype">float</span> previous_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[0], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04577" name="l04577"></a><span class="lineno"> 4577</span>        uint beam_ID = 0;</div>
 <div class="line"><a id="l04578" name="l04578"></a><span class="lineno"> 4578</span>        std::vector&lt;std::vector&lt;uint&gt;&gt; beam_array(Nbeams);</div>
 <div class="line"><a id="l04579" name="l04579"></a><span class="lineno"> 4579</span>        <span class="keywordflow">for</span>(uint i=0; i &lt; Nhits; i++)</div>
 <div class="line"><a id="l04580" name="l04580"></a><span class="lineno"> 4580</span>        {</div>
-<div class="line"><a id="l04581" name="l04581"></a><span class="lineno"> 4581</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Set floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
+<div class="line"><a id="l04581" name="l04581"></a><span class="lineno"> 4581</span>            <span class="keywordtype">float</span> current_beam = <a class="code hl_function" href="class_li_d_a_rcloud.html#a274ef68850afa3f288bb648d9fd6a59a" title="Get floating point data value associated with a hit point.">getHitData</a>(this_scan_index[i], <span class="stringliteral">&quot;timestamp&quot;</span>);</div>
 <div class="line"><a id="l04582" name="l04582"></a><span class="lineno"> 4582</span> </div>
 <div class="line"><a id="l04583" name="l04583"></a><span class="lineno"> 4583</span>            <span class="keywordflow">if</span>(current_beam == previous_beam)</div>
 <div class="line"><a id="l04584" name="l04584"></a><span class="lineno"> 4584</span>            {</div>

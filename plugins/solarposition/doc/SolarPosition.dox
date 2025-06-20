@@ -20,7 +20,7 @@
  <table>
  <tr><th>Constructors</th></tr>
  <tr><td>\ref SolarPosition::SolarPosition( helios::Context* context) "SolarPosition( helios::Context* context)"</td></tr>
- <tr><td>\ref SolarPosition::SolarPosition( int UTC, float latitude, float longitude, helios::Context* context) "SolarPosition( int UTC, float latitude, float longitude, helios::Context* context)"</td></tr>
+ <tr><td>\ref SolarPosition::SolarPosition( float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context) "SolarPosition( float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context)"</td></tr>
  </table>
 
  The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).

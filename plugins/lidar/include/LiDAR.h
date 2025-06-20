@@ -194,13 +194,13 @@ struct ScanMetadata{
   /**
    * \param[in] origin  (x,y,z) position of the scanner
    * \param[in] Ntheta  Number of scan points in the theta (zenithal) direction
-   * \param[in] thetamin  Minimum scan angle in the theta (zenithal) direction in radians
-   * \param[in] thetamax  Maximum scan angle in the theta (zenithal) direction in radians
+   * \param[in] thetaMin  Minimum scan angle in the theta (zenithal) direction in radians
+   * \param[in] thetaMax  Maximum scan angle in the theta (zenithal) direction in radians
    * \param[in] Nphi  Number of scan points in the phi (azimuthal) direction
-   * \param[in] phimin  Minimum scan angle in the phi (azimuthal) direction in radians
-   * \param[in] phimax  Maximum scan angle in the phi (azimuthal) direction in radians
+   * \param[in] phiMin  Minimum scan angle in the phi (azimuthal) direction in radians
+   * \param[in] phiMax  Maximum scan angle in the phi (azimuthal) direction in radians
   */
-  ScanMetadata( const helios::vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector<std::string> &a_columnFormat);
+  ScanMetadata( const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, const std::vector<std::string> &columnFormat);
 
   //! File containing hit point data
   std::string data_file;
@@ -371,7 +371,7 @@ class LiDARcloud{
    * \param[in] scanID ID of scan hit point to which hit point should be added.
    * \param[in] xyz (x,y,z) coordinates of hit point.
    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
-   * \note If only the (row,column) scan table coordinates are available, use \ref rc2direction() to convert them to a spherical scan direction coordinate.
+   * \note If only the (row,column) scan table coordinates are available, use \ref ScanMetadata::rc2direction() to convert them to a spherical scan direction coordinate.
   */
   void addHitPoint( uint scanID, const helios::vec3 &xyz, const helios::SphericalCoord &direction );
 
@@ -381,7 +381,7 @@ class LiDARcloud{
    * \param[in] xyz (x,y,z) coordinates of hit point.
    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
    * \param[in] color r-g-b color of the hit point
-   * \note If only the (row,column) scan table coordinates are available, use \ref rc2direction() to convert them to a spherical scan direction coordinate.
+   * \note If only the (row,column) scan table coordinates are available, use \ref ScanMetadata::rc2direction() to convert them to a spherical scan direction coordinate.
   */
   void addHitPoint( uint scanID, const helios::vec3 &xyz, const helios::SphericalCoord &direction, const helios::RGBcolor &color );
 
@@ -487,18 +487,19 @@ class LiDARcloud{
    */
   helios::SphericalCoord getHitRaydir( uint index ) const;
 
+  //! Get floating point data value associated with a hit point.
+  /**
+   * \param[in] index Hit number.
+   * \param[in] label Label of the data value (e.g., "reflectance").
+   * \return Value of scalar data.
+  */
+  double getHitData( uint index, const char* label ) const;
+
   //! Set floating point data value associated with a hit point.
   /**
    * \param[in] index Hit number.
    * \param[in] label Label of the data value (e.g., "reflectance").
    * \param[in] value Value of scalar data.
-  */
-  double getHitData( uint index, const char* label ) const;
-
-  //! Get floating point data value associated with a hit point.
-  /**
-   * \param[in] index Hit number.
-   * \param[in] label Label of the data value (e.g., "reflectance").
   */
   void setHitData(uint index, const char* label, double value );
 
@@ -584,7 +585,7 @@ class LiDARcloud{
     
   //! Get hit point corresponding to first vertex of triangle
   /**
-   * \parameter[in] index Triangulation index (0 thru Ntriangles-1)
+   * \param[in] index Triangulation index (0 thru Ntriangles-1)
    * \return Hit point index (0 thru Nhits-1)
   */
   Triangulation getTriangle( uint index ) const;
@@ -895,7 +896,7 @@ class LiDARcloud{
   
   //! Add triangle geometry to Helios context
   /**
-   * \parameter[in] context Pointer to Helios context
+   * \param[in] context Pointer to Helios context
    */
   void addTrianglesToContext( helios::Context* context ) const;
 
@@ -975,7 +976,6 @@ d the last cell's index is Ncells-1.
   //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
   /**
    * \param[in] context Pointer to the Helios context.
-   * \param[in] xml_file Path to an XML file with LiDAR scan and grid information.
    * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
    * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
    * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.

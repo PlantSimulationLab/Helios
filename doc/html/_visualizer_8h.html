@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -258,7 +260,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04190">4190</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04183">4183</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -288,7 +290,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse cursor movements. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03980">3980</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03973">3973</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -315,7 +317,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l01293">1293</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l01297">1297</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 
 </div>
 </div>
@@ -350,7 +352,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse button presses. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03954">3954</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03947">3947</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -438,7 +440,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00260">260</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00253">253</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -468,7 +470,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse scroll. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03995">3995</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03988">3988</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -502,7 +504,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the texture file is valid, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03685">3685</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03678">3678</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

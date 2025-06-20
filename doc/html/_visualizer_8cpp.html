@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -333,7 +335,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04190">4190</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04183">4183</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -363,7 +365,7 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse cursor movements. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03980">3980</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03973">3973</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -382,7 +384,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04167">4167</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04160">4160</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -436,7 +438,7 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse button presses. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03954">3954</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03947">3947</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -524,7 +526,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00260">260</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00253">253</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -554,7 +556,7 @@ Variables</h2></td></tr>
 
 <p>Callback function for mouse scroll. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03995">3995</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03988">3988</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -588,7 +590,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the texture file is valid, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03685">3685</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03678">3678</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -626,7 +628,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00197">197</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00190">190</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -693,7 +695,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02622">2622</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02614">2614</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -709,7 +711,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02629">2629</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02621">2621</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -725,7 +727,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02623">2623</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02615">2615</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -741,7 +743,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02624">2624</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02616">2616</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -757,7 +759,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02627">2627</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02619">2619</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -773,7 +775,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02625">2625</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02617">2617</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -789,7 +791,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02628">2628</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02620">2620</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -805,7 +807,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02626">2626</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l02618">2618</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -821,7 +823,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03946">3946</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03939">3939</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -837,7 +839,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03948">3948</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03941">3941</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -853,7 +855,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03947">3947</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03940">3940</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -869,7 +871,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03951">3951</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03944">3944</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -885,7 +887,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03950">3950</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03943">3943</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -901,7 +903,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03950">3950</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03943">3943</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -917,7 +919,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03949">3949</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03942">3942</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -933,7 +935,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03949">3949</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03942">3942</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

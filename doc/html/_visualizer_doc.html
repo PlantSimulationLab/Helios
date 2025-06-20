@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -343,74 +345,64 @@ Adding Geometry</h2>
 <tr>
 <td>Rectangle </td><td>Rectangular polygon with coplanar vertices. </td><td><ul>
 <li>
-Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#aac01d7ef7d86b1b50b2fc8704032a557">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#aa8ccabea47a70696c644bc3fe75f8426">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const char* texture_file, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a7e2a3352e5e7f59ce450058c955ca62e">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, const char* texture_file, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a134cd3784283be388146dcb7f933b90d">Visualizer::addRectangleByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#ac1ad832579afa114f5b24ab5bc7a6841">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a9004cd4d2b4e125064e6e6c1aee0712c">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const char* texture_file, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a420a1d8669ecf08d48da8df2ca673a32">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, const char* texture_file, CoordinateSystem coordFlag )   </li>
+<a class="el" href="class_visualizer.html#ae81c624d81ae8f39c997be409df5a140">Visualizer::addRectangleByVertices( const std::vector&lt;helios::vec3&gt;&amp; vertices, const helios::RGBcolor &amp;color, const char* texture_file, Visualizer::CoordinateSystem coordFlag )</a>   </li>
 </ul>
 </td></tr>
 <tr>
 <td>Triangle </td><td>Triangular polygon specified by its three vertices. </td><td><ul>
 <li>
-Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a47a198b4ceef2beb284dfd08a93814d6">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a932dec6c270f63dbe5912e7f4e2d34b6">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a26a839aa01a5c6d30ea4470050b7a5b4">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
-</ul>
-</td></tr>
-<tr>
-<td>Disk </td><td>Ellipsoidal disk. </td><td><ul>
-<li>
-Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
-<li>
-Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
-<li>
-Visualizer::addDiskByCenter( const helios::vec3 &amp;center, const helios::vec2 &amp;size, const helios::SphericalCoord &amp;rotation, uint Ndivisions, const char* texture_file, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a0c9d6dab440a97b17ec7f19acdf39bb4">Visualizer::addTriangle( const helios::vec3 &amp;vertex0, const helios::vec3 &amp;vertex1, const helios::vec3 &amp;vertex2, const char* texture_file, const helios::vec2 &amp;uv0, const helios::vec2 &amp;uv1, const helios::vec2 &amp;uv2, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Voxel </td><td>Parallelpiped or rectangular prism. </td><td><ul>
 <li>
-Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#ae42382c106383b3ab48cdb23f6334bd0">Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#aaa68c543eec089ad88e56dc6f569b1f1">Visualizer::addVoxelByCenter( const helios::vec3 &amp;center, const helios::vec3 &amp;size, const helios::SphericalCoord &amp;rotation, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Sphere </td><td>Tessellated sphere composed of triangles. </td><td><ul>
 <li>
-Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a29d1c6a6462bab56c6da24ad19511bff">Visualizer::addSphereByCenter( float radius, const helios::vec3 &amp;center, uint Ndivisions, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addSphereByCenter( float radius, const helios::vec3 center, uint Ndivisions, const helios::RGBAcolor &amp;color, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a414d66e15e742c96dd074e20f0bbe3c1">Visualizer::addSphereByCenter( float radius, const helios::vec3 &amp;center, uint Ndivisions, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 </td></tr>
 <tr>
 <td>Line </td><td>Linear segment between two points. </td><td><ul>
 <li>
-Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;color, uint linewidth, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a641757758332e85a853a510bd9c5191e">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
-Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, uint linewidth, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a03885f2501207e152a198fbb6110d21e">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 <p class="endtd"></p>
 </td></tr>
 <tr>
 <td>Textbox </td><td>Box of text. </td><td><ul>
 <li>
-Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &amp;center, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;fontcolor, uint fontsize, const char* fontname, CoordinateSystem coordFlag ) </li>
+<a class="el" href="class_visualizer.html#a2b6e537fa13d94083beb030ea6da5be6">Visualizer::addTextboxByCenter( const char* textstring, const helios::vec3 &amp;center, const helios::SphericalCoord &amp;rotation, const helios::RGBcolor &amp;fontcolor, uint fontsize, const char* fontname, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 <br  />
  </td></tr>
@@ -434,9 +426,9 @@ Automatically importing Context geometry</h3>
 <tr>
 <th>Command </th><th>Description  </th></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#a4834cddbcc01696bf0b1ef1b0a2cde0c">buildContextGeometry( Context* context )</a> </td><td>Add all primitives in the Context to the Visualizer.  </td></tr>
+<td><a class="el" href="class_visualizer.html#a4834cddbcc01696bf0b1ef1b0a2cde0c">buildContextGeometry( Context* context_ptr )</a> </td><td>Add all primitives in the Context to the Visualizer.  </td></tr>
 <tr>
-<td><a class="el" href="class_visualizer.html#ada78ef51373f63718a95841f564a83ef">buildContextGeometry( Context* context, std::vector&lt;uint&gt; UUIDs )</a> </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
+<td><a class="el" href="class_visualizer.html#ada78ef51373f63718a95841f564a83ef">buildContextGeometry( Context* context_ptr, std::vector&lt;uint&gt; UUIDs )</a> </td><td>Add a subset of primitives in the Context to the Visualizer.  </td></tr>
 </table>
 <p>The example below shows how to add all Context geometry to the visualizer.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
@@ -663,7 +655,7 @@ Shading</h3>
 <tr>
 <td>Phong shading model with shadows. </td><td><a class="el" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864">Visualizer::LIGHTING_PHONG_SHADOWED</a> </td><td></td></tr>
 </table>
-<p>If the Phong shading model is used, the position of the light source should be specified. This is accomplished through the Visualizer::setLightDirection( vec3 direction ) command, which takes a unit vector pointing toward the light source. The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.</p>
+<p>If the Phong shading model is used, the position of the light source should be specified. This is accomplished through the <a class="el" href="class_visualizer.html#a492533fe226fa92d08b010dc9a3f6e93">Visualizer::setLightDirection( const helios::vec3 &amp;direction )</a> command, which takes a unit vector pointing toward the light source. The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>

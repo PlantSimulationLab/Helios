@@ -1,7 +1,12 @@
 var searchData=
 [
-  ['data_0',['Data',['../context_primdata_tutorial.html',1,'Tutorial 5: Primitive Data'],['../context_globaldata_tutorial.html',1,'Tutorial 6: Global Data']]],
-  ['data_20values_1',['Tutorial 8: Visualizing primitive data values',['../visualizer_pdata_tutorial.html',1,'Tutorials']]],
-  ['documentation_2',['Documentation',['../_aerial_li_d_a_r_doc.html',1,'Aerial LiDAR Point Cloud Plugin Documentation'],['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_canopy_generator_doc.html',1,'Canopy Generator Plugin Documentation'],['../_energy_balance_doc.html',1,'Energy Balance Model Plugin Documentation'],['../_li_d_a_r_doc.html',1,'LiDAR Point Cloud Plugin Documentation'],['../_photosynthesis_doc.html',1,'Photosynthesis Model Plugin Documentation'],['../_plant_architecture_doc.html',1,'Plant Architecture Model Plugin Documentation'],['../_project_builder_doc.html',1,'ProjectBuilder Plugin Documentation'],['../_radiation_doc.html',1,'Radiation Model Plugin Documentation'],['../_solar_position_doc.html',1,'Solar Position Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation'],['../_visualizer_doc.html',1,'Visualizer Plugin Documentation'],['../_voxel_intersection_doc.html',1,'Voxel Intersection Plugin Documentation'],['../_weber_penn_doc.html',1,'Weber-Penn Tree Plugin Documentation']]],
-  ['driver_20timeout_3',['Increasing graphics driver timeout',['../_p_c_g_p_u_timeout.html',1,'']]]
+  ['a_20canopy_20of_20spherical_20crowns_0',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
+  ['a_20homogeneous_20canopy_1',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
+  ['aerial_20lidar_20point_20cloud_20plugin_20documentation_2',['Aerial LiDAR Point Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'PlugIns']]],
+  ['and_20fraction_20of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_3',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
+  ['and_20optix_20version_4',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['and_20set_20up_5',['Install and Set-up',['../_dependent_software.html',1,'']]],
+  ['api_20guide_6',['User/API Guide',['../_a_p_i.html',1,'']]],
+  ['architecture_20model_20plugin_20documentation_7',['Plant Architecture Model Plugin Documentation',['../_plant_architecture_doc.html',1,'PlugIns']]],
+  ['area_20for_20a_20homogeneous_20canopy_8',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]]
 ];

@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -261,6 +263,7 @@ $(function(){initNavTree('files.html',''); initResizable(true); });
 <tr id="row_2_8_1_2_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_initialize_radiation_8cpp_source.html"><span class="icondoc"></span></a><b>InitializeRadiation.cpp</b></td><td class="desc"></td></tr>
 <tr id="row_2_8_1_3_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_initialize_simulation_8cpp_source.html"><span class="icondoc"></span></a><b>InitializeSimulation.cpp</b></td><td class="desc"></td></tr>
 <tr id="row_2_8_1_4_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_project_builder_8cpp_source.html"><span class="icondoc"></span></a><b>ProjectBuilder.cpp</b></td><td class="desc"></td></tr>
+<tr id="row_2_8_1_5_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="plugins_2projectbuilder_2src_2self_test_8cpp_source.html"><span class="icondoc"></span></a><b>selfTest.cpp</b></td><td class="desc"></td></tr>
 <tr id="row_2_9_" class="even"><td class="entry"><span style="width:16px;display:inline-block;">&#160;</span><span id="arr_2_9_" class="arrow" onclick="dynsection.toggleFolder('2_9_')">&#9660;</span><span id="img_2_9_" class="iconfopen" onclick="dynsection.toggleFolder('2_9_')">&#160;</span><a class="el" href="dir_676c0954ed84853013df50d94356577b.html" target="_self">radiation</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_0_" class="odd"><td class="entry"><span style="width:32px;display:inline-block;">&#160;</span><span id="arr_2_9_0_" class="arrow" onclick="dynsection.toggleFolder('2_9_0_')">&#9658;</span><span id="img_2_9_0_" class="iconfclosed" onclick="dynsection.toggleFolder('2_9_0_')">&#160;</span><a class="el" href="dir_40ea2a4aa4adfc7dc77aa13d0834001b.html" target="_self">include</a></td><td class="desc"></td></tr>
 <tr id="row_2_9_0_0_" class="even" style="display:none;"><td class="entry"><span style="width:64px;display:inline-block;">&#160;</span><a href="_camera_calibration_8h_source.html"><span class="icondoc"></span></a><a class="el" href="_camera_calibration_8h.html" target="_self">CameraCalibration.h</a></td><td class="desc"></td></tr>

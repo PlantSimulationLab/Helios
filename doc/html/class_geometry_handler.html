@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -512,7 +514,7 @@ Static Public Attributes</h2></td></tr>
 <p>Clears all geometry data managed by the GeometryHandler. </p>
 <p>Resets all associated data structures for geometry types and resets counters for deleted primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00637">637</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00636">636</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -534,7 +536,7 @@ Static Public Attributes</h2></td></tr>
 <p>Clears context-specific geometry data. </p>
 <p>Marks context-associated geometry data for deletion based on predefined flags and defragments the buffers. </p>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00663">663</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00662">662</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -561,7 +563,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00631">631</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00630">630</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -588,7 +590,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00612">612</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00611">611</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -615,7 +617,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00193">193</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00192">192</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -642,7 +644,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00197">197</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00196">196</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -678,7 +680,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The RGBAcolor corresponding to the specified UUID. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00380">380</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00379">379</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -714,7 +716,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the vector containing color data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00401">401</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00400">400</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -750,7 +752,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A constant pointer to a vector of integers representing the coordinate flag data for the given geometry type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00593">593</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00592">592</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -777,7 +779,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00600">600</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00599">599</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -815,7 +817,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00684">684</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00683">683</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -847,7 +849,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00725">725</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00724">724</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -883,7 +885,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Constant pointer to the vector containing face index data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00265">265</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00264">264</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -919,7 +921,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The total number of line geometries, including or excluding deleted ones based on the parameter. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00255">255</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00254">254</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -955,7 +957,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Normal vector as helios::vec3 object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00336">336</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00335">335</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -991,7 +993,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Constant pointer to the vector containing normal data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00356">356</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00355">355</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1027,7 +1029,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total number of points, optionally including deleted points. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00245">245</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00244">244</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1054,7 +1056,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00210">210</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00209">209</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1090,7 +1092,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The number of rectangles, optionally including those marked as deleted. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00225">225</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00224">224</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1126,7 +1128,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the vector containing texture flag data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00551">551</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00550">550</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1162,7 +1164,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The texture ID linked to the specified UUID. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00487">487</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00486">486</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1198,7 +1200,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the vector containing texture ID data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00501">501</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00500">500</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1234,7 +1236,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The total number of triangles, optionally including those marked as deleted. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00235">235</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00234">234</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1270,7 +1272,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a vector containing the UV data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00461">461</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00460">460</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1306,7 +1308,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A vector containing the UV coordinates as vec2 objects. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00438">438</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00437">437</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1343,7 +1345,7 @@ Static Public Attributes</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>The vertex count corresponding to the specified geometry type. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Returns 0 for unsupported or invalid geometry types. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00902">902</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00901">901</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1379,7 +1381,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Constant pointer to the vector containing vertex data. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00329">329</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00328">328</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1415,7 +1417,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A vector containing the vertices as helios::vec3 objects. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00305">305</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00304">304</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1451,7 +1453,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the vector of boolean values representing visibility flags. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00586">586</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00585">585</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1487,7 +1489,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the primitive is visible, otherwise false. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00572">572</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00571">571</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1514,7 +1516,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00508">508</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00507">507</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1536,7 +1538,7 @@ Static Public Attributes</h2></td></tr>
 <p>Generates and returns a random unique identifier value as a size_t. </p>
 <dl class="section return"><dt>Returns</dt><dd>A randomly generated UUID value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00744">744</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00743">743</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1568,7 +1570,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00363">363</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00362">362</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1600,7 +1602,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00468">468</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00467">467</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1633,7 +1635,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>This function only applies to certain geometry types where UV mapping is applicable. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00408">408</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00407">407</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1666,7 +1668,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00272">272</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00271">271</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1698,7 +1700,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00558">558</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00557">557</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>
@@ -1725,7 +1727,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00531">531</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_geometry_handler_8cpp_source.html#l00530">530</a> of file <a class="el" href="_geometry_handler_8cpp_source.html">GeometryHandler.cpp</a>.</p>
 
 </div>
 </div>

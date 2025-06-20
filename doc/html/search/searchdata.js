@@ -9,7 +9,7 @@ var indexSectionsWithContent =
   6: "chlop",
   7: "o",
   8: "cfgoptuv",
-  9: "0125678abcdefghilmoprstuvw"
+  9: "0123456789abcdefghilmoprstuvw"
 };
 
 var indexSectionNames =

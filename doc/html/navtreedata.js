@@ -52,10 +52,13 @@ var NAVTREE =
       [ "Tutorial 0: Context Self-Test", "context_selftest_tutorial.html#context_selftest_tutorial", null ],
       [ "Tutorial 1: Helios Vector Types", "context_vectors_tutorial.html#context_vectors_tutorial", null ],
       [ "Tutorial 2: Working with Context Geometry", "context_primitives_tutorial.html#context_primitives_tutorial", null ],
+      [ "Tutorial 3: Data Timeseries", "context_timeseries_tutorial.html#context_timeseries_tutorial", null ],
+      [ "Tutorial 4: File I/O", "context_fileio_tutorial.html#context_fileio_tutorial", null ],
       [ "Tutorial 5: Primitive Data", "context_primdata_tutorial.html#context_primdata_tutorial", null ],
       [ "Tutorial 6: Global Data", "context_globaldata_tutorial.html#context_globaldata_tutorial", null ],
       [ "Tutorial 7: Visualizer Basics", "visualizer_basics_tutorial.html#visualizer_basics_tutorial", null ],
       [ "Tutorial 8: Visualizing Variable and Primitive Data", "visualizer_pdata_tutorial.html#visualizer_pdata_tutorial", null ],
+      [ "Tutorial 9: Visualizer configuration", "visualizer_custom_tutorial.html#visualizer_custom_tutorial", null ],
       [ "Tutorial 10: Tree light interception", "radiation_basics_tutorial.html#radiation_basics_tutorial", null ],
       [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ],
       [ "Tutorial 12: Water-use efficiency for a canopy of spherical crowns", "canopy__w_u_e_tutorial.html#canopy_WUE_tutorial", null ]
@@ -75,7 +78,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"dir_fceca22ca0920a3e9321d273c935ca85.html"
+"dir_f54e10c7807847345da870f7da42cdf0.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

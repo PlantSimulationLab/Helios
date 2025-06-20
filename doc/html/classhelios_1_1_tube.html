@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -185,6 +187,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab55e8f7d7a948941027f169d714e365b" id="r_ab55e8f7d7a948941027f169d714e365b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab55e8f7d7a948941027f169d714e365b">getNodes</a> () const</td></tr>
 <tr class="memdesc:ab55e8f7d7a948941027f169d714e365b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Cartesian coordinates of each of the tube object nodes.  <br /></td></tr>
 <tr class="separator:ab55e8f7d7a948941027f169d714e365b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d19658536333e2ef614f46c800ccf56" id="r_a1d19658536333e2ef614f46c800ccf56"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d19658536333e2ef614f46c800ccf56">getNodeCount</a> () const</td></tr>
+<tr class="memdesc:a1d19658536333e2ef614f46c800ccf56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current number of nodes in the tube object.  <br /></td></tr>
+<tr class="separator:a1d19658536333e2ef614f46c800ccf56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29823b956371d22b35add97fc6831cab" id="r_a29823b956371d22b35add97fc6831cab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29823b956371d22b35add97fc6831cab">getNodeRadii</a> () const</td></tr>
 <tr class="memdesc:a29823b956371d22b35add97fc6831cab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the radius at each of the tube object nodes.  <br /></td></tr>
 <tr class="separator:a29823b956371d22b35add97fc6831cab"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -479,7 +484,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03892">3892</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03907">3907</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -517,7 +522,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03773">3773</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03788">3788</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -546,7 +551,7 @@ Friends</h2></td></tr>
 
 <p>Get the length of the tube object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03739">3739</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03754">3754</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -575,7 +580,36 @@ Friends</h2></td></tr>
 
 <p>Get the colors at each of the tube object nodes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03727">3727</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03742">3742</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1d19658536333e2ef614f46c800ccf56" name="a1d19658536333e2ef614f46c800ccf56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d19658536333e2ef614f46c800ccf56">&#9670;&#160;</a></span>getNodeCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint Tube::getNodeCount </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the current number of nodes in the tube object. </p>
+
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03723">3723</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -604,7 +638,7 @@ Friends</h2></td></tr>
 
 <p>Get the radius at each of the tube object nodes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03712">3712</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03727">3727</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -633,7 +667,7 @@ Friends</h2></td></tr>
 
 <p>Get the Cartesian coordinates of each of the tube object nodes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03699">3699</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03710">3710</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -668,7 +702,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03760">3760</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03775">3775</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -697,7 +731,7 @@ Friends</h2></td></tr>
 
 <p>Get the number of sub-triangle divisions of the tube object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03735">3735</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03750">3750</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -726,7 +760,7 @@ Friends</h2></td></tr>
 
 <p>Get positions of triangle vertices comprising the tube object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03731">3731</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03746">3746</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -755,7 +789,7 @@ Friends</h2></td></tr>
 
 <p>Get the volume of the tube object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03747">3747</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l03762">3762</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -782,7 +816,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04094">4094</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04109">4109</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -809,7 +843,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04025">4025</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04040">4040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -836,7 +870,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04059">4059</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04074">4074</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -863,7 +897,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04078">4078</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04093">4093</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -890,7 +924,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04040">4040</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04055">4055</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -915,7 +949,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00798">798</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00801">801</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>
@@ -939,7 +973,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00799">799</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00802">802</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>

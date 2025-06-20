@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -407,7 +409,7 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Box compound object class. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00804">804</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00807">807</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a96e72a40ff113d6a6b463fe8c60b672a" name="a96e72a40ff113d6a6b463fe8c60b672a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a96e72a40ff113d6a6b463fe8c60b672a">&#9670;&#160;</a></span>getCenter()</h2>
@@ -434,7 +436,7 @@ Friends</h2></td></tr>
 
 <p>Get the Cartesian coordinates of the center of the box object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04176">4176</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04191">4191</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -463,7 +465,7 @@ Friends</h2></td></tr>
 
 <p>Get the dimensions of the box object in each Cartesian direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04159">4159</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04174">4174</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -492,7 +494,7 @@ Friends</h2></td></tr>
 
 <p>Get the number of sub-patch divisions of the box object in each Cartesian direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04190">4190</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04205">4205</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -521,7 +523,7 @@ Friends</h2></td></tr>
 
 <p>Get the volume of the box object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04198">4198</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04213">4213</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -548,7 +550,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04194">4194</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04209">4209</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -573,7 +575,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00838">838</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00841">841</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>
@@ -597,7 +599,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00839">839</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00842">842</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>

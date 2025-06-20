@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -2174,7 +2176,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties()). </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03242">3242</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
@@ -2202,7 +2204,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a>), and 3) update radiative properties in the model (see updateRadiativeProperties()). </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03247">3247</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 

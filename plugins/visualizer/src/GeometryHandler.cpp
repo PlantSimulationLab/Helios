@@ -621,7 +621,7 @@ void GeometryHandler::deleteGeometry( size_t UUID ) {
 
     deleted_primitive_count ++;
 
-    if ( deleted_primitive_count>10000 ) {
+    if ( deleted_primitive_count>100000 ) {
         defragmentBuffers();
     }
 

@@ -257,7 +257,7 @@ The coordinate system of plant organs is defined with respect to it's parent ele
 
 Nearly all parameters in the architectural model can either be specified as a constant value, or as a random variable following several pre-defined distributions.
 
-Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref val() method is used to get the value of the parameter.
+Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref RandomParameter_float::val "val()" method is used to get the value of the parameter.
 
 ~~~~~~
 // Assign a constant value
@@ -281,16 +281,16 @@ Available distributions for \ref RandomParameter_float are listed below
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref uniformDistribution() | minimum value, maximum value |
-| Normal | \ref normalDistribution() | mean, standard deviation |
-| Weibull | \ref weibullDistribution() | shape parameter, scale parameter |
+| Uniform | \ref RandomParameter_float::uniformDistribution "uniformDistribution()" | minimum value, maximum value |
+| Normal | \ref RandomParameter_float::normalDistribution "normalDistribution()" | mean, standard deviation |
+| Weibull | \ref RandomParameter_float::weibullDistribution "weibullDistribution()" | shape parameter, scale parameter |
 
 and for \ref RandomParameter_int are:
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref uniformDistribution() | minimum value, maximum value |
-| Discrete Values | \ref discreteValues() | vector of discrete int values that will be randomly chosen |
+| Uniform | \ref RandomParameter_float::uniformDistribution "uniformDistribution()" | minimum value, maximum value |
+| Discrete Values | \ref RandomParameter_int::discreteValues "discreteValues()" | vector of discrete int values that will be randomly chosen |
 
 \section PlantArchPhytomerParams Defining the Phytomer and its Parameters
 
@@ -375,7 +375,7 @@ The figure below provides some examples of how various shoot growth patterns (e.
 
 \subsection PlantArchOrgans Creating Plant Organ Prototypes
 
-The geometry of plant leaves, flowers, and fruit are defined based on `prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
+The geometry of plant leaves, flowers, and fruit are defined based on `prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref helios::Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
 
 The size, position, and orientation of the prototype when it is created needs to follow a specific convention.
 

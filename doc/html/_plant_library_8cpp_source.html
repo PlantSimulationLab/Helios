@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -1294,7 +1296,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01133" name="l01133"></a><span class="lineno"> 1133</span>    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09,0.12);</div>
 <div class="line"><a id="l01134" name="l01134"></a><span class="lineno"> 1134</span>    phytomer_parameters_trifoliate.leaf.prototype = leaf_prototype_trifoliate;</div>
 <div class="line"><a id="l01135" name="l01135"></a><span class="lineno"> 1135</span> </div>
-<div class="line"><a id="l01136" name="l01136"></a><span class="lineno"> 1136</span>    phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.25,0.27);</div>
+<div class="line"><a id="l01136" name="l01136"></a><span class="lineno"> 1136</span>    phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.3,0.35);</div>
 <div class="line"><a id="l01137" name="l01137"></a><span class="lineno"> 1137</span>    phytomer_parameters_trifoliate.peduncle.radius = 0.0025;</div>
 <div class="line"><a id="l01138" name="l01138"></a><span class="lineno"> 1138</span>    phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);</div>
 <div class="line"><a id="l01139" name="l01139"></a><span class="lineno"> 1139</span>    phytomer_parameters_trifoliate.peduncle.roll = 90;</div>
@@ -1303,7 +1305,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01142" name="l01142"></a><span class="lineno"> 1142</span>    phytomer_parameters_trifoliate.peduncle.length_segments = 6;</div>
 <div class="line"><a id="l01143" name="l01143"></a><span class="lineno"> 1143</span>    phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;</div>
 <div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span> </div>
-<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>    phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle = 4;<span class="comment">//.uniformDistribution(1, 3);</span></div>
+<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>    phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);</div>
 <div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span>    phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.025;</div>
 <div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50,70);</div>
 <div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20,20);</div>
@@ -1311,7 +1313,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>    phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;</div>
 <div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.11,0.13);</div>
 <div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;</div>
-<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.,0.7);</div>
+<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.5,0.7);</div>
 <div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span> </div>
 <div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>    PhytomerParameters phytomer_parameters_unifoliate = phytomer_parameters_trifoliate;</div>
 <div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>    phytomer_parameters_unifoliate.<a class="code hl_variable" href="struct_phytomer_parameters.html#afd92e77a87bec17a845f81d146600b39" title="Parameters defining the characteristics of an internode.">internode</a>.pitch = 0;</div>

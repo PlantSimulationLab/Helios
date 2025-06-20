@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -301,7 +303,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05435">5435</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05551">5551</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -333,7 +335,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05443">5443</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05559">5559</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -365,7 +367,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05451">5451</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05567">5567</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -400,7 +402,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05403">5403</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05519">5519</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -440,7 +442,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05419">5419</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05535">5535</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -475,7 +477,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05411">5411</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05527">5527</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -515,7 +517,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05427">5427</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05543">5543</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -536,7 +538,7 @@ GNU General Public License for more details.
 
 <p>Function to open file dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00154">154</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00155">155</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -582,7 +584,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00350">350</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00354">354</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -761,7 +763,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00076">76</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00077">77</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -784,7 +786,7 @@ GNU General Public License for more details.
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01306">1306</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01320">1320</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -811,7 +813,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00228">228</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00231">231</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -843,7 +845,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00120">120</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00121">121</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -870,7 +872,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00058">58</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00059">59</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -897,7 +899,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00064">64</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00065">65</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -924,7 +926,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00070">70</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00071">71</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>

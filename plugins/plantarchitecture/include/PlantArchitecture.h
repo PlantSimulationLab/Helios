@@ -975,7 +975,13 @@ public:
      */
     [[nodiscard]] std::vector<float> getInternodeNodeRadii() const;
 
-    float calculatePhytomerVolume(uint node_number) const;
+    /**
+     * \brief Calculates the volume of a phytomer.
+     *
+     * \param[in] node_number The node index of the phytomer whose volume is to be computed.
+     * \return The calculated volume of the phytomer.
+     */
+    [[nodiscard]] float calculatePhytomerVolume(uint node_number) const;
 
     /**
      * \brief Retrieves the axis vector of the internode at a given fraction along the internode.
@@ -1424,6 +1430,13 @@ struct Shoot {
      */
     [[nodiscard]] float sumChildVolume( uint start_node_index = 0) const;
 
+    /**
+     * \brief Propagates the given leaf area downstream through the specified shoot.
+     *
+     * \param[in] shoot Pointer to the shoot through which leaf area is propagated
+     * \param[in] node_index Index of the node to start propagation from
+     * \param[in] leaf_area Leaf area to add downstream
+     */
     void propagateDownstreamLeafArea(const Shoot* shoot, uint node_index, float leaf_area);
 
     /**
@@ -1522,50 +1535,6 @@ struct PlantInstance{
     float max_age = 999;
 
     CarbohydrateParameters carb_parameters;
-
-    //Stem Growth
-    // float stem_density = 540000; //Almond wood density (g m^-3) - Grossman 1993
-    // float stem_carbon_percentage = .4559; //portion of the dry weight of almond wood made up by carbon - Grossman 1993
-    // float shoot_root_ratio = 3;
-    //
-    // //Leaf Growth
-    // float SLA = 2.5e-2; //ratio of leaf area to leaf dry mass m^2 / g DW
-    // float leaf_carbon_percentage = .444; //portion of the dry weight of the leaf made up by carbon - Penning de Vries et al. 1989
-    //
-    // //Flower Growth
-    // float total_flower_cost = 8.33e-4; //mol C flower^-1  (Bustan & Goldschmidt 2002)
-    // //float flower_production_cost = total_flower_cost*.69; //mol C flower^-1  (Bustan & Goldschmidt 2002)
-    // //float flower_growth_respiration = total_flower_cost*.31; //mol C flower^-1  (Bustan & Goldschmidt 2002)
-    //
-    // //Fruit Growth
-    // float fruit_density = 525000; //g m^-3
-    // float percent_kernel = .27; //portion of the nut made up by the kernel
-    // float percent_shell = .19;  //portion of the nut made up by the shell
-    // float percent_hull = .54;  //portion of the nut made up by the hull
-    // float kernel_carbon_percentage = .454; //portion of the kernel made up by carbon by dry weight
-    // float shell_carbon_percentage = .470;  //portion of the shell made up by caron by dry weight
-    // float hull_carbon_percentage = .494;  //portion of the hull made up by carbon by dry weight
-    // float fruit_carbon_percentage = percent_kernel*kernel_carbon_percentage + percent_shell*shell_carbon_percentage + percent_hull*hull_carbon_percentage; //overall portion of the nut made up by carbon by dry weight
-    //
-    //
-    // //Respiration
-    // float stem_maintainance_respiration_rate = 1.9458e-05 * pow(1.8, ((25. - 15.) / 10)); //mol C respired/mol C in pool/day
-    // float root_maintainance_respiration_rate = 1.9458e-05 * pow(1.8, ((25. - 15.) / 10)) / shoot_root_ratio; //mol C respired/mol C in pool/day
-    // float growth_respiration_fraction = 0.28; //Accounting for the growth carbon lost to respiration (assumed 28%)
-    //
-    // //Abortion of Organs
-    // float C_molecular_wt = 12.01; //g C mol^-1
-    // float carbohydrate_abortion_threshold = 50*stem_density/(1000*C_molecular_wt); //mol C/m3
-    // float bud_death_threshold = 2; //days
-    // float branch_death_threshold = 5; //days
-    //
-    // //Phyllochron Adjustment
-    // float carbohydrate_phyllochron_threshold = 100*stem_density/(1000*C_molecular_wt); //mol C/m3
-    // float carbohydrate_phyllochron_threshold_low = 50*stem_density/(1000*C_molecular_wt); //mol C/m3
-    //
-    // //Carbon Transfer
-    // float carbohydrate_transfer_threshold = 100*stem_density/(1000*C_molecular_wt); //mol C/m3
-    // float carbon_conductance = 0.8;
 
 };
 
@@ -2450,6 +2419,8 @@ protected:
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
     void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
+
+    void pruneGroundCollisions( uint plantID );
 
     // --- Carbohydrate Model --- //
 

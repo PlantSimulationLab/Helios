@@ -57,7 +57,7 @@
 
  \subsection BLCModels Boundary-layer Conductance Models
 
- There are four different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref setBoundaryLayerModel() is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.
+ There are four different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.
 
  It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development. This is usually necesary when using the boundary-layer conductance model for a sphere, for example.
 
@@ -150,8 +150,8 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
  <table>
  <caption>Functions to perform boundary-layer conductance model calculations.</caption>
  <tr><th>Model Run Function <th>Description
- <tr><td>\ref BLConductanceModel::run( void ) <td>Run model calculations for all primitives in the Context.
- <tr><td>\ref BLConductanceModel::run( std::vector<uint> UUIDs ) <td>Run model calculations for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
+ <tr><td>\ref BLConductanceModel::run "BLConductanceModel::run()" <td>Run model calculations for all primitives in the Context.
+ <tr><td>\ref BLConductanceModel::run "BLConductanceModel::run()" <td>Run model calculations for a select set of primitives in the Context, which are specified by a vector of their UUIDs.
  </table>
 
 */

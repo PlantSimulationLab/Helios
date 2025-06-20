@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -177,31 +179,32 @@ $(function(){initNavTree('plugins_2plantarchitecture_2src_2self_test_8cpp_source
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Building &quot;</span> &lt;&lt; plant_label &lt;&lt; <span class="stringliteral">&quot; plant model...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>            <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>            <a class="code hl_function" href="class_plant_architecture.html#ab55c86604c49abcedde90adb395074e9" title="Main architectural model class constructor.">PlantArchitecture</a> plantarchitecture(&amp;context);</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>            plantarchitecture.<a class="code hl_function" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a" title="Load an existing plant model from the library.">loadPlantModelFromLibrary</a>( plant_label );</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>            plantarchitecture.<a class="code hl_function" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba" title="Build a plant instance based on the model currently loaded from the library.">buildPlantInstanceFromLibrary</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 5000);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        }<span class="keywordflow">catch</span> (std::exception &amp;e) {</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>            std::cerr &lt;&lt; plant_label &lt;&lt; <span class="stringliteral">&quot; model failed.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>            std::cerr &lt;&lt; e.what() &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>            error_count++;</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        }</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    };</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Running self-test to build all plants in the library...&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordflow">for</span> ( <span class="keyword">auto</span> &amp;plant_label : plant_labels ) {</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        test_buildPlantFromLibrary( plant_label );</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    }</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordflow">if</span> ( error_count==0 ) {</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;passed.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;failed &quot;</span> &lt;&lt; error_count &lt;&lt; <span class="stringliteral">&quot; tests.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    }</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>            plantarchitecture.<a class="code hl_function" href="class_plant_architecture.html#a27dd2c46b6bb9f5c922d18acb6d9ba69" title="Enable automatic removal of organs that are below the ground plane.">enableGroundClipping</a>();</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>            plantarchitecture.<a class="code hl_function" href="class_plant_architecture.html#adc41de628e65a52f560b4d0685c64c3a" title="Load an existing plant model from the library.">loadPlantModelFromLibrary</a>( plant_label );</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>            plantarchitecture.<a class="code hl_function" href="class_plant_architecture.html#ab98a62363a5e4553c5052a23e39711ba" title="Build a plant instance based on the model currently loaded from the library.">buildPlantInstanceFromLibrary</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 5000);</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        }<span class="keywordflow">catch</span> (std::exception &amp;e) {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>            std::cerr &lt;&lt; plant_label &lt;&lt; <span class="stringliteral">&quot; model failed.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>            std::cerr &lt;&lt; e.what() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>            error_count++;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        }</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    };</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Running self-test to build all plants in the library...&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordflow">for</span> ( <span class="keyword">auto</span> &amp;plant_label : plant_labels ) {</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        test_buildPlantFromLibrary( plant_label );</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    }</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordflow">if</span> ( error_count==0 ) {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;passed.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;failed &quot;</span> &lt;&lt; error_count &lt;&lt; <span class="stringliteral">&quot; tests.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    }</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>}</div>
 </div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

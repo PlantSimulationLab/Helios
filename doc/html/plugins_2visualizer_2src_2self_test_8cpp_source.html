@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -170,7 +172,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Running visualizer self-test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    }</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <a class="code hl_function" href="class_visualizer.html#a9277e99596d46d77d31a2249a1406983" title="Visualizer constructor.">Visualizer</a> visualizer(1000);</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <a class="code hl_function" href="class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac" title="forbid the default constructor">Visualizer</a> visualizer(1000);</div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <span class="comment">// ---- Test enableMessages() ---- //</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    {</div>
@@ -298,9 +300,9 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    <span class="comment">// ---- Test Visualizer Constructors ---- //</span></div>
 <div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    {</div>
 <div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        <span class="keywordflow">try</span> {</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>            <a class="code hl_function" href="class_visualizer.html#a9277e99596d46d77d31a2249a1406983" title="Visualizer constructor.">Visualizer</a> v1(800, 600);</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>            <a class="code hl_function" href="class_visualizer.html#a9277e99596d46d77d31a2249a1406983" title="Visualizer constructor.">Visualizer</a> v2(1024, 768, 4);</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>            <a class="code hl_function" href="class_visualizer.html#a9277e99596d46d77d31a2249a1406983" title="Visualizer constructor.">Visualizer</a> v3(1280, 720, 8, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>            <a class="code hl_function" href="class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac" title="forbid the default constructor">Visualizer</a> v1(800, 600);</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>            <a class="code hl_function" href="class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac" title="forbid the default constructor">Visualizer</a> v2(1024, 768, 4);</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>            <a class="code hl_function" href="class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac" title="forbid the default constructor">Visualizer</a> v3(1280, 720, 8, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed Visualizer constructors test.\n&quot;</span>;</div>
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>        } <span class="keywordflow">catch</span> (...) {</div>
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: Visualizer constructors test failed.\n&quot;</span>;</div>

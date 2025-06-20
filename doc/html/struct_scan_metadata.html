@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -172,9 +174,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2f625c96f54068fb8de34b528e7f770d" id="r_a2f625c96f54068fb8de34b528e7f770d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f625c96f54068fb8de34b528e7f770d">ScanMetadata</a> ()</td></tr>
 <tr class="memdesc:a2f625c96f54068fb8de34b528e7f770d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default LiDAR scan data structure.  <br /></td></tr>
 <tr class="separator:a2f625c96f54068fb8de34b528e7f770d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4" id="r_a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const std::vector&lt; std::string &gt; &amp;a_columnFormat)</td></tr>
-<tr class="memdesc:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <br /></td></tr>
-<tr class="separator:a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a444f3e74f9d4843da9c73a9bf95f2fe6" id="r_a444f3e74f9d4843da9c73a9bf95f2fe6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a444f3e74f9d4843da9c73a9bf95f2fe6">ScanMetadata</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;<a class="el" href="#a200bf65b728866855ace6456365d66a3">origin</a>, uint <a class="el" href="#a8432ab0ab545a0027bb47ce84f0a6704">Ntheta</a>, float <a class="el" href="#a1b5a4f80f3d64d54755d2b6499f3863f">thetaMin</a>, float <a class="el" href="#a2654da6ef2d7d383ba912cbc6cbfeedf">thetaMax</a>, uint <a class="el" href="#a8d9273e0fccbfc20916c284ab6c573ac">Nphi</a>, float <a class="el" href="#a019acfcaf7a3ba3fe062af1a59c24513">phiMin</a>, float <a class="el" href="#a29f41bdfbec57a32c60755944b4c0a7f">phiMax</a>, float <a class="el" href="#a86d36162498a4de96a04ce83976c8e22">exitDiameter</a>, float <a class="el" href="#acec69b1556a96236c0702f03b231d008">beamDivergence</a>, const std::vector&lt; std::string &gt; &amp;<a class="el" href="#accc2b308821e99b3e9aeed5d0a797130">columnFormat</a>)</td></tr>
+<tr class="memdesc:a444f3e74f9d4843da9c73a9bf95f2fe6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a LiDAR scan data structure.  <br /></td></tr>
+<tr class="separator:a444f3e74f9d4843da9c73a9bf95f2fe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae28f6042e5eae2adaaacbeaaa6109a8c" id="r_ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae28f6042e5eae2adaaacbeaaa6109a8c">rc2direction</a> (uint row, uint column) const</td></tr>
 <tr class="memdesc:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the (row,column) of hit point in a scan to a direction vector.  <br /></td></tr>
 <tr class="separator:ae28f6042e5eae2adaaacbeaaa6109a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -245,8 +247,8 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a id="a6aa59ee9ecf89c9c6a2ae3a734c5ccd4" name="a6aa59ee9ecf89c9c6a2ae3a734c5ccd4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6aa59ee9ecf89c9c6a2ae3a734c5ccd4">&#9670;&#160;</a></span>ScanMetadata() <span class="overload">[2/2]</span></h2>
+<a id="a444f3e74f9d4843da9c73a9bf95f2fe6" name="a444f3e74f9d4843da9c73a9bf95f2fe6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a444f3e74f9d4843da9c73a9bf95f2fe6">&#9670;&#160;</a></span>ScanMetadata() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -254,52 +256,52 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">ScanMetadata::ScanMetadata </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a_origin</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>a_Ntheta</em></span>, </td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Ntheta</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_thetaMin</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>thetaMin</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_thetaMax</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>thetaMax</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>a_Nphi</em></span>, </td>
+          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nphi</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_phiMin</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>phiMin</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_phiMax</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>phiMax</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_exitDiameter</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>exitDiameter</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a_beamDivergence</em></span>, </td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>beamDivergence</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>a_columnFormat</em></span>&#160;)</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>columnFormat</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -309,11 +311,11 @@ Data Fields</h2></td></tr>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>(x,y,z) position of the scanner </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">Ntheta</td><td>Number of scan points in the theta (zenithal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">thetamin</td><td>Minimum scan angle in the theta (zenithal) direction in radians </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">thetamax</td><td>Maximum scan angle in the theta (zenithal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">thetaMin</td><td>Minimum scan angle in the theta (zenithal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">thetaMax</td><td>Maximum scan angle in the theta (zenithal) direction in radians </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">Nphi</td><td>Number of scan points in the phi (azimuthal) direction </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">phimin</td><td>Minimum scan angle in the phi (azimuthal) direction in radians </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">phimax</td><td>Maximum scan angle in the phi (azimuthal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phiMin</td><td>Minimum scan angle in the phi (azimuthal) direction in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phiMax</td><td>Maximum scan angle in the phi (azimuthal) direction in radians </td></tr>
   </table>
   </dd>
 </dl>

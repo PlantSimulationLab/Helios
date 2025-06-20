@@ -18,6 +18,7 @@ var class_visualizer =
       [ "LIGHTING_PHONG", "class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573adce805e52c5b47950ecc3cfdddd2160c", null ],
       [ "LIGHTING_PHONG_SHADOWED", "class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864", null ]
     ] ],
+    [ "Visualizer", "class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac", null ],
     [ "Visualizer", "class_visualizer.html#a9277e99596d46d77d31a2249a1406983", null ],
     [ "Visualizer", "class_visualizer.html#ac39e631c7d248c0e0f4f9ebba58a6dc4", null ],
     [ "Visualizer", "class_visualizer.html#aa1b2dc8221d4d254ba54880afb6fce98", null ],

@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -263,7 +265,7 @@ Spatially Homogeneous Canopy</h2>
 <tr>
 <th>Individual Plant Function</th><td>N/A </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( HomogeneousCanopyParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -301,7 +303,7 @@ Canopy of Spherical Crowns</h2>
 <tr>
 <th>Individual Plant Function</th><td>N/A </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( SphericalCrownsCanopyParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -349,7 +351,7 @@ Canopy of Conical Crowns</h2>
 <tr>
 <th>Individual Plant Function</th><td>N/A </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( ConicalCrownsCanopyParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -397,9 +399,9 @@ Grapevine Canopy with VSP Trellis</h2>
 <tr>
 <th>Parameters Structure</th><td><a class="el" href="struct_v_s_p_grapevine_parameters.html">VSPGrapevineParameters</a> </td></tr>
 <tr>
-<th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#aaffe5cdb82a779785bc6d5e35e622812">CanopyGenerator::grapevineVSP()</a> </td></tr>
+<th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#aaffe5cdb82a779785bc6d5e35e622812">grapevineVSP()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( VSPGrapevineParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -467,7 +469,7 @@ Grapevine Canopy with a Split Trellis</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#a8747bad1af97214059c38043241f0b47">CanopyGenerator::grapevineSplit()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( SplitGrapevineParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -539,7 +541,7 @@ Grapevine Canopy with a Unilateral VSP Trellis</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#aac9104d7c6565e860737310de06981f8">CanopyGenerator::grapevineUnilateral()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( UnilateralGrapevineParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -609,7 +611,7 @@ Grapevine Canopy with a Goblet Trellis</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#a8f2d498637c464ee852109e6085cde8a">CanopyGenerator::grapevineGoblet()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( GobletGrapevineParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -681,7 +683,7 @@ Strawberry Canopy</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#a61ad89294ae8c964aff9cd18d273fc10">CanopyGenerator::strawberry()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( StrawberryParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -739,7 +741,7 @@ Walnut Canopy</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#af8b7088179f65a2d3d05a1f21207dd54">CanopyGenerator::walnut()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( WalnutCanopyParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -813,7 +815,7 @@ sorghum Canopy</h2>
 <tr>
 <th>Individual Plant Function</th><td><a class="el" href="class_canopy_generator.html#a1e1b20fe60767277a4440e7a918d507c">CanopyGenerator::sorghum()</a> </td></tr>
 <tr>
-<th>Canopy Build Function</th><td>CanopyGenerator::buildCanopy( SorghumCanopyParameters parameters ) </td></tr>
+<th>Canopy Build Function</th><td><a class="el" href="class_canopy_generator.html#a1c7efa40c83c82ec081a7723c9c9ed98">buildCanopy()</a> </td></tr>
 </table>
 <table class="doxtable">
 <tr>
@@ -1028,7 +1030,7 @@ Building an Individual Plant</h1>
 <div class="line">   canopygenerator.grapevineVSP( parameters, origin );</div>
 <div class="line"> </div>
 <div class="line"> }</div>
-</div><!-- fragment --><p>The function grapevineVSP() could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.</p>
+</div><!-- fragment --><p>The function <a class="el" href="class_canopy_generator.html#aaffe5cdb82a779785bc6d5e35e622812">grapevineVSP()</a> could be called many times with different origin positions to create any canopy that is desired. Below, we will introduce functions that automatically generate a canopy according to the values set in the parameters structure.</p>
 <h1><a class="anchor" id="CGenBuildCanopy"></a>
 Building a Canopy</h1>
 <p>Functions are available for each plant type to quickly generate a canopy of many plants using the associated "buildCanopy()" function. The example below shows how to build a vineyard on VSP trellis.</p>

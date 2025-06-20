@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -167,8 +169,8 @@ Context Basics</h2>
 <li><a class="el" href="context_selftest_tutorial.html">Tutorial 0: Context Self-Test</a></li>
 <li><a class="el" href="context_vectors_tutorial.html">Tutorial 1: Helios Vector Types</a></li>
 <li><a class="el" href="context_primitives_tutorial.html">Tutorial 2: Working with Context Geometry</a></li>
-<li>Tutorial 3: Data Timeseries</li>
-<li>Tutorial 4: File I/O</li>
+<li><a class="el" href="context_timeseries_tutorial.html">Tutorial 3: Data Timeseries</a></li>
+<li><a class="el" href="context_fileio_tutorial.html">Tutorial 4: File I/O</a></li>
 </ul>
 <h2><a class="anchor" id="PrimDataTut"></a>
 Working with Context Data</h2>
@@ -181,7 +183,7 @@ Visualizer Plug-In</h1>
 <ul>
 <li><a class="el" href="visualizer_basics_tutorial.html">Tutorial 7: Visualizer Basics</a></li>
 <li><a class="el" href="visualizer_pdata_tutorial.html">Tutorial 8: Visualizing Variable and Primitive Data</a></li>
-<li>Tutorial 9: Visualizer Configuration</li>
+<li><a class="el" href="visualizer_custom_tutorial.html">Tutorial 9: Visualizer Configuration</a></li>
 </ul>
 <h1><a class="anchor" id="RadiationTuts"></a>
 Radiation Model Plug-In</h1>

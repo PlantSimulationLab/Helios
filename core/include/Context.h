@@ -702,6 +702,9 @@ public:
     
     //! Get the Cartesian coordinates of each of the tube object nodes
     [[nodiscard]] std::vector<helios::vec3> getNodes() const;
+
+    //! Get the current number of nodes in the tube object
+    [[nodiscard]] uint getNodeCount() const;
     
     //! Get the radius at each of the tube object nodes
     [[nodiscard]] std::vector<float> getNodeRadii() const;
@@ -2160,6 +2163,21 @@ private:
     uint currentUUID;
 
     uint currentObjectID;
+
+    //---------- MEMORY HANDLING -----------------//
+
+    //! Handles out-of-memory situations.
+    /**
+     * This function is called when the program runs out of host memory and
+     * cannot continue execution.
+     */
+    static void out_of_memory_handler();
+
+    //! Installs a handler to manage out-of-memory situations.
+    /**
+     * Configures the application to use a predefined handler for cases where memory allocation fails.
+     */
+    static void install_out_of_memory_handler();
 
 public:
 
@@ -5098,6 +5116,12 @@ public:
      */
     [[nodiscard]] std::vector<helios::vec3> getTubeObjectNodes(uint ObjID) const;
 
+    //! get the number of nodes of a Tube object from the context
+    /**
+     * \param[in] ObjID object ID of the Tube object
+     */
+    [[nodiscard]] uint getTubeObjectNodeCount(uint ObjID) const;
+
     //! get the node radii of a Tube object from the context
     /**
      * \param[in] ObjID object ID of the Tube object
@@ -5972,7 +5996,7 @@ public:
      * \param[in] label Name of timeseries variable (e.g., temperature)
      * \param[in] value Value of timeseries data point
      * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::time "Time")
+     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
      * \ingroup timeseries
      */
     void addTimeseriesData(const char* label, float value, const Date &date, const Time &time );
@@ -5989,7 +6013,7 @@ public:
     /**This method interpolates the timeseries data to provide a value at exactly `date' and `time'.  Thus, `date' and `time' must be between the first and last timeseries values.
      * \param[in] label Name of timeseries variable (e.g., temperature)
      * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::time "Time")
+     * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
      * \return Value of timeseries data point
      * \ingroup timeseries
      */

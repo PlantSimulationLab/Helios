@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['6_3a_20global_20data_0',['Tutorial 6: Global Data',['../context_globaldata_tutorial.html',1,'Tutorials']]]
+  ['4_3a_20file_20i_20o_0',['Tutorial 4: File I/O',['../context_fileio_tutorial.html',1,'Tutorials']]]
 ];

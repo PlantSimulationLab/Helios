@@ -1,10 +1,16 @@
 var searchData=
 [
-  ['file_20formats_20to_20ply_20using_20blender_0',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['file_20input_20output_1',['File Input/Output',['../_i_o.html',1,'']]],
-  ['files_20with_20transparency_20using_20gimp_2',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['for_20a_20canopy_20of_20spherical_20crowns_3',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'Tutorials']]],
-  ['for_20a_20homogeneous_20canopy_4',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
-  ['formats_20to_20ply_20using_20blender_5',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['fraction_20of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_6',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]]
+  ['canopy_0',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
+  ['canopy_20generator_20plugin_20documentation_1',['Canopy Generator Plugin Documentation',['../_canopy_generator_doc.html',1,'PlugIns']]],
+  ['canopy_20of_20spherical_20crowns_2',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
+  ['choosing_20the_20right_20cuda_20and_20optix_20version_3',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['clion_20ide_20with_20helios_4',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
+  ['cloud_20plugin_20documentation_5',['Cloud Plugin Documentation',['../_aerial_li_d_a_r_doc.html',1,'Aerial LiDAR Point Cloud Plugin Documentation'],['../_li_d_a_r_doc.html',1,'LiDAR Point Cloud Plugin Documentation']]],
+  ['conductance_20model_20plugin_20documentation_6',['Conductance Model Plugin Documentation',['../_b_l_conductance_doc.html',1,'Boundary-Layer Conductance Model Plugin Documentation'],['../_stomatal_doc.html',1,'Stomatal Conductance Model Plugin Documentation']]],
+  ['context_20geometry_7',['Tutorial 2: Working with Context Geometry',['../context_primitives_tutorial.html',1,'Tutorials']]],
+  ['context_20self_20test_20tutorial_8',['Tutorial 0: Context Self-Test Tutorial',['../context_selftest_tutorial.html',1,'Tutorials']]],
+  ['converting_20polygon_20file_20formats_20to_20ply_20using_20blender_9',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
+  ['crowns_10',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
+  ['cuda_20and_20optix_20version_11',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['customizing_20visualizations_12',['Tutorial 9: Customizing visualizations',['../visualizer_custom_tutorial.html',1,'Tutorials']]]
 ];

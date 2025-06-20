@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -427,7 +429,7 @@ Setting the Model Coefficients</h2>
 <div class="line">modelcoeffs.b = 6.7;</div>
 </div><!-- fragment --><h2><a class="anchor" id="StomatalRun"></a>
 Running the Model (steady-state mode)</h2>
-<p>There are two possible functions to run the model: one to run the model for all primitives in the Context (see <a class="el" href="class_stomatal_conductance_model.html#acb041e756e00d5ced85b03905a97f5c6">StomatalConductanceModel::run()</a>), and another to run the model only for a subset of primitives given their UUIDs (see StomatalConductanceModel::run( std::vector&lt;uint&gt; &amp;UUIDs )).</p>
+<p>There are two possible functions to run the model: one to run the model for all primitives in the Context (see <a class="el" href="class_stomatal_conductance_model.html#acb041e756e00d5ced85b03905a97f5c6">run()</a>), and another to run the model only for a subset of primitives given their UUIDs (see <a class="el" href="class_stomatal_conductance_model.html#acb041e756e00d5ced85b03905a97f5c6">run()</a>).</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_stomatal_conductance_model_8h.html">StomatalConductanceModel.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>

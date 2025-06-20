@@ -54,7 +54,8 @@ var searchData=
   ['printprimitiveinfo_51',['printPrimitiveInfo',['../classhelios_1_1_context.html#a355617da1f3faa4d01ca4d95425e9c0b',1,'helios::Context']]],
   ['printwindow_52',['printWindow',['../class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32',1,'Visualizer::printWindow()'],['../class_visualizer.html#a13437147f11e5b4fa7eb89de778cd2c3',1,'Visualizer::printWindow(const char *outfile) const']]],
   ['projectbuilder_53',['ProjectBuilder',['../class_project_builder.html#a59b09aad1714505a387f57d7596abff0',1,'ProjectBuilder']]],
-  ['prospect_54',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]],
-  ['prunebranch_55',['pruneBranch',['../class_plant_architecture.html#a3de2882d6e4f990ff3e68b76134ed825',1,'PlantArchitecture']]],
-  ['prunetubenodes_56',['pruneTubeNodes',['../classhelios_1_1_tube.html#a4d8bc6d05dab160f3e0fbee48ad3fd2c',1,'helios::Tube::pruneTubeNodes()'],['../classhelios_1_1_context.html#a7e47d13895d9e65ae719e2afce8d1d54',1,'helios::Context::pruneTubeNodes()']]]
+  ['propagatedownstreamleafarea_54',['propagateDownstreamLeafArea',['../struct_shoot.html#aaf4056ac1b7cd3b9c0303fc720e3a2d8',1,'Shoot']]],
+  ['prospect_55',['PROSPECT',['../class_leaf_optics.html#a8af86e8cce4d721230ddc746580b7dcf',1,'LeafOptics']]],
+  ['prunebranch_56',['pruneBranch',['../class_plant_architecture.html#a3de2882d6e4f990ff3e68b76134ed825',1,'PlantArchitecture']]],
+  ['prunetubenodes_57',['pruneTubeNodes',['../classhelios_1_1_tube.html#a4d8bc6d05dab160f3e0fbee48ad3fd2c',1,'helios::Tube::pruneTubeNodes()'],['../classhelios_1_1_context.html#a7e47d13895d9e65ae719e2afce8d1d54',1,'helios::Context::pruneTubeNodes()']]]
 ];

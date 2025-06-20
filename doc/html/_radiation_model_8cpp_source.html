@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -6212,7 +6214,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l05872" name="l05872"></a><span class="lineno"> 5872</span>        std::cout&lt;&lt; <span class="stringliteral">&quot;No color board added, use default color calibration.&quot;</span> &lt;&lt;std::endl;</div>
 <div class="line"><a id="l05873" name="l05873"></a><span class="lineno"> 5873</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> centrelocation =<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0.2); <span class="comment">// Location of color board</span></div>
 <div class="line"><a id="l05874" name="l05874"></a><span class="lineno"> 5874</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> rotationrad =<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1.5705); <span class="comment">// Rotation angle of color board</span></div>
-<div class="line"><a id="l05875" name="l05875"></a><span class="lineno"> 5875</span>        cameracalibration_.<a class="code hl_function" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8" title="Set reflectivity for a specific UUID.">addDefaultColorboard</a>(centrelocation, 0.1, rotationrad);</div>
+<div class="line"><a id="l05875" name="l05875"></a><span class="lineno"> 5875</span>        cameracalibration_.<a class="code hl_function" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8" title="Add default color board (DGK-DKK) with spectral reflectivity values.">addDefaultColorboard</a>(centrelocation, 0.1, rotationrad);</div>
 <div class="line"><a id="l05876" name="l05876"></a><span class="lineno"> 5876</span>        RadiationModel::setCameraCalibration(&amp;cameracalibration_);</div>
 <div class="line"><a id="l05877" name="l05877"></a><span class="lineno"> 5877</span>    }</div>
 <div class="line"><a id="l05878" name="l05878"></a><span class="lineno"> 5878</span> </div>

@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -162,7 +164,8 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="keyword">using namespace </span>helios;</div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="keywordtype">int</span> <a class="code hl_function" href="class_energy_balance_model.html#ad4a1681ae6edd9f82d23e6a8ef3fc26c" title="Self-test.">EnergyBalanceModel::selfTest</a>() {</div>
+<div class="foldopen" id="foldopen00005" data-start="{" data-end="}">
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno"><a class="line" href="class_energy_balance_model.html#ad4a1681ae6edd9f82d23e6a8ef3fc26c">    5</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_energy_balance_model.html#ad4a1681ae6edd9f82d23e6a8ef3fc26c" title="Self-test.">EnergyBalanceModel::selfTest</a>() {</div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Running energy balance model self-test...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>    <span class="keywordtype">float</span> err_tol = 1e-3;</div>
@@ -170,7 +173,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <span class="comment">// ---- Equilibrium test ---- //</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    {</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>        Context context_test;</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>        std::vector&lt;uint&gt; UUIDs;</div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>        UUIDs.push_back(context_test.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 2, 3), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 2)));</div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>        UUIDs.push_back(context_test.<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77" title="Add new Triangle geometric primitive.">addTriangle</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(4, 5, 6), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 5, 6), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 6, 6)));</div>
@@ -180,9 +183,9 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>        context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs, <span class="stringliteral">&quot;air_temperature&quot;</span>, Tref);</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energymodeltest(&amp;context_test);</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>        energymodeltest.disableMessages();</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>        energymodeltest.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        energymodeltest.run();</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>        energymodeltest.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>        energymodeltest.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        energymodeltest.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> p = 0; p &lt; UUIDs.size(); p++) {</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>            <span class="keywordtype">float</span> T;</div>
@@ -196,7 +199,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="comment">// ---- Energy Budget Closure ---- //</span></div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    {</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        Context context_2;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_2;</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        std::vector&lt;uint&gt; UUIDs_2;</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        UUIDs_2.push_back(context_2.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 2, 3), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 2)));</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        UUIDs_2.push_back(context_2.<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77" title="Add new Triangle geometric primitive.">addTriangle</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(4, 5, 6), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 5, 6), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 6, 6)));</div>
@@ -207,10 +210,10 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        context_2.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_2, <span class="stringliteral">&quot;air_temperature&quot;</span>, T);</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energymodel_2(&amp;context_2);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        energymodel_2.disableMessages();</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        energymodel_2.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        energymodel_2.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        energymodel_2.run();</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        energymodel_2.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        energymodel_2.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        energymodel_2.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;SW&quot;</span>);</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        energymodel_2.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> p = 0; p &lt; UUIDs_2.size(); p++) {</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>            <span class="keywordtype">float</span> sensible_flux, latent_flux, <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, temperature;</div>
@@ -235,7 +238,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="comment">// ---- Temperature Solution Check ---- //</span></div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    {</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        Context context_3;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_3;</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>        uint UUID_3 = context_3.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,2,3), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3,2));</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>        <span class="keywordtype">float</span> T = 312.f;</div>
@@ -250,15 +253,15 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energymodel_3(&amp;context_3);</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        energymodel_3.disableMessages();</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        energymodel_3.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        energymodel_3.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>        energymodel_3.run();</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;SW&quot;</span>);</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span> </div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        <span class="keywordtype">float</span> sensible_flux, latent_flux, temperature;</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="keywordtype">float</span> sensible_flux_exact = 48.7098;</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordtype">float</span> latent_flux_exact = 21.7644;</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        <span class="keywordtype">float</span> temperature_exact = 329.309;</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="keywordtype">float</span> sensible_flux_exact = 48.7017;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordtype">float</span> latent_flux_exact = 21.6094;</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        <span class="keywordtype">float</span> temperature_exact = 329.307;</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;sensible_flux&quot;</span>, sensible_flux);</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;latent_flux&quot;</span>, latent_flux);</div>
@@ -273,11 +276,11 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="comment">// Use object length instead of sqrt(area)</span></div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;object_length&quot;</span>, <span class="keywordtype">float</span>(0.374f));</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        energymodel_3.run();</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        sensible_flux_exact = 89.2217;</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        latent_flux_exact = 20.2213;</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        temperature_exact = 324.389;</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        sensible_flux_exact = 89.2024;</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        latent_flux_exact = 20.0723;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        temperature_exact = 324.386;</div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;sensible_flux&quot;</span>, sensible_flux);</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;latent_flux&quot;</span>, latent_flux);</div>
@@ -292,11 +295,11 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>        <span class="comment">// Manually set boundary-layer conductance</span></div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;boundarylayer_conductance&quot;</span>, <span class="keywordtype">float</span>(0.134f));</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>        energymodel_3.run();</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>        energymodel_3.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span> </div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>        sensible_flux_exact = 61.5525f;</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        latent_flux_exact = 21.8290f;</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        temperature_exact = 327.704f;</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>        sensible_flux_exact = 61.5411f;</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        latent_flux_exact = 21.6718f;</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        temperature_exact = 327.701f;</div>
 <div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
 <div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;sensible_flux&quot;</span>, sensible_flux);</div>
 <div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>        context_3.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_3, <span class="stringliteral">&quot;latent_flux&quot;</span>, latent_flux);</div>
@@ -312,17 +315,17 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <span class="comment">// ---- Optional Primitive Data Output Check ---- //</span></div>
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    {</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        Context context_4;</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_4;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        uint UUID_4 = context_4.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,2,3), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3,2));</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energymodel_4(&amp;context_4);</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        energymodel_4.disableMessages();</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        energymodel_4.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>        energymodel_4.optionalOutputPrimitiveData(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        energymodel_4.optionalOutputPrimitiveData(<span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span>);</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        energymodel_4.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        energymodel_4.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>        energymodel_4.<a class="code hl_function" href="class_energy_balance_model.html#a8fd349c962047a29384e3f8099f1a054" title="Add optional output primitive data values to the Context.">optionalOutputPrimitiveData</a>(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        energymodel_4.<a class="code hl_function" href="class_energy_balance_model.html#a8fd349c962047a29384e3f8099f1a054" title="Add optional output primitive data values to the Context.">optionalOutputPrimitiveData</a>(<span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span>);</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_4, <span class="stringliteral">&quot;radiation_flux_LW&quot;</span>, 0.f);</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        energymodel_4.run();</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        energymodel_4.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span> </div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        <span class="keywordflow">if</span> (!context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b" title="Check if primitive data &#39;label&#39; exists.">doesPrimitiveDataExist</a>(UUID_4, <span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span>) ||</div>
 <div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>            !context_4.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b" title="Check if primitive data &#39;label&#39; exists.">doesPrimitiveDataExist</a>(UUID_4, <span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>)) {</div>
@@ -333,7 +336,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span> </div>
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    <span class="comment">// ---- Dynamic Model Check ---- //</span></div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    {</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        Context context_5;</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_5;</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        <span class="keywordtype">float</span> dt_5 = 1.f, T_5 = 3600, To_5 = 300.f, cp_5 = 2000;</div>
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        <span class="keywordtype">float</span> Rlow = 50.f, Rhigh = 500.f;</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
@@ -345,9 +348,9 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;emissivity_SW&quot;</span>, 0.f);</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span> </div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energybalance_5(&amp;context_5);</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        energybalance_5.disableMessages();</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        energybalance_5.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        energybalance_5.optionalOutputPrimitiveData(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;SW&quot;</span>);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#a8fd349c962047a29384e3f8099f1a054" title="Add optional output primitive data values to the Context.">optionalOutputPrimitiveData</a>(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        std::vector&lt;float&gt; temperature_dyn;</div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        <span class="keywordtype">int</span> N = round(T_5/dt_5);</div>
@@ -355,7 +358,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>            <span class="keywordflow">if</span> (t &gt; 0.5f * N) {</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;radiation_flux_SW&quot;</span>, Rhigh);</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>            }</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            energybalance_5.run(dt_5);</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>(dt_5);</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span> </div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            <span class="keywordtype">float</span> temp;</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;temperature&quot;</span>, temp);</div>
@@ -367,12 +370,12 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        <span class="keywordtype">float</span> tau_5 = cp_5 / gH_5 / 29.25f;</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span> </div>
 <div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;radiation_flux_SW&quot;</span>, Rlow);</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        energybalance_5.run();</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keywordtype">float</span> Tlow;</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;temperature&quot;</span>, Tlow);</div>
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span> </div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;radiation_flux_SW&quot;</span>, Rhigh);</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        energybalance_5.run();</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        energybalance_5.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>();</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        <span class="keywordtype">float</span> Thigh;</div>
 <div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        context_5.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_5, <span class="stringliteral">&quot;temperature&quot;</span>, Thigh);</div>
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span> </div>
@@ -393,16 +396,16 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    <span class="comment">// ---- Test enableMessages() and disableMessages() ---- //</span></div>
 <div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    {</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        Context context_enable;</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_enable;</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> testModel(&amp;context_enable);</div>
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>        testModel.enableMessages();</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a261480763ea918e133bb594ce9f3e14c" title="Enable standard output from this plug-in (default)">enableMessages</a>();</div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        <span class="keywordflow">if</span> (!testModel.message_flag) {</div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed enableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>            error_count++;</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        }</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        testModel.disableMessages();</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
 <div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        <span class="keywordflow">if</span> (testModel.message_flag) {</div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed disableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>            error_count++;</div>
@@ -411,12 +414,12 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="comment">// ---- Test addRadiationBand() ---- //</span></div>
 <div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    {</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        Context context_radiation;</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_radiation;</div>
 <div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> testModel(&amp;context_radiation);</div>
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span> </div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        testModel.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        testModel.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);  <span class="comment">// Should not duplicate</span></div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        testModel.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);  <span class="comment">// Should not duplicate</span></div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;SW&quot;</span>);</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        <span class="keywordflow">if</span> (testModel.radiation_bands.size() != 2) {</div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed addRadiationBand() test.&quot;</span> &lt;&lt; std::endl;</div>
@@ -426,11 +429,11 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="comment">// ---- Test optionalOutputPrimitiveData() ---- //</span></div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    {</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        Context context_output;</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_output;</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> testModel(&amp;context_output);</div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        testModel.optionalOutputPrimitiveData(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>        testModel.optionalOutputPrimitiveData(<span class="stringliteral">&quot;invalid_label&quot;</span>);  <span class="comment">// Should print warning</span></div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a8fd349c962047a29384e3f8099f1a054" title="Add optional output primitive data values to the Context.">optionalOutputPrimitiveData</a>(<span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>);</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a8fd349c962047a29384e3f8099f1a054" title="Add optional output primitive data values to the Context.">optionalOutputPrimitiveData</a>(<span class="stringliteral">&quot;invalid_label&quot;</span>);  <span class="comment">// Should print warning</span></div>
 <div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span> </div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>        <span class="keywordflow">if</span> (testModel.output_prim_data.size() != 1 || testModel.output_prim_data[0] != <span class="stringliteral">&quot;boundarylayer_conductance_out&quot;</span>) {</div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed optionalOutputPrimitiveData() test.&quot;</span> &lt;&lt; std::endl;</div>
@@ -441,13 +444,13 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span> </div>
 <div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    <span class="comment">// ---- Test printDefaultValueReport() ---- //</span></div>
 <div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    {</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        Context context_print;</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_print;</div>
 <div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> testModel(&amp;context_print);</div>
 <div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span> </div>
 <div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        std::stringstream buffer;</div>
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>        std::streambuf *old = std::cout.rdbuf(buffer.rdbuf()); <span class="comment">// Redirect std::cout</span></div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        testModel.printDefaultValueReport();</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a058d24583430bffdf78b53a8f9a5a851" title="Print a report detailing usage of default input values for all primitives in the Context.">printDefaultValueReport</a>();</div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span> </div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        std::cout.rdbuf(old); <span class="comment">// Restore std::cout</span></div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span> </div>
@@ -474,7 +477,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
 <div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    <span class="comment">// ---- Test printDefaultValueReport(const std::vector&lt;uint&gt;&amp; UUIDs) ---- //</span></div>
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    {</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        Context context_print;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_print;</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> testModel(&amp;context_print);</div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>        std::vector&lt;uint&gt; testUUIDs;</div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        testUUIDs.push_back(context_print.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 2, 3), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 2)));</div>
@@ -482,7 +485,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        std::stringstream buffer;</div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>        std::streambuf *old = std::cout.rdbuf(buffer.rdbuf()); <span class="comment">// Redirect std::cout</span></div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        testModel.printDefaultValueReport(testUUIDs);</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        testModel.<a class="code hl_function" href="class_energy_balance_model.html#a058d24583430bffdf78b53a8f9a5a851" title="Print a report detailing usage of default input values for all primitives in the Context.">printDefaultValueReport</a>(testUUIDs);</div>
 <div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span> </div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        std::cout.rdbuf(old); <span class="comment">// Restore std::cout</span></div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
@@ -510,7 +513,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="comment">// ---- Dynamic Model Check ---- //</span></div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    {</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        Context context_dyn;</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_dyn;</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>        <span class="keywordtype">float</span> dt = 1.f, Tfinal = 3600, To = 300.f, cp = 2000;</div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="keywordtype">float</span> Rlow = 50.f, Rhigh = 500.f;</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span> </div>
@@ -522,8 +525,8 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        context_dyn.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_dyn, <span class="stringliteral">&quot;emissivity_SW&quot;</span>, 0.f);</div>
 <div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span> </div>
 <div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>        <a class="code hl_function" href="class_energy_balance_model.html#ad6c6f535390c7fcb4957a33cfc13b140" title="Constructor.">EnergyBalanceModel</a> energybalance_dyn(&amp;context_dyn);</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>        energybalance_dyn.disableMessages();</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>        energybalance_dyn.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>        energybalance_dyn.<a class="code hl_function" href="class_energy_balance_model.html#aaee48ad61d28ce32bdc8fb3650471b5b" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>        energybalance_dyn.<a class="code hl_function" href="class_energy_balance_model.html#a7ce12c9b4baf734d49562fe45e7eb272" title="Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of...">addRadiationBand</a>(<span class="stringliteral">&quot;SW&quot;</span>);</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
 <div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>        std::vector&lt;float&gt; temperature_dyn;</div>
 <div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>        <span class="keywordtype">int</span> N = round(Tfinal / dt);</div>
@@ -531,7 +534,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>            <span class="keywordflow">if</span> (t &gt; 0.5f * N) {</div>
 <div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                context_dyn.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID_dyn, <span class="stringliteral">&quot;radiation_flux_SW&quot;</span>, Rhigh);</div>
 <div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>            }</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>            energybalance_dyn.run(dt);</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>            energybalance_dyn.<a class="code hl_function" href="class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a" title="Function to run the energy balance model for all primitives in the Context.">run</a>(dt);</div>
 <div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span> </div>
 <div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>            <span class="keywordtype">float</span> temp;</div>
 <div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>            context_dyn.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID_dyn, <span class="stringliteral">&quot;temperature&quot;</span>, temp);</div>
@@ -554,6 +557,7 @@ $(function(){initNavTree('plugins_2energybalance_2src_2self_test_8cpp_source.htm
 <div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span> </div>
 <div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keywordflow">return</span> error_count;</div>
 <div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>}</div>
+</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

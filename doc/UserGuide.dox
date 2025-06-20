@@ -14,7 +14,7 @@
 
   <h1>System Requirements</h1>
 
-  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins.
+  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins. Note that since modern Mac's don't have NVIDIA GPUs, these plug-ins will not work on MacOS.
   
   <p> <br></p>
 
@@ -25,20 +25,18 @@
   To do so, first install git, then using your command-line interface (e.g. terminal) change into the directory where you want to download the code, then type:
 
   ~~~~~~
-  $ git clone https://www.github.com/PlantSimulationLab/Helios
+  git clone https://www.github.com/PlantSimulationLab/Helios
   ~~~~~~
 
-  As updates are released, update your version of the code by typing:
+  <h1>Using Helios with an IDE</h1>
 
-  ~~~~~~
-$ git pull
-  ~~~~~~
+  We recommend using Helios with an IDE such as CLion or Visual Studio Code. Helios can be downloaded and kept up to date directly within the IDE. The YouTube videos below are available below for setting up Helios within an IDE (and via command line).
 
-  You can always check which version you are on by typing:
+  \htmlonly
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/rg21UHxR16s?si=lJ7qJDKMF-Mg_WOX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-  ~~~~~~
-  $ git describe --tags
-  ~~~~~~
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/pPoAfE69VcI?si=13mwnedvYq_ekuk-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+  \endhtmlonly
 
  <p> <br><br><br><br> </p>
 
@@ -354,7 +352,7 @@ $ git pull
   Projects that use the Helios API are typically built using the CMake package a CMakeLists.txt file.  Helios requires CMake version 3.15+. A prototypical CMakeLists.txt file used for building Helios samples and projects is given in the code sample below.  Inputs for the specific case are entered in the top block of code by setting variables (see the CMake 'set' command reference).  The user sets the location of the Helios base directory, the name of the executable file, any source or header files, and a list of plug-ins to use (the example below uses the 'visualizer' plug-in). The last line in the file references another file in the core/ directory that contains additional code for setting up the project.
 
   ```
-  # Helios standard CMakeLists.txt file version 1.9
+  # Helios standard CMakeLists.txt file version 1.10
   cmake_minimum_required(VERSION 3.15)
   project(helios)
 
@@ -373,7 +371,7 @@ $ git pull
   set( PLUGINS "visualizer" )
 
   #-------- DO NOT MODIFY ---------#
-  include( "${BASE_DIRECTORY}/core/CMake_project.txt" )
+  include( "${BASE_DIRECTORY}/core/CMake_project.cmake" )
  ```
 
   The easiest way to compile the code is by using an IDE such as CLion, which is described in detail on the page \ref CLionIDE "Using the CLion IDE with Helios".

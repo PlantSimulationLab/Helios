@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -160,14 +162,14 @@ $(function(){initNavTree('context_globaldata_tutorial.html',''); initResizable(t
 <div class="contents">
 <div class="textblock"><h1><a class="anchor" id="context_globaldata_intro"></a>
 Introduction to Global Data</h1>
-<p>Using global data is very similar to using primitive data (see context_primdata), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.</p>
+<p>Using global data is very similar to using primitive data (see <a class="el" href="context_primdata_tutorial.html">Tutorial 5: Primitive Data</a>), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.</p>
 <p>A graphical depiction of global data (right box) and primitive data (green boxes) is given in the figure below.</p>
 <div class="image">
 <img src="Context_sketch.png" alt=""/>
 </div>
 <h1><a class="anchor" id="context_globaldata_scalar"></a>
 Creating Global Data (Scalars)</h1>
-<p>Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the addGlobalData() function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data".</p>
+<p>Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the <a class="el" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5">setGlobalData()</a> function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data".</p>
 <div class="fragment"><div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"> <span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>

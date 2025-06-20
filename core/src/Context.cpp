@@ -18,6 +18,9 @@
 using namespace helios;
 
 Context::Context() {
+
+    install_out_of_memory_handler();
+
     //---- ALL DEFAULT VALUES ARE SET HERE ----//
 
     sim_date = make_Date(1, 6, 2000);
@@ -977,6 +980,10 @@ Patch::Patch(const char *a_texturefile, const std::vector<helios::vec2> &a_uv, s
 
     texturefile = a_texturefile;
     uv = a_uv;
+    for ( auto &uv_vert : uv ) {
+        uv_vert.x = std::min(uv_vert.x, 1.f );
+        uv_vert.y = std::min(uv_vert.y, 1.f );
+    }
     texturecoloroverridden = false;
 
     solid_fraction = textures.at(texturefile).getSolidFraction(uv);
@@ -1030,6 +1037,10 @@ Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1,
 
     texturefile = a_texturefile;
     uv = a_uv;
+    for ( auto &uv_vert : uv ) {
+        uv_vert.x = std::min(uv_vert.x, 1.f );
+        uv_vert.y = std::min(uv_vert.y, 1.f );
+    }
     solid_fraction = 1.f;
     texturecoloroverridden = false;
 
@@ -3707,6 +3718,10 @@ std::vector<helios::vec3> Tube::getNodes() const {
     }
 
     return nodes_T;
+}
+
+uint Tube::getNodeCount() const {
+    return scast<uint>(nodes.size());
 }
 
 std::vector<float> Tube::getNodeRadii() const {
@@ -7010,6 +7025,12 @@ std::vector<std::string> Context::generateTexturesFromColormap(const std::string
     return texture_filenames;
 }
 
+void Context::out_of_memory_handler() {
+    helios_runtime_error("ERROR: Out of host memory. The program has run out of memory and cannot continue.");
+}
+
+void Context::install_out_of_memory_handler() { std::set_new_handler(out_of_memory_handler); }
+
 Context::~Context() {
     for (auto &[UUID, primitive]: primitives) {
         delete getPrimitivePointer_private(UUID);
@@ -8255,6 +8276,10 @@ uint Context::getTubeObjectSubdivisionCount(uint ObjID) const {
 
 std::vector<helios::vec3> Context::getTubeObjectNodes(uint ObjID) const {
     return getTubeObjectPointer_private(ObjID)->getNodes();
+}
+
+uint Context::getTubeObjectNodeCount(uint ObjID) const {
+    return getTubeObjectPointer_private(ObjID)->getNodeCount();
 }
 
 std::vector<float> Context::getTubeObjectNodeRadii(uint ObjID) const {

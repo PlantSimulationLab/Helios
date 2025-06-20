@@ -927,14 +927,14 @@ public:
     //! Run the simulation for a single radiative band
     /**
      * \param[in] label Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref addRadiationBand()), 2) update the Context geometry in the model (see \ref updateGeometry()), and 3) update radiative properties in the model (see \ref updateRadiativeProperties).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref addRadiationBand()), 2) update the Context geometry in the model (see \ref updateGeometry()), and 3) update radiative properties in the model (see \ref updateRadiativeProperties()).
     */
     void runBand( const std::string &label );
 
     //! Run the simulation for a multiple radiative bands
     /**
      * \param[in] labels Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref addRadiationBand()), 2) update the Context geometry in the model (see \ref updateGeometry()), and 3) update radiative properties in the model (see \ref updateRadiativeProperties).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref addRadiationBand()), 2) update the Context geometry in the model (see \ref updateGeometry()), and 3) update radiative properties in the model (see \ref updateRadiativeProperties()).
     */
     void runBand( const std::vector<std::string> &labels );
 

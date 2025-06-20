@@ -3,7 +3,7 @@ var searchData=
   ['each_20grid_20cell_0',['Calculating leaf area for each grid cell',['../_li_d_a_r_doc.html#LiDARleafarea',1,'']]],
   ['effects_20of_20clouds_1',['Incorporating the effects of clouds',['../_solar_position_doc.html#SolarFluxClouds',1,'']]],
   ['efficiency_2',['Canopy Water-Use Efficiency',['../_tutorials.html#WUETuts',1,'']]],
-  ['efficiency_20photosyntheses_20per_20unit_20transpiration_20for_20a_20canopy_20of_20spherical_20crowns_3',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'Tutorials']]],
+  ['efficiency_20photosyntheses_20per_20unit_20transpiration_20for_20a_20canopy_20of_20spherical_20crowns_3',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
   ['elevation_4',['elevation',['../structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73',1,'helios::SphericalCoord']]],
   ['elongation_5frate_5',['elongation_rate',['../_plant_architecture_doc.html#ShootParam_elongation_rate',1,'']]],
   ['elongation_5frate_5fmax_6',['elongation_rate_max',['../struct_shoot_parameters.html#abd17f504d63a56a1b1857bf74f64287a',1,'ShootParameters']]],

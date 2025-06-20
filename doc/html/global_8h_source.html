@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -667,13 +669,12 @@ $(function(){initNavTree('global_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>        }</div>
 <div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span>    };</div>
 </div>
-<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span> </div>
-<div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span></div>
-<div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>;</div>
-<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>;</div>
-<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>}</div>
-<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span> </div>
-<div class="line"><a id="l01079" name="l01079"></a><span class="lineno"> 1079</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span></div>
+<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>;</div>
+<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span>    <span class="keyword">extern</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>;</div>
+<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>}</div>
+<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span> </div>
+<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

@@ -185,11 +185,13 @@ var NAVTREEINDEX0 =
 "aeriallidar_2src_2file_i_o_8cpp.html":[4,0,2,0,1,2],
 "aeriallidar_2src_2file_i_o_8cpp_source.html":[4,0,2,0,1,2],
 "bean_8cpp_source.html":[4,0,2,2,1,0],
-"canopy__w_u_e_tutorial.html#canopy_WUE_tutorial":[3,9],
-"context_globaldata_tutorial.html#context_globaldata_tutorial":[3,4],
-"context_primdata_tutorial.html#context_primdata_tutorial":[3,3],
+"canopy__w_u_e_tutorial.html#canopy_WUE_tutorial":[3,12],
+"context_fileio_tutorial.html#context_fileio_tutorial":[3,4],
+"context_globaldata_tutorial.html#context_globaldata_tutorial":[3,6],
+"context_primdata_tutorial.html#context_primdata_tutorial":[3,5],
 "context_primitives_tutorial.html#context_primitives_tutorial":[3,2],
 "context_selftest_tutorial.html#context_selftest_tutorial":[3,0],
+"context_timeseries_tutorial.html#context_timeseries_tutorial":[3,3],
 "context_vectors_tutorial.html#context_vectors_tutorial":[3,1],
 "core_2src_2self_test_8cpp.html":[4,0,0,1,4],
 "core_2src_2self_test_8cpp_source.html":[4,0,0,1,4],
@@ -247,7 +249,5 @@ var NAVTREEINDEX0 =
 "dir_daed1286feb5181d9374e50e34ff739d.html":[4,0,2,12],
 "dir_e68e8157741866f444e17edd764ebbae.html":[4,0,1],
 "dir_e8ed08f2d5f8ac3e3b5447bfe7f0fce5.html":[4,0,2,0,1],
-"dir_ee14773baee519b082f78b85b263aa48.html":[4,0,2,15],
-"dir_f54e10c7807847345da870f7da42cdf0.html":[4,0,2,13],
-"dir_f93a58e1b1064abf3e9af98b74e2f5d5.html":[4,0,2,6]
+"dir_ee14773baee519b082f78b85b263aa48.html":[4,0,2,15]
 };

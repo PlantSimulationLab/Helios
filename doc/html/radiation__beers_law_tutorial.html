@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -190,7 +192,7 @@ $(function(){initNavTree('radiation__beers_law_tutorial.html',''); initResizable
 <p>Finally, we add a ground surface using the helios::Context::addTile() function. For this particular tutorial, a ground is not explicitly needed because we have no diffuse/scattered radiation that could emanate from below.</p>
 <h2><a class="anchor" id="tutorial11_rad"></a>
 3. Radiation model set-up</h2>
-<p>The set-up of the radiation model is very similar to the previous tutorial, except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.</p>
+<p>The set-up of the radiation model is very similar to the <a class="el" href="radiation_basics_tutorial.html">previous tutorial</a>, except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.</p>
 <h2><a class="anchor" id="tutorial11_run"></a>
 4. Run model and process results</h2>
 <p>Radiation model calculations are performed when the <a class="el" href="class_radiation_model.html#a7d803f2b67bc4d0d89b2dc98a58d9ff1">RadiationModel::runBand()</a> function is called.</p>

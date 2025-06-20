@@ -1,0 +1,194 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: Tutorial 9: Customizing visualizations</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.35</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('visualizer_custom_tutorial.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div><div class="header">
+  <div class="headertitle"><div class="title">Tutorial 9: Customizing visualizations</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><p>The Visualizer offers many options for tailoring how results are displayed. In this tutorial we start from a Context that already contains geometry and data. We will adjust lighting, map primitive data to a colorbar and add a text annotation.</p>
+<div class="fragment"><div class="line">Context context;</div>
+<div class="line"><span class="comment">// assume geometry and data have been added</span></div>
+<div class="line"><a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800);</div>
+<div class="line">vis.buildContextGeometry(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">vis.setLightingModel(<a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573adce805e52c5b47950ecc3cfdddd2160c" title="Phong lighting model is applied to add shading effects to the diffuse color.">Visualizer::LIGHTING_PHONG</a>);</div>
+<div class="line">vis.setLightIntensityFactor(1.2f);</div>
+<div class="line"> </div>
+<div class="line">vis.colorContextPrimitivesByData(<span class="stringliteral">&quot;height&quot;</span>);</div>
+<div class="line">vis.setColormap(<a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba9a15b906eca8c544a6b83f885877fbe7" title="&quot;Parula&quot; colormap">Visualizer::COLORMAP_PARULA</a>);</div>
+<div class="line">vis.enableColorbar();</div>
+<div class="line">vis.setColorbarTitle(<span class="stringliteral">&quot;Height (m)&quot;</span>);</div>
+<div class="line">vis.setColorbarRange(0.f, 2.f);</div>
+<div class="line"> </div>
+<div class="line">vis.addTextboxByCenter(<span class="stringliteral">&quot;Demo&quot;</span>, make_vec3(0.5,0.9,0), nullrotation,</div>
+<div class="line">                      RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>,</div>
+<div class="line">                      <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5" title="Coordinates are normalized to unity and are window-aligned. The point (x,y)=(0,0) is in the bottom le...">Visualizer::COORDINATES_WINDOW_NORMALIZED</a>);</div>
+<div class="line"> </div>
+<div class="line">vis.plotInteractive();</div>
+</div><!-- fragment --><p>The first two commands call <a class="el" href="class_visualizer.html#afc496b8bd99bbb786d553c4b3e8dfded">Visualizer::setLightingModel()</a> and <a class="el" href="class_visualizer.html#ae2227bdf3b92fb67bcad6acf7e9279b0">Visualizer::setLightIntensityFactor()</a> to control shading. We then color primitives by the primitive data label "height" using <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData()</a> and select the <a class="el" href="class_visualizer.html#a992f636c4c406bbfc3f29add1fa3a278">Parula</a> colormap. Calling <a class="el" href="class_visualizer.html#a050807f8462ca95bde2fd737b26830c4">Visualizer::enableColorbar()</a> adds a scale bar that we title "Height (m)" and restrict to a range of 0&ndash;2 meters. Finally, a short text label is placed near the top of the window using <a class="el" href="class_visualizer.html#a2b6e537fa13d94083beb030ea6da5be6">Visualizer::addTextboxByCenter()</a>. </p>
+</div></div><!-- contents -->
+</div><!-- PageDoc -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

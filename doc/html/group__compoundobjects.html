@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -373,7 +375,7 @@ Functions</h2></td></tr>
 <dd>
 This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06253">6253</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06268">6268</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -419,7 +421,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06263">6263</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06278">6278</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -471,7 +473,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06357">6357</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06372">6372</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -517,7 +519,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06259">6259</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06274">6274</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -569,7 +571,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06267">6267</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06282">6282</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -611,7 +613,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dd>
 This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05152">5152</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05167">5167</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -657,7 +659,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05162">5162</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05177">5177</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -703,7 +705,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05158">5158</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05173">5173</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -755,7 +757,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05166">5166</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05181">5181</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -807,7 +809,7 @@ This version of addBox assumes that all surface normal vectors point away from t
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new box object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This version of addBox assumes that all surface normal vectors point away from the box </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05285">5285</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05300">5300</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -862,7 +864,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06554">6554</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06569">6569</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -919,7 +921,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06642">6642</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06657">6657</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -976,7 +978,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06561">6561</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06576">6576</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1032,7 +1034,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05574">5574</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05589">5589</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1090,7 +1092,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05683">5683</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05698">5698</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1148,7 +1150,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05579">5579</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05594">5594</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1200,7 +1202,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06510">6510</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06525">6525</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1251,7 +1253,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06477">6477</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06492">6492</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1302,7 +1304,7 @@ Sample image of a Tube compound object.</div></div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06473">6473</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06488">6488</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1344,7 +1346,7 @@ Sample image of a Tube compound object.</div></div>
 <dd>
 Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06453">6453</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06468">6468</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1390,7 +1392,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06457">6457</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06472">6472</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1442,7 +1444,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06469">6469</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06484">6484</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1493,7 +1495,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06465">6465</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06480">6480</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1544,7 +1546,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06461">6461</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06476">6476</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1596,7 +1598,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05481">5481</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05496">5496</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1647,7 +1649,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05425">5425</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05440">5440</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1698,7 +1700,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05421">5421</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05436">5436</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1740,7 +1742,7 @@ Assumes a default color of black. </dd></dl>
 <dd>
 Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05401">5401</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05416">5416</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1786,7 +1788,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05405">5405</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05420">5420</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1838,7 +1840,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of black. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05417">5417</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05432">5432</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1889,7 +1891,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05413">5413</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05428">5428</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1940,7 +1942,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new disk object </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05409">5409</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05424">5424</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -1968,7 +1970,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new Polymesh </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05545">5545</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05560">5560</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2008,7 +2010,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05809">5809</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05824">5824</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2053,7 +2055,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05855">5855</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05870">5870</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2098,7 +2100,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05815">5815</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05830">5830</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2138,7 +2140,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04504">4504</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04519">4519</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2183,7 +2185,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04585">4585</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04600">4600</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2228,7 +2230,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04508">4508</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04523">4523</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2268,7 +2270,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes a default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04492">4492</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04507">4507</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2313,7 +2315,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04500">4500</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04515">4515</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2358,7 +2360,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new sphere object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04496">4496</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04511">4511</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2404,7 +2406,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05950">5950</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05965">5965</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2455,7 +2457,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05985">5985</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06000">6000</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2506,7 +2508,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-patch </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05956">5956</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05971">5971</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2552,7 +2554,7 @@ Assumes a default color of black. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Assumes default color of green </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04714">4714</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04729">4729</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2603,7 +2605,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04782">4782</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04797">4797</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2654,7 +2656,7 @@ Assumes a default color of black. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tile object. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04720">4720</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04735">4735</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2698,7 +2700,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06055">6055</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06070">6070</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2744,7 +2746,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06147">6147</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06162">6162</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2790,7 +2792,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs for each sub-triangle </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06061">6061</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l06076">6076</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2834,7 +2836,7 @@ Sample image of a Tube compound object.</div></div>
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tube object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04879">4879</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04894">4894</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2882,7 +2884,7 @@ Sample image of a Tube compound object.</div></div>
 <dd>
 The tube is textured such that the x/u direction of the image runs longitudinally along the tube. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05006">5006</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05021">5021</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2936,7 +2938,7 @@ The tube is textured such that the x/u direction of the image runs longitudinall
 <dd>
 The tube is textured such that the x/u direction of the image runs longitudinally along the tube. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05016">5016</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l05031">5031</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -2982,7 +2984,7 @@ The tube is textured such that the x/u direction of the image runs longitudinall
 <dl class="section return"><dt>Returns</dt><dd>Object ID of new tube object. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Ndivs must be greater than 2. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04891">4891</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l04906">4906</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

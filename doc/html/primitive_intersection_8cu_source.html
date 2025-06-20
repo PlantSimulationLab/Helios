@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -240,7 +242,7 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        </div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        ind = make_uint3( floorf(<span class="keywordtype">float</span>(sz.x-1)*(uvmin.x+uv.x*duv.x)), floorf(<span class="keywordtype">float</span>(sz.y-1)*(1.f - uvmin.y - uv.y*duv.y)), maskID[ID] );</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        <span class="keywordflow">if</span>( ind.x&gt;=sz.x || ind.y&gt;=sz.y ){</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>          rtPrintf(<span class="stringliteral">&quot;ERROR: texture out of bounds.\n&quot;</span>);</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>          rtPrintf(<span class="stringliteral">&quot;ERROR: texture out of bounds. uv = (%f,%f)\n&quot;</span>,uv.x,uv.y);</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        }</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>      }</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>      <span class="keywordflow">if</span>( maskdata[ind] ){</div>
@@ -338,7 +340,7 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>      uint3 ind = make_uint3( roundf(<span class="keywordtype">float</span>(sz.x-1)*fabs(uv.x)), roundf(<span class="keywordtype">float</span>(sz.y-1)*fabs(uv.y)), maskID[ID] );</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>      <span class="keywordflow">if</span>( ind.x&gt;=sz.x || ind.y&gt;=sz.y ){</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        rtPrintf(<span class="stringliteral">&quot;ERROR: texture out of bounds.\n&quot;</span>);</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>          rtPrintf(<span class="stringliteral">&quot;ERROR: texture out of bounds. uv = (%f,%f)\n&quot;</span>,uv.x,uv.y);</div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>      }</div>
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>      <span class="keywordflow">if</span>( maskdata[ind] ){</div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        <span class="keywordflow">if</span>( rtPotentialIntersection( t ) ) {</div>

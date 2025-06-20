@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -244,10 +246,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:aa91258bd97d6fcacd3313d8b55cceed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get ray direction of hit point in the scan based on its index.  <br /></td></tr>
 <tr class="separator:aa91258bd97d6fcacd3313d8b55cceed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a274ef68850afa3f288bb648d9fd6a59a" id="r_a274ef68850afa3f288bb648d9fd6a59a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a274ef68850afa3f288bb648d9fd6a59a">getHitData</a> (uint index, const char *label) const</td></tr>
-<tr class="memdesc:a274ef68850afa3f288bb648d9fd6a59a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set floating point data value associated with a hit point.  <br /></td></tr>
+<tr class="memdesc:a274ef68850afa3f288bb648d9fd6a59a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get floating point data value associated with a hit point.  <br /></td></tr>
 <tr class="separator:a274ef68850afa3f288bb648d9fd6a59a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4ad8b12380a24f48ecfbae0ad6b5cfaa" id="r_a4ad8b12380a24f48ecfbae0ad6b5cfaa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4ad8b12380a24f48ecfbae0ad6b5cfaa">setHitData</a> (uint index, const char *label, double value)</td></tr>
-<tr class="memdesc:a4ad8b12380a24f48ecfbae0ad6b5cfaa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get floating point data value associated with a hit point.  <br /></td></tr>
+<tr class="memdesc:a4ad8b12380a24f48ecfbae0ad6b5cfaa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set floating point data value associated with a hit point.  <br /></td></tr>
 <tr class="separator:a4ad8b12380a24f48ecfbae0ad6b5cfaa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aabb8d404b7f3fa00d8281cb6b74f90c0" id="r_aabb8d404b7f3fa00d8281cb6b74f90c0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabb8d404b7f3fa00d8281cb6b74f90c0">doesHitDataExist</a> (uint index, const char *label) const</td></tr>
 <tr class="memdesc:aabb8d404b7f3fa00d8281cb6b74f90c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if scalar data exists for a hit point.  <br /></td></tr>
@@ -820,7 +822,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>If only the (row,column) scan table coordinates are available, use rc2direction() to convert them to a spherical scan direction coordinate. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>If only the (row,column) scan table coordinates are available, use <a class="el" href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">ScanMetadata::rc2direction()</a> to convert them to a spherical scan direction coordinate. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00171">171</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -865,7 +867,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>If only the (row,column) scan table coordinates are available, use rc2direction() to convert them to a spherical scan direction coordinate. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>If only the (row,column) scan table coordinates are available, use <a class="el" href="struct_scan_metadata.html#ae28f6042e5eae2adaaacbeaaa6109a8c">ScanMetadata::rc2direction()</a> to convert them to a spherical scan direction coordinate. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00194">194</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -1191,7 +1193,12 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Add triangle geometry to Helios context. </p>
-<p>\parameter[in] context Pointer to Helios context </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">context</td><td>Pointer to Helios context </td></tr>
+  </table>
+  </dd>
+</dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01772">1772</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -2729,15 +2736,15 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Set floating point data value associated with a hit point. </p>
+<p>Get floating point data value associated with a hit point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Hit number. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Label of the data value (e.g., "reflectance"). </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">value</td><td>Value of scalar data. </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>Value of scalar data. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00345">345</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -3150,7 +3157,13 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 </div><div class="memdoc">
 
 <p>Get hit point corresponding to first vertex of triangle. </p>
-<p>\parameter[in] index Triangulation index (0 thru Ntriangles-1) </p><dl class="section return"><dt>Returns</dt><dd>Hit point index (0 thru Nhits-1) </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Triangulation index (0 thru Ntriangles-1) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Hit point index (0 thru Nhits-1) </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l00512">512</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 
@@ -3611,11 +3624,12 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
       </table>
 </div><div class="memdoc">
 
-<p>Get floating point data value associated with a hit point. </p>
+<p>Set floating point data value associated with a hit point. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Hit number. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Label of the data value (e.g., "reflectance"). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">value</td><td>Value of scalar data. </td></tr>
   </table>
   </dd>
 </dl>
@@ -3750,7 +3764,6 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">context</td><td>Pointer to the Helios context. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">xml_file</td><td>Path to an XML file with LiDAR scan and grid information. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rays_per_pulse</td><td>Number of ray launches per laser pulse direction. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">pulse_distance_threshold</td><td>Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit. </td></tr>
   </table>

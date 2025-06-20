@@ -34,12 +34,9 @@ set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_A
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
-CUDA_ADD_LIBRARY( energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" )
+CUDA_ADD_LIBRARY( energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "src/selfTest.cpp" )
 
 include_directories("${CUDA_INCLUDE_DIRS}")
 target_link_libraries( energybalance ${CUDA_LIBRARIES} )
 
-target_compile_definitions(energybalance PRIVATE  $<$<CONFIG:Debug>:HELIOS_DEBUG>  $<$<CONFIG:RelWithDebInfo>:HELIOS_DEBUG> )
-
 set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
-

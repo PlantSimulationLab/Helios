@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -172,7 +174,7 @@ Introduction to Primitive Data</h1>
 </div>
 <h1><a class="anchor" id="context_primdata_scalar"></a>
 Creating Primitive Data (Scalars)</h1>
-<p>Adding primitive data that is a single (scalar) value can be accomplished using the addPrimitiveData() function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles.</p>
+<p>Adding primitive data that is a single (scalar) value can be accomplished using the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">setPrimitiveData()</a> function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles.</p>
 <div class="fragment"><div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"> <span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>
@@ -195,7 +197,7 @@ Creating Primitive Data (Scalars)</h1>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs,<span class="stringliteral">&quot;my_data&quot;</span>,data); <span class="comment">//we could also set the value of all primitives at once</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-</div><!-- fragment --><p>To retrieve the primitive value we set, we can use the getPrimitiveData() function as illustrated below.</p>
+</div><!-- fragment --><p>To retrieve the primitive value we set, we can use the <a class="el" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData()</a> function as illustrated below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"> <span class="keyword">using namespace </span>helios; <span class="comment">//note that we are using the helios namespace so we can omit &#39;helios::&#39; before names</span></div>

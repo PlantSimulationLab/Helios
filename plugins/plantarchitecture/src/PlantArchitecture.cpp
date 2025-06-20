@@ -711,8 +711,8 @@ void Shoot::updateShootNodes(bool update_context_geometry) {
 
         auto parent_shoot = plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID);
 
-        const vec3 &current_origin = shoot_internode_vertices.front().front();
-        const vec3 &updated_origin = parent_shoot->shoot_internode_vertices.at(this->parent_node_index).back();
+        const vec3 current_origin = shoot_internode_vertices.front().front();
+        const vec3 updated_origin = parent_shoot->shoot_internode_vertices.at(this->parent_node_index).back();
         vec3 shift = updated_origin - current_origin;
 
         // shift shoot based outward by the radius of the parent internode
@@ -1109,6 +1109,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - phytomer_parameters.petiole.taper.val() / float(Ndiv_petiole_length) * float(j));
             petiole_colors.at(j) = phytomer_parameters.petiole.color;
+
+            assert( !std::isnan(petiole_vertices.at(petiole).at(j).x) && std::isfinite(petiole_vertices.at(petiole).at(j).x) );
+            assert( !std::isnan(petiole_radii.at(petiole).at(j)) && std::isfinite(petiole_radii.at(petiole).at(j)) );
         }
 
         if (build_context_geometry_petiole && petiole_radii.at(petiole).front() > 0.f) {
@@ -1569,11 +1572,11 @@ void Phytomer::rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotatio
     float yaw;
     float roll;
     float compound_rotation = 0;
-    if (leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaf
+    if (leaves_per_petiole > 1 && leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaf
         roll = 0;
         yaw = 0;
         compound_rotation = 0;
-    } else if (leaf_index < float(leaves_per_petiole - 1) / 2.f) {
+    } else if (leaves_per_petiole > 1 && leaf_index < float(leaves_per_petiole - 1) / 2.f) {
         yaw = -rotation.yaw;
         roll = -rotation.roll;
         compound_rotation = -0.5 * PI_F;
@@ -1763,7 +1766,7 @@ void Phytomer::setLeafPrototypeScale(float leaf_prototype_scale) {
 }
 
 void Phytomer::scaleLeafPrototypeScale(uint petiole_index, float scale_factor) {
-    if ( leaf_objIDs.size() <= petiole_index) {
+    if (leaf_objIDs.size() <= petiole_index) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Invalid petiole index for leaf prototype scale.");
     }
     if (scale_factor < 0.f) {
@@ -1821,8 +1824,8 @@ void Phytomer::removeLeaf() {
     this->leaf_bases.resize(0);
 
     context_ptr->deleteObject(flatten(leaf_objIDs));
-    leaf_objIDs.resize(0);
-    leaf_bases.resize(0);
+    leaf_objIDs.clear();
+    leaf_bases.clear();
 
     if (build_context_geometry_petiole) {
         context_ptr->deleteObject(flatten(petiole_objIDs));
@@ -1831,48 +1834,71 @@ void Phytomer::removeLeaf() {
 }
 
 void Phytomer::deletePhytomer() {
-    // internode
+
+    // prune the internode tube in the Context
     if (context_ptr->doesObjectExist(parent_shoot_ptr->internode_tube_objID)) {
-        context_ptr->pruneTubeNodes(parent_shoot_ptr->internode_tube_objID, this->shoot_index.x);
+        uint tube_nodes = context_ptr->getTubeObjectNodeCount(parent_shoot_ptr->internode_tube_objID);
+        uint tube_segments = this->parent_shoot_ptr->shoot_parameters.phytomer_parameters.internode.length_segments;
+        uint tube_prune_index;
+        if ( this->shoot_index.x == 0 ) {
+            tube_prune_index = 0;
+        }else {
+            tube_prune_index = this->shoot_index.x * tube_segments + 1; //note that first segment has an extra vertex
+        }
+        if ( tube_prune_index < tube_nodes ) {
+            context_ptr->pruneTubeNodes(parent_shoot_ptr->internode_tube_objID, tube_prune_index);
+        }
         parent_shoot_ptr->terminateApicalBud();
     }
 
-    // leaves
-    this->removeLeaf();
+    for (uint node = this->shoot_index.x; node < shoot_index.y; node++) {
+        auto &phytomer = parent_shoot_ptr->phytomers.at(node);
 
-    // inflorescence
-    for (auto &petiole: this->floral_buds) {
-        for (auto &fbud: petiole) {
-            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
-                uint objID = fbud.inflorescence_objIDs.at(p);
-                context_ptr->deleteObject(objID);
-                fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
-                fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+        // leaves
+        phytomer->removeLeaf();
+
+        // inflorescence
+        for (auto &petiole: phytomer->floral_buds) {
+            for (auto &fbud: petiole) {
+                for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                    uint objID = fbud.inflorescence_objIDs.at(p);
+                    context_ptr->deleteObject(objID);
+                    fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                    fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                }
+                for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
+                    context_ptr->deleteObject(fbud.peduncle_objIDs);
+                    context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                    fbud.peduncle_objIDs.clear();
+                    fbud.inflorescence_objIDs.clear();
+                    fbud.inflorescence_bases.clear();
+                    break;
+                }
             }
-            for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
-                context_ptr->deleteObject(fbud.peduncle_objIDs);
-                context_ptr->deleteObject(fbud.inflorescence_objIDs);
-                fbud.peduncle_objIDs.clear();
-                fbud.inflorescence_objIDs.clear();
-                fbud.inflorescence_bases.clear();
-                break;
+        }
+
+        // delete any child shoots
+        if (parent_shoot_ptr->childIDs.find(node) != parent_shoot_ptr->childIDs.end()) {
+            for (auto childID: parent_shoot_ptr->childIDs.at(node)) {
+                auto child_shoot = plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(childID);
+                if (!child_shoot->phytomers.empty()) {
+                    child_shoot->phytomers.front()->deletePhytomer();
+                }
             }
         }
     }
 
-    // delete next phytomer on shoot
-    if (shoot_index.x < parent_shoot_ptr->phytomers.size() - 1) {
-        auto next_phytomer = parent_shoot_ptr->phytomers.at(shoot_index.x + 1);
-        next_phytomer->deletePhytomer();
-    }
+    // delete shoot arrays
+    parent_shoot_ptr->shoot_internode_radii.resize(this->shoot_index.x);
+    parent_shoot_ptr->shoot_internode_vertices.resize(this->shoot_index.x);
+    parent_shoot_ptr->phytomers.resize(this->shoot_index.x);
 
-    // delete any child shoots
-    if (parent_shoot_ptr->childIDs.find(shoot_index.x) != parent_shoot_ptr->childIDs.end()) {
-        for (auto childID: parent_shoot_ptr->childIDs.at(shoot_index.x)) {
-            auto child_shoot = plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(childID);
-            child_shoot->phytomers.front()->deletePhytomer();
-        }
+    // set the correct node index for phytomers on this shoot
+    for (const auto &phytomer: parent_shoot_ptr->phytomers) {
+        phytomer->shoot_index.y = scast<int>(parent_shoot_ptr->phytomers.size());
     }
+    parent_shoot_ptr->current_node_number = scast<int>(parent_shoot_ptr->phytomers.size());
+
 }
 
 bool Phytomer::hasLeaf() const { return (!leaf_bases.empty() && !leaf_bases.front().empty()); }
@@ -2293,6 +2319,71 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     if (update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
         context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii));
     }
+}
+
+void PlantArchitecture::pruneGroundCollisions( uint plantID ) {
+
+    if ( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::pruneGroundCollisions): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+        for (auto &phytomer: shoot->phytomers) {
+
+            // internode
+            if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
+                context_ptr->deleteObject(shoot->internode_tube_objID);
+                shoot->terminateApicalBud();
+            }
+
+            // leaves
+            for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
+                    phytomer->removeLeaf();
+                }
+            }
+
+            // inflorescence
+            for (auto &petiole: phytomer->floral_buds) {
+                for (auto &fbud: petiole) {
+                    for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                        uint objID = fbud.inflorescence_objIDs.at(p);
+                        if (detectGroundCollision(objID)) {
+                            context_ptr->deleteObject(objID);
+                            fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                            fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                        }
+                    }
+                    for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
+                        uint objID = fbud.peduncle_objIDs.at(p);
+                        if (detectGroundCollision(objID)) {
+                            context_ptr->deleteObject(fbud.peduncle_objIDs);
+                            context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                            fbud.peduncle_objIDs.clear();
+                            fbud.inflorescence_objIDs.clear();
+                            fbud.inflorescence_bases.clear();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // prune the shoots if all downstream leaves have been removed
+    // for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+    //     int node = -1;
+    //     for ( node = shoot->phytomers.size() - 2; node >= 0; node--) {
+    //         if ( shoot->phytomers.size() > node && shoot->phytomers.at(node)->hasLeaf() ) {
+    //             break;
+    //         }else {
+    //         }
+    //     }
+    //     if ( node>=0 && node+1 < shoot-> phytomers.size()-1 ) {
+    //         pruneBranch(plantID, shoot->ID, node+1);
+    //     }
+    // }
+
 }
 
 void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction) {
@@ -3345,7 +3436,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
             float internode_radius = phytomer->internode_radius_initial;
             float internode_length_max = phytomer->internode_length_max;
             float internode_scale_factor_fraction = phytomer->current_internode_scale_factor;
-            float leaf_scale_factor_fraction = 1.f;//phytomer->current_leaf_scale_factor;
+            float leaf_scale_factor_fraction = 1.f; // phytomer->current_leaf_scale_factor;
 
             if (node == 0) { // first phytomer on shoot
                 AxisRotation original_base_rotation = shoot->base_rotation;
@@ -3355,7 +3446,8 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
                     uint parent_node = plant_shoot_tree->at(shoot->parent_shoot_ID)->parent_node_index;
                     uint parent_petiole_index = 0;
                     for (auto &petiole: phytomer->axillary_vegetative_buds) {
-                        shootID_new = addChildShoot(plantID_new, shoot->parent_shoot_ID, parent_node, 1, original_base_rotation, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction, 0, shoot->shoot_type_label, parent_petiole_index);
+                        shootID_new = addChildShoot(plantID_new, shoot->parent_shoot_ID, parent_node, 1, original_base_rotation, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction, 0,
+                                                    shoot->shoot_type_label, parent_petiole_index);
                         parent_petiole_index++;
                     }
                 }
@@ -3364,7 +3456,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
                 appendPhytomerToShoot(plantID_new, shootID_new, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction);
             }
             auto phytomer_new = plant_instances.at(plantID_new).shoot_tree.at(shootID_new)->phytomers.back();
-            for ( uint petiole_index = 0; petiole_index < phytomer->petiole_objIDs.size(); petiole_index++ ) {
+            for (uint petiole_index = 0; petiole_index < phytomer->petiole_objIDs.size(); petiole_index++) {
                 phytomer_new->setLeafScaleFraction(petiole_index, phytomer->current_leaf_scale_factor.at(petiole_index));
             }
         }
@@ -3644,10 +3736,10 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             node_index = 0;
             for (auto &phytomer: shoot->phytomers) {
                 // scale petiole/leaves
-                if (phytomer->hasLeaf() ) {
-                    for ( uint petiole_index = 0; petiole_index<phytomer->current_leaf_scale_factor.size(); petiole_index++ ) {
+                if (phytomer->hasLeaf()) {
+                    for (uint petiole_index = 0; petiole_index < phytomer->current_leaf_scale_factor.size(); petiole_index++) {
 
-                        if ( phytomer->current_leaf_scale_factor.at(petiole_index) >= 1 ) {
+                        if (phytomer->current_leaf_scale_factor.at(petiole_index) >= 1) {
                             continue;
                         }
 
@@ -3710,47 +3802,6 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                         }
                     }
                     parent_petiole_index++;
-                }
-
-                // check for ground collisions
-                if (ground_clipping_height != -99999) {
-                    // internode
-                    if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
-                        context_ptr->deleteObject(shoot->internode_tube_objID);
-                        shoot->terminateApicalBud();
-                    }
-
-                    // leaves
-                    for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
-                        if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
-                            phytomer->removeLeaf();
-                        }
-                    }
-
-                    // inflorescence
-                    for (auto &petiole: phytomer->floral_buds) {
-                        for (auto &fbud: petiole) {
-                            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
-                                uint objID = fbud.inflorescence_objIDs.at(p);
-                                if (detectGroundCollision(objID)) {
-                                    context_ptr->deleteObject(objID);
-                                    fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
-                                    fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
-                                }
-                            }
-                            for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
-                                uint objID = fbud.peduncle_objIDs.at(p);
-                                if (detectGroundCollision(objID)) {
-                                    context_ptr->deleteObject(fbud.peduncle_objIDs);
-                                    context_ptr->deleteObject(fbud.inflorescence_objIDs);
-                                    fbud.peduncle_objIDs.clear();
-                                    fbud.inflorescence_objIDs.clear();
-                                    fbud.inflorescence_bases.clear();
-                                    break;
-                                }
-                            }
-                        }
-                    }
                 }
 
                 if (output_object_data.at("age")) {
@@ -3823,6 +3874,13 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     // update Context geometry
     shoot_tree->front()->updateShootNodes(true);
+
+    // *** ground collision detection *** //
+    if (ground_clipping_height != -99999) {
+
+        pruneGroundCollisions( plantID );
+
+    }
 
     // Assign current volume as old volume for your next timestep
     for (auto &shoot: *shoot_tree) {

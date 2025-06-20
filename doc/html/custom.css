@@ -1,0 +1,13 @@
+#searchbox-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+#searchbox-container doxygen-awesome-dark-mode-toggle {
+    margin-top: var(--spacing-small);
+}
+
+#searchbox-container #MSearchBox {
+    width: 100%;
+}

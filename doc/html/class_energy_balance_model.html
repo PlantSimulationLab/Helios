@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -277,7 +279,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00778">778</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00494">494</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -304,7 +306,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00784">784</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -325,7 +327,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable standard output from this plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00774">774</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00490">490</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -347,7 +349,7 @@ Public Member Functions</h2></td></tr>
 <p>Enable the air energy balance model, which computes the average air temperature and water vapor mole fraction based on the energy balance of the air layer in the canopy. </p>
 <p>Calling this version of enableAirEnergyBalance() will compute the canopy height based on a bounding box of all primitives in the Context, or the UUIDs based to evaluateAirEnergyBalance(). It also assumes that the reference height for ambient air temperature, humidity, and wind speed is at the canopy top. This routine sets primitive data 'air_temperature' and 'air_humidity' to the average air temperature and humidity in the canopy for all primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00790">790</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00506">506</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +381,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00794">794</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00510">510</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -400,7 +402,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable standard output from this plug-in (default) </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00770">770</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00486">486</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -438,7 +440,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00375">375</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00091">91</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -470,7 +472,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00371">371</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00087">87</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -497,7 +499,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00807">807</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00523">523</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -518,7 +520,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Print a report detailing usage of default input values for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00817">817</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00533">533</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -545,7 +547,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00821">821</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00537">537</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -566,7 +568,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Function to run the energy balance model for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00338">338</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00054">54</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -593,7 +595,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00346">346</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00062">62</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -625,7 +627,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00351">351</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00067">67</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -652,7 +654,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00342">342</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00058">58</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -674,7 +676,7 @@ Public Member Functions</h2></td></tr>
 <p>Self-test. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if test was successful, 1 if test failed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00054">54</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2energybalance_2src_2self_test_8cpp_source.html#l00005">5</a> of file <a class="el" href="plugins_2energybalance_2src_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>

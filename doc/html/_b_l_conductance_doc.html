@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -274,7 +276,7 @@ Input Variables</h2>
 <p>Inputs to the model are set by creating primitive variable data in the usual way. If a variable needed for a model input has not been create in the Context, the default value is assumed.</p>
 <h2><a class="anchor" id="BLCModels"></a>
 Boundary-layer Conductance Models</h2>
-<p>There are four different built-in models for the boundary-layer conductance. The boundary-layer conductance model is set using the setBoundaryLayerModel() function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the setBoundaryLayerModel() is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.</p>
+<p>There are four different built-in models for the boundary-layer conductance. The boundary-layer conductance model is set using the <a class="el" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel()</a> function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the <a class="el" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df">setBoundaryLayerModel()</a> is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.</p>
 <p>It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development. This is usually necesary when using the boundary-layer conductance model for a sphere, for example.</p>
 <p>The four available models are described in detail below:</p>
 <table class="doxtable">
@@ -344,9 +346,9 @@ Running the Model</h2>
 <tr>
 <th>Model Run Function </th><th>Description </th></tr>
 <tr>
-<td><a class="el" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run( void )</a> </td><td>Run model calculations for all primitives in the Context. </td></tr>
+<td><a class="el" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run()</a> </td><td>Run model calculations for all primitives in the Context. </td></tr>
 <tr>
-<td>BLConductanceModel::run( std::vector&lt;uint&gt; UUIDs ) </td><td>Run model calculations for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
+<td><a class="el" href="class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049">BLConductanceModel::run()</a> </td><td>Run model calculations for a select set of primitives in the Context, which are specified by a vector of their UUIDs. </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

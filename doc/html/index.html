@@ -21,6 +21,21 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -45,6 +60,7 @@ window.MathJax = {
 <script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
@@ -63,20 +79,6 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
-<script>
-    try {
-        // Remove the stored “last visited page” so the tree always starts fresh
-        localStorage.removeItem('navpath');
-        // Older Doxygen versions might use this key:
-        localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
-    } catch(e) {
-        /* storage unavailable? ignore */
-    }
-</script>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -85,10 +87,10 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.34</span>
+       <span id="projectnumber">&#160;v1.3.35</span>
    </div>
   </td>
-    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -169,18 +171,21 @@ $(function(){initNavTree('index.html',''); initResizable(true); });
 <p><br  />
 </p>
 <h1>System Requirements</h1>
-<p>Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins.</p>
+<p>Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins. Note that since modern Mac's don't have NVIDIA GPUs, these plug-ins will not work on MacOS.</p>
 <p><br  />
 </p>
 <h1>Downloading the Code</h1>
 <p>The code repository is located at <a href="https://www.github.com/PlantSimulationLab/Helios">https://www.github.com/PlantSimulationLab/Helios</a>. The best way to download it is using "git", which allows you to easily update your code when new updates are available.</p>
 <p>To do so, first install git, then using your command-line interface (e.g. terminal) change into the directory where you want to download the code, then type:</p>
-<div class="fragment"><div class="line">$ git clone https:<span class="comment">//www.github.com/PlantSimulationLab/Helios</span></div>
-</div><!-- fragment --><p>As updates are released, update your version of the code by typing:</p>
-<div class="fragment"><div class="line">$ git pull</div>
-</div><!-- fragment --><p>You can always check which version you are on by typing:</p>
-<div class="fragment"><div class="line">$ git describe --tags</div>
-</div><!-- fragment --><p><br  />
+<div class="fragment"><div class="line">git clone https:<span class="comment">//www.github.com/PlantSimulationLab/Helios</span></div>
+</div><!-- fragment --><h1>Using Helios with an IDE</h1>
+<p>We recommend using Helios with an IDE such as CLion or Visual Studio Code. Helios can be downloaded and kept up to date directly within the IDE. The YouTube videos below are available below for setting up Helios within an IDE (and via command line).</p>
+<p> 
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/rg21UHxR16s?si=lJ7qJDKMF-Mg_WOX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/pPoAfE69VcI?si=13mwnedvYq_ekuk-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+  </p>
+<p><br  />
 <br  />
 <br  />
 <br  />

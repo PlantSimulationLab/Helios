@@ -310,6 +310,7 @@ var classhelios_1_1_context =
     [ "getTriangleCount", "group__primitives.html#gae036767fb407f0b01bd327328e88379c", null ],
     [ "getTriangleVertex", "classhelios_1_1_context.html#a846f93175f8b45f44237e88155af8fde", null ],
     [ "getTubeObjectNodeColors", "classhelios_1_1_context.html#a7ad271dabb4291067f9a39d4c92e6ffd", null ],
+    [ "getTubeObjectNodeCount", "classhelios_1_1_context.html#a6d19990cbe2e529653ca21184c17c1c7", null ],
     [ "getTubeObjectNodeRadii", "classhelios_1_1_context.html#a6a58d8f1a8446a213d9a21e67ae8ed97", null ],
     [ "getTubeObjectNodes", "classhelios_1_1_context.html#aa4650e7a0a16be12615870ff9a567ae3", null ],
     [ "getTubeObjectPointer", "classhelios_1_1_context.html#ab26f963c75aa99d797a43860479910b0", null ],

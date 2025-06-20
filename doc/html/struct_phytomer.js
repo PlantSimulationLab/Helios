@@ -2,6 +2,7 @@ var struct_phytomer =
 [
     [ "Phytomer", "struct_phytomer.html#a588596baf890a4b4e6431096deaa8690", null ],
     [ "calculateDownstreamLeafArea", "struct_phytomer.html#a0a2257100ec06229fe39f64cc59c0289", null ],
+    [ "calculatePhytomerVolume", "struct_phytomer.html#a83343a9f7a4ad6e241fda48facc52273", null ],
     [ "deletePhytomer", "struct_phytomer.html#a4a534909ab3f4e0159fc1de28884de5d", null ],
     [ "getInternodeAxisVector", "struct_phytomer.html#a44a1c87c905746ca31befed25f2dd647", null ],
     [ "getInternodeLength", "struct_phytomer.html#acb8e9c145c85075812f98503c4a6bc44", null ],

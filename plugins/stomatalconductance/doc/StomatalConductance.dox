@@ -540,7 +540,7 @@ In order to modify model coefficients from the default values, one should 1) dec
 
 \subsection StomatalRun Running the Model (steady-state mode)
 
-There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run()), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run( std::vector<uint> &UUIDs )).
+There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run "run()"), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run "run()").
 
   ```
   #include "StomatalConductanceModel.h"
