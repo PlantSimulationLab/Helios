@@ -2204,30 +2204,36 @@ void ProjectBuilder::visualize(){
                         visualization_type = "RGB";
                         switch_visualization = true;
                     }
-                    for (auto &type : visualization_types){
+                    std::set<std::string> vis_types;
+                    std::set_union(visualization_types_primitive.begin(), visualization_types_primitive.end(),
+                                    visualization_types_object.begin(), visualization_types_object.end(),
+                                    std::inserter(vis_types, vis_types.begin()));
+                    for ( auto &type : vis_types ){
                         if (ImGui::MenuItem(type.c_str()) && visualization_type != type)  {
                             visualization_type = type;
                             switch_visualization = true;
                         }
                     }
                     if (switch_visualization){
-                        const char* font_name = "LCD";
-                        visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                            RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                        visualizer->plotUpdate();
-                        visualizer->clearGeometry();
-                        updateSpectra();
+                        // const char* font_name = "LCD";
+                        // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
+                        //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                        // visualizer->plotUpdate();
+                        // visualizer->clearGeometry();
+
                         if (visualization_type != "RGB") {
-                            visualizer->colorContextPrimitivesByData(visualization_type.c_str());
-                            visualizer->enableColorbar();
+                            if ( visualization_types_primitive.find(visualization_type) != visualization_types_primitive.end() ){
+                                visualizer->colorContextPrimitivesByData(visualization_type.c_str());
+                            } else{
+                                visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
+                            }
+                            visualizer->clearColor();
                             visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }else{
                             visualizer->clearColor();
-                            visualizer->disableColorbar();
                             visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }
-                        visualizer->buildContextGeometry(context);
-                        visualizer->plotUpdate();
+                        is_dirty = true;
                         switch_visualization = false;
                     }
                     ImGui::EndMenu();
@@ -2320,11 +2326,10 @@ void ProjectBuilder::visualize(){
                     if (enable_coords_ != enable_coordinate_axes){
                         if (enable_coordinate_axes){
                             visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
-                            visualizer->plotUpdate();
+                            is_dirty = true;
                         } else{
                             visualizer->disableCoordinateAxes();
-                            visualizer->plotUpdate();
-                            // refreshVisualization();
+                            is_dirty = true;
                         }
                     }
                     ImGui::SameLine();
@@ -2332,6 +2337,24 @@ void ProjectBuilder::visualize(){
                         ImGui::Text("Coordinate Axes Enabled");
                     } else{
                         ImGui::Text("Coordinate Axes Disabled");
+                    }
+                    // ####### COLORBAR ####### //
+                    bool enable_colorbar_ = enable_colorbar;
+                    toggle_button("##colorbar", &enable_colorbar);
+                    if (enable_colorbar_ != enable_colorbar){
+                        if (enable_colorbar){
+                            visualizer->enableColorbar();
+                            is_dirty = true;
+                        } else{
+                            visualizer->disableColorbar();
+                            is_dirty = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (enable_colorbar){
+                        ImGui::Text("Colorbar Enabled");
+                    } else{
+                        ImGui::Text("Colorbar Disabled");
                     }
                     // ####### LIGHTING MODEL ####### //
                     std::string prev_lighting_model = lighting_model;
@@ -4241,6 +4264,9 @@ void ProjectBuilder::visualize(){
 
             if ( is_dirty && !ImGui::IsMouseDragging(ImGuiMouseButton_Left) && !ImGui::IsMouseDown(ImGuiMouseButton_Left) ){
                 visualizer->plotUpdate();
+                //TODO: requery primitive types here
+                // updatePrimitiveTypes();
+                // refreshVisualizationTypes();
                 context->markGeometryClean();
                 is_dirty = false;
             }
@@ -5968,14 +5994,28 @@ void ProjectBuilder::updateGround(){
 
 
 void ProjectBuilder::refreshVisualizationTypes(){
-    visualization_types.clear();
+    // primitive
+    visualization_types_primitive.clear();
     std::vector<uint> allUUIDs = context->getAllUUIDs();
     for (auto &UUID : allUUIDs){
         std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
         for (auto &data : primitiveData){
-            visualization_types.insert(data);
+            visualization_types_primitive.insert(data);
+            primitive_data_types[data] = context->getPrimitiveDataType(UUID, data.c_str());
         }
     }
+    //
+    // object
+    visualization_types_object.clear();
+    std::vector<uint> allobjIDs = context->getAllObjectIDs();
+    for (auto &objID : allobjIDs){
+        std::vector<std::string> objData = context->listObjectData(objID);
+        for (auto &data : objData){
+            visualization_types_object.insert(data);
+            object_data_types[data] = context->getObjectDataType(objID, data.c_str());
+        }
+    }
+    //
 }
 
 

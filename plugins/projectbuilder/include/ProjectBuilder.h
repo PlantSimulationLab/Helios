@@ -617,6 +617,9 @@ class ProjectBuilder {
     //! Enable coordinate axes
     bool enable_coordinate_axes = true;
 
+    //! Enable colorbar
+    bool enable_colorbar = false;
+
     //! Latitude
     float latitude = 38.55;
 
@@ -1044,8 +1047,17 @@ class ProjectBuilder {
     //! Fruit emissivity spectrum
     std::string fruit_emissivity_spectrum;
 
-    //! All possible visualization types
-    std::set<std::string> visualization_types = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+    //! All possible visualization types for primitives
+    std::set<std::string> visualization_types_primitive = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+
+    //! All possible visualization types for objects
+    std::set<std::string> visualization_types_object = {};
+
+    //! Primitive data types
+    std::map<std::string, helios::HeliosDataType> primitive_data_types;
+
+    //! Object data types
+    std::map<std::string, helios::HeliosDataType> object_data_types;
 
     //! Visualization type
     std::string visualization_type = "RGB";
