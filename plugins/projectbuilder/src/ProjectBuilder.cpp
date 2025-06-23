@@ -837,6 +837,7 @@ void ProjectBuilder::buildFromXML(){
     // if (enable_plantarchitecture){
     #ifdef ENABLE_PLANT_ARCHITECTURE
         BuildGeometry(xml_input_file, plantarchitecture, context, canopy_IDs, individual_plant_locations);
+        context->getGlobalData("ground_UUIDs", ground_UUIDs);
     // } //PLANT_ARCHITECTURE
     #endif //PLANT_ARCHITECTURE
 
@@ -920,25 +921,11 @@ void ProjectBuilder::buildFromXML(){
     // bandlabels = {"red", "green", "blue"};
 
     if (enable_plantarchitecture){
-        // context->getGlobalData( "ground_UUIDs", ground_UUIDs );
-        // context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
-        // for (std::string primitive_name : primitive_names){
-        //     if (primitive_name != "All" && primitive_name != "all"){
-        //         bounding_boxes[primitive_name] = false;
-        //         std::string primitive_name_lower = primitive_name;
-        //         primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
-        //         std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
-        //         if ( context->doesGlobalDataExist( primitive_UUIDs_name.c_str() ) ){
-        //             context->getGlobalData( primitive_UUIDs_name.c_str(), primitive_UUIDs[primitive_name] );
-        //             std::vector<uint> primitive_UUIDs_ = primitive_UUIDs[primitive_name];
-        //             if ( !primitive_UUIDs_.empty()){
-        //                 context->setPrimitiveData(primitive_UUIDs[primitive_name], "object_label", primitive_name_lower);
-        //             }
-        //         }
-        //     }
-        // }
-        ground_UUIDs = primitive_UUIDs["ground"];
-        leaf_UUIDs = primitive_UUIDs["leaf"];
+        context->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+
+        primitive_UUIDs["ground"] = ground_UUIDs;
+        primitive_UUIDs["leaf"] = leaf_UUIDs;
         // assert( !ground_UUIDs.empty() );
         // assert( !leaf_UUIDs.empty() );
         context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
@@ -2454,6 +2441,14 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Ground")){
                         updateGround();
+                        updatePrimitiveTypes();
+                        updateSpectra();
+                        is_dirty = true;
+                        // refreshVisualization();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Delete Ground")){
+                        deleteGround();
                         updatePrimitiveTypes();
                         updateSpectra();
                         is_dirty = true;
@@ -5946,9 +5941,9 @@ void ProjectBuilder::updateLocation(){
 
 
 void ProjectBuilder::updateGround(){
-    ground_UUIDs.clear();
-    context->deletePrimitive(primitive_UUIDs["ground"]);
+    context->deletePrimitive(ground_UUIDs);
     if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
     primitive_UUIDs["ground"].clear();
 
     // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullptr, ground_resolution, ground_texture_file.c_str() );
@@ -6000,6 +5995,14 @@ void ProjectBuilder::updateGround(){
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
+}
+
+
+void ProjectBuilder::deleteGround(){
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
 }
 
 
@@ -6067,9 +6070,9 @@ void ProjectBuilder::setBoundingBoxObjects(){
 
 
 void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  ){
-    ground_UUIDs.clear();
-    context->deletePrimitive(primitive_UUIDs["ground"]);
+    context->deletePrimitive(ground_UUIDs);
     if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
     primitive_UUIDs["ground"].clear();
 
     vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
@@ -6088,7 +6091,7 @@ void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &gr
 
             UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_texture_file );
 
-            ground_UUIDs.insert( ground_UUIDs.end(), UUIDs.begin(), UUIDs.end() );
+            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
 
         }
     }

@@ -1764,6 +1764,9 @@ class ProjectBuilder {
     //! Update ground
     void updateGround();
 
+    //! Delete ground
+    void deleteGround();
+
     //! Update context
     void updateContext();
 
