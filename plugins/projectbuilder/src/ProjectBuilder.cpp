@@ -2372,7 +2372,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::Text("Light Direction (Spherical)");
                         if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
-                            SphericalCoord light_dir = SphericalCoord( light_dir_sphere_.radius, light_dir_sphere.x, light_dir_sphere.y ) ;
+                            SphericalCoord light_dir = make_SphericalCoord( light_dir_sphere.x, light_dir_sphere.y ) ;
                             light_direction = sphere2cart(light_dir);
                         }
                     } else {
