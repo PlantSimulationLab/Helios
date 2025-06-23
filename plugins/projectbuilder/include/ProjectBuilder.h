@@ -1790,6 +1790,17 @@ class ProjectBuilder {
     */
     void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation);
 
+    //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes (from `buildGround` Canopy Generator plugin)
+    /**
+     * \param[in] ground_origin x-, y-, and z-position of the ground center point.
+     * \param[in] ground_extent Width of the ground in the x- and y-directions.
+     * \param[in] texture_subtiles Number of sub-divisions of the ground into texture map tiles in the x- and y-directions.
+     * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
+     * \param[in] ground_color Ground color.
+     * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
+    */
+    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, helios::RGBcolor ground_color, float ground_rotation);
+
     //! Constructor
     ProjectBuilder(){
       std::cout.rdbuf(captured_cout.rdbuf());

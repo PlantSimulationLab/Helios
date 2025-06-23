@@ -5967,7 +5967,7 @@ void ProjectBuilder::updateGround(){
         ground_color_.b = ground_color[2];
 
         if (num_tiles.x > 1 || num_tiles.y > 1 || ground_resolution.x > 1 || ground_resolution.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_color_, 0.f );
             context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
             return;
@@ -6016,7 +6016,7 @@ void ProjectBuilder::refreshVisualizationTypes(){
             visualization_types_primitive.insert(data);
             primitive_data_types[data] = context->getPrimitiveDataType(UUID, data.c_str());
         }
-        }
+    }
     //
     // object
     visualization_types_object.clear();
@@ -6090,6 +6090,42 @@ void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &gr
             }
 
             UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_texture_file );
+
+            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
+
+        }
+    }
+    context->cleanDeletedUUIDs(ground_UUIDs);
+
+    context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
+    primitive_UUIDs["ground"] = ground_UUIDs;
+
+}
+
+
+void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, RGBcolor ground_color, float ground_rotation  ){
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
+
+    vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
+
+    vec2 dx_subpatch( dx_tile.x/float(texture_subpatches.x), dx_tile.y/float(texture_subpatches.y) );
+
+    std::vector<uint> UUIDs;
+    for( int j=0; j<texture_subtiles.y; j++ ){
+        for( int i=0; i<texture_subtiles.x; i++ ){
+
+            vec3 center = ground_origin + make_vec3( -0.5f*ground_extent.x+(float(i)+0.5f)*dx_tile.x, -0.5f*ground_extent.y+(float(j)+0.5f)*dx_tile.y, 0 );
+
+            if( ground_rotation!=0 ){
+                center = rotatePointAboutLine( center, ground_origin, make_vec3(0,0,1), ground_rotation );
+            }
+
+            UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_color );
 
             ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
 
