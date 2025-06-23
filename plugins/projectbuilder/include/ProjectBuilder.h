@@ -288,6 +288,9 @@ class ProjectBuilder {
     //! User input
     bool user_input;
 
+    //! Light coordinates type (false = Cartesian, true = Spherical)
+    bool light_coord_type = false;
+
     //! If true, the context has been updated since the last time the visualizer has been updated
     bool is_dirty = false;
 

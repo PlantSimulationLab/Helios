@@ -2353,14 +2353,38 @@ void ProjectBuilder::visualize(){
                     ImGui::InputFloat("Light Intensity Factor", &light_intensity);
                     visualizer->setLightIntensityFactor(light_intensity);
                     // ####### LIGHTING DIRECTION ####### //
-                    float light_dir[3];
-                    light_dir[0] = light_direction.x;
-                    light_dir[1] = light_direction.y;
-                    light_dir[2] = light_direction.z;
-                    ImGui::InputFloat3("Light Direction", light_dir);
-                    light_direction.x = light_dir[0];
-                    light_direction.y = light_dir[1];
-                    light_direction.z = light_dir[2];
+                    toggle_button("##light_coord_type", &light_coord_type);
+                    ImGui::SameLine();
+                    if (light_coord_type) {
+                        SphericalCoord light_dir_sphere_ = cart2sphere(light_direction);
+                        vec2 light_dir_sphere;
+                        light_dir_sphere.x = light_dir_sphere_.elevation;
+                        light_dir_sphere.y = light_dir_sphere_.azimuth;
+                        ImGui::Text("Elevation:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("##light_elevation", &light_dir_sphere.x);
+                        ImGui::SameLine();
+                        ImGui::Text("Azimuth:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("##light_azimuth", &light_dir_sphere.y);
+                        ImGui::SameLine();
+                        ImGui::Text("Light Direction (Spherical)");
+                        if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
+                            SphericalCoord light_dir = SphericalCoord( light_dir_sphere_.radius, light_dir_sphere.x, light_dir_sphere.y ) ;
+                            light_direction = sphere2cart(light_dir);
+                        }
+                    } else {
+                        float light_dir[3];
+                        light_dir[0] = light_direction.x;
+                        light_dir[1] = light_direction.y;
+                        light_dir[2] = light_direction.z;
+                        ImGui::InputFloat3("Light Direction (Cartesian)", light_dir);
+                        light_direction.x = light_dir[0];
+                        light_direction.y = light_dir[1];
+                        light_direction.z = light_dir[2];
+                    }
                     visualizer->setLightDirection(light_direction);
                     // ####### LOCATION ####### //
                     ImGui::SetWindowFontScale(1.25f);
@@ -4369,6 +4393,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("color", "object", obj_colors, obj_names_dict);
     xmlSetValues("data_group", "object", obj_data_groups, obj_names_dict);
     // CANOPY BLOCK
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     // Delete from XML doc
     helios = xmldoc.child("helios");
     node = helios.child("canopy");
@@ -4416,6 +4441,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("plant_age", "canopy_block", plant_ages, canopy_labels_dict);
     xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights, canopy_labels_dict);
     xmlSetValues("data_group", "canopy_block", canopy_data_groups, canopy_labels_dict);
+    #endif
     // RIG BLOCK
     // Delete from XML doc
     helios = xmldoc.child("helios");
