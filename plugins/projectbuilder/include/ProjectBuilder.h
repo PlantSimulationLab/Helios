@@ -366,6 +366,9 @@ class ProjectBuilder {
     //! Ground UUIDs
     std::vector<uint> ground_UUIDs;
 
+    //! Ground object ID
+    uint ground_objID;
+
     //! Leaf UUIDs
     std::vector<uint> leaf_UUIDs;
 

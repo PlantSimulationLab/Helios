@@ -2039,11 +2039,9 @@ bool Context::isPrimitiveHidden(uint UUID) const {
 }
 
 void Context::cleanDeletedUUIDs(std::vector<uint> &UUIDs) const {
-    for (auto it = UUIDs.begin(); it != UUIDs.end(); ) {
-        if (!doesObjectExist(*it)) {
-            it = UUIDs.erase(it);
-        } else {
-            ++it;
+    for (size_t i = UUIDs.size(); i-- > 0;) {
+        if (!doesPrimitiveExist(UUIDs.at(i))) {
+            UUIDs.erase(UUIDs.begin() + i);
         }
     }
 }

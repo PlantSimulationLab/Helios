@@ -2218,23 +2218,16 @@ void ProjectBuilder::visualize(){
                         }
                     }
                     if (switch_visualization){
-                        // const char* font_name = "LCD";
-                        // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                        //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                        // visualizer->plotUpdate();
-                        // visualizer->clearGeometry();
-
                         if (visualization_type != "RGB") {
                             if ( visualization_types_primitive.find(visualization_type) != visualization_types_primitive.end() ){
-                            visualizer->colorContextPrimitivesByData(visualization_type.c_str());
+                                visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             } else{
                                 visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
                             }
                             visualizer->clearColor();
-                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
+
                         }else{
                             visualizer->clearColor();
-                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }
                         is_dirty = true;
                         switch_visualization = false;
@@ -2461,6 +2454,7 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Ground")){
                         updateGround();
+                        updatePrimitiveTypes();
                         updateSpectra();
                         is_dirty = true;
                         // refreshVisualization();
@@ -2552,28 +2546,28 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
-                        // ####### DOMAIN EXTENT ####### //
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                        randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
-                        randomizerParams("domain_extent_x");
-                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                        randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
-                        randomizerParams("domain_extent_y");
-                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Domain Extent");
-                        // ####### NUMBER OF TILES ####### //
-                        ImGui::SetNextItemWidth(60);
-                        int temp[2];
-                        temp[0] = num_tiles.x;
-                        temp[1] = num_tiles.y;
-                        ImGui::InputInt2("Number of Tiles", temp);
-                        num_tiles.x = temp[0];
-                        num_tiles.y = temp[1];
+                    // ####### DOMAIN EXTENT ####### //
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
+                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+                    randomizerParams("domain_extent_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
+                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+                    randomizerParams("domain_extent_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Extent");
+                    // ####### NUMBER OF TILES ####### //
+                    ImGui::SetNextItemWidth(60);
+                    int temp[2];
+                    temp[0] = num_tiles.x;
+                    temp[1] = num_tiles.y;
+                    ImGui::InputInt2("Number of Tiles", temp);
+                    num_tiles.x = temp[0];
+                    num_tiles.y = temp[1];
                     }
 
                     ImGui::EndTabItem();
@@ -5952,9 +5946,12 @@ void ProjectBuilder::updateLocation(){
 
 
 void ProjectBuilder::updateGround(){
+    ground_UUIDs.clear();
     context->deletePrimitive(primitive_UUIDs["ground"]);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    primitive_UUIDs["ground"].clear();
+
     // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullptr, ground_resolution, ground_texture_file.c_str() );
-    uint ground_objID;
     if( !ground_model_file.empty() && ground_flag == 2 && use_ground_texture ) {
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
         context->translatePrimitive( ground_UUIDs, domain_origin );
@@ -5964,9 +5961,9 @@ void ProjectBuilder::updateGround(){
             buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
 
             return;
-        }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        } else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
@@ -5979,9 +5976,9 @@ void ProjectBuilder::updateGround(){
             context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
             return;
-        }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        } else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
@@ -5998,6 +5995,8 @@ void ProjectBuilder::updateGround(){
     // }
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    context->cleanDeletedUUIDs(ground_UUIDs);
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
@@ -6068,8 +6067,10 @@ void ProjectBuilder::setBoundingBoxObjects(){
 
 
 void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  ){
-
     ground_UUIDs.clear();
+    context->deletePrimitive(primitive_UUIDs["ground"]);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    primitive_UUIDs["ground"].clear();
 
     vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
 
@@ -6087,10 +6088,11 @@ void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &gr
 
             UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_texture_file );
 
-            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
+            ground_UUIDs.insert( ground_UUIDs.end(), UUIDs.begin(), UUIDs.end() );
 
         }
     }
+    context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
