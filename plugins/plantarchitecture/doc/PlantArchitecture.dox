@@ -257,7 +257,7 @@ The coordinate system of plant organs is defined with respect to it's parent ele
 
 Nearly all parameters in the architectural model can either be specified as a constant value, or as a random variable following several pre-defined distributions.
 
-Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref RandomParameter_float::val "val()" method is used to get the value of the parameter.
+Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref RandomParameter_float::val() "val()" method is used to get the value of the parameter.
 
 ~~~~~~
 // Assign a constant value
@@ -281,16 +281,16 @@ Available distributions for \ref RandomParameter_float are listed below
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution "uniformDistribution()" | minimum value, maximum value |
-| Normal | \ref RandomParameter_float::normalDistribution "normalDistribution()" | mean, standard deviation |
-| Weibull | \ref RandomParameter_float::weibullDistribution "weibullDistribution()" | shape parameter, scale parameter |
+| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
+| Normal | \ref RandomParameter_float::normalDistribution() "normalDistribution()" | mean, standard deviation |
+| Weibull | \ref RandomParameter_float::weibullDistribution() "weibullDistribution()" | shape parameter, scale parameter |
 
 and for \ref RandomParameter_int are:
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution "uniformDistribution()" | minimum value, maximum value |
-| Discrete Values | \ref RandomParameter_int::discreteValues "discreteValues()" | vector of discrete int values that will be randomly chosen |
+| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
+| Discrete Values | \ref RandomParameter_int::discreteValues() "discreteValues()" | vector of discrete int values that will be randomly chosen |
 
 \section PlantArchPhytomerParams Defining the Phytomer and its Parameters
 
@@ -389,7 +389,7 @@ Flower and fruit OBJ models are usually created in 3rd party software and export
 
 \subsubsection LeafPrototypes Leaf Prototypes
 
-Leaf prototypes can be generated using three primary methods: 1) using the built-in function for procedural leaf generation based on a set of parameters, 2) loading a leaf model from an OBJ file, or 3) creating a leaf manually through Helios Context methods (e.g., \ref Context::addTileObject()).
+Leaf prototypes can be generated using three primary methods: 1) using the built-in function for procedural leaf generation based on a set of parameters, 2) loading a leaf model from an OBJ file, or 3) creating a leaf manually through Helios Context methods (e.g., \ref helios::Context::addTileObject( const helios::vec3&, const helios::vec2&, const helios::SphericalCoord&, const helios::int2& ) ).
 
 The built-in function for procedural leaf generation generates leaf geometries based on the parameter set given in the table below. The advantage of this approach is that it provides a straight-forward means of representing many leaf morphologies with random variation. The drawback is that if very high leaf detail is needed such as venation patterns, this may require using an OBJ model.
 

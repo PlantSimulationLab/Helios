@@ -489,7 +489,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal
  ~~~~~~
 
- Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
+Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref helios::Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
 
  ~~~~~~{.cpp}
  vec2 ground_size(10,10);  //lateral size of the ground
@@ -576,7 +576,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  radiationmodel.addRadiationCamera("visible", {"red","green","blue"}, camera_position, camera_lookat, properties, antialiasing_samples );
  ~~~~~~
 
- This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addBand().
+This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addRadiationBand().
 
  \subsubsection RadCamSpecular Radiation Camera Specular Reflection
 
@@ -650,7 +650,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
- 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref CameraCalibration::addCustomColorboard().
+4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref helios::CameraCalibration::addCustomColorboard().
 
  \subsection RadRun Running Simulations
 
@@ -818,7 +818,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   std::cout << "Fraction of intercepted PAR is " << fPAR << std::endl;
  ~~~~~~
 
- The above example assumes that we have already added some geometry to the Context, separated leaf and ground UUIDs, and declared and set up the radiation model. For a full example, see \ref radiation_basics "Tutorial 10".
+The above example assumes that we have already added some geometry to the Context, separated leaf and ground UUIDs, and declared and set up the radiation model. For a full example, see \ref radiation_basics_tutorial "Tutorial 10".
 
  \subsubsection RadCamOut Writing Camera Images to File
 

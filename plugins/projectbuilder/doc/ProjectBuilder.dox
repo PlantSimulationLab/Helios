@@ -88,7 +88,7 @@
         return 0;
     }
     ~~~~~~
-    It is also possible to build a project from an input XML file without opening the GUI using the \ref ProjectBuilder::build() method. The GUI can be opened later in the code after the project is built using the \ref ProjectBuilder::visualize() method.
+ It is also possible to build a project from an input XML file without opening the GUI using the \ref ProjectBuilder::buildFromXML() method. The GUI can be opened later in the code after the project is built using the \ref ProjectBuilder::visualize() method.
     ~~~~~~
     #include "ProjectBuilder.h"
 
@@ -96,7 +96,7 @@
 
         ProjectBuilder builder;
 
-        builder.build("inputs.xml");
+         builder.buildFromXML("inputs.xml");
 
         ...
 

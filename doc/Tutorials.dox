@@ -893,7 +893,7 @@
 
 \subsection Tutorial10_rad 2. Radiation model set-up
 
- We can then declare and initialize the \ref RadiationModel class. It's constructor takes a pointer to the \ref Context as an argument, so that it can get model geometry and data, and write calculated values to primitive data.
+ We can then declare and initialize the \ref RadiationModel class. It's constructor takes a pointer to the \ref helios::Context as an argument, so that it can get model geometry and data, and write calculated values to primitive data.
 
  We'll then add a "sun sphere" radiation source in the model using \ref RadiationModel::addSunSphereRadiationSource(). This creates a spherical radiation source with size and distance of the sun, and thus includes penumbral effects. This function with no arguments sets the sun position as vertical, but we'll pass it a \ref helios::SphericalCoord that sets the sun elevation at 60 degrees and azimuth at 45 degrees. The function returns a uint value that gives an ID of the source that we'll use to reference it later.
 
