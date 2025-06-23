@@ -2358,8 +2358,8 @@ void ProjectBuilder::visualize(){
                     if (light_coord_type) {
                         SphericalCoord light_dir_sphere_ = cart2sphere(light_direction);
                         vec2 light_dir_sphere;
-                        light_dir_sphere.x = light_dir_sphere_.elevation;
-                        light_dir_sphere.y = light_dir_sphere_.azimuth;
+                        light_dir_sphere.x = rad2deg(light_dir_sphere_.elevation);
+                        light_dir_sphere.y = rad2deg(light_dir_sphere_.azimuth);
                         ImGui::Text("Elevation:");
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(80);
@@ -2372,7 +2372,7 @@ void ProjectBuilder::visualize(){
                         ImGui::SameLine();
                         ImGui::Text("Light Direction (Spherical)");
                         if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
-                            SphericalCoord light_dir = make_SphericalCoord( light_dir_sphere.x, light_dir_sphere.y ) ;
+                            SphericalCoord light_dir = make_SphericalCoord( deg2rad(light_dir_sphere.x), deg2rad(light_dir_sphere.y) );
                             light_direction = sphere2cart(light_dir);
                         }
                     } else {

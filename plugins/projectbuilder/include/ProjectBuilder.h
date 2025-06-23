@@ -1255,10 +1255,10 @@ class ProjectBuilder {
     helios::vec3 light_direction{0, 0, 1};
 
     //! Light intensity factor in the visualizer
-    float light_intensity = 2.0;
+    float light_intensity = 1.0;
 
     //! Number of tiles
-    helios::int2 num_tiles{1,1};
+    helios::int2 num_tiles{5,5};
 
   public:
     //! Context
