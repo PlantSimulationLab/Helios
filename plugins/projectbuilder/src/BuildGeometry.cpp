@@ -364,6 +364,7 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
     // ####### SET UUID GLOBAL DATA ####### //
 
     context_ptr->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    context_ptr->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     context_ptr->setGlobalData( "leaf_UUIDs", HELIOS_TYPE_UINT, leaf_UUIDs.size(), leaf_UUIDs.data() );
     context_ptr->setGlobalData( "petiolule_UUIDs", HELIOS_TYPE_UINT, petiolule_UUIDs.size(), petiolule_UUIDs.data() );
     context_ptr->setGlobalData( "petiole_UUIDs", HELIOS_TYPE_UINT, petiole_UUIDs.size(), petiole_UUIDs.data() );
