@@ -837,6 +837,7 @@ void ProjectBuilder::buildFromXML(){
     // if (enable_plantarchitecture){
     #ifdef ENABLE_PLANT_ARCHITECTURE
         BuildGeometry(xml_input_file, plantarchitecture, context, canopy_IDs, individual_plant_locations);
+        context->getGlobalData("ground_UUIDs", ground_UUIDs);
     // } //PLANT_ARCHITECTURE
     #endif //PLANT_ARCHITECTURE
 
@@ -920,25 +921,11 @@ void ProjectBuilder::buildFromXML(){
     // bandlabels = {"red", "green", "blue"};
 
     if (enable_plantarchitecture){
-        // context->getGlobalData( "ground_UUIDs", ground_UUIDs );
-        // context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
-        // for (std::string primitive_name : primitive_names){
-        //     if (primitive_name != "All" && primitive_name != "all"){
-        //         bounding_boxes[primitive_name] = false;
-        //         std::string primitive_name_lower = primitive_name;
-        //         primitive_name_lower[0] = std::tolower(static_cast<unsigned char>(primitive_name_lower[0]));
-        //         std::string primitive_UUIDs_name = primitive_name_lower + "_UUIDs";
-        //         if ( context->doesGlobalDataExist( primitive_UUIDs_name.c_str() ) ){
-        //             context->getGlobalData( primitive_UUIDs_name.c_str(), primitive_UUIDs[primitive_name] );
-        //             std::vector<uint> primitive_UUIDs_ = primitive_UUIDs[primitive_name];
-        //             if ( !primitive_UUIDs_.empty()){
-        //                 context->setPrimitiveData(primitive_UUIDs[primitive_name], "object_label", primitive_name_lower);
-        //             }
-        //         }
-        //     }
-        // }
-        ground_UUIDs = primitive_UUIDs["ground"];
-        leaf_UUIDs = primitive_UUIDs["leaf"];
+        context->getGlobalData( "ground_UUIDs", ground_UUIDs );
+        context->getGlobalData( "leaf_UUIDs", leaf_UUIDs );
+
+        primitive_UUIDs["ground"] = ground_UUIDs;
+        primitive_UUIDs["leaf"] = leaf_UUIDs;
         // assert( !ground_UUIDs.empty() );
         // assert( !leaf_UUIDs.empty() );
         context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
@@ -2218,23 +2205,16 @@ void ProjectBuilder::visualize(){
                         }
                     }
                     if (switch_visualization){
-                        // const char* font_name = "LCD";
-                        // visualizer->addTextboxByCenter("LOADING...", vec3(.5,.5,0), make_SphericalCoord(0, 0),
-                        //     RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                        // visualizer->plotUpdate();
-                        // visualizer->clearGeometry();
-
                         if (visualization_type != "RGB") {
                             if ( visualization_types_primitive.find(visualization_type) != visualization_types_primitive.end() ){
-                            visualizer->colorContextPrimitivesByData(visualization_type.c_str());
+                                visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             } else{
                                 visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
                             }
                             visualizer->clearColor();
-                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
+
                         }else{
                             visualizer->clearColor();
-                            visualizer->addCoordinateAxes(helios::make_vec3(0,0,0.05), helios::make_vec3(1,1,1), "positive");
                         }
                         is_dirty = true;
                         switch_visualization = false;
@@ -2373,14 +2353,38 @@ void ProjectBuilder::visualize(){
                     ImGui::InputFloat("Light Intensity Factor", &light_intensity);
                     visualizer->setLightIntensityFactor(light_intensity);
                     // ####### LIGHTING DIRECTION ####### //
-                    float light_dir[3];
-                    light_dir[0] = light_direction.x;
-                    light_dir[1] = light_direction.y;
-                    light_dir[2] = light_direction.z;
-                    ImGui::InputFloat3("Light Direction", light_dir);
-                    light_direction.x = light_dir[0];
-                    light_direction.y = light_dir[1];
-                    light_direction.z = light_dir[2];
+                    toggle_button("##light_coord_type", &light_coord_type);
+                    ImGui::SameLine();
+                    if (light_coord_type) {
+                        SphericalCoord light_dir_sphere_ = cart2sphere(light_direction);
+                        vec2 light_dir_sphere;
+                        light_dir_sphere.x = rad2deg(light_dir_sphere_.elevation);
+                        light_dir_sphere.y = rad2deg(light_dir_sphere_.azimuth);
+                        ImGui::Text("Elevation:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("##light_elevation", &light_dir_sphere.x);
+                        ImGui::SameLine();
+                        ImGui::Text("Azimuth:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::InputFloat("##light_azimuth", &light_dir_sphere.y);
+                        ImGui::SameLine();
+                        ImGui::Text("Light Direction (Spherical)");
+                        if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
+                            SphericalCoord light_dir = make_SphericalCoord( deg2rad(light_dir_sphere.x), deg2rad(light_dir_sphere.y) );
+                            light_direction = sphere2cart(light_dir);
+                        }
+                    } else {
+                        float light_dir[3];
+                        light_dir[0] = light_direction.x;
+                        light_dir[1] = light_direction.y;
+                        light_dir[2] = light_direction.z;
+                        ImGui::InputFloat3("Light Direction (Cartesian)", light_dir);
+                        light_direction.x = light_dir[0];
+                        light_direction.y = light_dir[1];
+                        light_direction.z = light_dir[2];
+                    }
                     visualizer->setLightDirection(light_direction);
                     // ####### LOCATION ####### //
                     ImGui::SetWindowFontScale(1.25f);
@@ -2461,6 +2465,15 @@ void ProjectBuilder::visualize(){
                     ImGui::SetWindowFontScale(1.0f);
                     if (ImGui::Button("Update Ground")){
                         updateGround();
+                        updatePrimitiveTypes();
+                        updateSpectra();
+                        is_dirty = true;
+                        // refreshVisualization();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Delete Ground")){
+                        deleteGround();
+                        updatePrimitiveTypes();
                         updateSpectra();
                         is_dirty = true;
                         // refreshVisualization();
@@ -2552,28 +2565,28 @@ void ProjectBuilder::visualize(){
                     ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
                     ImGui::SameLine();
                     ImGui::Text("Ground Resolution");
-                        // ####### DOMAIN EXTENT ####### //
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                        randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
-                        randomizerParams("domain_extent_x");
-                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(50);
-                        ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                        randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
-                        randomizerParams("domain_extent_y");
-                        ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Domain Extent");
-                        // ####### NUMBER OF TILES ####### //
-                        ImGui::SetNextItemWidth(60);
-                        int temp[2];
-                        temp[0] = num_tiles.x;
-                        temp[1] = num_tiles.y;
-                        ImGui::InputInt2("Number of Tiles", temp);
-                        num_tiles.x = temp[0];
-                        num_tiles.y = temp[1];
+                    // ####### DOMAIN EXTENT ####### //
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
+                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+                    randomizerParams("domain_extent_x");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50);
+                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
+                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+                    randomizerParams("domain_extent_y");
+                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
+                    ImGui::SameLine();
+                    ImGui::Text("Domain Extent");
+                    // ####### NUMBER OF TILES ####### //
+                    ImGui::SetNextItemWidth(60);
+                    int temp[2];
+                    temp[0] = num_tiles.x;
+                    temp[1] = num_tiles.y;
+                    ImGui::InputInt2("Number of Tiles", temp);
+                    num_tiles.x = temp[0];
+                    num_tiles.y = temp[1];
                     }
 
                     ImGui::EndTabItem();
@@ -4380,6 +4393,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("color", "object", obj_colors, obj_names_dict);
     xmlSetValues("data_group", "object", obj_data_groups, obj_names_dict);
     // CANOPY BLOCK
+    #ifdef ENABLE_PLANT_ARCHITECTURE
     // Delete from XML doc
     helios = xmldoc.child("helios");
     node = helios.child("canopy");
@@ -4427,6 +4441,7 @@ void ProjectBuilder::xmlSetValues(){
     xmlSetValues("plant_age", "canopy_block", plant_ages, canopy_labels_dict);
     xmlSetValues("ground_clipping_height", "canopy_block", ground_clipping_heights, canopy_labels_dict);
     xmlSetValues("data_group", "canopy_block", canopy_data_groups, canopy_labels_dict);
+    #endif
     // RIG BLOCK
     // Delete from XML doc
     helios = xmldoc.child("helios");
@@ -5952,9 +5967,12 @@ void ProjectBuilder::updateLocation(){
 
 
 void ProjectBuilder::updateGround(){
-    context->deletePrimitive(primitive_UUIDs["ground"]);
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
+
     // uint ground_objID = context->addTileObject( domain_origin, domain_extent, nullptr, ground_resolution, ground_texture_file.c_str() );
-    uint ground_objID;
     if( !ground_model_file.empty() && ground_flag == 2 && use_ground_texture ) {
         ground_UUIDs = context->loadOBJ(ground_model_file.c_str());
         context->translatePrimitive( ground_UUIDs, domain_origin );
@@ -5964,9 +5982,9 @@ void ProjectBuilder::updateGround(){
             buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
 
             return;
-        }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        } else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_texture_file.c_str() );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 1  && !use_ground_texture ){
         RGBcolor ground_color_;
@@ -5975,13 +5993,13 @@ void ProjectBuilder::updateGround(){
         ground_color_.b = ground_color[2];
 
         if (num_tiles.x > 1 || num_tiles.y > 1 || ground_resolution.x > 1 || ground_resolution.y > 1){
-            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_texture_file.c_str(), 0.f );
+            buildTiledGround( domain_origin, domain_extent, num_tiles, ground_resolution, ground_color_, 0.f );
             context->setPrimitiveColor(ground_UUIDs, ground_color_);
 
             return;
-        }else{
-        ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
-        ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+        } else{
+            ground_objID = context->addTileObject( domain_origin, domain_extent, nullrotation, ground_resolution, ground_color_ );
+            ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
         }
     }else if( ground_flag == 2  && !use_ground_texture ){
         RGBcolor ground_color_;
@@ -5998,9 +6016,19 @@ void ProjectBuilder::updateGround(){
     // }
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
+    context->cleanDeletedUUIDs(ground_UUIDs);
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
     primitive_UUIDs["ground"] = ground_UUIDs;
+}
+
+
+void ProjectBuilder::deleteGround(){
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
 }
 
 
@@ -6014,7 +6042,7 @@ void ProjectBuilder::refreshVisualizationTypes(){
             visualization_types_primitive.insert(data);
             primitive_data_types[data] = context->getPrimitiveDataType(UUID, data.c_str());
         }
-        }
+    }
     //
     // object
     visualization_types_object.clear();
@@ -6068,8 +6096,10 @@ void ProjectBuilder::setBoundingBoxObjects(){
 
 
 void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation  ){
-
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
     ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
 
     vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
 
@@ -6091,6 +6121,43 @@ void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &gr
 
         }
     }
+    context->cleanDeletedUUIDs(ground_UUIDs);
+
+    context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
+    context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
+    context->setPrimitiveData( ground_UUIDs, "object_label", "ground" );
+    primitive_UUIDs["ground"] = ground_UUIDs;
+
+}
+
+
+void ProjectBuilder::buildTiledGround( const vec3 &ground_origin, const vec2 &ground_extent, const int2 &texture_subtiles, const int2 &texture_subpatches, RGBcolor ground_color, float ground_rotation  ){
+    context->deletePrimitive(ground_UUIDs);
+    if (context->doesObjectExist(ground_objID)) context->deleteObject(ground_objID);
+    ground_UUIDs.clear();
+    primitive_UUIDs["ground"].clear();
+
+    vec2 dx_tile( ground_extent.x/float(texture_subtiles.x), ground_extent.y/float(texture_subtiles.y) );
+
+    vec2 dx_subpatch( dx_tile.x/float(texture_subpatches.x), dx_tile.y/float(texture_subpatches.y) );
+
+    std::vector<uint> UUIDs;
+    for( int j=0; j<texture_subtiles.y; j++ ){
+        for( int i=0; i<texture_subtiles.x; i++ ){
+
+            vec3 center = ground_origin + make_vec3( -0.5f*ground_extent.x+(float(i)+0.5f)*dx_tile.x, -0.5f*ground_extent.y+(float(j)+0.5f)*dx_tile.y, 0 );
+
+            if( ground_rotation!=0 ){
+                center = rotatePointAboutLine( center, ground_origin, make_vec3(0,0,1), ground_rotation );
+            }
+
+            UUIDs = context->addTile( center, dx_tile, make_SphericalCoord(0,-ground_rotation), texture_subpatches, ground_color );
+
+            ground_UUIDs.insert( ground_UUIDs.begin(), UUIDs.begin(), UUIDs.end() );
+
+        }
+    }
+    context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData( ground_UUIDs, "twosided_flag", uint(0) );
     context->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );

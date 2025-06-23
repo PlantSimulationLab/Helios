@@ -29,7 +29,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 __device__ float evaluateEnergyBalance( float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity, float surfacehumidity, float dt, float Tprev ){
-
+    //! specific heat capacity of air at constant pressure, J mol⁻¹ K⁻¹
+    const float cp_air_mol = 29.25f;
+    //! latent heat of vaporization of water at 300 K, J mol⁻¹
+    const float lambda_mol = 44000.f;
     //Outgoing emission flux
     float Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;
 
