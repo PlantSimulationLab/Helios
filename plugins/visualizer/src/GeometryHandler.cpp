@@ -621,7 +621,7 @@ void GeometryHandler::deleteGeometry( size_t UUID ) {
 
     deleted_primitive_count ++;
 
-    if ( deleted_primitive_count>10000 ) {
+    if ( deleted_primitive_count>250000 ) {
         defragmentBuffers();
     }
 
@@ -741,7 +741,7 @@ void GeometryHandler::getDomainBoundingSphere(helios::vec3& center, helios::vec3
 }
 
 size_t GeometryHandler::sampleUUID(){
-    std::uniform_int_distribution<size_t> dist(1, std::numeric_limits<size_t>::max());
+    std::uniform_int_distribution<size_t> dist(1, (std::numeric_limits<size_t>::max)());
     size_t UUID = 0;
     while ( UUID==0 || UUID_map.find(UUID) != UUID_map.end() ) {
         UUID = dist(random_generator);
@@ -799,7 +799,6 @@ void GeometryHandler::defragmentBuffers() {
 
             // Otherwise copy its slices into the new buffers
             const char vcount = getVertexCount(prim.geometry_type);
-            const size_t v1 = static_cast<size_t>(vcount);
             const size_t v3 = static_cast<size_t>(vcount) * 3;
             const size_t v2 = static_cast<size_t>(vcount) * 2;
 

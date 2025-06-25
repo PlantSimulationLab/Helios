@@ -13,11 +13,11 @@ double HungarianAlgorithm::Solve(
     int dim = std::max(n, m);
 
     // Build a square cost matrix 'a', filling missing entries with a large cost
-    std::vector<std::vector<double>> a(dim, std::vector<double>(dim, std::numeric_limits<double>::max()));
+    std::vector<std::vector<double>> a(dim, std::vector<double>(dim, (std::numeric_limits<double>::max)()));
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
             double v = DistMatrix[i][j];
-            a[i][j] = std::isfinite(v) ? v : (std::numeric_limits<double>::max() * 0.5);
+            a[i][j] = std::isfinite(v) ? v : ((std::numeric_limits<double>::max)() * 0.5);
         }
     }
 
@@ -29,13 +29,13 @@ double HungarianAlgorithm::Solve(
     for (int i = 1; i <= dim; ++i) {
         p[0] = i;
         int j0 = 0;
-        std::vector<double> minv(dim+1, std::numeric_limits<double>::max());
+        std::vector<double> minv(dim+1, (std::numeric_limits<double>::max)());
         std::vector<bool> used(dim+1, false);
 
         do {
             used[j0] = true;
             int i0 = p[j0], j1 = 0;
-            double delta = std::numeric_limits<double>::max();
+            double delta = (std::numeric_limits<double>::max)();
 
             // Try to improve the matching by looking at all free columns
             for (int j = 1; j <= dim; ++j) {

@@ -5,7 +5,8 @@ project(helios)
 
 set(PLUGIN_INCLUDE_DIRS "")
 set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp")
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/selfTest.cpp")
 
 # Conditional Plugins
 file(GLOB PLUGIN_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/plugins/*)
@@ -231,6 +232,7 @@ if("visualizer" IN_LIST PLUGINS)
         include_directories(lib/nativefiledialog/src/include)
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
+        target_link_libraries(projectbuilder dl)
         # uncomment for GTK
 #        find_package(PkgConfig REQUIRED)
 #        pkg_check_modules(GTK REQUIRED gtkmm-3.0)

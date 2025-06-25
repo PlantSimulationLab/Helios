@@ -1,0 +1,1012 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: CameraCalibration Struct Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.36</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('struct_camera_calibration.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Data Structures</a> &#124;
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Data Fields</a>  </div>
+  <div class="headertitle"><div class="title">CameraCalibration Struct Reference</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Camera calibration structure used for camera calibration tasks.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_camera_calibration_1_1_gradient_descent_parameters.html">GradientDescentParameters</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parameter struct for gradient descent.  <a href="struct_camera_calibration_1_1_gradient_descent_parameters.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a8d44e108e6edc0bf0ad1a3eb522d1f94" id="r_a8d44e108e6edc0bf0ad1a3eb522d1f94"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8d44e108e6edc0bf0ad1a3eb522d1f94">CameraCalibration</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
+<tr class="separator:a8d44e108e6edc0bf0ad1a3eb522d1f94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab101fe425760d29aab58073d626be460" id="r_ab101fe425760d29aab58073d626be460"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab101fe425760d29aab58073d626be460">addCheckerboard</a> (const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;boardsidesize, const float &amp;patchsize, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad, bool firstblack=true)</td></tr>
+<tr class="memdesc:ab101fe425760d29aab58073d626be460"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add checker board geometry into context.  <br /></td></tr>
+<tr class="separator:ab101fe425760d29aab58073d626be460"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73e6dfb0a8a3a68beeed498797310702" id="r_a73e6dfb0a8a3a68beeed498797310702"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a73e6dfb0a8a3a68beeed498797310702">addDefaultCheckerboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad)</td></tr>
+<tr class="memdesc:a73e6dfb0a8a3a68beeed498797310702"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add default checker board geometry into context.  <br /></td></tr>
+<tr class="separator:a73e6dfb0a8a3a68beeed498797310702"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1c0a4605b3b3ea355b9f3dee1706ec9" id="r_ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1c0a4605b3b3ea355b9f3dee1706ec9">addColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad, const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &gt; &amp;colorassignment={}, const std::vector&lt; std::vector&lt; std::string &gt; &gt; &amp;spectrumassignment={})</td></tr>
+<tr class="memdesc:ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add color board geometry into context.  <br /></td></tr>
+<tr class="separator:ad1c0a4605b3b3ea355b9f3dee1706ec9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b1c43adcd27bc075327a239f31f03b8" id="r_a4b1c43adcd27bc075327a239f31f03b8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4b1c43adcd27bc075327a239f31f03b8">addDefaultColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0, 0, 0))</td></tr>
+<tr class="memdesc:a4b1c43adcd27bc075327a239f31f03b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add default color board (DGK-DKK) with spectral reflectivity values.  <br /></td></tr>
+<tr class="separator:a4b1c43adcd27bc075327a239f31f03b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3bf289a5f6aae45fcdf96266e507b96d" id="r_a3bf289a5f6aae45fcdf96266e507b96d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3bf289a5f6aae45fcdf96266e507b96d">addDGKColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0, 0, 0))</td></tr>
+<tr class="memdesc:a3bf289a5f6aae45fcdf96266e507b96d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add DGK-DKK calibration color board.  <br /></td></tr>
+<tr class="separator:a3bf289a5f6aae45fcdf96266e507b96d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab050093228412d637b6ad144504cc022" id="r_ab050093228412d637b6ad144504cc022"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab050093228412d637b6ad144504cc022">addCalibriteColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0, 0, 0))</td></tr>
+<tr class="memdesc:ab050093228412d637b6ad144504cc022"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add Calibrite ColorChecker Classic calibration color board.  <br /></td></tr>
+<tr class="separator:ab050093228412d637b6ad144504cc022"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2d255559ec6c91af3158f2ac32568ab" id="r_ad2d255559ec6c91af3158f2ac32568ab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad2d255559ec6c91af3158f2ac32568ab">addSpyderCHECKRColorboard</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centrelocation, float patchsize=0.5, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;rotationrad=<a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0, 0, 0))</td></tr>
+<tr class="memdesc:ad2d255559ec6c91af3158f2ac32568ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add Datacolor SpyderCHECKR 24 calibration color board.  <br /></td></tr>
+<tr class="separator:ad2d255559ec6c91af3158f2ac32568ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad70c4585fbaef6ffb459838bd170f64" id="r_aad70c4585fbaef6ffb459838bd170f64"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad70c4585fbaef6ffb459838bd170f64">getColorBoardUUIDs</a> ()</td></tr>
+<tr class="memdesc:aad70c4585fbaef6ffb459838bd170f64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a list of color board UUIDs.  <br /></td></tr>
+<tr class="separator:aad70c4585fbaef6ffb459838bd170f64"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96b8a246adb36d20a09e3d527be9de25" id="r_a96b8a246adb36d20a09e3d527be9de25"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a96b8a246adb36d20a09e3d527be9de25">writeSpectralXMLfile</a> (const std::string &amp;filename, const std::string &amp;note, const std::string &amp;label, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; *spectrum)</td></tr>
+<tr class="memdesc:a96b8a246adb36d20a09e3d527be9de25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write XML file from spectral vectors containing both wavelengths and spectral values.  <br /></td></tr>
+<tr class="separator:a96b8a246adb36d20a09e3d527be9de25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e689ece69868c47a8d6f392dac06d19" id="r_a0e689ece69868c47a8d6f392dac06d19"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e689ece69868c47a8d6f392dac06d19">loadXMLlabeldata</a> (const std::string &amp;filename, const std::string &amp;labelname, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;spectraldata)</td></tr>
+<tr class="memdesc:a0e689ece69868c47a8d6f392dac06d19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load XML file and save data in spectral vectors containing both wavelengths and spectral values.  <br /></td></tr>
+<tr class="separator:a0e689ece69868c47a8d6f392dac06d19"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5bfbb206b8271b406cda85eb5ae23a1b" id="r_a5bfbb206b8271b406cda85eb5ae23a1b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5bfbb206b8271b406cda85eb5ae23a1b">GradientDescent</a> (std::vector&lt; std::vector&lt; float &gt; &gt; *expandedcameraspectra, const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;expandedconstinput, const float &amp;learningrate, const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;truevalues)</td></tr>
+<tr class="memdesc:a5bfbb206b8271b406cda85eb5ae23a1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduce calibration error based on gradient descent.  <br /></td></tr>
+<tr class="separator:a5bfbb206b8271b406cda85eb5ae23a1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8187123a8969af3d1eb69aa6425f39ee" id="r_a8187123a8969af3d1eb69aa6425f39ee"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8187123a8969af3d1eb69aa6425f39ee">updateCameraResponseSpectra</a> (const std::vector&lt; std::string &gt; &amp;camerareponselabels, const std::string &amp;cameralabel, const std::map&lt; uint, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &amp;simulatedinputspectra, const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;truevalues)</td></tr>
+<tr class="memdesc:a8187123a8969af3d1eb69aa6425f39ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update camera response spectra.  <br /></td></tr>
+<tr class="separator:a8187123a8969af3d1eb69aa6425f39ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f11687ea932b11dd32efb4a5a2d79e8" id="r_a7f11687ea932b11dd32efb4a5a2d79e8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7f11687ea932b11dd32efb4a5a2d79e8">preprocessSpectra</a> (const std::vector&lt; std::string &gt; &amp;sourcelabels, const std::vector&lt; std::string &gt; &amp;cameralabels, std::vector&lt; std::string &gt; &amp;objectlabels, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;wavelengthrange, const std::string &amp;targetlabel=&quot;&quot;)</td></tr>
+<tr class="memdesc:a7f11687ea932b11dd32efb4a5a2d79e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preprocess all spectra for modelling.  <br /></td></tr>
+<tr class="separator:a7f11687ea932b11dd32efb4a5a2d79e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae05de1b77f6cdab7a14a5582321f71ad" id="r_ae05de1b77f6cdab7a14a5582321f71ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae05de1b77f6cdab7a14a5582321f71ad">distortImage</a> (const std::string &amp;cameralabel, const std::vector&lt; std::string &gt; &amp;bandlabels, const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;focalxy, std::vector&lt; double &gt; &amp;distCoeffs, <a class="el" href="structhelios_1_1int2.html">helios::int2</a> cameraresolution)</td></tr>
+<tr class="memdesc:ae05de1b77f6cdab7a14a5582321f71ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get distorted image.  <br /></td></tr>
+<tr class="separator:ae05de1b77f6cdab7a14a5582321f71ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18eff4a7ecab1038f27b68c3963a5513" id="r_a18eff4a7ecab1038f27b68c3963a5513"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18eff4a7ecab1038f27b68c3963a5513">getCameraResponseScale</a> (const std::string &amp;cameralabel, const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> cameraresolution, const std::vector&lt; std::string &gt; &amp;bandlabels, const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;truevalues)</td></tr>
+<tr class="memdesc:a18eff4a7ecab1038f27b68c3963a5513"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get camera spectral response scale.  <br /></td></tr>
+<tr class="separator:a18eff4a7ecab1038f27b68c3963a5513"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4f513355e7095b19417ad62d6f9f89f" id="r_ae4f513355e7095b19417ad62d6f9f89f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae4f513355e7095b19417ad62d6f9f89f">readROMCCanopy</a> ()</td></tr>
+<tr class="memdesc:ae4f513355e7095b19417ad62d6f9f89f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Read ROMC canopy file (Used for self test).  <br /></td></tr>
+<tr class="separator:ae4f513355e7095b19417ad62d6f9f89f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a148bdc83d9f7a3d564a3aa10793a5d70" id="r_a148bdc83d9f7a3d564a3aa10793a5d70"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a148bdc83d9f7a3d564a3aa10793a5d70">writeCalibratedCameraResponses</a> (const std::vector&lt; std::string &gt; &amp;camerareponselabels, const std::string &amp;calibratemark, float scale)</td></tr>
+<tr class="memdesc:a148bdc83d9f7a3d564a3aa10793a5d70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write calibrated camera response spectra.  <br /></td></tr>
+<tr class="separator:a148bdc83d9f7a3d564a3aa10793a5d70"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr class="memitem:a6d212fd1b208a3a10237a1908578b97c" id="r_a6d212fd1b208a3a10237a1908578b97c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_camera_calibration_1_1_gradient_descent_parameters.html">GradientDescentParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d212fd1b208a3a10237a1908578b97c">responseupdateparameters</a></td></tr>
+<tr class="separator:a6d212fd1b208a3a10237a1908578b97c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed162989edcf723021f4486ef9381105" id="r_aed162989edcf723021f4486ef9381105"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, std::map&lt; std::string, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed162989edcf723021f4486ef9381105">processedspectra</a></td></tr>
+<tr class="separator:aed162989edcf723021f4486ef9381105"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Camera calibration structure used for camera calibration tasks. </p>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00021">21</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a8d44e108e6edc0bf0ad1a3eb522d1f94" name="a8d44e108e6edc0bf0ad1a3eb522d1f94"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d44e108e6edc0bf0ad1a3eb522d1f94">&#9670;&#160;</a></span>CameraCalibration()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">CameraCalibration::CameraCalibration </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00020">20</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="ab050093228412d637b6ad144504cc022" name="ab050093228412d637b6ad144504cc022"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab050093228412d637b6ad144504cc022">&#9670;&#160;</a></span>addCalibriteColorboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addCalibriteColorboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.5</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0,&#160;0,&#160;0)</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add Calibrite ColorChecker Classic calibration color board. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>Location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>Size of each color patch in color board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>Radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vector of UUIDs making up the color board patches </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00171">171</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab101fe425760d29aab58073d626be460" name="ab101fe425760d29aab58073d626be460"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab101fe425760d29aab58073d626be460">&#9670;&#160;</a></span>addCheckerboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addCheckerboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>boardsidesize</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>firstblack</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add checker board geometry into context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">boardsidesize</td><td>size of check board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>size of each square patch </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">firstblack</td><td>initial the color of first square patch (black or white) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00023">23</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad1c0a4605b3b3ea355b9f3dee1706ec9" name="ad1c0a4605b3b3ea355b9f3dee1706ec9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1c0a4605b3b3ea355b9f3dee1706ec9">&#9670;&#160;</a></span>addColorboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addColorboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>colorassignment</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; std::string &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>spectrumassignment</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add color board geometry into context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>location of the board center (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>size of each square color patch on the board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>rotation the board about x-, y-, and z-axes </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">colorassignment</td><td>[OPTIONAL] Color of each patch and size of color board. First index is the row and second index is the column. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">spectrumassignment</td><td>[OPTIONAL] Label of global data corresponding to the reflectance spectrum of each color patch on the color board. First index is the row and second index is the column. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00086">86</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a73e6dfb0a8a3a68beeed498797310702" name="a73e6dfb0a8a3a68beeed498797310702"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73e6dfb0a8a3a68beeed498797310702">&#9670;&#160;</a></span>addDefaultCheckerboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addDefaultCheckerboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add default checker board geometry into context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00077">77</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4b1c43adcd27bc075327a239f31f03b8" name="a4b1c43adcd27bc075327a239f31f03b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b1c43adcd27bc075327a239f31f03b8">&#9670;&#160;</a></span>addDefaultColorboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addDefaultColorboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.5</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0,0,0)</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add default color board (DGK-DKK) with spectral reflectivity values. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Corresponding UUID </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>name with path of XML file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">labelname</td><td>label name of data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>Location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>Size of each color patch in color board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>Radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vector of UUIDs making up the color board patches </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00151">151</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3bf289a5f6aae45fcdf96266e507b96d" name="a3bf289a5f6aae45fcdf96266e507b96d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3bf289a5f6aae45fcdf96266e507b96d">&#9670;&#160;</a></span>addDGKColorboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addDGKColorboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.5</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0,&#160;0,&#160;0)</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add DGK-DKK calibration color board. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>Location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>Size of each color patch in color board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>Radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vector of UUIDs making up the color board patches </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00156">156</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad2d255559ec6c91af3158f2ac32568ab" name="ad2d255559ec6c91af3158f2ac32568ab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2d255559ec6c91af3158f2ac32568ab">&#9670;&#160;</a></span>addSpyderCHECKRColorboard()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::addSpyderCHECKRColorboard </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centrelocation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>patchsize</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.5</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rotationrad</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5">helios::make_vec3</a>(0,&#160;0,&#160;0)</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add Datacolor SpyderCHECKR 24 calibration color board. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">centrelocation</td><td>Location of the board (vec3 on coordinates x,y,z) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">patchsize</td><td>Size of each color patch in color board </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rotationrad</td><td>Radians of rotation (vec3 on coordinates x,y,z) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vector of UUIDs making up the color board patches </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00186">186</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae05de1b77f6cdab7a14a5582321f71ad" name="ae05de1b77f6cdab7a14a5582321f71ad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae05de1b77f6cdab7a14a5582321f71ad">&#9670;&#160;</a></span>distortImage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CameraCalibration::distortImage </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>cameralabel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>bandlabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>focalxy</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>distCoeffs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1int2.html">helios::int2</a></td>          <td class="paramname"><span class="paramname"><em>cameraresolution</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get distorted image. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of camera. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">bandlabels</td><td>Label vector of bands. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">focalxy</td><td>Focal length xy of camera. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">distCoeffs</td><td>Distortion coefficients. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameraresolution</td><td>Resolution of camera. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameraresolution</td><td>Resolution of camera for distortion. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00415">415</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a18eff4a7ecab1038f27b68c3963a5513" name="a18eff4a7ecab1038f27b68c3963a5513"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18eff4a7ecab1038f27b68c3963a5513">&#9670;&#160;</a></span>getCameraResponseScale()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CameraCalibration::getCameraResponseScale </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>cameralabel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int2.html">helios::int2</a></td>          <td class="paramname"><span class="paramname"><em>cameraresolution</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>bandlabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>truevalues</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get camera spectral response scale. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of camera. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameraresolution</td><td>Resolution of camera. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">bandlabels</td><td>Label vector of bands. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">truevalues</td><td>True color board values. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00634">634</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aad70c4585fbaef6ffb459838bd170f64" name="aad70c4585fbaef6ffb459838bd170f64"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad70c4585fbaef6ffb459838bd170f64">&#9670;&#160;</a></span>getColorBoardUUIDs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::getColorBoardUUIDs </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retrieves a list of color board UUIDs. </p>
+<dl class="section return"><dt>Returns</dt><dd>A vector containing the UUIDs of color boards. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00201">201</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5bfbb206b8271b406cda85eb5ae23a1b" name="a5bfbb206b8271b406cda85eb5ae23a1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5bfbb206b8271b406cda85eb5ae23a1b">&#9670;&#160;</a></span>GradientDescent()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CameraCalibration::GradientDescent </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; std::vector&lt; float &gt; &gt; *</td>          <td class="paramname"><span class="paramname"><em>expandedcameraspectra</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>expandedconstinput</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;</td>          <td class="paramname"><span class="paramname"><em>learningrate</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>truevalues</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reduce calibration error based on gradient descent. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">expandedcameraspectra</td><td>Expanded camera response spectra to be updated. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">expandedconstinput</td><td>Expanded input spectra. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">learningrate</td><td>Learning rate. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">truevalues</td><td>True color board values. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A float of loss. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00255">255</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0e689ece69868c47a8d6f392dac06d19" name="a0e689ece69868c47a8d6f392dac06d19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e689ece69868c47a8d6f392dac06d19">&#9670;&#160;</a></span>loadXMLlabeldata()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CameraCalibration::loadXMLlabeldata </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>labelname</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>spectraldata</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Load XML file and save data in spectral vectors containing both wavelengths and spectral values. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name with path of XML file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">labelname</td><td>Label name of data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">spectraldata</td><td>An empty spectral vector to be filled </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00240">240</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7f11687ea932b11dd32efb4a5a2d79e8" name="a7f11687ea932b11dd32efb4a5a2d79e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7f11687ea932b11dd32efb4a5a2d79e8">&#9670;&#160;</a></span>preprocessSpectra()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CameraCalibration::preprocessSpectra </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>sourcelabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>cameralabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>objectlabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>wavelengthrange</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>targetlabel</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Preprocess all spectra for modelling. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">sourcelabels</td><td>Label vector of source spectra. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabels</td><td>Label vector of camera spectra. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">objectlabels</td><td>Label vector of object spectra. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">wavelengthrange</td><td>Min and max of wavelength boundary. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">targetlabel</td><td>Label of target spectrum used for interpolation. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00511">511</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae4f513355e7095b19417ad62d6f9f89f" name="ae4f513355e7095b19417ad62d6f9f89f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae4f513355e7095b19417ad62d6f9f89f">&#9670;&#160;</a></span>readROMCCanopy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; uint &gt; CameraCalibration::readROMCCanopy </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Read ROMC canopy file (Used for self test). </p>
+<dl class="section return"><dt>Returns</dt><dd>A vector of ROMC canopy UUIDs. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00674">674</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8187123a8969af3d1eb69aa6425f39ee" name="a8187123a8969af3d1eb69aa6425f39ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8187123a8969af3d1eb69aa6425f39ee">&#9670;&#160;</a></span>updateCameraResponseSpectra()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; CameraCalibration::updateCameraResponseSpectra </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>camerareponselabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>cameralabel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::map&lt; uint, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>simulatedinputspectra</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::vector&lt; float &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>truevalues</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Update camera response spectra. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">camerareponselabels</td><td>Label vector of camera response spectra to be updated. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cameralabel</td><td>Label of camera to be used for simulation. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">simulatedinputspectra</td><td>Input spectra. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">truevalues</td><td>True color board values. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A vector of training losses. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00329">329</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a148bdc83d9f7a3d564a3aa10793a5d70" name="a148bdc83d9f7a3d564a3aa10793a5d70"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a148bdc83d9f7a3d564a3aa10793a5d70">&#9670;&#160;</a></span>writeCalibratedCameraResponses()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CameraCalibration::writeCalibratedCameraResponses </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>camerareponselabels</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>calibratemark</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scale</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write calibrated camera response spectra. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">camerareponselabels</td><td>Label vector of original camera response spectra to be written. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calibratemark</td><td>Calibration mark. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scale</td><td>Manually adjustable Scaling factor for calibrated camera response spectra. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00401">401</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a96b8a246adb36d20a09e3d527be9de25" name="a96b8a246adb36d20a09e3d527be9de25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a96b8a246adb36d20a09e3d527be9de25">&#9670;&#160;</a></span>writeSpectralXMLfile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CameraCalibration::writeSpectralXMLfile </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>note</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; *</td>          <td class="paramname"><span class="paramname"><em>spectrum</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write XML file from spectral vectors containing both wavelengths and spectral values. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>Name with path of XML file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">note</td><td>Note to write in XML file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Label of spectral data to write in XML file </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">spectrum</td><td>Pointer of spectrum to write in XML file </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8cpp_source.html#l00205">205</a> of file <a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="aed162989edcf723021f4486ef9381105" name="aed162989edcf723021f4486ef9381105"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed162989edcf723021f4486ef9381105">&#9670;&#160;</a></span>processedspectra</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::map&lt;std::string,std::map&lt;std::string, std::vector&lt;<a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&gt; &gt; &gt; CameraCalibration::processedspectra</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00189">189</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+
+</div>
+</div>
+<a id="a6d212fd1b208a3a10237a1908578b97c" name="a6d212fd1b208a3a10237a1908578b97c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d212fd1b208a3a10237a1908578b97c">&#9670;&#160;</a></span>responseupdateparameters</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_camera_calibration_1_1_gradient_descent_parameters.html">GradientDescentParameters</a> CameraCalibration::responseupdateparameters</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00154">154</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following files:<ul>
+<li>plugins/radiation/include/<a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a></li>
+<li>plugins/radiation/src/<a class="el" href="_camera_calibration_8cpp_source.html">CameraCalibration.cpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="struct_camera_calibration.html">CameraCalibration</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

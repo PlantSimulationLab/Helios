@@ -26,7 +26,7 @@
  The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).
 
  <table>
- <caption>\ref SolarPosition constructor inputs</caption>
+ <caption>SolarPosition constructor inputs</caption>
  <tr><th>Input Parameter</th><th>Description</th><th>Convention</th><th>Default Behavior</th></tr>
  <tr><td>UTC</td><td>Difference in hours between Coordinated Universal Time (UTC) for a particular location.  See the figure below to determine a particular UTC offset.</td><td>UTC offset value is positive moving West.</td><td>+8:00</td></tr>
  <tr><td>latitude</td><td>Geographic coordinate that specifies the north–south position of a point on the Earth's surface in degrees.</td><td>Latitude is positive in the northern hemisphere.</td><td>+38.55</td></tr>

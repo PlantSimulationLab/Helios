@@ -5984,7 +5984,7 @@ void RadiationModel::applyImageProcessingPipeline( const std::string &cameralabe
 
 void RadiationCamera::normalizePixels() {
 
-    float min_P = std::numeric_limits<float>::max();
+    float min_P = (std::numeric_limits<float>::max)();
     float max_P = 0.0f;
     for ( const auto &[channel_label, data] : pixel_data ) {
         for ( float v : data ) {

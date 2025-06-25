@@ -2420,6 +2420,8 @@ protected:
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
     void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
+    void pruneGroundCollisions( uint plantID );
+
     // --- Carbohydrate Model --- //
 
     void accumulateShootPhotosynthesis() const;

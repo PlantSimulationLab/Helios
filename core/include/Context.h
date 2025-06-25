@@ -5360,6 +5360,19 @@ public:
      */
     uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile );
 
+    //! Add a patch that is subdivided into a regular grid of sub-patches (tiled texture)
+    /**
+     * \param[in] center 3D coordinates of box center
+     * \param[in] size Size of the box in the x- and y-directions
+     * \param[in] rotation Spherical rotation of tiled surface
+     * \param[in] subdiv Number of subdivisions in x- and y-directions
+     * \param[in] texturefile Name of image file for texture map
+     * \param[in] texture_repeat Number of times to repeat the texture image in the x- and y-directions
+     * \return Object ID of new tile object.
+     * \ingroup compoundobjects
+     */
+    uint addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile, const int2 &texture_repeat);
+
     //! Add a spherical compound object to the Context
     /**
      * \param[in] Ndivs Number of tessellations in zenithal and azimuthal directions
@@ -5755,6 +5768,19 @@ public:
      * \ingroup compoundobjects
      */
     std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char* texturefile );
+
+    //! Add a patch that is subdivided into a regular grid of sub-patches (tiled texture)
+    /**
+     * \param[in] center 3D coordinates of box center
+     * \param[in] size Size of the box in the x- and y-directions
+     * \param[in] rotation Spherical rotation of tiled surface
+     * \param[in] subdiv Number of subdivisions in x- and y-directions
+     * \param[in] texturefile Name of image file for texture map
+     * \param[in] texture_repeat Number of times to repeat the texture image in the x- and y-directions
+     * \return Vector of UUIDs for each sub-patch
+     * \ingroup compoundobjects
+     */
+    std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile, const int2 &texture_repeat);
 
     //! Add a 3D tube compound object to the Context
     /** A `tube' or `snake' compound object comprised of Triangle primitives

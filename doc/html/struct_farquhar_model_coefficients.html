@@ -1,0 +1,1864 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: FarquharModelCoefficients Struct Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.36</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('struct_farquhar_model_coefficients.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Data Fields</a> &#124;
+<a href="#friends">Friends</a>  </div>
+  <div class="headertitle"><div class="title">FarquharModelCoefficients Struct Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a6ffd05672ffed3b3558350aa64759af3" id="r_a6ffd05672ffed3b3558350aa64759af3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ffd05672ffed3b3558350aa64759af3">setVcmax</a> (float Vcmax)</td></tr>
+<tr class="memdesc:a6ffd05672ffed3b3558350aa64759af3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Vcmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:a6ffd05672ffed3b3558350aa64759af3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d507726aa764df6ee14a7b23f2c926b" id="r_a0d507726aa764df6ee14a7b23f2c926b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d507726aa764df6ee14a7b23f2c926b">setVcmax</a> (float Vcmax_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:a0d507726aa764df6ee14a7b23f2c926b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:a0d507726aa764df6ee14a7b23f2c926b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6b0e6762acfd46a004dcfb3e17ad38b" id="r_af6b0e6762acfd46a004dcfb3e17ad38b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af6b0e6762acfd46a004dcfb3e17ad38b">setVcmax</a> (float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:af6b0e6762acfd46a004dcfb3e17ad38b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:af6b0e6762acfd46a004dcfb3e17ad38b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab04f1f6e2a0a804dcf930fe7a79331ab" id="r_ab04f1f6e2a0a804dcf930fe7a79331ab"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab04f1f6e2a0a804dcf930fe7a79331ab">setVcmax</a> (float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:ab04f1f6e2a0a804dcf930fe7a79331ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:ab04f1f6e2a0a804dcf930fe7a79331ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64c5a3e2177539d1c6c2596d948f4d9f" id="r_a64c5a3e2177539d1c6c2596d948f4d9f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64c5a3e2177539d1c6c2596d948f4d9f">setJmax</a> (float Jmax)</td></tr>
+<tr class="memdesc:a64c5a3e2177539d1c6c2596d948f4d9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Jmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:a64c5a3e2177539d1c6c2596d948f4d9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a352a9ccec0c4abd0b16486b177c2c6e6" id="r_a352a9ccec0c4abd0b16486b177c2c6e6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a352a9ccec0c4abd0b16486b177c2c6e6">setJmax</a> (float Jmax_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:a352a9ccec0c4abd0b16486b177c2c6e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:a352a9ccec0c4abd0b16486b177c2c6e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad16af5b96d79579253e8658ce10d34b7" id="r_ad16af5b96d79579253e8658ce10d34b7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad16af5b96d79579253e8658ce10d34b7">setJmax</a> (float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:ad16af5b96d79579253e8658ce10d34b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:ad16af5b96d79579253e8658ce10d34b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb6ffe12014f11c8f200253e2dcf0586" id="r_abb6ffe12014f11c8f200253e2dcf0586"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb6ffe12014f11c8f200253e2dcf0586">setJmax</a> (float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:abb6ffe12014f11c8f200253e2dcf0586"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:abb6ffe12014f11c8f200253e2dcf0586"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6d86187da7c21c2c6a469c85a181ade" id="r_ad6d86187da7c21c2c6a469c85a181ade"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6d86187da7c21c2c6a469c85a181ade">setTPU</a> (float TPU)</td></tr>
+<tr class="memdesc:ad6d86187da7c21c2c6a469c85a181ade"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:ad6d86187da7c21c2c6a469c85a181ade"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5656a4df42eb8de9b7ce0f740a621df1" id="r_a5656a4df42eb8de9b7ce0f740a621df1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5656a4df42eb8de9b7ce0f740a621df1">setTPU</a> (float TPU_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:a5656a4df42eb8de9b7ce0f740a621df1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:a5656a4df42eb8de9b7ce0f740a621df1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34126435976e855f367e594e8fd43f1a" id="r_a34126435976e855f367e594e8fd43f1a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a34126435976e855f367e594e8fd43f1a">setTPU</a> (float TPU_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:a34126435976e855f367e594e8fd43f1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:a34126435976e855f367e594e8fd43f1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77fe6675d7f48b1797a2fc2e2ade6514" id="r_a77fe6675d7f48b1797a2fc2e2ade6514"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77fe6675d7f48b1797a2fc2e2ade6514">setTPU</a> (float TPU_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:a77fe6675d7f48b1797a2fc2e2ade6514"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:a77fe6675d7f48b1797a2fc2e2ade6514"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a385e9bd7fe6164bdff7f6a53d66aa0cc" id="r_a385e9bd7fe6164bdff7f6a53d66aa0cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a385e9bd7fe6164bdff7f6a53d66aa0cc">setRd</a> (float Rd)</td></tr>
+<tr class="memdesc:a385e9bd7fe6164bdff7f6a53d66aa0cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:a385e9bd7fe6164bdff7f6a53d66aa0cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13b6543d99af107e12ca4a057d87b706" id="r_a13b6543d99af107e12ca4a057d87b706"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a13b6543d99af107e12ca4a057d87b706">setRd</a> (float Rd_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:a13b6543d99af107e12ca4a057d87b706"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:a13b6543d99af107e12ca4a057d87b706"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf1055c8ff5725f746d624f6baa326c7" id="r_acf1055c8ff5725f746d624f6baa326c7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf1055c8ff5725f746d624f6baa326c7">setRd</a> (float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:acf1055c8ff5725f746d624f6baa326c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:acf1055c8ff5725f746d624f6baa326c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad203fa1a082d9ac2db6247d7afb56558" id="r_ad203fa1a082d9ac2db6247d7afb56558"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad203fa1a082d9ac2db6247d7afb56558">setRd</a> (float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:ad203fa1a082d9ac2db6247d7afb56558"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response ccording to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:ad203fa1a082d9ac2db6247d7afb56558"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa81a3f91ec33be34b377e641efc83263" id="r_aa81a3f91ec33be34b377e641efc83263"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa81a3f91ec33be34b377e641efc83263">setQuantumEfficiency_alpha</a> (float alpha)</td></tr>
+<tr class="memdesc:aa81a3f91ec33be34b377e641efc83263"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:aa81a3f91ec33be34b377e641efc83263"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad499e42fdff8b223947497e0683a682" id="r_aad499e42fdff8b223947497e0683a682"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad499e42fdff8b223947497e0683a682">setQuantumEfficiency_alpha</a> (float alpha_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:aad499e42fdff8b223947497e0683a682"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:aad499e42fdff8b223947497e0683a682"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6f487fb95d090d43456446d040d4167" id="r_ad6f487fb95d090d43456446d040d4167"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6f487fb95d090d43456446d040d4167">setQuantumEfficiency_alpha</a> (float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:ad6f487fb95d090d43456446d040d4167"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:ad6f487fb95d090d43456446d040d4167"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a79575c65e21daba4b639f572ff43111f" id="r_a79575c65e21daba4b639f572ff43111f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a79575c65e21daba4b639f572ff43111f">setQuantumEfficiency_alpha</a> (float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:a79575c65e21daba4b639f572ff43111f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:a79575c65e21daba4b639f572ff43111f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26bc4485aa9294a084fd37d96be1d59f" id="r_a26bc4485aa9294a084fd37d96be1d59f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a26bc4485aa9294a084fd37d96be1d59f">setLightResponseCurvature_theta</a> (float theta)</td></tr>
+<tr class="memdesc:a26bc4485aa9294a084fd37d96be1d59f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.  <br /></td></tr>
+<tr class="separator:a26bc4485aa9294a084fd37d96be1d59f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3b2303667723d8256fa79da237f235b" id="r_ae3b2303667723d8256fa79da237f235b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3b2303667723d8256fa79da237f235b">setLightResponseCurvature_theta</a> (float theta_at_25_C, float rate_of_increase_dHa)</td></tr>
+<tr class="memdesc:ae3b2303667723d8256fa79da237f235b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation.  <br /></td></tr>
+<tr class="separator:ae3b2303667723d8256fa79da237f235b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36f7e75b7243069af8bf90fb2928148c" id="r_a36f7e75b7243069af8bf90fb2928148c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36f7e75b7243069af8bf90fb2928148c">setLightResponseCurvature_theta</a> (float theta_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C)</td></tr>
+<tr class="memdesc:a36f7e75b7243069af8bf90fb2928148c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum.  <br /></td></tr>
+<tr class="separator:a36f7e75b7243069af8bf90fb2928148c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac76b56a7b951e18619d54769e09900ff" id="r_ac76b56a7b951e18619d54769e09900ff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac76b56a7b951e18619d54769e09900ff">setLightResponseCurvature_theta</a> (float theta_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd)</td></tr>
+<tr class="memdesc:ac76b56a7b951e18619d54769e09900ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum.  <br /></td></tr>
+<tr class="separator:ac76b56a7b951e18619d54769e09900ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e1f26443a7514d6a694da64d6db42d6" id="r_a6e1f26443a7514d6a694da64d6db42d6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e1f26443a7514d6a694da64d6db42d6">getVcmaxTempResponse</a> ()</td></tr>
+<tr class="separator:a6e1f26443a7514d6a694da64d6db42d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acef3fbf4fd4dc65aa58b555afdee4805" id="r_acef3fbf4fd4dc65aa58b555afdee4805"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acef3fbf4fd4dc65aa58b555afdee4805">getJmaxTempResponse</a> ()</td></tr>
+<tr class="separator:acef3fbf4fd4dc65aa58b555afdee4805"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2d524b3a20bc13d151fc27d465d7553" id="r_aa2d524b3a20bc13d151fc27d465d7553"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa2d524b3a20bc13d151fc27d465d7553">getTPUTempResponse</a> ()</td></tr>
+<tr class="separator:aa2d524b3a20bc13d151fc27d465d7553"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c2eae545d33ab797d8023f3d917cd74" id="r_a9c2eae545d33ab797d8023f3d917cd74"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9c2eae545d33ab797d8023f3d917cd74">getRdTempResponse</a> ()</td></tr>
+<tr class="separator:a9c2eae545d33ab797d8023f3d917cd74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06d579a3ee786824daf23cabcde3069a" id="r_a06d579a3ee786824daf23cabcde3069a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06d579a3ee786824daf23cabcde3069a">getQuantumEfficiencyTempResponse</a> ()</td></tr>
+<tr class="separator:a06d579a3ee786824daf23cabcde3069a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3d5ff687a91f2cd4aa56ec1a35faf1b" id="r_af3d5ff687a91f2cd4aa56ec1a35faf1b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3d5ff687a91f2cd4aa56ec1a35faf1b">getLightResponseCurvatureTempResponse</a> ()</td></tr>
+<tr class="separator:af3d5ff687a91f2cd4aa56ec1a35faf1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr class="memitem:ad5d997cb7b71441cc8700c69c1c4a0cd" id="r_ad5d997cb7b71441cc8700c69c1c4a0cd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad5d997cb7b71441cc8700c69c1c4a0cd">TPU_flag</a></td></tr>
+<tr class="separator:ad5d997cb7b71441cc8700c69c1c4a0cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a254143d822eb5b58bc918467f32a7c6f" id="r_a254143d822eb5b58bc918467f32a7c6f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a254143d822eb5b58bc918467f32a7c6f">Vcmax</a></td></tr>
+<tr class="separator:a254143d822eb5b58bc918467f32a7c6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5ee76820ec9ad8b31ac727eb2f97889" id="r_ae5ee76820ec9ad8b31ac727eb2f97889"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae5ee76820ec9ad8b31ac727eb2f97889">Jmax</a></td></tr>
+<tr class="separator:ae5ee76820ec9ad8b31ac727eb2f97889"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a418ee076ef2eaa2e5d6d695fa52cf132" id="r_a418ee076ef2eaa2e5d6d695fa52cf132"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a418ee076ef2eaa2e5d6d695fa52cf132">Rd</a></td></tr>
+<tr class="separator:a418ee076ef2eaa2e5d6d695fa52cf132"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a57a2170eeb331a8a0f5ee248c8bacb" id="r_a8a57a2170eeb331a8a0f5ee248c8bacb"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a57a2170eeb331a8a0f5ee248c8bacb">alpha</a></td></tr>
+<tr class="separator:a8a57a2170eeb331a8a0f5ee248c8bacb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace01fefd33aa5937c7f720c393b2359b" id="r_ace01fefd33aa5937c7f720c393b2359b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace01fefd33aa5937c7f720c393b2359b">O</a></td></tr>
+<tr class="separator:ace01fefd33aa5937c7f720c393b2359b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07e26037ea04a7469727698d714bff9d" id="r_a07e26037ea04a7469727698d714bff9d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a07e26037ea04a7469727698d714bff9d">c_Rd</a></td></tr>
+<tr class="separator:a07e26037ea04a7469727698d714bff9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a945558d8e48cf4caceee9384e9c5f51f" id="r_a945558d8e48cf4caceee9384e9c5f51f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a945558d8e48cf4caceee9384e9c5f51f">c_Vcmax</a></td></tr>
+<tr class="separator:a945558d8e48cf4caceee9384e9c5f51f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a508f8a8325d0d1011a0a41adbf34fa11" id="r_a508f8a8325d0d1011a0a41adbf34fa11"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a508f8a8325d0d1011a0a41adbf34fa11">c_Jmax</a></td></tr>
+<tr class="separator:a508f8a8325d0d1011a0a41adbf34fa11"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c259bfdd4c42be170101303011c5a62" id="r_a4c259bfdd4c42be170101303011c5a62"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c259bfdd4c42be170101303011c5a62">c_Gamma</a></td></tr>
+<tr class="separator:a4c259bfdd4c42be170101303011c5a62"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae37a41ee733b150cb91bded7d32942a8" id="r_ae37a41ee733b150cb91bded7d32942a8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae37a41ee733b150cb91bded7d32942a8">c_Kc</a></td></tr>
+<tr class="separator:ae37a41ee733b150cb91bded7d32942a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acffbe509471d9f85b879cd678aa16510" id="r_acffbe509471d9f85b879cd678aa16510"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acffbe509471d9f85b879cd678aa16510">c_Ko</a></td></tr>
+<tr class="separator:acffbe509471d9f85b879cd678aa16510"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af164c9278f21d1860b67ffc306bdcc7c" id="r_af164c9278f21d1860b67ffc306bdcc7c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af164c9278f21d1860b67ffc306bdcc7c">dH_Rd</a></td></tr>
+<tr class="separator:af164c9278f21d1860b67ffc306bdcc7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdafa7a08b1f2fe6313e03603f931b7a" id="r_abdafa7a08b1f2fe6313e03603f931b7a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abdafa7a08b1f2fe6313e03603f931b7a">dH_Vcmax</a></td></tr>
+<tr class="separator:abdafa7a08b1f2fe6313e03603f931b7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2e7dc2e2b41e5c82eac4cb08026d224" id="r_ab2e7dc2e2b41e5c82eac4cb08026d224"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab2e7dc2e2b41e5c82eac4cb08026d224">dH_Jmax</a></td></tr>
+<tr class="separator:ab2e7dc2e2b41e5c82eac4cb08026d224"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c195c9d6ecc49d3c1fb2732cb37e29b" id="r_a0c195c9d6ecc49d3c1fb2732cb37e29b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c195c9d6ecc49d3c1fb2732cb37e29b">dH_Gamma</a></td></tr>
+<tr class="separator:a0c195c9d6ecc49d3c1fb2732cb37e29b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd5f0a93a9badc714ee96877be7d35c8" id="r_afd5f0a93a9badc714ee96877be7d35c8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd5f0a93a9badc714ee96877be7d35c8">dH_Kc</a></td></tr>
+<tr class="separator:afd5f0a93a9badc714ee96877be7d35c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a434b97784588ae7ec862756d9c134f20" id="r_a434b97784588ae7ec862756d9c134f20"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a434b97784588ae7ec862756d9c134f20">dH_Ko</a></td></tr>
+<tr class="separator:a434b97784588ae7ec862756d9c134f20"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a250081250c5a9d2a0de65110f4606efe" id="r_a250081250c5a9d2a0de65110f4606efe"><td class="memItemLeft" align="right" valign="top">class&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a250081250c5a9d2a0de65110f4606efe">PhotosynthesisModel</a></td></tr>
+<tr class="separator:a250081250c5a9d2a0de65110f4606efe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock">
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00112">112</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a87f8535a388bf7de293f5b7df71a5567" name="a87f8535a388bf7de293f5b7df71a5567"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a87f8535a388bf7de293f5b7df71a5567">&#9670;&#160;</a></span>FarquharModelCoefficients()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FarquharModelCoefficients::FarquharModelCoefficients </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00114">114</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="acef3fbf4fd4dc65aa58b555afdee4805" name="acef3fbf4fd4dc65aa58b555afdee4805"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acef3fbf4fd4dc65aa58b555afdee4805">&#9670;&#160;</a></span>getJmaxTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getJmaxTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00415">415</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af3d5ff687a91f2cd4aa56ec1a35faf1b" name="af3d5ff687a91f2cd4aa56ec1a35faf1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3d5ff687a91f2cd4aa56ec1a35faf1b">&#9670;&#160;</a></span>getLightResponseCurvatureTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getLightResponseCurvatureTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00431">431</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a06d579a3ee786824daf23cabcde3069a" name="a06d579a3ee786824daf23cabcde3069a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06d579a3ee786824daf23cabcde3069a">&#9670;&#160;</a></span>getQuantumEfficiencyTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getQuantumEfficiencyTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00427">427</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a9c2eae545d33ab797d8023f3d917cd74" name="a9c2eae545d33ab797d8023f3d917cd74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c2eae545d33ab797d8023f3d917cd74">&#9670;&#160;</a></span>getRdTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getRdTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00423">423</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aa2d524b3a20bc13d151fc27d465d7553" name="aa2d524b3a20bc13d151fc27d465d7553"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa2d524b3a20bc13d151fc27d465d7553">&#9670;&#160;</a></span>getTPUTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getTPUTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00419">419</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a6e1f26443a7514d6a694da64d6db42d6" name="a6e1f26443a7514d6a694da64d6db42d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e1f26443a7514d6a694da64d6db42d6">&#9670;&#160;</a></span>getVcmaxTempResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> FarquharModelCoefficients::getVcmaxTempResponse </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00411">411</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a64c5a3e2177539d1c6c2596d948f4d9f" name="a64c5a3e2177539d1c6c2596d948f4d9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64c5a3e2177539d1c6c2596d948f4d9f">&#9670;&#160;</a></span>setJmax() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setJmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Jmax</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Jmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax</td><td>Value of Jmax. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00211">211</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a352a9ccec0c4abd0b16486b177c2c6e6" name="a352a9ccec0c4abd0b16486b177c2c6e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a352a9ccec0c4abd0b16486b177c2c6e6">&#9670;&#160;</a></span>setJmax() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setJmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Jmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00220">220</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad16af5b96d79579253e8658ce10d34b7" name="ad16af5b96d79579253e8658ce10d34b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad16af5b96d79579253e8658ce10d34b7">&#9670;&#160;</a></span>setJmax() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setJmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Jmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00230">230</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="abb6ffe12014f11c8f200253e2dcf0586" name="abb6ffe12014f11c8f200253e2dcf0586"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb6ffe12014f11c8f200253e2dcf0586">&#9670;&#160;</a></span>setJmax() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setJmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Jmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Jmax with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00242">242</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a26bc4485aa9294a084fd37d96be1d59f" name="a26bc4485aa9294a084fd37d96be1d59f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26bc4485aa9294a084fd37d96be1d59f">&#9670;&#160;</a></span>setLightResponseCurvature_theta() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setLightResponseCurvature_theta </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>theta</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00375">375</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ae3b2303667723d8256fa79da237f235b" name="ae3b2303667723d8256fa79da237f235b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3b2303667723d8256fa79da237f235b">&#9670;&#160;</a></span>setLightResponseCurvature_theta() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setLightResponseCurvature_theta </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>theta_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00384">384</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a36f7e75b7243069af8bf90fb2928148c" name="a36f7e75b7243069af8bf90fb2928148c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a36f7e75b7243069af8bf90fb2928148c">&#9670;&#160;</a></span>setLightResponseCurvature_theta() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setLightResponseCurvature_theta </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>theta_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of theta in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00395">395</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ac76b56a7b951e18619d54769e09900ff" name="ac76b56a7b951e18619d54769e09900ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac76b56a7b951e18619d54769e09900ff">&#9670;&#160;</a></span>setLightResponseCurvature_theta() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setLightResponseCurvature_theta </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>theta_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of reaction in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of theta with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00407">407</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aa81a3f91ec33be34b377e641efc83263" name="aa81a3f91ec33be34b377e641efc83263"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa81a3f91ec33be34b377e641efc83263">&#9670;&#160;</a></span>setQuantumEfficiency_alpha() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setQuantumEfficiency_alpha </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>alpha</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00335">335</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aad499e42fdff8b223947497e0683a682" name="aad499e42fdff8b223947497e0683a682"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad499e42fdff8b223947497e0683a682">&#9670;&#160;</a></span>setQuantumEfficiency_alpha() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setQuantumEfficiency_alpha </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>alpha_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00344">344</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad6f487fb95d090d43456446d040d4167" name="ad6f487fb95d090d43456446d040d4167"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6f487fb95d090d43456446d040d4167">&#9670;&#160;</a></span>setQuantumEfficiency_alpha() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setQuantumEfficiency_alpha </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>alpha_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00355">355</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a79575c65e21daba4b639f572ff43111f" name="a79575c65e21daba4b639f572ff43111f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a79575c65e21daba4b639f572ff43111f">&#9670;&#160;</a></span>setQuantumEfficiency_alpha() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setQuantumEfficiency_alpha </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>alpha_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of alpha with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00367">367</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a385e9bd7fe6164bdff7f6a53d66aa0cc" name="a385e9bd7fe6164bdff7f6a53d66aa0cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a385e9bd7fe6164bdff7f6a53d66aa0cc">&#9670;&#160;</a></span>setRd() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setRd </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Rd</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00295">295</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a13b6543d99af107e12ca4a057d87b706" name="a13b6543d99af107e12ca4a057d87b706"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a13b6543d99af107e12ca4a057d87b706">&#9670;&#160;</a></span>setRd() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setRd </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Rd_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00304">304</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="acf1055c8ff5725f746d624f6baa326c7" name="acf1055c8ff5725f746d624f6baa326c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf1055c8ff5725f746d624f6baa326c7">&#9670;&#160;</a></span>setRd() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setRd </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Rd_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00315">315</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad203fa1a082d9ac2db6247d7afb56558" name="ad203fa1a082d9ac2db6247d7afb56558"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad203fa1a082d9ac2db6247d7afb56558">&#9670;&#160;</a></span>setRd() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setRd </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Rd_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response ccording to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Rd with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00327">327</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad6d86187da7c21c2c6a469c85a181ade" name="ad6d86187da7c21c2c6a469c85a181ade"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6d86187da7c21c2c6a469c85a181ade">&#9670;&#160;</a></span>setTPU() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setTPU </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>TPU</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00250">250</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a5656a4df42eb8de9b7ce0f740a621df1" name="a5656a4df42eb8de9b7ce0f740a621df1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5656a4df42eb8de9b7ce0f740a621df1">&#9670;&#160;</a></span>setTPU() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setTPU </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>TPU_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>A temperature optimum will not be assumed if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00261">261</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a34126435976e855f367e594e8fd43f1a" name="a34126435976e855f367e594e8fd43f1a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a34126435976e855f367e594e8fd43f1a">&#9670;&#160;</a></span>setTPU() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setTPU </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>TPU_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00273">273</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a77fe6675d7f48b1797a2fc2e2ade6514" name="a77fe6675d7f48b1797a2fc2e2ade6514"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77fe6675d7f48b1797a2fc2e2ade6514">&#9670;&#160;</a></span>setTPU() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setTPU </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>TPU_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of TPU with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00286">286</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a6ffd05672ffed3b3558350aa64759af3" name="a6ffd05672ffed3b3558350aa64759af3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ffd05672ffed3b3558350aa64759af3">&#9670;&#160;</a></span>setVcmax() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setVcmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Vcmax</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Vcmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax</td><td>Value of Vcmax. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00171">171</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a0d507726aa764df6ee14a7b23f2c926b" name="a0d507726aa764df6ee14a7b23f2c926b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d507726aa764df6ee14a7b23f2c926b">&#9670;&#160;</a></span>setVcmax() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setVcmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Vcmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00180">180</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af6b0e6762acfd46a004dcfb3e17ad38b" name="af6b0e6762acfd46a004dcfb3e17ad38b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6b0e6762acfd46a004dcfb3e17ad38b">&#9670;&#160;</a></span>setVcmax() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setVcmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Vcmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celcius. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The rate of decrease of Vcmax with temperature will be assumed with a biologically reasonable default value if not specified. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00191">191</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab04f1f6e2a0a804dcf930fe7a79331ab" name="ab04f1f6e2a0a804dcf930fe7a79331ab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab04f1f6e2a0a804dcf930fe7a79331ab">&#9670;&#160;</a></span>setVcmax() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void FarquharModelCoefficients::setVcmax </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Vcmax_at_25_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_increase_dHa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>optimum_temperature_in_C</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>rate_of_decrease_dHd</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Vcmax with temperature beyond the optimum. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00203">203</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Friends And Related Symbol Documentation</h2>
+<a id="a250081250c5a9d2a0de65110f4606efe" name="a250081250c5a9d2a0de65110f4606efe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a250081250c5a9d2a0de65110f4606efe">&#9670;&#160;</a></span>PhotosynthesisModel</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">friend class <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel friend">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00445">445</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="a8a57a2170eeb331a8a0f5ee248c8bacb" name="a8a57a2170eeb331a8a0f5ee248c8bacb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a57a2170eeb331a8a0f5ee248c8bacb">&#9670;&#160;</a></span>alpha</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::alpha</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00149">149</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a4c259bfdd4c42be170101303011c5a62" name="a4c259bfdd4c42be170101303011c5a62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c259bfdd4c42be170101303011c5a62">&#9670;&#160;</a></span>c_Gamma</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Gamma</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00156">156</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a508f8a8325d0d1011a0a41adbf34fa11" name="a508f8a8325d0d1011a0a41adbf34fa11"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a508f8a8325d0d1011a0a41adbf34fa11">&#9670;&#160;</a></span>c_Jmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Jmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00155">155</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ae37a41ee733b150cb91bded7d32942a8" name="ae37a41ee733b150cb91bded7d32942a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae37a41ee733b150cb91bded7d32942a8">&#9670;&#160;</a></span>c_Kc</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Kc</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00157">157</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="acffbe509471d9f85b879cd678aa16510" name="acffbe509471d9f85b879cd678aa16510"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acffbe509471d9f85b879cd678aa16510">&#9670;&#160;</a></span>c_Ko</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Ko</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00158">158</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a07e26037ea04a7469727698d714bff9d" name="a07e26037ea04a7469727698d714bff9d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07e26037ea04a7469727698d714bff9d">&#9670;&#160;</a></span>c_Rd</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Rd</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00153">153</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a945558d8e48cf4caceee9384e9c5f51f" name="a945558d8e48cf4caceee9384e9c5f51f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a945558d8e48cf4caceee9384e9c5f51f">&#9670;&#160;</a></span>c_Vcmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::c_Vcmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00154">154</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a0c195c9d6ecc49d3c1fb2732cb37e29b" name="a0c195c9d6ecc49d3c1fb2732cb37e29b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c195c9d6ecc49d3c1fb2732cb37e29b">&#9670;&#160;</a></span>dH_Gamma</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Gamma</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00163">163</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab2e7dc2e2b41e5c82eac4cb08026d224" name="ab2e7dc2e2b41e5c82eac4cb08026d224"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2e7dc2e2b41e5c82eac4cb08026d224">&#9670;&#160;</a></span>dH_Jmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Jmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00162">162</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="afd5f0a93a9badc714ee96877be7d35c8" name="afd5f0a93a9badc714ee96877be7d35c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd5f0a93a9badc714ee96877be7d35c8">&#9670;&#160;</a></span>dH_Kc</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Kc</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00164">164</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a434b97784588ae7ec862756d9c134f20" name="a434b97784588ae7ec862756d9c134f20"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a434b97784588ae7ec862756d9c134f20">&#9670;&#160;</a></span>dH_Ko</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Ko</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00165">165</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af164c9278f21d1860b67ffc306bdcc7c" name="af164c9278f21d1860b67ffc306bdcc7c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af164c9278f21d1860b67ffc306bdcc7c">&#9670;&#160;</a></span>dH_Rd</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Rd</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00160">160</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="abdafa7a08b1f2fe6313e03603f931b7a" name="abdafa7a08b1f2fe6313e03603f931b7a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdafa7a08b1f2fe6313e03603f931b7a">&#9670;&#160;</a></span>dH_Vcmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::dH_Vcmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00161">161</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ae5ee76820ec9ad8b31ac727eb2f97889" name="ae5ee76820ec9ad8b31ac727eb2f97889"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5ee76820ec9ad8b31ac727eb2f97889">&#9670;&#160;</a></span>Jmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::Jmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00147">147</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ace01fefd33aa5937c7f720c393b2359b" name="ace01fefd33aa5937c7f720c393b2359b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace01fefd33aa5937c7f720c393b2359b">&#9670;&#160;</a></span>O</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::O</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00150">150</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a418ee076ef2eaa2e5d6d695fa52cf132" name="a418ee076ef2eaa2e5d6d695fa52cf132"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a418ee076ef2eaa2e5d6d695fa52cf132">&#9670;&#160;</a></span>Rd</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::Rd</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00148">148</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad5d997cb7b71441cc8700c69c1c4a0cd" name="ad5d997cb7b71441cc8700c69c1c4a0cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5d997cb7b71441cc8700c69c1c4a0cd">&#9670;&#160;</a></span>TPU_flag</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int FarquharModelCoefficients::TPU_flag</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00143">143</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a254143d822eb5b58bc918467f32a7c6f" name="a254143d822eb5b58bc918467f32a7c6f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a254143d822eb5b58bc918467f32a7c6f">&#9670;&#160;</a></span>Vcmax</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FarquharModelCoefficients::Vcmax</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00146">146</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>plugins/photosynthesis/include/<a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

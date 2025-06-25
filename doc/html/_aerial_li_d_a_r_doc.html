@@ -1,0 +1,404 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: Aerial LiDAR Point Cloud Plugin Documentation</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.36</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('_aerial_li_d_a_r_doc.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div><div class="header">
+  <div class="headertitle"><div class="title">Aerial LiDAR Point Cloud Plugin Documentation</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="toc"><h3>Table of Contents</h3>
+<ul>
+  <li class="level1">
+    <a href="#AerialLiDARissues">Known Issues</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARintro">Introduction</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARdepends">Dependencies</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARConstructor">Class Constructor</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARbg">Background information</a>
+    <ul>
+      <li class="level2">
+        <a href="#AerialLiDARcoord">Coordinates and scan pattern</a>
+      </li>
+      <li class="level2">
+        <a href="#AerialLiDARreturn">Difference between discrete-return and full-waveform LiDAR data</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#AerialSetup">Data processing setup</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialScanIO">Loading scan data from file</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARgrid">Establishing grid cells</a>
+  </li>
+  <li class="level1">
+    <a href="#AerialLiDARprocess">Processing LiDAR data</a>
+    <ul>
+      <li class="level2">
+        <a href="#AerialRasters">2D raster height maps</a>
+      </li>
+      <li class="level2">
+        <a href="#AerialGroundCover">2D raster ground cover fraction</a>
+      </li>
+      <li class="level2">
+        <a href="#AerialLeafArea">Leaf area</a>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
+<div class="textblock"><div class="image">
+<img src="AerialLiDAR.png" alt=""/>
+</div>
+<p><br  />
+<br  />
+ </p>
+<table class="doxtable">
+<tr>
+<th>Dependencies </th><td><p class="starttd">NVIDIA CUDA 9.0+ </p>
+<p class="endtd">Visualizer plug-in  </p>
+</td></tr>
+<tr>
+<th>CMakeLists.txt </th><td>set( PLUGINS "aeriallidar" )  </td></tr>
+<tr>
+<th>Header File </th><td>include "AerialLiDAR.h"  </td></tr>
+<tr>
+<th>Class </th><td><a class="el" href="class_aerial_li_d_a_rcloud.html">AerialLiDARcloud</a>  </td></tr>
+</table>
+<h1><a class="anchor" id="AerialLiDARissues"></a>
+Known Issues</h1>
+<ul>
+<li>The Aerial LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.</li>
+</ul>
+<h1><a class="anchor" id="AerialLiDARintro"></a>
+Introduction</h1>
+<p>The Aerial LiDAR plugin is used to process LiDAR data collected from an airborne platform into 2D and 3D raster data. The plugin is able to create the following data products on an arbitrary raster grid:</p>
+<ul>
+<li>Ground height (2D)</li>
+<li>Maximum vegetation height (2D)</li>
+<li>"Effective" vegetation height (2D)</li>
+<li>Ground cover fraction (2D)</li>
+<li>Leaf area index (2D)</li>
+<li>Leaf area density (3D)</li>
+</ul>
+<h1><a class="anchor" id="AerialLiDARdepends"></a>
+Dependencies</h1>
+<table class="doxtable">
+<tr>
+<th>Package </th><td><div class="image">
+<img src="apple-logo.png" alt=""/>
+</div>
+ </td><td><div class="image">
+<img src="unix-logo.png" alt=""/>
+</div>
+ </td><td><div class="image">
+<img src="windows-logo.png" alt=""/>
+</div>
+  </td></tr>
+<tr>
+<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX: Not available </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
+</table>
+<p>For help choosing the correct CUDA toolkit version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
+<p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Install and Set-up</a></p>
+<p>If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
+<h1><a class="anchor" id="AerialLiDARConstructor"></a>
+Class Constructor</h1>
+<table class="doxtable">
+<tr>
+<th>Constructors  </th></tr>
+<tr>
+<td><a class="el" href="class_aerial_li_d_a_rcloud.html">AerialLiDARcloud( void )</a>  </td></tr>
+</table>
+<p>The <a class="el" href="class_aerial_li_d_a_rcloud.html">AerialLiDARcloud</a> class contains point cloud data, and is used to perform processing operations on the data. The class constructor does not take any arguments.</p>
+<h1><a class="anchor" id="AerialLiDARbg"></a>
+Background information</h1>
+<h2><a class="anchor" id="AerialLiDARcoord"></a>
+Coordinates and scan pattern</h2>
+<p>The plug-in assumes that laser pulses are launched from some surface above the canopy downward. When processing LiDAR data, each laser pulse is defined by 1) the (x,y,z) coordinates of the laser-object intersection point, and 2) the angle of the laser traversal direction in spherical coordinates (e.g., for a laser pulse traveling directly downward, the zenith angle is \(\theta=\pi\) and azimuth \(\varphi\) is arbitrary).</p>
+<div class="image">
+<img src="LaunchSchematic.jpeg" alt=""/>
+</div>
+<h2><a class="anchor" id="AerialLiDARreturn"></a>
+Difference between discrete-return and full-waveform LiDAR data</h2>
+<p>The laser beam emitted from a LiDAR instrument has some finite diameter, which increases with distance from the scanner. In many cases, the beam diameter may be larger than the width of individual leaves by the time it reaches the canopy. This means that a single laser pulse may intersect multiple objects along its path to the ground.</p>
+<p>For a "discrete-return" instrument, only one (or sometimes a few) hit points are recorded per laser pulse. The distance from the scanner recorded for the hit point is an effective average distance to all objects intersected by the beam.</p>
+<p>By contrast "full-waveform" instruments are able to record multiple hit point locations along a single laser pulse by analyzing the return timeseries or "waveform". This class of instruments is able to process the timeseries of pulse returns into separate distances. Full-waveform instruments are preferred because they provide more information, particularly in dense canopies where a discrete-return instrument would rarely record the location of the ground. Technically, full-waveform instruments ultimately output discrete hit points, but for the purposes of this documentation we will consider discrete-return data to have a single hit point per laser pulse, and full-waveform data to have an unlimited number of hit points per laser pulse.</p>
+<div class="image">
+<img src="WaveformSchematic.jpeg" alt=""/>
+</div>
+<h1><a class="anchor" id="AerialSetup"></a>
+Data processing setup</h1>
+<p>Processing begins by constructing an instance of AerialLiDAR::AerialLiDARcloud and adding one or more aerial scans. Scans may be created manually using AerialLiDAR::addScan() and AerialLiDAR::addHitPoint(), but are usually imported from an XML file with AerialLiDAR::loadXML(). The same XML description can also define the 3-D grid used for binning hits. After the scans and grid are loaded, call AerialLiDAR::calculateHitGridCell() so that each return is associated with the appropriate grid cell.</p>
+<h1><a class="anchor" id="AerialScanIO"></a>
+Loading scan data from file</h1>
+<p>Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan. The XML file specifies the path to an ASCII text file that contains the data for each scan. The code below gives a sample XML file for loading multiple scans. Not all entries are required. At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan. Additional optional information can be specified for each hit point, as given in the table below.</p>
+<div class="fragment"><div class="line">&lt;helios&gt;</div>
+<div class="line"> </div>
+<div class="line">   &lt;scan&gt;</div>
+<div class="line">     &lt;filename&gt; /path/to/data/file.xyz &lt;/filename&gt;</div>
+<div class="line">     &lt;ASCII_format&gt; x y z zenith azimuth target_count target_index &lt;/ASCII_format&gt;</div>
+<div class="line">   &lt;/scan&gt;</div>
+<div class="line">   </div>
+<div class="line"> &lt;/helios&gt;</div>
+</div><!-- fragment --><p>The ASCII text file containing the data is a plain text file, where each row corresponds to a hit point and each column is some data value associated with that hit point. The "ASCII_format" tag defines the column format of the ASCII text file (in this case, file.xyz). Each entry in the list specifies the meaning of each column. Possible fields are listed in the table below:</p>
+<table class="doxtable">
+<tr>
+<th>Label </th><th>Description </th><th>Default behavior  </th></tr>
+<tr>
+<td>x </td><td>x-component of the (x,y,z) Cartesian coordinate of the hit point. </td><td>None: REQUIRED  </td></tr>
+<tr>
+<td>y </td><td>y-component of the (x,y,z) Cartesian coordinate of the hit point. </td><td>None: REQUIRED  </td></tr>
+<tr>
+<td>z </td><td>z-component of the (x,y,z) Cartesian coordinate of the hit point. </td><td>None: REQUIRED  </td></tr>
+<tr>
+<td>target_count </td><td>Total number of returns/hits along the hit's beam path. </td><td>REQUIRED for full-waveform; N/A for discrete-return  </td></tr>
+<tr>
+<td>target_index </td><td>Index of returns/hits along the hit's beam path (target_index=0 for first return, =1 for second return, =target_count-1 for last return). NOTE: target indices can start at 0 or 1 for the first return as long as it is consitent throughout. </td><td>REQUIRED for full-waveform; N/A for discrete-return  </td></tr>
+<tr>
+<td>zenith (or zenith_rad) </td><td>Zenithal angle (degrees) of scan ray direction corresponding to the hit point. If "theta_rad" is used, theta has units of radians rather than degrees. </td><td>180 (or \(\pi\))  </td></tr>
+<tr>
+<td>azimuth (or phi_rad) </td><td>Azithal angle (degrees) of scan ray direction corresponding to the hit point. If "phi_rad" is used, phi has units of radians rather than degrees. </td><td>0  </td></tr>
+<tr>
+<td>r (or r255) </td><td>red component of (r,g,b) hit color. If "r" tag is used, r is a floating point value and 0&lt;r&lt;1. If "r255" is used, r is an integer and 0&lt;r&lt;255. </td><td>r=1 or r255=255  </td></tr>
+<tr>
+<td>g (or g255) </td><td>green component of (r,g,b) hit color. If "g" tag is used, g is a floating point value and 0&lt;g&lt;1. If "g255" is used, g is an integer and 0&lt;g&lt;255. </td><td>g=0 or g255=0  </td></tr>
+<tr>
+<td>b (or b255) </td><td>blue component of (r,g,b) hit color. If "b" tag is used, b is a floating point value and 0&lt;b&lt;1. If "b255" is used, b is an integer and 0&lt;b&lt;255. </td><td>b=0 or b255=0  </td></tr>
+<tr>
+<td>(label) </td><td>User-defined floating-point data value. "label" can be any string describing data. For example, "reflectance", "temperature", etc.  </td><td>N/A  </td></tr>
+</table>
+<p>The XML file can be automatically loaded into the point cloud using the loadXML() function, as illustrated below.</p>
+<div class="fragment"><div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"> <span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"> <span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line"> </div>
+<div class="line">    pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);</div>
+<div class="line">    </div>
+<div class="line">}</div>
+</div><!-- fragment --><h1><a class="anchor" id="AerialLiDARgrid"></a>
+Establishing grid cells</h1>
+<p>Rectangular grid cells are used as the basis for processing point cloud data. For example, total leaf area (or leaf area density) may be calculated for each grid cell. Grid cells or "voxels" are parallelpiped volumes. The top and bottom faces are always horizontal, but the cells can be rotated in the azimuthal direction. 2D raster data such as the ground height is given on a rectangular grid.</p>
+<p>Grid cells are defined by specifying the (x,y,z) position of its center, and the size of the cell in the x, y, and z directions. Additional optional information can also be provided for grid cells, which are detailed below.</p>
+<table class="doxtable">
+<tr>
+<th>Tag </th><th>Description </th><th>Default behavior  </th></tr>
+<tr>
+<td>center </td><td>(x,y,z) Cartesian coordinates of grid center. </td><td>None: required.  </td></tr>
+<tr>
+<td>size </td><td>Size of the grid in x, y, and z directions. </td><td>None: required.  </td></tr>
+<tr>
+<td>rotation </td><td>Azimuthal rotation of the grid in degrees. </td><td>0  </td></tr>
+<tr>
+<td>Nx </td><td>Grid cell subdivisions in the x-direction. </td><td>1  </td></tr>
+<tr>
+<td>Ny </td><td>Grid cell subdivisions in the y-direction. </td><td>1  </td></tr>
+<tr>
+<td>Nz </td><td>Grid cell subdivisions in the z-direction. </td><td>1  </td></tr>
+</table>
+<p>The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells. For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".</p>
+<p>Grid cell options can be specified in an XML file using the tags listed in the table above. Multiple grid cells are added by simply adding more &lt;grid&gt;...&lt;/grid&gt; groups to the XML file.</p>
+<div class="fragment"><div class="line"> &lt;<span class="keywordtype">grid</span>&gt;</div>
+<div class="line">   \&lt;<span class="keywordtype">center</span>&gt; 0 0 0.5 \&lt;/<span class="keywordtype">center</span>&gt;</div>
+<div class="line">   \&lt;<span class="keywordtype">size</span>&gt; 100 100 10 &lt;/<span class="keywordtype">size</span>&gt;</div>
+<div class="line">   \&lt;<span class="keywordtype">rotation</span>&gt; 30 &lt;/<span class="keywordtype">rotation</span>&gt; </div>
+<div class="line">   \&lt;<span class="keywordtype">Nx</span>&gt; 3 &lt;/<span class="keywordtype">Nx</span>&gt; </div>
+<div class="line">   \&lt;<span class="keywordtype">Ny</span>&gt; 3 &lt;/<span class="keywordtype">Ny</span>&gt; </div>
+<div class="line">   \&lt;<span class="keywordtype">Nz</span>&gt; 3 &lt;/<span class="keywordtype">Nz</span>&gt; </div>
+<div class="line">&lt;/<span class="keywordtype">grid</span>&gt;</div>
+</div><!-- fragment --><h1><a class="anchor" id="AerialLiDARprocess"></a>
+Processing LiDAR data</h1>
+<h2><a class="anchor" id="AerialRasters"></a>
+2D raster height maps</h2>
+<p>Run AerialLiDAR::generateHeightModel() to create rasters of ground elevation, vegetation height and the maximum observed hit height. The routine fits planes to the lowest and highest points within each grid cell using a RANSAC algorithm. Heights for a given cell can later be queried using AerialLiDAR::getCellGroundHeight(), AerialLiDAR::getCellVegetationHeight() and AerialLiDAR::getCellMaximumHitHeight().</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_aerial_li_d_a_rcloud.html" title="Primary class for aerial LiDAR scan.">AerialLiDARcloud</a> cloud;</div>
+<div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa87abfc0d5538d3d8fe28458c7093c2c" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);</div>
+<div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#abe3e99a406251c388a3d934a7519ddb2" title="Determine the grid cell in which each hit point resides for the whole point cloud *‍/.">calculateHitGridCell</a>();</div>
+<div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a1df082e2c4cfbadba9ed2b5f139e2091" title="Determine the ground and vegetation height for each x-y grid cell. Inputs to this function are parame...">generateHeightModel</a>(1000,0.2f,0.6f,0.4f,0.6f);</div>
+</div><!-- fragment --><h2><a class="anchor" id="AerialGroundCover"></a>
+2D raster ground cover fraction</h2>
+<p>After the hit points have been associated with grid cells, call AerialLiDAR::calculateCoverFraction() to compute the fraction of ground returns within each (x,y) cell. Values are retrieved via AerialLiDAR::getCellCoverFraction().</p>
+<div class="fragment"><div class="line">cloud.calculateCoverFraction();</div>
+<div class="line"><span class="keywordtype">float</span> f = cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aaaca6e083b0195ea95a12ffb455f76f5" title="Get the height of the ground at the (x,y) location of this gridcell.">getCellCoverFraction</a>( <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">helios::make_int2</a>(0,0) );</div>
+</div><!-- fragment --><h2><a class="anchor" id="AerialLeafArea"></a>
+Leaf area</h2>
+<p>Leaf area index and leaf area density per voxel are obtained with AerialLiDAR::calculateLeafAreaGPU(). This function assumes a constant leaf angle distribution and uses the ray statistics computed for each grid cell. Individual voxel totals are accessed with AerialLiDAR::getCellLeafArea() and AerialLiDAR::getCellLeafAreaDensity().</p>
+<div class="fragment"><div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac395fd2640af864792df68609b3bd938" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(0.5f);</div>
+</div><!-- fragment --></div></div><!-- contents -->
+</div><!-- PageDoc -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

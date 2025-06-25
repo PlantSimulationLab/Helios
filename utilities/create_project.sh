@@ -37,7 +37,7 @@ fi
 
 #----- build the CMakeLists.txt file ------#
 
-echo -e '# Helios standard CMakeLists.txt file version 1.9' > CMakeLists.txt
+echo -e '# Helios standard CMakeLists.txt file version 1.10' > CMakeLists.txt
 
 echo -e 'cmake_minimum_required(VERSION 3.15)\nproject(helios)\n' >> CMakeLists.txt
 
@@ -70,7 +70,7 @@ else
     echo -e '" )\n\n' >> CMakeLists.txt
 fi
 
-echo -e '#-------- DO NOT MODIFY ---------#\ninclude( "${BASE_DIRECTORY}/core/CMake_project.txt" )\n' >> CMakeLists.txt
+echo -e '#-------- DO NOT MODIFY ---------#\ninclude( "${BASE_DIRECTORY}/core/CMake_project.cmake" )\n' >> CMakeLists.txt
 
 #----- build the main.cpp file ------#
 

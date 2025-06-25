@@ -1,0 +1,690 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: helios::uint4 Struct Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.36</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('structhelios_1_1uint4.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Data Fields</a> &#124;
+<a href="#friends">Friends</a>  </div>
+  <div class="headertitle"><div class="title">helios::uint4 Struct Reference<div class="ingroups"><a class="el" href="group__vectors.html">Vectors</a></div></div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Vector of four elements of type 'unsigned int'.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:abe6c28a81281be3379b0e881a1d29bba" id="r_abe6c28a81281be3379b0e881a1d29bba"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe6c28a81281be3379b0e881a1d29bba">uint4</a> ()</td></tr>
+<tr class="memdesc:abe6c28a81281be3379b0e881a1d29bba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
+<tr class="separator:abe6c28a81281be3379b0e881a1d29bba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed343e1458d1933b0fbb040df6333f8e" id="r_aed343e1458d1933b0fbb040df6333f8e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed343e1458d1933b0fbb040df6333f8e">uint4</a> (const std::vector&lt; unsigned int &gt; &amp;v)</td></tr>
+<tr class="memdesc:aed343e1458d1933b0fbb040df6333f8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct uint4 from a vector of unsigned ints.  <br /></td></tr>
+<tr class="separator:aed343e1458d1933b0fbb040df6333f8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29d5261558f8d7cca3f86c47a2039df8" id="r_a29d5261558f8d7cca3f86c47a2039df8"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29d5261558f8d7cca3f86c47a2039df8">uint4</a> (const unsigned int v[4])</td></tr>
+<tr class="memdesc:a29d5261558f8d7cca3f86c47a2039df8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct uint4 from an array of unsigned ints.  <br /></td></tr>
+<tr class="separator:a29d5261558f8d7cca3f86c47a2039df8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c3b908c3d740b6b519da9c453472edb" id="r_a6c3b908c3d740b6b519da9c453472edb"><td class="memItemLeft" align="right" valign="top">constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c3b908c3d740b6b519da9c453472edb">uint4</a> (unsigned int v0, unsigned int v1, unsigned int v2, unsigned int v3)</td></tr>
+<tr class="memdesc:a6c3b908c3d740b6b519da9c453472edb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct uint4 from four unsigned ints.  <br /></td></tr>
+<tr class="separator:a6c3b908c3d740b6b519da9c453472edb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e5ae8efc37dd60f1d284c1a7f831c60" id="r_a3e5ae8efc37dd60f1d284c1a7f831c60"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1uint4.html">uint4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e5ae8efc37dd60f1d284c1a7f831c60">operator+</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:a3e5ae8efc37dd60f1d284c1a7f831c60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add two uint4 vectors.  <br /></td></tr>
+<tr class="separator:a3e5ae8efc37dd60f1d284c1a7f831c60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7a9419499c059fb4dc32c14eb23ec86" id="r_ac7a9419499c059fb4dc32c14eb23ec86"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac7a9419499c059fb4dc32c14eb23ec86">operator+=</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) noexcept</td></tr>
+<tr class="memdesc:ac7a9419499c059fb4dc32c14eb23ec86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increment uint4 vector.  <br /></td></tr>
+<tr class="separator:ac7a9419499c059fb4dc32c14eb23ec86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b0f89244ea9cc0c1f4b6680cd4b90ca" id="r_a7b0f89244ea9cc0c1f4b6680cd4b90ca"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b0f89244ea9cc0c1f4b6680cd4b90ca">operator-=</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) noexcept</td></tr>
+<tr class="memdesc:a7b0f89244ea9cc0c1f4b6680cd4b90ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement uint4 vector.  <br /></td></tr>
+<tr class="separator:a7b0f89244ea9cc0c1f4b6680cd4b90ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a58cdda9e41c9f3f862e9dad71bcdb53a" id="r_a58cdda9e41c9f3f862e9dad71bcdb53a"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1uint4.html">uint4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a58cdda9e41c9f3f862e9dad71bcdb53a">operator-</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:a58cdda9e41c9f3f862e9dad71bcdb53a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract two uint4 vectors.  <br /></td></tr>
+<tr class="separator:a58cdda9e41c9f3f862e9dad71bcdb53a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed716598cb6a12316ee8a9385e5c8aa2" id="r_aed716598cb6a12316ee8a9385e5c8aa2"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed716598cb6a12316ee8a9385e5c8aa2">operator==</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:aed716598cb6a12316ee8a9385e5c8aa2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equality for all elements.  <br /></td></tr>
+<tr class="separator:aed716598cb6a12316ee8a9385e5c8aa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8a3cd89690e235925245a9766d39ffc" id="r_af8a3cd89690e235925245a9766d39ffc"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af8a3cd89690e235925245a9766d39ffc">operator!=</a> (const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;a) const noexcept</td></tr>
+<tr class="memdesc:af8a3cd89690e235925245a9766d39ffc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inequality for all elements.  <br /></td></tr>
+<tr class="separator:af8a3cd89690e235925245a9766d39ffc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a02c7803bbaa5326f31a4d97c1a3482fb" id="r_a02c7803bbaa5326f31a4d97c1a3482fb"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1uint4.html">uint4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a02c7803bbaa5326f31a4d97c1a3482fb">operator-</a> () const noexcept</td></tr>
+<tr class="memdesc:a02c7803bbaa5326f31a4d97c1a3482fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element by zero minus itself (wraps)  <br /></td></tr>
+<tr class="separator:a02c7803bbaa5326f31a4d97c1a3482fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr class="memitem:ae5317a5f924d16566591082cbcbf5c98" id="r_ae5317a5f924d16566591082cbcbf5c98"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae5317a5f924d16566591082cbcbf5c98">x</a></td></tr>
+<tr class="memdesc:ae5317a5f924d16566591082cbcbf5c98"><td class="mdescLeft">&#160;</td><td class="mdescRight">First element in vector.  <br /></td></tr>
+<tr class="separator:ae5317a5f924d16566591082cbcbf5c98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac1f4137f469abb7b3fb9114854459446" id="r_ac1f4137f469abb7b3fb9114854459446"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac1f4137f469abb7b3fb9114854459446">y</a></td></tr>
+<tr class="memdesc:ac1f4137f469abb7b3fb9114854459446"><td class="mdescLeft">&#160;</td><td class="mdescRight">Second element in vector.  <br /></td></tr>
+<tr class="separator:ac1f4137f469abb7b3fb9114854459446"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae02e4a894b323f1f0f96a0803db09577" id="r_ae02e4a894b323f1f0f96a0803db09577"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae02e4a894b323f1f0f96a0803db09577">z</a></td></tr>
+<tr class="memdesc:ae02e4a894b323f1f0f96a0803db09577"><td class="mdescLeft">&#160;</td><td class="mdescRight">Third element in vector.  <br /></td></tr>
+<tr class="separator:ae02e4a894b323f1f0f96a0803db09577"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f3e508e3d66ce70430853eeef65a6ed" id="r_a9f3e508e3d66ce70430853eeef65a6ed"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f3e508e3d66ce70430853eeef65a6ed">w</a></td></tr>
+<tr class="memdesc:a9f3e508e3d66ce70430853eeef65a6ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fourth element in vector.  <br /></td></tr>
+<tr class="separator:a9f3e508e3d66ce70430853eeef65a6ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:ace8f6e39a8b899f52214b71516532ee7" id="r_ace8f6e39a8b899f52214b71516532ee7"><td class="memItemLeft" align="right" valign="top">std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace8f6e39a8b899f52214b71516532ee7">operator&lt;&lt;</a> (std::ostream &amp;os, const <a class="el" href="structhelios_1_1uint4.html">helios::uint4</a> &amp;vec)</td></tr>
+<tr class="memdesc:ace8f6e39a8b899f52214b71516532ee7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write uint4 to output stream.  <br /></td></tr>
+<tr class="separator:ace8f6e39a8b899f52214b71516532ee7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Vector of four elements of type 'unsigned int'. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00564">564</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="abe6c28a81281be3379b0e881a1d29bba" name="abe6c28a81281be3379b0e881a1d29bba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe6c28a81281be3379b0e881a1d29bba">&#9670;&#160;</a></span>uint4() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">helios::uint4::uint4 </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Default constructor. </p>
+<p>initializes to zero </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00579">579</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="aed343e1458d1933b0fbb040df6333f8e" name="aed343e1458d1933b0fbb040df6333f8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed343e1458d1933b0fbb040df6333f8e">&#9670;&#160;</a></span>uint4() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">helios::uint4::uint4 </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; unsigned int &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>v</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Construct uint4 from a vector of unsigned ints. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00582">582</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a29d5261558f8d7cca3f86c47a2039df8" name="a29d5261558f8d7cca3f86c47a2039df8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29d5261558f8d7cca3f86c47a2039df8">&#9670;&#160;</a></span>uint4() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">helios::uint4::uint4 </td>
+          <td>(</td>
+          <td class="paramtype">const unsigned int</td>          <td class="paramname"><span class="paramname"><em>v</em></span>[4]</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Construct uint4 from an array of unsigned ints. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00593">593</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a6c3b908c3d740b6b519da9c453472edb" name="a6c3b908c3d740b6b519da9c453472edb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c3b908c3d740b6b519da9c453472edb">&#9670;&#160;</a></span>uint4() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">helios::uint4::uint4 </td>
+          <td>(</td>
+          <td class="paramtype">unsigned int</td>          <td class="paramname"><span class="paramname"><em>v0</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned int</td>          <td class="paramname"><span class="paramname"><em>v1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned int</td>          <td class="paramname"><span class="paramname"><em>v2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned int</td>          <td class="paramname"><span class="paramname"><em>v3</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Construct uint4 from four unsigned ints. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00596">596</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="af8a3cd89690e235925245a9766d39ffc" name="af8a3cd89690e235925245a9766d39ffc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af8a3cd89690e235925245a9766d39ffc">&#9670;&#160;</a></span>operator!=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::uint4::operator!= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Inequality for all elements. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00669">669</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a3e5ae8efc37dd60f1d284c1a7f831c60" name="a3e5ae8efc37dd60f1d284c1a7f831c60"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e5ae8efc37dd60f1d284c1a7f831c60">&#9670;&#160;</a></span>operator+()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1uint4.html">uint4</a> helios::uint4::operator+ </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add two uint4 vectors. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00641">641</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="ac7a9419499c059fb4dc32c14eb23ec86" name="ac7a9419499c059fb4dc32c14eb23ec86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac7a9419499c059fb4dc32c14eb23ec86">&#9670;&#160;</a></span>operator+=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp; helios::uint4::operator+= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Increment uint4 vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00645">645</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a02c7803bbaa5326f31a4d97c1a3482fb" name="a02c7803bbaa5326f31a4d97c1a3482fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a02c7803bbaa5326f31a4d97c1a3482fb">&#9670;&#160;</a></span>operator-() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1uint4.html">uint4</a> helios::uint4::operator- </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Multiply each element by zero minus itself (wraps) </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00673">673</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a58cdda9e41c9f3f862e9dad71bcdb53a" name="a58cdda9e41c9f3f862e9dad71bcdb53a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a58cdda9e41c9f3f862e9dad71bcdb53a">&#9670;&#160;</a></span>operator-() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1uint4.html">uint4</a> helios::uint4::operator- </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Subtract two uint4 vectors. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00661">661</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a7b0f89244ea9cc0c1f4b6680cd4b90ca" name="a7b0f89244ea9cc0c1f4b6680cd4b90ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b0f89244ea9cc0c1f4b6680cd4b90ca">&#9670;&#160;</a></span>operator-=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp; helios::uint4::operator-= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Decrement uint4 vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00653">653</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="aed716598cb6a12316ee8a9385e5c8aa2" name="aed716598cb6a12316ee8a9385e5c8aa2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed716598cb6a12316ee8a9385e5c8aa2">&#9670;&#160;</a></span>operator==()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::uint4::operator== </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Equality for all elements. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00665">665</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Friends And Related Symbol Documentation</h2>
+<a id="ace8f6e39a8b899f52214b71516532ee7" name="ace8f6e39a8b899f52214b71516532ee7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace8f6e39a8b899f52214b71516532ee7">&#9670;&#160;</a></span>operator&lt;&lt;</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::ostream &amp; operator&lt;&lt; </td>
+          <td>(</td>
+          <td class="paramtype">std::ostream &amp;</td>          <td class="paramname"><span class="paramname"><em>os</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1uint4.html">helios::uint4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel friend">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Write uint4 to output stream. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00614">614</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="a9f3e508e3d66ce70430853eeef65a6ed" name="a9f3e508e3d66ce70430853eeef65a6ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f3e508e3d66ce70430853eeef65a6ed">&#9670;&#160;</a></span>w</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int helios::uint4::w</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Fourth element in vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00573">573</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="ae5317a5f924d16566591082cbcbf5c98" name="ae5317a5f924d16566591082cbcbf5c98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5317a5f924d16566591082cbcbf5c98">&#9670;&#160;</a></span>x</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int helios::uint4::x</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>First element in vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00567">567</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="ac1f4137f469abb7b3fb9114854459446" name="ac1f4137f469abb7b3fb9114854459446"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac1f4137f469abb7b3fb9114854459446">&#9670;&#160;</a></span>y</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int helios::uint4::y</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Second element in vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00569">569</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="ae02e4a894b323f1f0f96a0803db09577" name="ae02e4a894b323f1f0f96a0803db09577"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae02e4a894b323f1f0f96a0803db09577">&#9670;&#160;</a></span>z</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int helios::uint4::z</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Third element in vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00571">571</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>core/include/<a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><b>helios</b></li><li class="navelem"><a class="el" href="structhelios_1_1uint4.html">uint4</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

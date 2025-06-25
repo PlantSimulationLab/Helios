@@ -288,6 +288,12 @@ class ProjectBuilder {
     //! User input
     bool user_input;
 
+    //! Light coordinates type (false = Cartesian, true = Spherical)
+    bool light_coord_type = false;
+
+    //! If true, the context has been updated since the last time the visualizer has been updated
+    bool is_dirty = false;
+
     //! If true, the project has been built and `visualize()` can be run.
     bool built = false;
 
@@ -363,6 +369,9 @@ class ProjectBuilder {
     //! Ground UUIDs
     std::vector<uint> ground_UUIDs;
 
+    //! Ground object ID
+    uint ground_objID;
+
     //! Leaf UUIDs
     std::vector<uint> leaf_UUIDs;
 
@@ -398,7 +407,9 @@ class ProjectBuilder {
                                                 "peduncle", "petal", "pedicel", "fruit"};
 
     //! Bounding boxes
-    std::map<std::string, bool> bounding_boxes;
+    std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
+                                                  {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
+                                                  {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
@@ -611,6 +622,9 @@ class ProjectBuilder {
 
     //! Enable coordinate axes
     bool enable_coordinate_axes = true;
+
+    //! Enable colorbar
+    bool enable_colorbar = false;
 
     //! Latitude
     float latitude = 38.55;
@@ -1039,8 +1053,17 @@ class ProjectBuilder {
     //! Fruit emissivity spectrum
     std::string fruit_emissivity_spectrum;
 
-    //! All possible visualization types
-    std::set<std::string> visualization_types = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+    //! All possible visualization types for primitives
+    std::set<std::string> visualization_types_primitive = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+
+    //! All possible visualization types for objects
+    std::set<std::string> visualization_types_object = {};
+
+    //! Primitive data types
+    std::map<std::string, helios::HeliosDataType> primitive_data_types;
+
+    //! Object data types
+    std::map<std::string, helios::HeliosDataType> object_data_types;
 
     //! Visualization type
     std::string visualization_type = "RGB";
@@ -1232,10 +1255,10 @@ class ProjectBuilder {
     helios::vec3 light_direction{0, 0, 1};
 
     //! Light intensity factor in the visualizer
-    float light_intensity = 2.0;
+    float light_intensity = 1.0;
 
     //! Number of tiles
-    helios::int2 num_tiles{1,1};
+    helios::int2 num_tiles{5,5};
 
   public:
     //! Context
@@ -1264,6 +1287,9 @@ class ProjectBuilder {
 
     //! Camera Properties
     CameraProperties *cameraproperties = nullptr;
+
+    //! Method to run through automated tests
+    static int selfTest();
 
     //! Function to update spectra based on saved information
     void updateSpectra();
@@ -1300,7 +1326,7 @@ class ProjectBuilder {
 
     //! Function to set all values in GUI from XML
     /**
-     * \param[in] xml_input_file Name of XML input file
+     * \param[in] xml_path Name of XML input file
     */
     void xmlSetValues(std::string xml_path);
 
@@ -1741,6 +1767,9 @@ class ProjectBuilder {
     //! Update ground
     void updateGround();
 
+    //! Delete ground
+    void deleteGround();
+
     //! Update context
     void updateContext();
 
@@ -1763,6 +1792,17 @@ class ProjectBuilder {
      * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
     */
     void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation);
+
+    //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes (from `buildGround` Canopy Generator plugin)
+    /**
+     * \param[in] ground_origin x-, y-, and z-position of the ground center point.
+     * \param[in] ground_extent Width of the ground in the x- and y-directions.
+     * \param[in] texture_subtiles Number of sub-divisions of the ground into texture map tiles in the x- and y-directions.
+     * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
+     * \param[in] ground_color Ground color.
+     * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
+    */
+    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, helios::RGBcolor ground_color, float ground_rotation);
 
     //! Constructor
     ProjectBuilder(){
@@ -1808,6 +1848,8 @@ class ProjectBuilder {
 
     //! Destructor
     ~ProjectBuilder(){
+      std::cout.rdbuf(old_cout_stream_buf);
+
       delete context;
 
       #ifdef HELIOS_VISUALIZER

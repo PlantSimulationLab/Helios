@@ -124,7 +124,7 @@
 
   \subsection Background Window background
 
-  The window background can be set to a constant color via the command \ref Visualizer::setBackgroundColor( RGBcolor color ) "setBackgroundColor( RGBcolor color )".  Alternatively, a three-dimensional `sky' background can be set using the \ref Visualizer::addSkyDomeByCenter "addSkyDomeByCenter" command.  This adds a hemispherical dome with a sky texture image mapped to its surface.  The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory.  The following example shows how to add a sky dome:
+ The window background can be set to a constant color via the command \ref Visualizer::setBackgroundColor( const helios::RGBcolor & ) "setBackgroundColor( RGBcolor color )".  Alternatively, a three-dimensional `sky' background can be set using the \ref Visualizer::addSkyDomeByCenter "addSkyDomeByCenter" command.  This adds a hemispherical dome with a sky texture image mapped to its surface.  The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory.  The following example shows how to add a sky dome:
 
   ~~~~~~{.cpp}
    #include "Visualizer.h"
@@ -229,7 +229,7 @@
 
   \subsubsection ContextGeom Automatically importing Context geometry
 
-  The visualizer can automatically import some or all geometry from the Context.  This is accomplished using the \ref buildContextGeometry command.  To add all primitives in the Context, the \ref buildContextGeometry command would be issued, which is passed the Context. We can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.
+ The visualizer can automatically import some or all geometry from the Context.  This is accomplished using the \ref Visualizer::buildContextGeometry() command.  To add all primitives in the Context, the \ref Visualizer::buildContextGeometry() command would be issued, which is passed the Context. We can add a subset of the Context geometry through an additional argument which takes a vector of UUID's.
 
  <table>
    <tr>	
@@ -273,7 +273,7 @@
 
   \subsubsection PlotInteractive plotInteractive()
 
-  The \ref plotInteractive() function can be used to generate an interactive plot of the geometry in the %Visualizer.  This means that the code will pause to produce the plot/visualization until the window is closed by the user.  The user can interact with the plot by issuing keystrokes to, e.g., zoom.  An example is given below to generate an interactive plot.
+ The \ref Visualizer::plotInteractive() function can be used to generate an interactive plot of the geometry in the %Visualizer.  This means that the code will pause to produce the plot/visualization until the window is closed by the user.  The user can interact with the plot by issuing keystrokes to, e.g., zoom.  An example is given below to generate an interactive plot.
 
   ~~~~~~{.cpp}
    #include "Context.h"
@@ -364,7 +364,7 @@
   
   \subsubsection PlotUpdate plotUpdate()
 
-   The \ref plotUpdate() function simply updates the plot window based on current geometry, and continues on to the next lines of code.  This can be useful if only a still image is to be written to file, as illustrated below.
+   The \ref Visualizer::plotUpdate() function simply updates the plot window based on current geometry, and continues on to the next lines of code.  This can be useful if only a still image is to be written to file, as illustrated below.
 
   ~~~~~~{.cpp}
    #include "Context.h"
@@ -440,7 +440,7 @@
    </tr>
  </table>
 
-  The colormap to be used is set using the following command \ref setColormap( Ctable colormap_name ), where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
+ The colormap to be used is set using the following command \ref Visualizer::setColormap( Ctable colormap_name ) "setColormap( Ctable colormap_name )", where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
 
   ~~~~~~{.cpp}
    vis.setColormap( Visualizer::COLORMAP_HOT );
@@ -597,9 +597,9 @@
 
   The default camera position is at an elevation angle of 20 degrees and to the North, with the camera looking toward the origin.  The distance of the camera from the origin is automatically adjusted to fit all primitives in view.
 
-  There are multiple ways of specifying custom camera views.  One method involves specifying the (x,y,z) position of the camera, and the (x,y,z) position that the camera is looking at. This is accomplished using the command \ref Visualizer::setCameraPosition( vec3 cameraPosition, vec3 lookAt ) "setCameraPosition( vec3 cameraPosition, vec3 lookAt )".
+ There are multiple ways of specifying custom camera views.  One method involves specifying the (x,y,z) position of the camera, and the (x,y,z) position that the camera is looking at. This is accomplished using the command \ref Visualizer::setCameraPosition( const helios::vec3 &cameraPosition, const helios::vec3 &lookAt ) "setCameraPosition( vec3 cameraPosition, vec3 lookAt )".
 
-  The other method involves specifying the spherical coordinates of the camera with respect to the (x,y,z) position the camera is looking at.  This is accomplished using the \ref Visualizer::setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt ) "setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt )".
+ The other method involves specifying the spherical coordinates of the camera with respect to the (x,y,z) position the camera is looking at.  This is accomplished using the \ref Visualizer::setCameraPosition( const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt ) "setCameraPosition( SphericalCoord cameraAngle, vec3 lookAt )".
 
   \image html CameraSchematic.jpeg
 

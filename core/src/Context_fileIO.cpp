@@ -3878,8 +3878,6 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                             }
                             tfile.close();
 
-                            materials.at(material_name).texture = texturefile;
-
                             if (maptype == "map_d") {
                                 map_d = texturefile;
                             } else {
@@ -3897,7 +3895,13 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                 }
             }
 
-            if (map_Kd.empty() && !map_d.empty()) {
+            if (!map_Kd.empty()) {
+                materials.at(material_name).texture = map_Kd;
+                if (!map_d.empty() && map_d != map_Kd) {
+                    materials.at(material_name).textureHasTransparency = true;
+                }
+            } else if (!map_d.empty()) {
+                materials.at(material_name).texture = map_d;
                 materials.at(material_name).textureColorIsOverridden = true;
             }
         } else {

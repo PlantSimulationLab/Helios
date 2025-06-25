@@ -28,10 +28,13 @@
       <tab type="user" visible="yes" url="@ref context_selftest_tutorial" title="Tutorial 0: Context Self-Test"/>
       <tab type="user" visible="yes" url="@ref context_vectors_tutorial" title="Tutorial 1: Helios Vector Types"/>
       <tab type="user" visible="yes" url="@ref context_primitives_tutorial" title="Tutorial 2: Working with Context Geometry"/>
+      <tab type="user" visible="yes" url="@ref context_timeseries_tutorial" title="Tutorial 3: Data Timeseries"/>
+      <tab type="user" visible="yes" url="@ref context_fileio_tutorial" title="Tutorial 4: File I/O"/>
       <tab type="user" visible="yes" url="@ref context_primdata_tutorial" title="Tutorial 5: Primitive Data"/>
       <tab type="user" visible="yes" url="@ref context_globaldata_tutorial" title="Tutorial 6: Global Data"/>
       <tab type="user" visible="yes" url="@ref visualizer_basics_tutorial" title="Tutorial 7: Visualizer Basics"/>
       <tab type="user" visible="yes" url="@ref visualizer_pdata_tutorial" title="Tutorial 8: Visualizing Variable and Primitive Data"/>
+      <tab type="user" visible="yes" url="@ref visualizer_custom_tutorial" title="Tutorial 9: Visualizer configuration"/>
       <tab type="user" visible="yes" url="@ref radiation_basics_tutorial" title="Tutorial 10: Tree light interception"/>
       <tab type="user" visible="yes" url="@ref radiation_BeersLaw_tutorial" title="Tutorial 11: Light interception for a homogeneous canopy"/>
       <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 12: Water-use efficiency for a canopy of spherical crowns"/>

@@ -1109,6 +1109,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - phytomer_parameters.petiole.taper.val() / float(Ndiv_petiole_length) * float(j));
             petiole_colors.at(j) = phytomer_parameters.petiole.color;
+
+            assert( !std::isnan(petiole_vertices.at(petiole).at(j).x) && std::isfinite(petiole_vertices.at(petiole).at(j).x) );
+            assert( !std::isnan(petiole_radii.at(petiole).at(j)) && std::isfinite(petiole_radii.at(petiole).at(j)) );
         }
 
         if (build_context_geometry_petiole && petiole_radii.at(petiole).front() > 0.f) {
@@ -1569,18 +1572,18 @@ void Phytomer::rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotatio
     float yaw;
     float roll;
     float compound_rotation = 0;
-    if (leaves_per_petiole > 1 && leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaf
+    if (leaves_per_petiole > 1 && leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaflet of compound leaf
         roll = 0;
         yaw = 0;
         compound_rotation = 0;
-    } else if (leaves_per_petiole > 1 && leaf_index < float(leaves_per_petiole - 1) / 2.f) {
+    } else if (leaves_per_petiole > 1 && leaf_index < float(leaves_per_petiole - 1) / 2.f) { // lateral leaflet of compound leaf
         yaw = -rotation.yaw;
         roll = -rotation.roll;
         compound_rotation = -0.5 * PI_F;
-    } else {
+    } else { // not a compound leaf
         yaw = -rotation.yaw;
         roll = rotation.roll;
-        compound_rotation = 0.5 * PI_F;
+        compound_rotation = 0;
     }
 
     // roll
@@ -1821,8 +1824,8 @@ void Phytomer::removeLeaf() {
     this->leaf_bases.resize(0);
 
     context_ptr->deleteObject(flatten(leaf_objIDs));
-    leaf_objIDs.resize(0);
-    leaf_bases.resize(0);
+    leaf_objIDs.clear();
+    leaf_bases.clear();
 
     if (build_context_geometry_petiole) {
         context_ptr->deleteObject(flatten(petiole_objIDs));
@@ -2316,6 +2319,71 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     if (update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
         context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii));
     }
+}
+
+void PlantArchitecture::pruneGroundCollisions( uint plantID ) {
+
+    if ( plant_instances.find(plantID) == plant_instances.end() ) {
+        helios_runtime_error("ERROR (PlantArchitecture::pruneGroundCollisions): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+        for (auto &phytomer: shoot->phytomers) {
+
+            // internode
+            if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
+                context_ptr->deleteObject(shoot->internode_tube_objID);
+                shoot->terminateApicalBud();
+            }
+
+            // leaves
+            for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
+                    phytomer->removeLeaf();
+                }
+            }
+
+            // inflorescence
+            for (auto &petiole: phytomer->floral_buds) {
+                for (auto &fbud: petiole) {
+                    for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                        uint objID = fbud.inflorescence_objIDs.at(p);
+                        if (detectGroundCollision(objID)) {
+                            context_ptr->deleteObject(objID);
+                            fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                            fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                        }
+                    }
+                    for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
+                        uint objID = fbud.peduncle_objIDs.at(p);
+                        if (detectGroundCollision(objID)) {
+                            context_ptr->deleteObject(fbud.peduncle_objIDs);
+                            context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                            fbud.peduncle_objIDs.clear();
+                            fbud.inflorescence_objIDs.clear();
+                            fbud.inflorescence_bases.clear();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // prune the shoots if all downstream leaves have been removed
+    // for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+    //     int node = -1;
+    //     for ( node = shoot->phytomers.size() - 2; node >= 0; node--) {
+    //         if ( shoot->phytomers.size() > node && shoot->phytomers.at(node)->hasLeaf() ) {
+    //             break;
+    //         }else {
+    //         }
+    //     }
+    //     if ( node>=0 && node+1 < shoot-> phytomers.size()-1 ) {
+    //         pruneBranch(plantID, shoot->ID, node+1);
+    //     }
+    // }
+
 }
 
 void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction) {
@@ -2885,7 +2953,7 @@ void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<
         for (size_t i = 0; i < N; ++i) {
             for (size_t j = 0; j < N; ++j) {
                 double d = (V0[i] - V1[j]).magnitude();
-                C[i][j] = std::isfinite(d) ? d : (std::numeric_limits<double>::max() * 0.5);
+                C[i][j] = std::isfinite(d) ? d : ((std::numeric_limits<double>::max)() * 0.5);
             }
         }
         hung.Solve(C, assignment);
@@ -3736,61 +3804,6 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
                     parent_petiole_index++;
                 }
 
-                // check for ground collisions
-                if (ground_clipping_height != -99999) {
-                    // internode
-                    if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
-                        context_ptr->deleteObject(shoot->internode_tube_objID);
-                        shoot->terminateApicalBud();
-                    }
-
-                    // leaves
-                    for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
-                        if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
-                            phytomer->removeLeaf();
-                            // any downstream phytomers that do not have leaves or floral buds
-                            bool prune_phytomer = true;
-                            for (int node = phytomer->shoot_index.x; node < shoot->phytomers.size(); node++) {
-                                if (phytomer->hasLeaf()) {
-                                    prune_phytomer = false;
-                                    break;
-                                }
-                            }
-                            if (prune_phytomer) {
-                                if (shoot->phytomers.size() > phytomer->shoot_index.x + 1) {
-                                    assert(shoot->current_node_number == shoot->phytomers.size());
-                                    pruneBranch(plantID, shoot->ID, phytomer->shoot_index.x);
-                                }
-                            }
-                        }
-                    }
-
-                    // inflorescence
-                    for (auto &petiole: phytomer->floral_buds) {
-                        for (auto &fbud: petiole) {
-                            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
-                                uint objID = fbud.inflorescence_objIDs.at(p);
-                                if (detectGroundCollision(objID)) {
-                                    context_ptr->deleteObject(objID);
-                                    fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
-                                    fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
-                                }
-                            }
-                            for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
-                                uint objID = fbud.peduncle_objIDs.at(p);
-                                if (detectGroundCollision(objID)) {
-                                    context_ptr->deleteObject(fbud.peduncle_objIDs);
-                                    context_ptr->deleteObject(fbud.inflorescence_objIDs);
-                                    fbud.peduncle_objIDs.clear();
-                                    fbud.inflorescence_objIDs.clear();
-                                    fbud.inflorescence_bases.clear();
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if (output_object_data.at("age")) {
                     if (shoot->build_context_geometry_internode) {
                         //\todo This is redundant and only needs to be done once per shoot
@@ -3861,6 +3874,13 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     // update Context geometry
     shoot_tree->front()->updateShootNodes(true);
+
+    // *** ground collision detection *** //
+    if (ground_clipping_height != -99999) {
+
+        pruneGroundCollisions( plantID );
+
+    }
 
     // Assign current volume as old volume for your next timestep
     for (auto &shoot: *shoot_tree) {

@@ -1,0 +1,496 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: plugins/aeriallidar/include/AerialLiDAR.h Source File</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.36</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('_aerial_li_d_a_r_8h_source.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">AerialLiDAR.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="_aerial_li_d_a_r_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#ifndef HELIOS_AERIALLIDAR</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#define HELIOS_AERIALLIDAR</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span></div>
+<div class="foldopen" id="foldopen00026" data-start="{" data-end="};">
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html">   26</a></span><span class="keyword">struct </span><a class="code hl_function" href="struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575" title="Create an aerial LiDAR scan data structure.">AerialScanMetadata</a>{</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  <a class="code hl_function" href="struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575" title="Create an aerial LiDAR scan data structure.">AerialScanMetadata</a>( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> __center, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> __extent, <span class="keyword">const</span> <span class="keywordtype">float</span> __coneangle, <span class="keyword">const</span> <span class="keywordtype">float</span> __scandensity, <span class="keyword">const</span> <span class="keywordtype">float</span> __exitDiameter, <span class="keyword">const</span> <span class="keywordtype">float</span> __beamDivergence );</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#a14b34575b0c5f8de6e1e203667a1d8a6">   37</a></span>  std::size_t <a class="code hl_variable" href="struct_aerial_scan_metadata.html#a14b34575b0c5f8de6e1e203667a1d8a6" title="Number of laser pulses in scan.">Nrays</a>;  </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>  </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#a8aaa9b231aca939a27d438bdf203699c">   40</a></span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#a8aaa9b231aca939a27d438bdf203699c" title="(x,y,z) position of scan surface center">center</a>;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span></div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#a5c51ed2d651b82502f0921bb52d80095">   43</a></span>  <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#a5c51ed2d651b82502f0921bb52d80095" title="(x,y) size/extent of scan surface">extent</a>;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#a5fbcc96d692e7be7e52c983eb9d242fd">   46</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#a5fbcc96d692e7be7e52c983eb9d242fd" title="Width of scan cone in degrees.">coneangle</a>;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#ab6e7d1152e1b122a4751c733f04a3803">   49</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#ab6e7d1152e1b122a4751c733f04a3803" title="Scan density in points/m^2.">scandensity</a>;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span></div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#aa42ea7d97c0d88bedea8ebeab10c4c84">   53</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#aa42ea7d97c0d88bedea8ebeab10c4c84" title="Diameter of laser pulse at exit from the scanner.">exitDiameter</a>;</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span></div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno"><a class="line" href="struct_aerial_scan_metadata.html#a8572a62a5c28d56c69e55737272d07b4">   59</a></span>  <span class="keywordtype">float</span> <a class="code hl_variable" href="struct_aerial_scan_metadata.html#a8572a62a5c28d56c69e55737272d07b4" title="Divergence angle of the laser beam in radians.">beamDivergence</a>;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  </div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>};</div>
+</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span></div>
+<div class="foldopen" id="foldopen00064" data-start="{" data-end="};">
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno"><a class="line" href="struct_aerial_hit_point.html">   64</a></span><span class="keyword">struct </span>AerialHitPoint{</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> position;</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> direction;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>  <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> color;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>  std::map&lt;std::string, float&gt; data;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> gridcell;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>  <span class="keywordtype">int</span> scanID;</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>  AerialHitPoint(<span class="keywordtype">void</span>){</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    position = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(0,0,0);</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    direction = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">helios::make_SphericalCoord</a>(0,0);</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    color = helios::RGB::red;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    gridcell = <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">helios::make_int3</a>(-2,-2,-2);</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    scanID = -1;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>  }</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  AerialHitPoint( <span class="keywordtype">int</span> __scanID, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> __position, <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> __direction, <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> __row_column, <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> __color, std::map&lt;std::string, float&gt; __data ){</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    scanID = __scanID;</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    position = __position;</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    direction = __direction;</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    color = __color;</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    data = __data;</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  }</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>};</div>
+</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span></div>
+<div class="foldopen" id="foldopen00088" data-start="{" data-end="};">
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html">   88</a></span><span class="keyword">class </span><a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa56199214b8be55a45ce72951ffef361" title="Aerial LiDAR point cloud constructor.">AerialLiDARcloud</a>{</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span></div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>  <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">helios::vec4</a> RANSAC( <span class="keyword">const</span> <span class="keywordtype">int</span> maxIter, <span class="keyword">const</span> <span class="keywordtype">float</span> threshDist, <span class="keyword">const</span> <span class="keywordtype">float</span> inlierRatio, <span class="keyword">const</span> std::vector&lt;helios::vec3&gt;&amp; hits, std::vector&lt;bool&gt;&amp; inliers );</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>  std::vector&lt;AerialScanMetadata&gt; scans;</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>  std::vector&lt;AerialHitPoint&gt; hits;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>  </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>  <span class="keywordtype">bool</span> printmessages;</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>  <span class="comment">// --- grid --- //</span></div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>  <span class="keywordtype">bool</span> hitgridcellcomputed;</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> gridcenter;</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> gridextent;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>  </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>  <span class="keywordtype">float</span> gridrotation;</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span> </div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> gridresolution;</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>  std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; leaf_area;</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>  std::vector&lt;std::vector&lt;std::vector&lt;float&gt; &gt; &gt; r_bar;</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>  std::vector&lt;std::vector&lt;std::vector&lt;helios::int2&gt; &gt; &gt; P_counts;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span> </div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>  <span class="keywordtype">bool</span> groundheightcomputed;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span> </div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  std::vector&lt;std::vector&lt;float&gt; &gt; ground_height;</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>  std::vector&lt;std::vector&lt;float&gt; &gt; vegetation_height;</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>  std::vector&lt;std::vector&lt;float&gt; &gt; maxhit_height;</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span> </div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>  std::vector&lt;std::vector&lt;float&gt; &gt; cover_fraction;</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span> </div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>  <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> rotatePoint2D( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> point, <span class="keyword">const</span> <span class="keywordtype">float</span> theta ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>  </div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span></div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>  <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa56199214b8be55a45ce72951ffef361" title="Aerial LiDAR point cloud constructor.">AerialLiDARcloud</a>();</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span></div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac6d082f7928a865787aa4b1d88fd4f55" title="Aerial LiDAR point cloud destructor.">~AerialLiDARcloud</a>();</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span></div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a8ce24bf39f32c71a4acb929ec0f68133" title="Self-test (unit test) function.">selfTest</a>();</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span></div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa4ee581d9f405c434ff1d4c890714dd8" title="Disable all print messages to the screen except for fatal error messages.">disableMessages</a>();</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span></div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa27a33219de7f55c7966f2d2f3d0bfd8" title="Enable all print messages to the screen.">enableMessages</a>();</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span> </div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>  <span class="comment">// ------- SCANS -------- //</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span></div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>  uint <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa20e625b8d7820ffbcfc8532be5ffb15" title="Get number of scans in point cloud.">getScanCount</a>();</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span></div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span></div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a7ecc9802ec7285391f10562666227c99" title="Add a LiDAR scan to the point cloud.">addScan</a>( <a class="code hl_struct" href="struct_aerial_scan_metadata.html" title="Structure containing metadata for an aerial scan.">AerialScanMetadata</a> newscan );</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span></div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span></div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a221bbfec00a8149e9a50d74861932f44">  174</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a221bbfec00a8149e9a50d74861932f44" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the origin and hit point.">addHitPoint</a>(uint scanID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;hit_xyz, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;ray_origin);</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    </div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span></div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#abb6768b79bdbeb2de24f212998acf73e">  182</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#abb6768b79bdbeb2de24f212998acf73e" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction.">addHitPoint</a>(uint scanID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;hit_xyz, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;direction);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span></div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span></div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#af9cde46be2f4e8f7a6a270cb63bf3825">  192</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#af9cde46be2f4e8f7a6a270cb63bf3825" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction.">addHitPoint</a>(uint scanID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;hit_xyz, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;direction, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> &amp;color);</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span></div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span></div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#afa3b5d7a3858174a04f35cc5451dbd29">  201</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#afa3b5d7a3858174a04f35cc5451dbd29" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction.">addHitPoint</a>(uint scanID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;hit_xyz, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;direction, <span class="keyword">const</span> std::map&lt;std::string, float&gt; &amp;data);</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    </div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span></div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a6c0b33321d2f89f8ef7335151c51e9c7">  211</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a6c0b33321d2f89f8ef7335151c51e9c7" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction.">addHitPoint</a>(uint scanID, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;hit_xyz, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;direction, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> &amp;color, <span class="keyword">const</span> std::map&lt;std::string, float&gt; &amp;data);</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span></div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a338e22a9457e21a273f6eaad37d82bfc" title="Delete a hit point in the scan.">deleteHitPoint</a>(uint index );</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>  uint <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3971197203acc20aec4cd2f0e428c674" title="Get the number of hit points in the point cloud.">getHitCount</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    </div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span></div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a8737b7dfe1eb939ac561148ae38bf28c" title="Get the (x,y,z) of scan surface center.">getScanCenter</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span></div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span></div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>  <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a7be9abb3cf0d46b265ebe3f1209ee9ab" title="Get the (x,y) extent of scan surface.">getScanExtent</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span></div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span></div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a7cfa04b4f5406376ab509b504eef97d0" title="Get the scan cone angle in degrees.">getScanConeAngle</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span></div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span></div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#afa073442a01cce43593b1264d452735d" title="Get the scan point density in points/m^2.">getScanDensity</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span></div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span></div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a4215af102002c6000c47b25c16a6c2c7" title="Get the diameter of the laser beam at exit from the instrument.">getScanBeamExitDiameter</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span></div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span></div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ae0624800ffaf06e41a541119947fe3a4" title="Divergence angle of the laser beam in radians.">getScanBeamDivergence</a>(uint scanID ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span></div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span></div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3363ac3ffff1bbdd164b6074010d75ba" title="Get (x,y,z) coordinate of hit point by index.">getHitXYZ</a>( uint index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span></div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span></div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aba5618bfc3b148d2baa109e1e3d4fe8b" title="Get ray direction of hit point in the scan based on its index.">getHitRaydir</a>(uint index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span></div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#af2cd32cca52682548a6912e761091842" title="Get floating point data value associated with a hit point.">getHitData</a>(uint index, <span class="keyword">const</span> <span class="keywordtype">char</span>* label ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span></div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span></div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a74743d7a3dbf6a1bee22d1c10ec9b83d" title="Set floating point data value associated with a hit point.">setHitData</a>(uint index, <span class="keyword">const</span> <span class="keywordtype">char</span>* label, <span class="keywordtype">float</span> value );</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span></div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span></div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>  <span class="keywordtype">bool</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a08cfe8f9d90e45d05dac69bbde02b03e" title="Check if scalar data exists for a hit point.">doesHitDataExist</a>(uint index, <span class="keyword">const</span> <span class="keywordtype">char</span>* label ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>  </div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span></div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>  <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3c6d941e75ba6e424209deee35a5191a" title="Get color of hit point.">getHitColor</a>(uint index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span></div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span></div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#acf3017c6e2edb3b244de7583a1ba1d97" title="Get the scan with which a hit is associated.">getHitScanID</a>(uint index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>  </div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span></div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a0e2af72085ac20554d5df0a641ece731" title="Get the grid cell in which the hit point resides.">getHitGridCell</a>(uint index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span></div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span></div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a50d14175edab7e65a6ed48d7695e5089" title="Set the grid cell in which the hit point resides.">setHitGridCell</a>(uint index, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk);</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span></div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span></div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a4972df8216c4cd8efdd7c1afa7c50805" title="Applies a coordinate shift to the current vector data.">coordinateShift</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;shift);</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>  </div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>  <span class="comment">// ------- FILE I/O --------- //</span></div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span></div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span></div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa87abfc0d5538d3d8fe28458c7093c2c" title="Read an XML file containing scan information.">loadXML</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* filename );</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>  </div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a9ef16e6966bd8d2b22dec257b1826821">  335</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a9ef16e6966bd8d2b22dec257b1826821" title="Read all XML files currently loaded into the Helios context.">readContextXML</a>();</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span></div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span></div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a7f0992570b8535f687fd7067eb9f3593">  341</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a7f0992570b8535f687fd7067eb9f3593" title="Export to file all points in the point cloud.">exportPointCloud</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* filename );</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span> </div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>  <span class="comment">// ------- VISUALIZER --------- //</span></div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>  </div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span></div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3b6494915e36005ae1998a155e061e4f" title="Add all hit points to the visualizer plug-in, and color them by their r-g-b color.">addHitsToVisualizer</a>( <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>* visualizer, uint pointsize ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>  </div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span></div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3b6494915e36005ae1998a155e061e4f" title="Add all hit points to the visualizer plug-in, and color them by their r-g-b color.">addHitsToVisualizer</a>( <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>* visualizer, uint pointsize, <span class="keyword">const</span> <span class="keywordtype">char</span>* color_value ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span></div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span></div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#afc659e4837184ee76ce5b165ea2515df" title="Add all grid cells to the visualizer plug-in.">addGridToVisualizer</a>( <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>* visualizer ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span></div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span></div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a74b0e833ecb6ee1b3ce3010f3d38d74d" title="Form an axis-aligned bounding box for all hit points in the point cloud.">getHitBoundingBox</a>( <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>&amp; boxmin, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>&amp; boxmax ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span></div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span></div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a158fa03133491fcb1d9686b183411ac5">  377</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a158fa03133491fcb1d9686b183411ac5" title="Filter scan by imposing a maximum distance from the scanner.">distanceFilter</a>( <span class="keywordtype">float</span> maxdistance );</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>  </div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span></div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a5cb2e852b103499c7d217b8020718676">  384</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a5cb2e852b103499c7d217b8020718676" title="Filter scan by imposing a minimum reflectance value.">reflectanceFilter</a>(<span class="keywordtype">float</span> minreflectance );</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span></div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span></div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno"><a class="line" href="class_aerial_li_d_a_rcloud.html#a3368dd715f2cb17c0977c844e192ac45">  393</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3368dd715f2cb17c0977c844e192ac45" title="Filter hit points based on a scalar field given by a column in the ASCII data.">scalarFilter</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* scalar_field, <span class="keywordtype">float</span> threshold, <span class="keyword">const</span> <span class="keywordtype">char</span>* comparator );</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span> </div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>  <span class="comment">// -------- GRID ----------- //</span></div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span></div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span></div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ae2bf620b8456f52ce0291f26cb81d959" title="Use a global index of a grid cell (ranging from 0 to Ncells-1) to retrieve the local index in the x-,...">gridindex2ijk</a>(<span class="keywordtype">int</span> index ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span></div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span></div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a6dc7b85973bb5324ff98ddd0a0c72e0b" title="Use a grid cell&#39;s local index in the x-, y-, and z-directions to retrieve the cells&#39; global index (ra...">gridijk2index</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span></div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a30642321efb0210c9513619169bcc529" title="Get the (x,y,z) coordinate of the grid center.">getGridCenter</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span></div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ab184bbc64aa8fa19050412d7e0a3c201" title="Get the size of the global grid in the x-, y-, and z-directions.">getGridExtent</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>  </div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3c93e0a87a4ec2ce188ef95dbceaa9a2" title="Get the total number of cells in the grid.">getGridResolution</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span></div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aace3b3baae4a75be461eb31f617ee695" title="Get the azimuthal rotation angle of the grid about its center point.">getGridRotation</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span></div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span></div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aab5f19895ad20c55a41b931b17d8fa3a" title="Get the center of the (i,j,k)th grid cell.">getCellCenter</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span></div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a5bf5379ee229ebb51fdc8195af8cf3e7" title="Get the size of grid cells.">getCellSize</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span></div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span></div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#abe3e99a406251c388a3d934a7519ddb2" title="Determine the grid cell in which each hit point resides for the whole point cloud *‍/.">calculateHitGridCell</a>();</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span> </div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>  <span class="comment">// ------- SYNTHETIC SCAN ------ //</span></div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span></div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span></div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a0d56ae98d2ab2ad7008640b0ea4ffaea" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file.">syntheticScan</a>( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context, <span class="keyword">const</span> <span class="keywordtype">char</span>* xml_file );</div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span></div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span></div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a0d56ae98d2ab2ad7008640b0ea4ffaea" title="Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file.">syntheticScan</a>( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context, <span class="keyword">const</span> <span class="keywordtype">char</span>* xml_file, <span class="keywordtype">int</span> rays_per_pulse, <span class="keywordtype">float</span> pulse_distance_threshold );</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span></div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span></div>
+<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ab5fec2c248d5889adf521cac3bb107b3" title="Calculate the surface area of all primitives in the context.">calculateSyntheticLeafArea</a>( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context );</div>
+<div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span> </div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>  <span class="comment">// -------- LEAF AREA -------- //</span></div>
+<div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span></div>
+<div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span></div>
+<div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a138a49c26e29e57794302efb27173576" title="Set the leaf area of a grid cell in m^2.">setCellLeafArea</a>(<span class="keywordtype">float</span> area, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk);</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span></div>
+<div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span></div>
+<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#af1925088a7d828004cd83fef4bbe66ee" title="Get the leaf area of a grid cell in m^2.">getCellLeafArea</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span></div>
+<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span></div>
+<div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3c97affbd6166c2026d7335b880e75d4" title="Get the leaf area density of a grid cell in 1/m.">getCellLeafAreaDensity</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span></div>
+<div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span></div>
+<div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ad19dc1efc64d3e7280a4ee9a5a944f7e" title="Set the cell transmission probability counts.">setCellTransmissionProbability</a>(<span class="keywordtype">int</span> P_denom, <span class="keywordtype">int</span> P_trans, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk);</div>
+<div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span></div>
+<div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span></div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a1d9d0b64698ccf48a68ea0d3d6061a8f" title="Get the cell transmission probability counts.">getCellTransmissionProbability</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk, <span class="keywordtype">int</span> &amp;P_denom, <span class="keywordtype">int</span> &amp;P_trans) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span></div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span></div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#acef94f1f06babb513596ef4f64612886" title="Set the average ray propagation distance in meters.">setCellRbar</a>(<span class="keywordtype">float</span> r_bar, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk);</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span></div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span></div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ab97f1e6e22cf7e2446670565dd2c8c73" title="Get the average ray propagation distance in meters.">getCellRbar</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> &amp;ijk) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span></div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span></div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac395fd2640af864792df68609b3bd938" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(<span class="keywordtype">float</span> Gtheta );</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span></div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span></div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac395fd2640af864792df68609b3bd938" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(<span class="keywordtype">float</span> Gtheta, <span class="keywordtype">int</span> minVoxelHits );</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span> </div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>  <span class="comment">// -------- HEIGHT MODEL -------- //</span></div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>  </div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span></div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a1df082e2c4cfbadba9ed2b5f139e2091" title="Determine the ground and vegetation height for each x-y grid cell. Inputs to this function are parame...">generateHeightModel</a>(<span class="keywordtype">int</span> maxIter, <span class="keywordtype">float</span> threshDist_ground, <span class="keywordtype">float</span> inlierRatio_ground, <span class="keywordtype">float</span> threshDist_vegetation, <span class="keywordtype">float</span> inlierRatio_vegetation);</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span></div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span></div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#acc5dac6283e216be0915431a484457eb" title="Set the height of the vegetation at the (x,y) location of this gridcell.">setCellVegetationHeight</a>(<span class="keywordtype">float</span> height, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij);</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span></div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span></div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a19dbe5a2e4c9d33192e7d68eab229c29" title="Get the height of the vegetation at the (x,y) location of this gridcell.">getCellVegetationHeight</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span></div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span></div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a8474fa2e3bc1a49db101c9daa6929d98" title="Set the height of the highest hit point at the (x,y) location of this gridcell.">setCellMaximumHitHeight</a>(<span class="keywordtype">float</span> height, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij);</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span></div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span></div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a70596fede0b34aacb47d1bc1543c9d31" title="Get the height of the highest hit point at the (x,y) location of this gridcell.">getCellMaximumHitHeight</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span></div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span></div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac3759bc24564aca497648327b38178f3" title="Set the height of the ground at the (x,y) location of this gridcell.">setCellGroundHeight</a>(<span class="keywordtype">float</span> height, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij);</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span></div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span></div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a12ee268ab4307ff551f9389d4e1113de" title="Get the height of the ground at the (x,y) location of this gridcell.">getCellGroundHeight</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span> </div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>  <span class="comment">//Run calculations for ground cover fraction</span></div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>  <span class="keywordtype">void</span> calculateCoverFraction();</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span></div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span></div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a4c0e17c469c2ec8380e4b5d56f1d6b1b" title="Set the ground cover fraction at the (x,y) location of this gridcell.">setCellCoverFraction</a>(<span class="keywordtype">float</span> cover_fraction, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij);</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span></div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span></div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aaaca6e083b0195ea95a12ffb455f76f5" title="Get the height of the ground at the (x,y) location of this gridcell.">getCellCoverFraction</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1int2.html" title="Vector of two elements of type &#39;int&#39;.">helios::int2</a> &amp;ij) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>  </div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>};</div>
+</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span> </div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span><span class="preprocessor">#endif</span></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_38c8d24aef3972a7f87b834274e76e31.html">plugins</a></li><li class="navelem"><a class="el" href="dir_311a8078924eda44cf0bc3884606fa36.html">aeriallidar</a></li><li class="navelem"><a class="el" href="dir_98f1c86a7f536ff9d6c61df9d8c64baa.html">include</a></li><li class="navelem"><a class="el" href="_aerial_li_d_a_r_8h.html">AerialLiDAR.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>
