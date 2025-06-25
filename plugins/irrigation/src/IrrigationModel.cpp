@@ -14,16 +14,21 @@
 */
 
 #include "IrrigationModel.h"
+#include <unordered_set>
 
 using namespace helios;
 
 IrrigationModel::IrrigationModel(Context *context) { this->context = context; }
 
-// ─────────────── Local helpers ──────────────────────────────────────────── //
+// ─────────────── Global DXF-parsing constants ─────────────────────────── //
 namespace {
-    constexpr double NODE_TOL = 1.0e-6; // coordinate merge tolerance (m)
+    constexpr double NODE_TOL = 1.0e-6; // merge tolerance [m]
+    constexpr double MIN_SEG_LEN = 1.0; // skip segments < 1 m
+    constexpr bool ORTH_ONLY = true; // keep only h/v pipes
+    constexpr bool SKIP_CLOSED = true; // ignore closed polylines
+    const std::unordered_set<std::string> IGNORE_LAYERS = {"0"};
 
-    void trim(std::string &s) {
+    inline void trim(std::string &s) {
         auto is_ws = [](unsigned char c) { return std::isspace(c); };
         while (!s.empty() && is_ws(s.back()))
             s.pop_back();
@@ -31,15 +36,28 @@ namespace {
         s.erase(s.begin(), it);
     }
 
-    std::map<int, std::string> pairsToMap(const std::vector<std::pair<int, std::string>> &pairs) {
+    std::map<int, std::string> pairsToMap(const std::vector<std::pair<int, std::string>> &vec) {
         std::map<int, std::string> m;
-        for (const auto &p: pairs)
-            m[p.first] = p.second;
+        for (const auto &kv: vec)
+            m[kv.first] = kv.second;
         return m;
+    }
+
+    bool keepLayer(const std::string &layer) { return !IGNORE_LAYERS.count(layer); }
+
+    bool keepSegment(double x1, double y1, double x2, double y2) {
+        if (ORTH_ONLY) {
+            double dx = std::fabs(x2 - x1);
+            double dy = std::fabs(y2 - y1);
+            if (dx >= NODE_TOL && dy >= NODE_TOL)
+                return false; // diagonal
+        }
+        return std::hypot(x2 - x1, y2 - y1) >= MIN_SEG_LEN;
     }
 } // anonymous namespace
 
-// ─────────────── Node management ───────────────────────────────────────── //
+
+// ─────────────── Node management ─────────────────────────────────────── //
 int IrrigationModel::getOrCreateNode(double x, double y) {
     for (std::size_t i = 0; i < nodes.size(); ++i)
         if (std::fabs(nodes[i].x - x) < NODE_TOL && std::fabs(nodes[i].y - y) < NODE_TOL)
@@ -49,7 +67,7 @@ int IrrigationModel::getOrCreateNode(double x, double y) {
     return int(nodes.size() - 1);
 }
 
-// ─────────────── Pipe helper ───────────────────────────────────────────── //
+// ─────────────── Pipe helper ─────────────────────────────────────────── //
 int IrrigationModel::addPipe(int n1, int n2, double L, double d, double kminor) {
     if (n1 == n2)
         return 1; // degenerate
@@ -57,107 +75,129 @@ int IrrigationModel::addPipe(int n1, int n2, double L, double d, double kminor) 
     return 0;
 }
 
-// ─────────────── Entity: LINE ──────────────────────────────────────────── //
+// ─────────────── Entity: LINE ────────────────────────────────────────── //
 int IrrigationModel::parseLineEntity(const std::map<int, std::string> &ent) {
     if (!(ent.count(10) && ent.count(20) && ent.count(11) && ent.count(21)))
         return 1;
 
+    std::string layer = ent.count(8) ? ent.at(8) : "";
+    if (!keepLayer(layer))
+        return 0; // silently ignore
+
     double x1 = std::stod(ent.at(10)), y1 = std::stod(ent.at(20));
     double x2 = std::stod(ent.at(11)), y2 = std::stod(ent.at(21));
-    double d = ent.count(40) ? std::stod(ent.at(40)) : 0.05;
-    if (d > 1.0)
-        d /= 1000.0;
+    if (!keepSegment(x1, y1, x2, y2))
+        return 0;
+
+    double dia = ent.count(40) ? std::stod(ent.at(40)) : 0.05;
+    if (dia > 1.0)
+        dia /= 1000.0;
 
     int n1 = getOrCreateNode(x1, y1);
     int n2 = getOrCreateNode(x2, y2);
-    return addPipe(n1, n2, std::hypot(x2 - x1, y2 - y1), d);
+    return addPipe(n1, n2, std::hypot(x2 - x1, y2 - y1), dia);
 }
 
-// ─────────────── Entity: LWPOLYLINE ─────────────────────────────────────── //
+// ─────────────── Entity: LWPOLYLINE ─────────────────────────────────── //
 int IrrigationModel::parseLWPolylineEntity(const std::vector<std::pair<int, std::string>> &ent) {
     std::vector<std::pair<double, double>> verts;
-    double curX = 0.0, diameter = 0.05;
+    double curX = 0.0, dia = 0.05;
     bool haveX = false, closed = false;
+    std::string layer;
 
     for (const auto &kv: ent) {
         int code = kv.first;
-        if (code == 10) {
+        if (code == 8)
+            layer = kv.second;
+        else if (code == 10) {
             curX = std::stod(kv.second);
             haveX = true;
-        } else if (code == 20) {
-            if (haveX) {
-                verts.emplace_back(curX, std::stod(kv.second));
-                haveX = false;
-            }
+        } else if (code == 20 && haveX) {
+            verts.emplace_back(curX, std::stod(kv.second));
+            haveX = false;
         } else if (code == 40)
-            diameter = std::stod(kv.second);
+            dia = std::stod(kv.second);
         else if (code == 70)
             closed = (std::stoi(kv.second) & 1) != 0;
     }
-    if (verts.size() < 2)
-        return 1;
-    if (diameter > 1.0)
-        diameter /= 1000.0;
+
+    if (!keepLayer(layer) || verts.size() < 2 || (closed && SKIP_CLOSED))
+        return 0;
+
+    if (dia > 1.0)
+        dia /= 1000.0;
 
     for (std::size_t i = 1; i < verts.size(); ++i) {
-        int n1 = getOrCreateNode(verts[i - 1].first, verts[i - 1].second);
-        int n2 = getOrCreateNode(verts[i].first, verts[i].second);
-        addPipe(n1, n2, std::hypot(verts[i].first - verts[i - 1].first, verts[i].second - verts[i - 1].second), diameter);
+        auto [x1, y1] = verts[i - 1];
+        auto [x2, y2] = verts[i];
+        if (!keepSegment(x1, y1, x2, y2))
+            continue;
+        addPipe(getOrCreateNode(x1, y1), getOrCreateNode(x2, y2), std::hypot(x2 - x1, y2 - y1), dia);
     }
     if (closed && verts.size() > 2) {
-        int n1 = getOrCreateNode(verts.back().first, verts.back().second);
-        int n2 = getOrCreateNode(verts.front().first, verts.front().second);
-        addPipe(n1, n2, std::hypot(verts.back().first - verts.front().first, verts.back().second - verts.front().second), diameter);
+        auto [x1, y1] = verts.back();
+        auto [x2, y2] = verts.front();
+        if (keepSegment(x1, y1, x2, y2))
+            addPipe(getOrCreateNode(x1, y1), getOrCreateNode(x2, y2), std::hypot(x2 - x1, y2 - y1), dia);
     }
     return 0;
 }
 
-// ─────────────── Entity: (old) POLYLINE + VERTEX ―──────────────────────── //
+// ─────────────── Entity: POLYLINE + VERTEX ───────────────────────────── //
 int IrrigationModel::parsePolylineEntity(const std::vector<std::pair<int, std::string>> &header, const std::vector<std::vector<std::pair<int, std::string>>> &vertices) {
     bool closed = false;
-    double diameter = 0.05;
+    double dia = 0.05;
+    std::string layer;
     for (const auto &kv: header) {
+        if (kv.first == 8)
+            layer = kv.second;
         if (kv.first == 70)
             closed = (std::stoi(kv.second) & 1) != 0;
         if (kv.first == 40)
-            diameter = std::stod(kv.second);
+            dia = std::stod(kv.second);
     }
-    if (diameter > 1.0)
-        diameter /= 1000.0;
+
+    if (!keepLayer(layer) || (closed && SKIP_CLOSED))
+        return 0;
+    if (dia > 1.0)
+        dia /= 1000.0;
 
     std::vector<std::pair<double, double>> verts;
     for (const auto &vtx: vertices) {
-        std::map<int, std::string> v = pairsToMap(vtx);
+        auto v = pairsToMap(vtx);
         if (v.count(10) && v.count(20))
             verts.emplace_back(std::stod(v.at(10)), std::stod(v.at(20)));
     }
     if (verts.size() < 2)
-        return 1;
+        return 0;
 
     for (std::size_t i = 1; i < verts.size(); ++i) {
-        int n1 = getOrCreateNode(verts[i - 1].first, verts[i - 1].second);
-        int n2 = getOrCreateNode(verts[i].first, verts[i].second);
-        addPipe(n1, n2, std::hypot(verts[i].first - verts[i - 1].first, verts[i].second - verts[i - 1].second), diameter);
+        auto [x1, y1] = verts[i - 1];
+        auto [x2, y2] = verts[i];
+        if (!keepSegment(x1, y1, x2, y2))
+            continue;
+        addPipe(getOrCreateNode(x1, y1), getOrCreateNode(x2, y2), std::hypot(x2 - x1, y2 - y1), dia);
     }
     if (closed && verts.size() > 2) {
-        int n1 = getOrCreateNode(verts.back().first, verts.back().second);
-        int n2 = getOrCreateNode(verts.front().first, verts.front().second);
-        addPipe(n1, n2, std::hypot(verts.back().first - verts.front().first, verts.back().second - verts.front().second), diameter);
+        auto [x1, y1] = verts.back();
+        auto [x2, y2] = verts.front();
+        if (keepSegment(x1, y1, x2, y2))
+            addPipe(getOrCreateNode(x1, y1), getOrCreateNode(x2, y2), std::hypot(x2 - x1, y2 - y1), dia);
     }
     return 0;
 }
 
-// ─────────────── DXF reader ────────────────────────────────────────────── //
+// ─────────────── DXF reader (dispatch) ───────────────────────────────── //
 int IrrigationModel::readDXF(const std::string &filename) {
     std::ifstream in(filename);
     if (!in.is_open())
-        helios_runtime_error("ERROR (IrrigationModel::readDXF): Cannot open '" + filename + "'");
+        helios_runtime_error("ERROR(IrrigationModel::readDXF): cannot open \"" + filename + "\"");
 
     std::vector<std::string> raw;
-    std::string line;
-    while (std::getline(in, line)) {
-        trim(line);
-        raw.push_back(line);
+    std::string ln;
+    while (std::getline(in, ln)) {
+        trim(ln);
+        raw.push_back(ln);
     }
     in.close();
 
@@ -185,9 +225,9 @@ int IrrigationModel::readDXF(const std::string &filename) {
             }
             parseLWPolylineEntity(ent);
         } else if (tag == "POLYLINE") {
-            std::vector<std::pair<int, std::string>> head{{0, "POLYLINE"}};
+            std::vector<std::pair<int, std::string>> hdr{{0, "POLYLINE"}};
             while (i + 1 < raw.size() && std::stoi(raw[i]) != 0) {
-                head.emplace_back(std::stoi(raw[i]), raw[i + 1]);
+                hdr.emplace_back(std::stoi(raw[i]), raw[i + 1]);
                 i += 2;
             }
             std::vector<std::vector<std::pair<int, std::string>>> verts;
@@ -204,7 +244,7 @@ int IrrigationModel::readDXF(const std::string &filename) {
                         v.emplace_back(std::stoi(raw[i]), raw[i + 1]);
                         i += 2;
                     }
-                    verts.push_back(std::move(v));
+                    verts.emplace_back(std::move(v));
                 } else if (subt == "SEQEND") {
                     i += 2;
                     break;
@@ -212,18 +252,26 @@ int IrrigationModel::readDXF(const std::string &filename) {
                     break;
                 }
             }
-            parsePolylineEntity(head, verts);
+            parsePolylineEntity(hdr, verts);
         }
-        /* ignore all other entity types */
     }
 
-    // fix first node at 50 psi (placeholder until layer-based BCs are added)
-    if (!nodes.empty()) {
-        nodes.front().fixed = true;
-        nodes.front().pressure = 50.0;
+    // ── pick the node nearest origin as supply (50 psi) ─────────────── //
+    int supply = -1;
+    double best = std::numeric_limits<double>::max();
+    for (std::size_t k = 0; k < nodes.size(); ++k) {
+        double r2 = nodes[k].x * nodes[k].x + nodes[k].y * nodes[k].y;
+        if (r2 < best) {
+            best = r2;
+            supply = int(k);
+        }
+    }
+    if (supply >= 0) {
+        nodes[supply].fixed = true;
+        nodes[supply].pressure = 50.0;
     }
 
-    checkConnectivity(); // throw if any node is unreachable
+    checkConnectivity();
     return 0;
 }
 
@@ -233,9 +281,14 @@ void IrrigationModel::checkConnectivity() const {
         return;
 
     std::vector<char> seen(nodes.size(), 0);
+
     std::queue<int> q;
-    q.push(0);
-    seen[0] = 1; // node 0 is fixed source
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        if (nodes[i].fixed) {
+            q.push(int(i));
+            seen[i] = 1;
+        }
+    }
 
     while (!q.empty()) {
         int u = q.front();
@@ -338,21 +391,33 @@ int IrrigationModel::solve() {
 }
 
 // ─────────────── DXF writer (unchanged except for const tweaks) ───────── //
-int IrrigationModel::writeDXF(const std::string &filename) const {
+int IrrigationModel::writeDXF(const std::string& filename) const
+{
     std::ofstream out(filename);
     if (!out.is_open())
-        helios_runtime_error("ERROR (IrrigationModel::writeDXF): Cannot open '" + filename + "' for writing.");
+        helios_runtime_error("ERROR(IrrigationModel::writeDXF): cannot open \""
+                             + filename + "\" for writing.");
 
-    std::cout << "Writing DXF file '" << filename << "'..." << std::flush;
+    std::cout << "Writing DXF \"" << filename << "\"… " << std::flush;
 
     out << "0\nSECTION\n2\nENTITIES\n";
-    for (const auto &p: pipes) {
-        const auto &n1 = nodes[p.n1];
-        const auto &n2 = nodes[p.n2];
-        out << "0\nLINE\n8\n0\n10\n" << n1.x << "\n20\n" << n1.y << "\n11\n" << n2.x << "\n21\n" << n2.y << "\n";
+
+    // ── pipes as LINE on layer PIPE_NET ─────────────────────────────── //
+    for (const auto& p : pipes) {
+        const auto& n1 = nodes[p.n1];
+        const auto& n2 = nodes[p.n2];
+        out << "0\nLINE\n8\nPIPE_NET\n62\n5\n"      // blue
+            << "10\n" << n1.x << "\n20\n" << n1.y
+            << "\n11\n" << n2.x << "\n21\n" << n2.y << "\n";
     }
-    for (const auto &node: nodes)
-        out << "0\nTEXT\n8\n0\n10\n" << node.x << "\n20\n" << node.y << "\n40\n0.2\n1\n" << node.pressure << "\n";
+
+    // ── node pressures as TEXT on layer PRESSURE ───────────────────── //
+    for (const auto& node : nodes) {
+        out << "0\nTEXT\n8\nPRESSURE\n62\n1\n"      // red
+            << "10\n" << node.x << "\n20\n" << node.y
+            << "\n40\n0.2\n1\n"                     // height 0.2; string follows
+            << std::fixed << std::setprecision(2) << node.pressure << "\n";
+    }
 
     out << "0\nENDSEC\n0\nEOF\n";
     std::cout << "done.\n";

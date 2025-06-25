@@ -18,50 +18,55 @@
 
 #include "Context.h"
 
-// ─────────────── Network primitives ──────────────────────────────────────── //
+// ─────────────── Network primitives ───────────────────────────────────── //
 struct IrrigationNode {
-    double x{}, y{}; //!< plan-view coordinates (m)
-    double pressure{0.0}; //!< hydraulic head (psi)
-    bool fixed{false}; //!< true ⇔ boundary condition
+    double x{}, y{};      //!< plan-view coordinates [m]
+    double pressure{0.0}; //!< hydraulic head [psi]
+    bool   fixed{false};  //!< true ⇒ boundary condition
 };
 
 struct IrrigationPipe {
-    int n1{-1}, n2{-1}; //!< node indices
-    double length{0.0}; //!< centre-to-centre length (m)
-    double diameter{0.05}; //!< internal diameter (m)
-    double kminor{1.0}; //!< minor-loss coefficient (elbows, tees…)
+    int    n1{-1}, n2{-1}; //!< node indices
+    double length{0.0};    //!< centre-to-centre length [m]
+    double diameter{0.05}; //!< internal diameter [m]
+    double kminor{1.0};    //!< minor-loss coefficient
 };
 
-// ─────────────────────── Main class ─────────────────────────────────────── //
+// ─────────────────────── Main class ───────────────────────────────────── //
 class IrrigationModel {
 public:
-    explicit IrrigationModel(helios::Context *context);
+    explicit IrrigationModel(helios::Context* ctx);
 
-    int readDXF(const std::string &filename); //!< import network
-    int solve(); //!< compute pressures
-    int writeDXF(const std::string &filename) const;
+    int readDXF (const std::string& filename); //!< import geometry
+    int solve();                            //!< compute pressures
+    int writeDXF(const std::string& filename) const;
+
     int selfTest();
 
 private:
     // ――― utilities ――― //
-    int getOrCreateNode(double x, double y);
-    int addPipe(int n1, int n2, double length, double diameter, double kminor = 1.0);
+    int  getOrCreateNode(double x, double y);
+    int  addPipe(int n1, int n2, double L,
+                 double diameter, double kminor = 1.0);
 
-    static double pipeResistance(const IrrigationPipe &p);
+    static double pipeResistance(const IrrigationPipe& p);
     void checkConnectivity() const;
 
     // ――― DXF helpers ――― //
-    int parseLineEntity(const std::map<int, std::string> &entity);
-    int parseLWPolylineEntity(const std::vector<std::pair<int, std::string>> &);
-    int parsePolylineEntity(const std::vector<std::pair<int, std::string>> &, const std::vector<std::vector<std::pair<int, std::string>>> &);
+    int parseLineEntity     (const std::map<int, std::string>& ent);
+    int parseLWPolylineEntity(const std::vector<std::pair<int, std::string>>&);
+    int parsePolylineEntity (const std::vector<std::pair<int, std::string>>&,
+                             const std::vector<std::vector<
+                                 std::pair<int, std::string>>>&);
 
-    // ――― linear solver ――― //
-    std::vector<double> solveLinear(std::vector<std::vector<double>> A, std::vector<double> b) const;
+    // ――― internal solver ――― //
+    std::vector<double> solveLinear(std::vector<std::vector<double>> A,
+                                    std::vector<double>              b) const;
 
     // ――― data ――― //
-    helios::Context *context{nullptr};
-    std::vector<IrrigationNode> nodes;
-    std::vector<IrrigationPipe> pipes;
+    helios::Context*               context{nullptr};
+    std::vector<IrrigationNode>    nodes;
+    std::vector<IrrigationPipe>    pipes;
 };
 
 #endif
