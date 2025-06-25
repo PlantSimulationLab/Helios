@@ -38,21 +38,17 @@ Context::Context() {
 
     currentUUID = 0;
 
-    currentObjectID = 1; //object ID of 0 is reserved for default object
+    currentObjectID = 1; // object ID of 0 is reserved for default object
 }
 
-void Context::seedRandomGenerator(uint seed) {
-    generator.seed(seed);
-}
+void Context::seedRandomGenerator(uint seed) { generator.seed(seed); }
 
-std::minstd_rand0 *Context::getRandomGenerator() {
-    return &generator;
-}
+std::minstd_rand0 *Context::getRandomGenerator() { return &generator; }
 
 void Context::addTexture(const char *texture_file) {
-    if (textures.find(texture_file) == textures.end()) { //texture has not already been added
+    if (textures.find(texture_file) == textures.end()) { // texture has not already been added
 
-        //texture must have type PNG or JPEG
+        // texture must have type PNG or JPEG
         const std::string &fn = texture_file;
         const std::string &ext = getFileExtension(fn);
         if (ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".jpeg" && ext != ".JPG" && ext != ".JPEG") {
@@ -65,9 +61,7 @@ void Context::addTexture(const char *texture_file) {
     }
 }
 
-bool Context::doesTextureFileExist(const char *texture_file) const {
-    return std::filesystem::exists(texture_file);
-}
+bool Context::doesTextureFileExist(const char *texture_file) const { return std::filesystem::exists(texture_file); }
 
 bool Context::validateTextureFileExtenstion(const char *texture_file) const {
     const std::string &fn = texture_file;
@@ -84,7 +78,7 @@ Texture::Texture(const char *texture_file) {
 
     //------ determine if transparency channel exists ---------//
 
-    //check if texture file has extension ".png"
+    // check if texture file has extension ".png"
     const std::string &ext = getFileExtension(filename);
     if (ext != ".png") {
         hastransparencychannel = false;
@@ -122,21 +116,13 @@ Texture::Texture(const char *texture_file) {
     }
 }
 
-std::string Texture::getTextureFile() const {
-    return filename;
-}
+std::string Texture::getTextureFile() const { return filename; }
 
-helios::int2 Texture::getImageResolution() const {
-    return image_resolution;
-}
+helios::int2 Texture::getImageResolution() const { return image_resolution; }
 
-bool Texture::hasTransparencyChannel() const {
-    return hastransparencychannel;
-}
+bool Texture::hasTransparencyChannel() const { return hastransparencychannel; }
 
-const std::vector<std::vector<bool> > *Texture::getTransparencyData() const {
-    return &transparencydata;
-}
+const std::vector<std::vector<bool>> *Texture::getTransparencyData() const { return &transparencydata; }
 
 float Texture::getSolidFraction(const std::vector<helios::vec2> &uvs) {
     float solidfraction = 1;
@@ -175,8 +161,7 @@ float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const 
             mask[y * W + x] = (*alpha2D)[H - 1 - y][x];
 
     // Compute pixel‐space bounding box from UVs
-    float minU = uvs[0].x, maxU = uvs[0].x,
-            minV = uvs[0].y, maxV = uvs[0].y;
+    float minU = uvs[0].x, maxU = uvs[0].x, minV = uvs[0].y, maxV = uvs[0].y;
     for (auto &p: uvs) {
         minU = std::min(minU, p.x);
         maxU = std::max(maxU, p.x);
@@ -300,25 +285,15 @@ void Context::markPrimitiveClean(const std::vector<uint> &UUIDs) const {
 
 Primitive::~Primitive() = default;
 
-uint Primitive::getUUID() const {
-    return UUID;
-}
+uint Primitive::getUUID() const { return UUID; }
 
-PrimitiveType Primitive::getType() const {
-    return prim_type;
-}
+PrimitiveType Primitive::getType() const { return prim_type; }
 
-void Primitive::setParentObjectID(uint objID) {
-    parent_object_ID = objID;
-}
+void Primitive::setParentObjectID(uint objID) { parent_object_ID = objID; }
 
-uint Primitive::getParentObjectID() const {
-    return parent_object_ID;
-}
+uint Primitive::getParentObjectID() const { return parent_object_ID; }
 
-void Primitive::getTransformationMatrix(float (&T)[16]) const {
-    std::memcpy(T, transform, 16 * sizeof(float));
-}
+void Primitive::getTransformationMatrix(float (&T)[16]) const { std::memcpy(T, transform, 16 * sizeof(float)); }
 
 void Primitive::setTransformationMatrix(float (&T)[16]) {
     std::memcpy(transform, T, 16 * sizeof(float));
@@ -345,28 +320,19 @@ float Voxel::getArea() const {
     return 2.f * size.x * size.y + 2.f * size.x * size.z + 2.f * size.y * size.z;
 }
 
-vec3 Patch::getNormal() const {
-    return normalize(make_vec3(transform[2], transform[6], transform[10]));
-}
+vec3 Patch::getNormal() const { return normalize(make_vec3(transform[2], transform[6], transform[10])); }
 
 vec3 Triangle::getNormal() const {
     const std::vector<vec3> &vertices = getVertices();
     return normalize(cross(vertices[1] - vertices[0], vertices[2] - vertices[1]));
 }
 
-vec3 Voxel::getNormal() const {
-    return nullorigin;
-}
+vec3 Voxel::getNormal() const { return nullorigin; }
 
 std::vector<vec3> Patch::getVertices() const {
     std::vector<vec3> vertices(4);
 
-    const std::vector<vec3> Y = {
-        {-0.5f, -0.5f, 0.f},
-        {0.5f, -0.5f, 0.f},
-        {0.5f, 0.5f, 0.f},
-        {-0.5f, 0.5f, 0.f}
-    };
+    const std::vector<vec3> Y = {{-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.f}, {0.5f, 0.5f, 0.f}, {-0.5f, 0.5f, 0.f}};
 
     for (int i = 0; i < 4; i++) {
         vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
@@ -379,11 +345,7 @@ std::vector<vec3> Patch::getVertices() const {
 std::vector<vec3> Triangle::getVertices() const {
     std::vector<vec3> vertices(3);
 
-    const std::vector<vec3> Y = {
-        {0.f, 0.f, 0.f},
-        {0.f, 1.f, 0.f},
-        {1.f, 1.f, 0.f}
-    };
+    const std::vector<vec3> Y = {{0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f, 0.f}};
 
     for (int i = 0; i < 3; i++) {
         vertices[i].x = transform[0] * Y[i].x + transform[1] * Y[i].y + transform[2] * Y[i].z + transform[3];
@@ -396,16 +358,7 @@ std::vector<vec3> Triangle::getVertices() const {
 std::vector<vec3> Voxel::getVertices() const {
     std::vector<vec3> vertices(8);
 
-    const std::vector<vec3> Y = {
-        {-0.5f, -0.5f, -0.5f},
-        {0.5f, -0.5f, -0.5f},
-        {0.5f, 0.5f, -0.5f},
-        {-0.5f, 0.5f, -0.5f},
-        {-0.5f, -0.5f, 0.5f},
-        {0.5f, -0.5f, 0.5f},
-        {0.5f, 0.5f, 0.5f},
-        {-0.5f, 0.5f, 0.5f}
-    };
+    const std::vector<vec3> Y = {{-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f}, {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}};
 
 
     for (int i = 0; i < 8; i++) {
@@ -416,17 +369,11 @@ std::vector<vec3> Voxel::getVertices() const {
     return vertices;
 }
 
-RGBcolor Primitive::getColor() const {
-    return {color.r, color.g, color.b};
-}
+RGBcolor Primitive::getColor() const { return {color.r, color.g, color.b}; }
 
-RGBcolor Primitive::getColorRGB() const {
-    return {color.r, color.g, color.b};
-}
+RGBcolor Primitive::getColorRGB() const { return {color.r, color.g, color.b}; }
 
-RGBAcolor Primitive::getColorRGBA() const {
-    return color;
-}
+RGBAcolor Primitive::getColorRGBA() const { return color; }
 
 void Primitive::setColor(const helios::RGBcolor &newcolor) {
     // if( parent_object_ID!=0 ){
@@ -456,18 +403,14 @@ bool Primitive::hasTexture() const {
     }
 }
 
-std::string Primitive::getTextureFile() const {
-    return texturefile;
-}
+std::string Primitive::getTextureFile() const { return texturefile; }
 
 void Primitive::setTextureFile(const char *texture) {
     texturefile = texture;
     dirty_flag = true;
 }
 
-std::vector<vec2> Primitive::getTextureUV() {
-    return uv;
-}
+std::vector<vec2> Primitive::getTextureUV() { return uv; }
 
 void Primitive::setTextureUV(const std::vector<vec2> &a_uv) {
     uv = a_uv;
@@ -494,22 +437,16 @@ void Primitive::useTextureColor() {
     dirty_flag = true;
 }
 
-bool Primitive::isTextureColorOverridden() const {
-    return texturecoloroverridden;
-}
+bool Primitive::isTextureColorOverridden() const { return texturecoloroverridden; }
 
-float Primitive::getSolidFraction() const {
-    return solid_fraction;
-}
+float Primitive::getSolidFraction() const { return solid_fraction; }
 
 void Primitive::setSolidFraction(float solidFraction) {
     solid_fraction = solidFraction;
     dirty_flag = true;
 }
 
-bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c) {
-    return ((c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y) >= 0);
-}
+bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c) { return ((c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y) >= 0); }
 
 void Triangle::setVertices(const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2) {
     makeTransformationMatrix(vertex0, vertex1, vertex2);
@@ -705,25 +642,21 @@ void Voxel::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
     dirty_flag = true;
 }
 
-void Voxel::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {
-    std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
-}
+void Voxel::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) { std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl; }
 
-void Voxel::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) {
-    std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
-}
+void Voxel::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) { std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl; }
 
 void Triangle::makeTransformationMatrix(const helios::vec3 &vert0, const helios::vec3 &vert1, const helios::vec3 &vert2) {
-    //We need to construct the Affine transformation matrix that transforms some generic triangle to a triangle with vertices at vertex0, vertex1, vertex2.
+    // We need to construct the Affine transformation matrix that transforms some generic triangle to a triangle with vertices at vertex0, vertex1, vertex2.
 
-    //V1 is going to be our generic triangle.  This is the triangle that we'll intersect in the OptiX ray intersection program.  We just need to pass the transformation matrix to OptiX so that we'll end up with the right triangle.
+    // V1 is going to be our generic triangle.  This is the triangle that we'll intersect in the OptiX ray intersection program.  We just need to pass the transformation matrix to OptiX so that we'll end up with the right triangle.
 
-    //We'll assume our generic triangle has vertices
-    //v0 = (0,0,0)
-    //v1 = (0,1,0)
-    //v2 = (1,1,0)
-    //this needs to match up with the triangle in triangle_intersect() and triangle_bounds() (see primitiveIntersection.cu).
-    //Note that the matrix is padded with 1's to make it 4x4
+    // We'll assume our generic triangle has vertices
+    // v0 = (0,0,0)
+    // v1 = (0,1,0)
+    // v2 = (1,1,0)
+    // this needs to match up with the triangle in triangle_intersect() and triangle_bounds() (see primitiveIntersection.cu).
+    // Note that the matrix is padded with 1's to make it 4x4
 
     float V1[16];
 
@@ -763,8 +696,8 @@ void Triangle::makeTransformationMatrix(const helios::vec3 &vert0, const helios:
     /* [3,3] */
     V1[15] = 1.f;
 
-    //V2 holds the vertex locations we want to transform to
-    //Note that the matrix is padded with 1's to make it 4x4
+    // V2 holds the vertex locations we want to transform to
+    // Note that the matrix is padded with 1's to make it 4x4
 
     float V2[16];
     /* [0,0] */
@@ -800,128 +733,48 @@ void Triangle::makeTransformationMatrix(const helios::vec3 &vert0, const helios:
     /* [3,3] */
     V2[15] = 1.f;
 
-    //Now we just need to solve the linear system for our transform matrix T
-    // [T][V1] = [V2]  -->
-    // [T] = [V2]([V1]^-1)
+    // Now we just need to solve the linear system for our transform matrix T
+    //  [T][V1] = [V2]  -->
+    //  [T] = [V2]([V1]^-1)
 
     double inv[16], det, invV1[16];
 
-    inv[0] = V1[5] * V1[10] * V1[15] -
-             V1[5] * V1[11] * V1[14] -
-             V1[9] * V1[6] * V1[15] +
-             V1[9] * V1[7] * V1[14] +
-             V1[13] * V1[6] * V1[11] -
-             V1[13] * V1[7] * V1[10];
+    inv[0] = V1[5] * V1[10] * V1[15] - V1[5] * V1[11] * V1[14] - V1[9] * V1[6] * V1[15] + V1[9] * V1[7] * V1[14] + V1[13] * V1[6] * V1[11] - V1[13] * V1[7] * V1[10];
 
-    inv[4] = -V1[4] * V1[10] * V1[15] +
-             V1[4] * V1[11] * V1[14] +
-             V1[8] * V1[6] * V1[15] -
-             V1[8] * V1[7] * V1[14] -
-             V1[12] * V1[6] * V1[11] +
-             V1[12] * V1[7] * V1[10];
+    inv[4] = -V1[4] * V1[10] * V1[15] + V1[4] * V1[11] * V1[14] + V1[8] * V1[6] * V1[15] - V1[8] * V1[7] * V1[14] - V1[12] * V1[6] * V1[11] + V1[12] * V1[7] * V1[10];
 
-    inv[8] = V1[4] * V1[9] * V1[15] -
-             V1[4] * V1[11] * V1[13] -
-             V1[8] * V1[5] * V1[15] +
-             V1[8] * V1[7] * V1[13] +
-             V1[12] * V1[5] * V1[11] -
-             V1[12] * V1[7] * V1[9];
+    inv[8] = V1[4] * V1[9] * V1[15] - V1[4] * V1[11] * V1[13] - V1[8] * V1[5] * V1[15] + V1[8] * V1[7] * V1[13] + V1[12] * V1[5] * V1[11] - V1[12] * V1[7] * V1[9];
 
-    inv[12] = -V1[4] * V1[9] * V1[14] +
-              V1[4] * V1[10] * V1[13] +
-              V1[8] * V1[5] * V1[14] -
-              V1[8] * V1[6] * V1[13] -
-              V1[12] * V1[5] * V1[10] +
-              V1[12] * V1[6] * V1[9];
+    inv[12] = -V1[4] * V1[9] * V1[14] + V1[4] * V1[10] * V1[13] + V1[8] * V1[5] * V1[14] - V1[8] * V1[6] * V1[13] - V1[12] * V1[5] * V1[10] + V1[12] * V1[6] * V1[9];
 
-    inv[1] = -V1[1] * V1[10] * V1[15] +
-             V1[1] * V1[11] * V1[14] +
-             V1[9] * V1[2] * V1[15] -
-             V1[9] * V1[3] * V1[14] -
-             V1[13] * V1[2] * V1[11] +
-             V1[13] * V1[3] * V1[10];
+    inv[1] = -V1[1] * V1[10] * V1[15] + V1[1] * V1[11] * V1[14] + V1[9] * V1[2] * V1[15] - V1[9] * V1[3] * V1[14] - V1[13] * V1[2] * V1[11] + V1[13] * V1[3] * V1[10];
 
-    inv[5] = V1[0] * V1[10] * V1[15] -
-             V1[0] * V1[11] * V1[14] -
-             V1[8] * V1[2] * V1[15] +
-             V1[8] * V1[3] * V1[14] +
-             V1[12] * V1[2] * V1[11] -
-             V1[12] * V1[3] * V1[10];
+    inv[5] = V1[0] * V1[10] * V1[15] - V1[0] * V1[11] * V1[14] - V1[8] * V1[2] * V1[15] + V1[8] * V1[3] * V1[14] + V1[12] * V1[2] * V1[11] - V1[12] * V1[3] * V1[10];
 
-    inv[9] = -V1[0] * V1[9] * V1[15] +
-             V1[0] * V1[11] * V1[13] +
-             V1[8] * V1[1] * V1[15] -
-             V1[8] * V1[3] * V1[13] -
-             V1[12] * V1[1] * V1[11] +
-             V1[12] * V1[3] * V1[9];
+    inv[9] = -V1[0] * V1[9] * V1[15] + V1[0] * V1[11] * V1[13] + V1[8] * V1[1] * V1[15] - V1[8] * V1[3] * V1[13] - V1[12] * V1[1] * V1[11] + V1[12] * V1[3] * V1[9];
 
-    inv[13] = V1[0] * V1[9] * V1[14] -
-              V1[0] * V1[10] * V1[13] -
-              V1[8] * V1[1] * V1[14] +
-              V1[8] * V1[2] * V1[13] +
-              V1[12] * V1[1] * V1[10] -
-              V1[12] * V1[2] * V1[9];
+    inv[13] = V1[0] * V1[9] * V1[14] - V1[0] * V1[10] * V1[13] - V1[8] * V1[1] * V1[14] + V1[8] * V1[2] * V1[13] + V1[12] * V1[1] * V1[10] - V1[12] * V1[2] * V1[9];
 
-    inv[2] = V1[1] * V1[6] * V1[15] -
-             V1[1] * V1[7] * V1[14] -
-             V1[5] * V1[2] * V1[15] +
-             V1[5] * V1[3] * V1[14] +
-             V1[13] * V1[2] * V1[7] -
-             V1[13] * V1[3] * V1[6];
+    inv[2] = V1[1] * V1[6] * V1[15] - V1[1] * V1[7] * V1[14] - V1[5] * V1[2] * V1[15] + V1[5] * V1[3] * V1[14] + V1[13] * V1[2] * V1[7] - V1[13] * V1[3] * V1[6];
 
-    inv[6] = -V1[0] * V1[6] * V1[15] +
-             V1[0] * V1[7] * V1[14] +
-             V1[4] * V1[2] * V1[15] -
-             V1[4] * V1[3] * V1[14] -
-             V1[12] * V1[2] * V1[7] +
-             V1[12] * V1[3] * V1[6];
+    inv[6] = -V1[0] * V1[6] * V1[15] + V1[0] * V1[7] * V1[14] + V1[4] * V1[2] * V1[15] - V1[4] * V1[3] * V1[14] - V1[12] * V1[2] * V1[7] + V1[12] * V1[3] * V1[6];
 
-    inv[10] = V1[0] * V1[5] * V1[15] -
-              V1[0] * V1[7] * V1[13] -
-              V1[4] * V1[1] * V1[15] +
-              V1[4] * V1[3] * V1[13] +
-              V1[12] * V1[1] * V1[7] -
-              V1[12] * V1[3] * V1[5];
+    inv[10] = V1[0] * V1[5] * V1[15] - V1[0] * V1[7] * V1[13] - V1[4] * V1[1] * V1[15] + V1[4] * V1[3] * V1[13] + V1[12] * V1[1] * V1[7] - V1[12] * V1[3] * V1[5];
 
-    inv[14] = -V1[0] * V1[5] * V1[14] +
-              V1[0] * V1[6] * V1[13] +
-              V1[4] * V1[1] * V1[14] -
-              V1[4] * V1[2] * V1[13] -
-              V1[12] * V1[1] * V1[6] +
-              V1[12] * V1[2] * V1[5];
+    inv[14] = -V1[0] * V1[5] * V1[14] + V1[0] * V1[6] * V1[13] + V1[4] * V1[1] * V1[14] - V1[4] * V1[2] * V1[13] - V1[12] * V1[1] * V1[6] + V1[12] * V1[2] * V1[5];
 
-    inv[3] = -V1[1] * V1[6] * V1[11] +
-             V1[1] * V1[7] * V1[10] +
-             V1[5] * V1[2] * V1[11] -
-             V1[5] * V1[3] * V1[10] -
-             V1[9] * V1[2] * V1[7] +
-             V1[9] * V1[3] * V1[6];
+    inv[3] = -V1[1] * V1[6] * V1[11] + V1[1] * V1[7] * V1[10] + V1[5] * V1[2] * V1[11] - V1[5] * V1[3] * V1[10] - V1[9] * V1[2] * V1[7] + V1[9] * V1[3] * V1[6];
 
-    inv[7] = V1[0] * V1[6] * V1[11] -
-             V1[0] * V1[7] * V1[10] -
-             V1[4] * V1[2] * V1[11] +
-             V1[4] * V1[3] * V1[10] +
-             V1[8] * V1[2] * V1[7] -
-             V1[8] * V1[3] * V1[6];
+    inv[7] = V1[0] * V1[6] * V1[11] - V1[0] * V1[7] * V1[10] - V1[4] * V1[2] * V1[11] + V1[4] * V1[3] * V1[10] + V1[8] * V1[2] * V1[7] - V1[8] * V1[3] * V1[6];
 
-    inv[11] = -V1[0] * V1[5] * V1[11] +
-              V1[0] * V1[7] * V1[9] +
-              V1[4] * V1[1] * V1[11] -
-              V1[4] * V1[3] * V1[9] -
-              V1[8] * V1[1] * V1[7] +
-              V1[8] * V1[3] * V1[5];
+    inv[11] = -V1[0] * V1[5] * V1[11] + V1[0] * V1[7] * V1[9] + V1[4] * V1[1] * V1[11] - V1[4] * V1[3] * V1[9] - V1[8] * V1[1] * V1[7] + V1[8] * V1[3] * V1[5];
 
-    inv[15] = V1[0] * V1[5] * V1[10] -
-              V1[0] * V1[6] * V1[9] -
-              V1[4] * V1[1] * V1[10] +
-              V1[4] * V1[2] * V1[9] +
-              V1[8] * V1[1] * V1[6] -
-              V1[8] * V1[2] * V1[5];
+    inv[15] = V1[0] * V1[5] * V1[10] - V1[0] * V1[6] * V1[9] - V1[4] * V1[1] * V1[10] + V1[4] * V1[2] * V1[9] + V1[8] * V1[1] * V1[6] - V1[8] * V1[2] * V1[5];
 
     det = V1[0] * inv[0] + V1[1] * inv[4] + V1[2] * inv[8] + V1[3] * inv[12];
 
-    //if (det == 0)
-    //return false;
+    // if (det == 0)
+    // return false;
 
     det = 1.0 / det;
 
@@ -949,7 +802,7 @@ Patch::Patch(const RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeIdentityMatrix(transform);
 
     color = a_color;
-    assert(color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1);
+    assert(color.r >= 0 && color.r <= 1 && color.g >= 0 && color.g <= 1 && color.b >= 0 && color.b <= 1);
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
@@ -980,9 +833,9 @@ Patch::Patch(const char *a_texturefile, const std::vector<helios::vec2> &a_uv, s
 
     texturefile = a_texturefile;
     uv = a_uv;
-    for ( auto &uv_vert : uv ) {
-        uv_vert.x = std::min(uv_vert.x, 1.f );
-        uv_vert.y = std::min(uv_vert.y, 1.f );
+    for (auto &uv_vert: uv) {
+        uv_vert.x = std::min(uv_vert.x, 1.f);
+        uv_vert.y = std::min(uv_vert.y, 1.f);
     }
     texturecoloroverridden = false;
 
@@ -997,9 +850,7 @@ helios::vec2 Patch::getSize() const {
     return {l, w};
 }
 
-helios::vec3 Patch::getCenter() const {
-    return make_vec3(transform[3], transform[7], transform[11]);
-}
+helios::vec3 Patch::getCenter() const { return make_vec3(transform[3], transform[7], transform[11]); }
 
 Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1, const helios::vec3 &a_vertex2, const helios::RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeTransformationMatrix(a_vertex0, a_vertex1, a_vertex2);
@@ -1037,9 +888,9 @@ Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1,
 
     texturefile = a_texturefile;
     uv = a_uv;
-    for ( auto &uv_vert : uv ) {
-        uv_vert.x = std::min(uv_vert.x, 1.f );
-        uv_vert.y = std::min(uv_vert.y, 1.f );
+    for (auto &uv_vert: uv) {
+        uv_vert.x = std::min(uv_vert.x, 1.f);
+        uv_vert.y = std::min(uv_vert.y, 1.f);
     }
     solid_fraction = 1.f;
     texturecoloroverridden = false;
@@ -1053,11 +904,7 @@ vec3 Triangle::getVertex(int vertex_index) const {
         helios_runtime_error("ERROR (Context::getVertex): vertex index must be 1, 2, or 3.");
     }
 
-    const std::vector<vec3> Y = {
-        {0.f, 0.f, 0.f},
-        {0.f, 1.f, 0.f},
-        {1.f, 1.f, 0.f}
-    };
+    const std::vector<vec3> Y = {{0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f, 0.f}};
 
     vec3 vertex;
 
@@ -1087,7 +934,7 @@ Voxel::Voxel(const RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeIdentityMatrix(transform);
 
     color = a_color;
-    assert(color.r>=0 && color.r<=1 && color.g>=0 && color.g<=1 && color.b>=0 && color.b<=1);
+    assert(color.r >= 0 && color.r <= 1 && color.g >= 0 && color.g <= 1 && color.b >= 0 && color.b <= 1);
     solid_fraction = 1.f;
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
@@ -1164,9 +1011,7 @@ void Context::setDate(int Julian_day, int year) {
     sim_date = CalendarDay(Julian_day, year);
 }
 
-Date Context::getDate() const {
-    return sim_date;
-}
+Date Context::getDate() const { return sim_date; }
 
 const char *Context::getMonthString() const {
     if (sim_date.month == 1) {
@@ -1196,13 +1041,9 @@ const char *Context::getMonthString() const {
     }
 }
 
-int Context::getJulianDate() const {
-    return JulianDay(sim_date.day, sim_date.month, sim_date.year);
-}
+int Context::getJulianDate() const { return JulianDay(sim_date.day, sim_date.month, sim_date.year); }
 
-void Context::setTime(int minute, int hour) {
-    setTime(0, minute, hour);
-}
+void Context::setTime(int minute, int hour) { setTime(0, minute, hour); }
 
 void Context::setTime(int second, int minute, int hour) {
     if (second < 0 || second > 59) {
@@ -1226,21 +1067,13 @@ void Context::setTime(const Time &time) {
     sim_time = time;
 }
 
-Time Context::getTime() const {
-    return sim_time;
-}
+Time Context::getTime() const { return sim_time; }
 
-void Context::setLocation(const helios::Location &location) {
-    sim_location = location;
-}
+void Context::setLocation(const helios::Location &location) { sim_location = location; }
 
-helios::Location Context::getLocation() const {
-    return sim_location;
-}
+helios::Location Context::getLocation() const { return sim_location; }
 
-float Context::randu() {
-    return unif_distribution(generator);
-}
+float Context::randu() { return unif_distribution(generator); }
 
 float Context::randu(float minrange, float maxrange) {
     if (maxrange < minrange) {
@@ -1264,29 +1097,17 @@ int Context::randu(int minrange, int maxrange) {
     }
 }
 
-float Context::randn() {
-    return norm_distribution(generator);
-}
+float Context::randn() { return norm_distribution(generator); }
 
-float Context::randn(float mean, float stddev) {
-    return mean + norm_distribution(generator) * fabs(stddev);
-}
+float Context::randn(float mean, float stddev) { return mean + norm_distribution(generator) * fabs(stddev); }
 
-uint Context::addPatch() {
-    return addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addPatch() { return addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addPatch(const vec3 &center, const vec2 &size) {
-    return addPatch(center, size, make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addPatch(const vec3 &center, const vec2 &size) { return addPatch(center, size, make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation) {
-    return addPatch(center, size, rotation, make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation) { return addPatch(center, size, rotation, make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) {
-    return addPatch(center, size, rotation, make_RGBAcolor(color, 1));
-}
+uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) { return addPatch(center, size, rotation, make_RGBAcolor(color, 1)); }
 
 uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
     if (size.x == 0 || size.y == 0) {
@@ -1327,7 +1148,7 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     //        helios_runtime_error("ERROR (Context::addPatch): Patch has area of zero.");
     //    }
 
-    assert(size.x>0.f && size.y>0.f);
+    assert(size.x > 0.f && size.y > 0.f);
     patch_new->scale(make_vec3(size.x, size.y, 1));
 
     if (rotation.elevation != 0) {
@@ -1355,12 +1176,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 
     addTexture(texture_file);
 
-    const std::vector<helios::vec2> uv = {
-        uv_center + make_vec2(-0.5f * uv_size.x, -0.5f * uv_size.y),
-        uv_center + make_vec2(+0.5f * uv_size.x, -0.5f * uv_size.y),
-        uv_center + make_vec2(+0.5f * uv_size.x, +0.5f * uv_size.y),
-        uv_center + make_vec2(-0.5f * uv_size.x, +0.5f * uv_size.y)
-    };
+    const std::vector<helios::vec2> uv = {uv_center + make_vec2(-0.5f * uv_size.x, -0.5f * uv_size.y), uv_center + make_vec2(+0.5f * uv_size.x, -0.5f * uv_size.y), uv_center + make_vec2(+0.5f * uv_size.x, +0.5f * uv_size.y),
+                                          uv_center + make_vec2(-0.5f * uv_size.x, +0.5f * uv_size.y)};
 
     auto *patch_new = (new Patch(texture_file, uv, textures, 0, currentUUID));
 
@@ -1368,7 +1185,7 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     //        helios_runtime_error("ERROR (Context::addPatch): Patch has area of zero.");
     //    }
 
-    assert(size.x>0.f && size.y>0.f);
+    assert(size.x > 0.f && size.y > 0.f);
     patch_new->scale(make_vec3(size.x, size.y, 1));
 
     if (rotation.elevation != 0) {
@@ -1385,13 +1202,9 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     return currentUUID - 1;
 }
 
-uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2) {
-    return addTriangle(vertex0, vertex1, vertex2, make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2) { return addTriangle(vertex0, vertex1, vertex2, make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBcolor &color) {
-    return addTriangle(vertex0, vertex1, vertex2, make_RGBAcolor(color, 1));
-}
+uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBcolor &color) { return addTriangle(vertex0, vertex1, vertex2, make_RGBAcolor(color, 1)); }
 
 uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBAcolor &color) {
     auto *tri_new = (new Triangle(vertex0, vertex1, vertex2, color, 0, currentUUID));
@@ -1421,17 +1234,11 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
     return currentUUID - 1;
 }
 
-uint Context::addVoxel(const vec3 &center, const vec3 &size) {
-    return addVoxel(center, size, 0, make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addVoxel(const vec3 &center, const vec3 &size) { return addVoxel(center, size, 0, make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotation) {
-    return addVoxel(center, size, rotation, make_RGBAcolor(0, 0, 0, 1));
-}
+uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotation) { return addVoxel(center, size, rotation, make_RGBAcolor(0, 0, 0, 1)); }
 
-uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotation, const RGBcolor &color) {
-    return addVoxel(center, size, rotation, make_RGBAcolor(color, 1));
-}
+uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotation, const RGBcolor &color) { return addVoxel(center, size, rotation, make_RGBAcolor(color, 1)); }
 
 uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotation, const RGBAcolor &color) {
     auto *voxel_new = (new Voxel(color, 0, currentUUID));
@@ -1453,9 +1260,7 @@ uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotati
     return currentUUID - 1;
 }
 
-void Context::translatePrimitive(uint UUID, const vec3 &shift) {
-    getPrimitivePointer_private(UUID)->translate(shift);
-}
+void Context::translatePrimitive(uint UUID, const vec3 &shift) { getPrimitivePointer_private(UUID)->translate(shift); }
 
 void Context::translatePrimitive(const std::vector<uint> &UUIDs, const vec3 &shift) {
     float T[16];
@@ -1466,9 +1271,7 @@ void Context::translatePrimitive(const std::vector<uint> &UUIDs, const vec3 &shi
     }
 }
 
-void Context::rotatePrimitive(uint UUID, float rotation_rad, const char *axis) {
-    getPrimitivePointer_private(UUID)->rotate(rotation_rad, axis);
-}
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const char *axis) { getPrimitivePointer_private(UUID)->rotate(rotation_rad, axis); }
 
 void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad, const char *axis) {
     if (rotation_rad == 0) {
@@ -1494,9 +1297,7 @@ void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad
     }
 }
 
-void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3 &axis) {
-    getPrimitivePointer_private(UUID)->rotate(rotation_rad, axis);
-}
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3 &axis) { getPrimitivePointer_private(UUID)->rotate(rotation_rad, axis); }
 
 void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad, const vec3 &axis) {
     if (rotation_rad == 0) {
@@ -1514,9 +1315,7 @@ void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad
     }
 }
 
-void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3 &origin, const helios::vec3 &axis) {
-    getPrimitivePointer_private(UUID)->rotate(rotation_rad, origin, axis);
-}
+void Context::rotatePrimitive(uint UUID, float rotation_rad, const helios::vec3 &origin, const helios::vec3 &axis) { getPrimitivePointer_private(UUID)->rotate(rotation_rad, origin, axis); }
 
 void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad, const helios::vec3 &origin, const vec3 &axis) {
     if (rotation_rad == 0) {
@@ -1552,9 +1351,7 @@ void Context::setPrimitiveNormal(uint UUID, const helios::vec3 &origin, const he
     float angle = acosf(d);
     helios::vec3 axis = cross(oldN, newN);
     if (axis.magnitude() < 1e-6f) {
-        axis = (std::fabs(oldN.x) < std::fabs(oldN.z))
-                   ? cross(oldN, {1, 0, 0})
-                   : cross(oldN, {0, 0, 1});
+        axis = (std::fabs(oldN.x) < std::fabs(oldN.z)) ? cross(oldN, {1, 0, 0}) : cross(oldN, {0, 0, 1});
     }
     axis = axis.normalize();
 
@@ -1569,18 +1366,14 @@ void Context::setPrimitiveNormal(uint UUID, const helios::vec3 &origin, const he
     // preserve the rectangle’s forward (local X) direction:
     //   - t0 is the world‐space image of (1,0,0) under M_old
     helios::vec3 t0{
-        M_old[0], // row0·[1,0,0,0]
-        M_old[4], // row1·[1,0,0,0]
-        M_old[8] // row2·[1,0,0,0]
+            M_old[0], // row0·[1,0,0,0]
+            M_old[4], // row1·[1,0,0,0]
+            M_old[8] // row2·[1,0,0,0]
     };
     t0 = normalize(t0);
 
     //  apply M_delta to that direction (w=0)
-    helios::vec3 t1{
-        M_delta[0] * t0.x + M_delta[1] * t0.y + M_delta[2] * t0.z,
-        M_delta[4] * t0.x + M_delta[5] * t0.y + M_delta[6] * t0.z,
-        M_delta[8] * t0.x + M_delta[9] * t0.y + M_delta[10] * t0.z
-    };
+    helios::vec3 t1{M_delta[0] * t0.x + M_delta[1] * t0.y + M_delta[2] * t0.z, M_delta[4] * t0.x + M_delta[5] * t0.y + M_delta[6] * t0.z, M_delta[8] * t0.x + M_delta[9] * t0.y + M_delta[10] * t0.z};
     t1 = normalize(t1);
 
     //  desired forward is world‐X projected onto the new plane
@@ -1590,9 +1383,8 @@ void Context::setPrimitiveNormal(uint UUID, const helios::vec3 &origin, const he
 
     // compute the twist about newN that carries t1 → targ
     //    using signed angle in that plane
-    float twist = std::atan2(
-        newN * cross(t1, targ), // dot(newN, t1×targ)
-        t1 * targ // dot(t1, targ)
+    float twist = std::atan2(newN * cross(t1, targ), // dot(newN, t1×targ)
+                             t1 * targ // dot(t1, targ)
     );
 
     // build that correction rotation
@@ -1712,7 +1504,7 @@ void Context::deletePrimitive(uint UUID) {
 
     Primitive *prim = primitives.at(UUID);
 
-    if (prim->getParentObjectID() != 0) { //primitive belongs to an object
+    if (prim->getParentObjectID() != 0) { // primitive belongs to an object
 
         uint ObjID = prim->getParentObjectID();
         if (doesObjectExist(ObjID)) {
@@ -1791,7 +1583,7 @@ uint Context::copyPrimitive(uint UUID) {
     } else if (type == PRIMITIVE_TYPE_VOXEL) {
         Voxel *p = getVoxelPointer_private(UUID);
         Voxel *voxel_new;
-        //if( !p->hasTexture() ){
+        // if( !p->hasTexture() ){
         voxel_new = (new Voxel(p->getColorRGBA(), parentID, currentUUID));
         //}else{
         //  voxel_new = (new Voxel( p->getColorRGBA(), currentUUID ));
@@ -1822,9 +1614,7 @@ Primitive *Context::getPrimitivePointer_private(uint UUID) const {
     return primitives.at(UUID);
 }
 
-bool Context::doesPrimitiveExist(uint UUID) const {
-    return primitives.find(UUID) != primitives.end();
-}
+bool Context::doesPrimitiveExist(uint UUID) const { return primitives.find(UUID) != primitives.end(); }
 
 bool Context::doesPrimitiveExist(const std::vector<uint> &UUIDs) const {
     if (UUIDs.empty()) {
@@ -1991,30 +1781,25 @@ std::vector<uint> Context::getAllUUIDs() const {
 
 std::vector<uint> Context::getDirtyUUIDs(bool include_deleted_UUIDs) const {
 
-    size_t dirty_count = std::count_if(
-        primitives.begin(), primitives.end(),
-        [&](auto const &kv){ return isPrimitiveDirty(kv.first); }
-    );
+    size_t dirty_count = std::count_if(primitives.begin(), primitives.end(), [&](auto const &kv) { return isPrimitiveDirty(kv.first); });
 
     std::vector<uint> dirty_UUIDs;
     dirty_UUIDs.reserve(dirty_count);
     for (const auto &[UUID, primitive]: primitives) {
-        if (!primitive->dirty_flag || primitive->ishidden ) {
+        if (!primitive->dirty_flag || primitive->ishidden) {
             continue;
         }
         dirty_UUIDs.push_back(UUID);
     }
 
-    if ( include_deleted_UUIDs ) {
-        dirty_UUIDs.insert( dirty_UUIDs.end(), dirty_deleted_primitives.begin(), dirty_deleted_primitives.end() );
+    if (include_deleted_UUIDs) {
+        dirty_UUIDs.insert(dirty_UUIDs.end(), dirty_deleted_primitives.begin(), dirty_deleted_primitives.end());
     }
 
     return dirty_UUIDs;
 }
 
-std::vector<uint> Context::getDeletedUUIDs() const {
-    return dirty_deleted_primitives;
-}
+std::vector<uint> Context::getDeletedUUIDs() const { return dirty_deleted_primitives; }
 
 void Context::hidePrimitive(uint UUID) const {
 #ifdef HELIOS_DEBUG
@@ -2039,18 +1824,16 @@ bool Context::isPrimitiveHidden(uint UUID) const {
 }
 
 void Context::cleanDeletedUUIDs(std::vector<uint> &UUIDs) const {
-    for (auto it = UUIDs.begin(); it != UUIDs.end(); ) {
-        if (!doesObjectExist(*it)) {
-            it = UUIDs.erase(it);
-        } else {
-            ++it;
+    for (size_t i = UUIDs.size(); i-- > 0;) {
+        if (!doesPrimitiveExist(UUIDs.at(i))) {
+            UUIDs.erase(UUIDs.begin() + i);
         }
     }
 }
 
-void Context::cleanDeletedUUIDs(std::vector<std::vector<uint> > &UUIDs) const {
-    for (auto &vec : UUIDs) {
-        for (auto it = vec.begin(); it != vec.end(); ) {
+void Context::cleanDeletedUUIDs(std::vector<std::vector<uint>> &UUIDs) const {
+    for (auto &vec: UUIDs) {
+        for (auto it = vec.begin(); it != vec.end();) {
             if (!doesObjectExist(*it)) {
                 it = vec.erase(it);
             } else {
@@ -2060,10 +1843,10 @@ void Context::cleanDeletedUUIDs(std::vector<std::vector<uint> > &UUIDs) const {
     }
 }
 
-void Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint> > > &UUIDs) const {
-    for (auto &vec2D : UUIDs) {
-        for (auto &vec : vec2D) {
-            for (auto it = vec.begin(); it != vec.end(); ) {
+void Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint>>> &UUIDs) const {
+    for (auto &vec2D: UUIDs) {
+        for (auto &vec: vec2D) {
+            for (auto it = vec.begin(); it != vec.end();) {
                 if (!doesObjectExist(*it)) {
                     it = vec.erase(it);
                 } else {
@@ -2075,16 +1858,16 @@ void Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint> > > &U
 }
 
 void Context::addTimeseriesData(const char *label, float value, const Date &date, const Time &time) {
-    //floating point value corresponding to date and time
+    // floating point value corresponding to date and time
     double date_value = floor(date.year * 366.25) + date.JulianDay();
     date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
 
-    //Check if data label already exists
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    // Check if data label already exists
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         timeseries_data[label].push_back(value);
         timeseries_datevalue[label].push_back(date_value);
         return;
-    } else { //exists
+    } else { // exists
 
         uint N = getTimeseriesLength(label);
 
@@ -2102,17 +1885,17 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
                 return;
             }
         } else {
-            if (date_value < timeseries_datevalue[label].front()) { //check if data should be inserted at beginning of timeseries
+            if (date_value < timeseries_datevalue[label].front()) { // check if data should be inserted at beginning of timeseries
                 timeseries_data[label].insert(it_data, value);
                 timeseries_datevalue[label].insert(it_datevalue, date_value);
                 return;
-            } else if (date_value > timeseries_datevalue[label].back()) { //check if data should be inserted at end of timeseries
+            } else if (date_value > timeseries_datevalue[label].back()) { // check if data should be inserted at end of timeseries
                 timeseries_data[label].push_back(value);
                 timeseries_datevalue[label].push_back(date_value);
                 return;
             }
 
-            //data should be inserted somewhere in the middle of timeseries
+            // data should be inserted somewhere in the middle of timeseries
             for (uint t = 0; t < N - 1; t++) {
                 if (date_value == timeseries_datevalue[label].at(t)) {
                     std::cerr << "WARNING (Context::addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
@@ -2131,7 +1914,7 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
 }
 
 void Context::setCurrentTimeseriesPoint(const char *label, uint index) {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR (setCurrentTimeseriesPoint): Timeseries variable `" + std::string(label) + "' does not exist.");
     }
     setDate(queryTimeseriesDate(label, index));
@@ -2139,7 +1922,7 @@ void Context::setCurrentTimeseriesPoint(const char *label, uint index) {
 }
 
 float Context::queryTimeseriesData(const char *label, const Date &date, const Time &time) const {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR (setCurrentTimeseriesData): Timeseries variable `" + std::string(label) + "' does not exist.");
     }
 
@@ -2186,12 +1969,10 @@ float Context::queryTimeseriesData(const char *label, const Date &date, const Ti
     }
 }
 
-float Context::queryTimeseriesData(const char *label) const {
-    return queryTimeseriesData(label, sim_date, sim_time);
-}
+float Context::queryTimeseriesData(const char *label) const { return queryTimeseriesData(label, sim_date, sim_time); }
 
 float Context::queryTimeseriesData(const char *label, const uint index) const {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR( Context::getTimeseriesData): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
@@ -2199,17 +1980,17 @@ float Context::queryTimeseriesData(const char *label, const uint index) const {
 }
 
 Time Context::queryTimeseriesTime(const char *label, const uint index) const {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR( Context::getTimeseriesTime): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
 
     int year = floor(floor(dateval) / 366.25);
-    assert(year>1000 && year<10000);
+    assert(year > 1000 && year < 10000);
 
     int JD = floor(dateval - floor(double(year) * 366.25));
-    assert(JD>0 && JD<367);
+    assert(JD > 0 && JD < 367);
 
     int hour = floor((dateval - floor(dateval)) * 24.);
     int minute = floor(((dateval - floor(dateval)) * 24. - double(hour)) * 60.);
@@ -2225,32 +2006,32 @@ Time Context::queryTimeseriesTime(const char *label, const uint index) const {
         hour++;
     }
 
-    assert(second>=0 && second<60);
-    assert(minute>=0 && minute<60);
-    assert(hour>=0 && hour<24);
+    assert(second >= 0 && second < 60);
+    assert(minute >= 0 && minute < 60);
+    assert(hour >= 0 && hour < 24);
 
     return make_Time(hour, minute, second);
 }
 
 Date Context::queryTimeseriesDate(const char *label, const uint index) const {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR( Context::getTimeseriesDate): Timeseries variable " + std::string(label) + " does not exist.");
     }
 
     double dateval = timeseries_datevalue.at(label).at(index);
 
     int year = floor(floor(dateval) / 366.25);
-    assert(year>1000 && year<10000);
+    assert(year > 1000 && year < 10000);
 
     int JD = floor(dateval - floor(double(year) * 366.25));
-    assert(JD>0 && JD<367);
+    assert(JD > 0 && JD < 367);
 
     return Julian2Calendar(JD, year);
 }
 
 uint Context::getTimeseriesLength(const char *label) const {
     uint size = 0;
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR (Context::getTimeseriesDate): Timeseries variable `" + std::string(label) + "' does not exist.");
     } else {
         size = timeseries_data.at(label).size();
@@ -2260,7 +2041,7 @@ uint Context::getTimeseriesLength(const char *label) const {
 }
 
 bool Context::doesTimeseriesVariableExist(const char *label) const {
-    if (timeseries_data.find(label) == timeseries_data.end()) { //does not exist
+    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         return false;
     } else {
         return true;
@@ -2277,9 +2058,7 @@ std::vector<std::string> Context::listTimeseriesVariables() const {
 }
 
 
-void Context::getDomainBoundingBox(vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const {
-    getDomainBoundingBox(getAllUUIDs(), xbounds, ybounds, zbounds);
-}
+void Context::getDomainBoundingBox(vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const { getDomainBoundingBox(getAllUUIDs(), xbounds, ybounds, zbounds); }
 
 void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const {
     // Global bounding box initialization
@@ -2292,20 +2071,20 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
 
     // Parallel region over the primitives (UUIDs)
 #ifdef USE_OPENMP
-    #pragma omp parallel
+#pragma omp parallel
     {
         // Each thread creates its own local bounding box.
         float local_xmin = 1e8, local_xmax = -1e8;
         float local_ymin = 1e8, local_ymax = -1e8;
         float local_zmin = 1e8, local_zmax = -1e8;
 
-        // Parallelize the outer loop over primitives. Use "for" inside the parallel region.
-        #pragma omp for nowait
+// Parallelize the outer loop over primitives. Use "for" inside the parallel region.
+#pragma omp for nowait
         for (size_t i = 0; i < UUIDs.size(); i++) {
             // For each primitive:
-            const std::vector<vec3>& verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
+            const std::vector<vec3> &verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
             // Update local bounding box for each vertex in this primitive.
-            for (const auto &vert : verts) {
+            for (const auto &vert: verts) {
                 local_xmin = std::min(local_xmin, vert.x);
                 local_xmax = std::max(local_xmax, vert.x);
                 local_ymin = std::min(local_ymin, vert.y);
@@ -2315,8 +2094,8 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
             }
         }
 
-        // Merge the thread-local bounds into the global bounds.
-        #pragma omp critical
+// Merge the thread-local bounds into the global bounds.
+#pragma omp critical
         {
             xbounds.x = std::min(xbounds.x, local_xmin);
             xbounds.y = std::max(xbounds.y, local_xmax);
@@ -2461,26 +2240,16 @@ void Context::cropDomain(const vec2 &xbounds, const vec2 &ybounds, const vec2 &z
 
 CompoundObject::~CompoundObject() = default;
 
-uint CompoundObject::getObjectID() const {
-    return OID;
-}
+uint CompoundObject::getObjectID() const { return OID; }
 
-helios::ObjectType CompoundObject::getObjectType() const {
-    return type;
-}
+helios::ObjectType CompoundObject::getObjectType() const { return type; }
 
-uint CompoundObject::getPrimitiveCount() const {
-    return UUIDs.size();
-}
+uint CompoundObject::getPrimitiveCount() const { return UUIDs.size(); }
 
 
-std::vector<uint> CompoundObject::getPrimitiveUUIDs() const {
-    return UUIDs;
-}
+std::vector<uint> CompoundObject::getPrimitiveUUIDs() const { return UUIDs; }
 
-bool CompoundObject::doesObjectContainPrimitive(uint UUID) {
-    return find(UUIDs.begin(), UUIDs.end(), UUID) != UUIDs.end();
-}
+bool CompoundObject::doesObjectContainPrimitive(uint UUID) { return find(UUIDs.begin(), UUIDs.end(), UUID) != UUIDs.end(); }
 
 helios::vec3 CompoundObject::getObjectCenter() const {
     vec2 xbounds, ybounds, zbounds;
@@ -2550,9 +2319,7 @@ bool CompoundObject::hasTexture() const {
     }
 }
 
-std::string CompoundObject::getTextureFile() const {
-    return texturefile;
-}
+std::string CompoundObject::getTextureFile() const { return texturefile; }
 
 void CompoundObject::translate(const helios::vec3 &shift) {
     if (shift == nullorigin) {
@@ -2653,13 +2420,9 @@ void CompoundObject::rotate(float rotation_radians, const helios::vec3 &origin, 
     }
 }
 
-void CompoundObject::scale(const helios::vec3 &scale) {
-    scaleAboutPoint(scale, nullorigin);
-}
+void CompoundObject::scale(const helios::vec3 &scale) { scaleAboutPoint(scale, nullorigin); }
 
-void CompoundObject::scaleAboutCenter(const helios::vec3 &scale) {
-    scaleAboutPoint(scale, getObjectCenter());
-}
+void CompoundObject::scaleAboutCenter(const helios::vec3 &scale) { scaleAboutPoint(scale, getObjectCenter()); }
 
 void CompoundObject::scaleAboutPoint(const helios::vec3 &scale, const helios::vec3 &point) {
     if (scale.x == 1.f && scale.y == 1.f && scale.z == 1.f) {
@@ -2691,9 +2454,7 @@ void CompoundObject::setTransformationMatrix(float (&T)[16]) {
     }
 }
 
-void CompoundObject::setPrimitiveUUIDs(const std::vector<uint> &a_UUIDs) {
-    UUIDs = a_UUIDs;
-}
+void CompoundObject::setPrimitiveUUIDs(const std::vector<uint> &a_UUIDs) { UUIDs = a_UUIDs; }
 
 void CompoundObject::deleteChildPrimitive(uint UUID) {
     auto it = find(UUIDs.begin(), UUIDs.end(), UUID);
@@ -2710,9 +2471,7 @@ void CompoundObject::deleteChildPrimitive(const std::vector<uint> &a_UUIDs) {
     }
 }
 
-bool CompoundObject::arePrimitivesComplete() const {
-    return primitivesarecomplete;
-}
+bool CompoundObject::arePrimitivesComplete() const { return primitivesarecomplete; }
 
 bool Context::areObjectPrimitivesComplete(uint objID) const {
 #ifdef HELIOS_DEBUG
@@ -2724,7 +2483,7 @@ bool Context::areObjectPrimitivesComplete(uint objID) const {
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
-    for (auto it = objIDs.begin(); it != objIDs.end(); ) {
+    for (auto it = objIDs.begin(); it != objIDs.end();) {
         if (!doesObjectExist(*it)) {
             it = objIDs.erase(it);
         } else {
@@ -2733,9 +2492,9 @@ void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
     }
 }
 
-void Context::cleanDeletedObjectIDs(std::vector<std::vector<uint> > &objIDs) const {
-    for (auto &vec : objIDs) {
-        for (auto it = vec.begin(); it != vec.end(); ) {
+void Context::cleanDeletedObjectIDs(std::vector<std::vector<uint>> &objIDs) const {
+    for (auto &vec: objIDs) {
+        for (auto it = vec.begin(); it != vec.end();) {
             if (!doesObjectExist(*it)) {
                 it = vec.erase(it);
             } else {
@@ -2745,10 +2504,10 @@ void Context::cleanDeletedObjectIDs(std::vector<std::vector<uint> > &objIDs) con
     }
 }
 
-void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint> > > &objIDs) const {
-    for (auto &vec2D : objIDs) {
-        for (auto &vec : vec2D) {
-            for (auto it = vec.begin(); it != vec.end(); ) {
+void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint>>> &objIDs) const {
+    for (auto &vec2D: objIDs) {
+        for (auto &vec: vec2D) {
+            for (auto it = vec.begin(); it != vec.end();) {
                 if (!doesObjectExist(*it)) {
                     it = vec.erase(it);
                 } else {
@@ -2768,13 +2527,9 @@ CompoundObject *Context::getObjectPointer(uint ObjID) const {
     return objects.at(ObjID);
 }
 
-uint Context::getObjectCount() const {
-    return objects.size();
-}
+uint Context::getObjectCount() const { return objects.size(); }
 
-bool Context::doesObjectExist(const uint ObjID) const {
-    return objects.find(ObjID) != objects.end();
-}
+bool Context::doesObjectExist(const uint ObjID) const { return objects.find(ObjID) != objects.end(); }
 
 std::vector<uint> Context::getAllObjectIDs() const {
     std::vector<uint> objIDs;
@@ -2861,7 +2616,7 @@ uint Context::copyObject(uint ObjID) {
         const std::vector<vec3> &nodes = o->getNodes();
         const std::vector<float> &radius = o->getNodeRadii();
         const std::vector<RGBcolor> &colors = o->getNodeColors();
-        const std::vector<std::vector<vec3> > &triangle_vertices = o->getTriangleVertices();
+        const std::vector<std::vector<vec3>> &triangle_vertices = o->getTriangleVertices();
         uint subdiv = o->getSubdivisionCount();
 
         auto *tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, colors, triangle_vertices, subdiv, texturefile.c_str(), this));
@@ -3160,7 +2915,7 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<uint> &ObjI
     return output_UUIDs;
 }
 
-std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<std::vector<uint> > &ObjIDs) const {
+std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<std::vector<uint>> &ObjIDs) const {
     std::vector<uint> output_UUIDs;
 
     for (uint j = 0; j < ObjIDs.size(); j++) {
@@ -3227,7 +2982,7 @@ std::vector<float> Context::getTileObjectAreaRatio(const std::vector<uint> &ObjI
 }
 
 void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, const int2 &new_subdiv) {
-    //check that all objects are Tile Objects, and get vector of texture files
+    // check that all objects are Tile Objects, and get vector of texture files
     std::vector<uint> tile_ObjectIDs;
     std::vector<uint> textured_tile_ObjectIDs;
 
@@ -3241,24 +2996,24 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
         }
 #endif
 
-        //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
+        // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
         } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
-            //test if the tile is textured and push into two different vectors
+            // test if the tile is textured and push into two different vectors
             Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
-            if (!p->hasTexture()) { //no texture
+            if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
-            } else { //texture
+            } else { // texture
                 textured_tile_ObjectIDs.push_back(ObjID);
                 tex.push_back(p->getTextureFile());
             }
         }
     }
 
-    //Here just call setSubdivisionCount directly for the non-textured tile objects
+    // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (unsigned int tile_ObjectID: tile_ObjectIDs) {
         Tile *current_object_pointer = getTileObjectPointer(tile_ObjectID);
         const std::vector<uint> &UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
@@ -3286,21 +3041,21 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
     it = std::unique(tex.begin(), tex.end());
     tex.resize(std::distance(tex.begin(), it));
 
-    //create object templates for all the unique texture files
+    // create object templates for all the unique texture files
     std::vector<uint> object_templates;
-    std::vector<std::vector<uint> > template_primitives;
+    std::vector<std::vector<uint>> template_primitives;
     for (uint j = 0; j < tex.size(); j++) {
-        //create a template object for the current texture
+        // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
         std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
-    //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
-    //for each textured tile object
+    // keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
+    // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-        //get info from current object
+        // get info from current object
         Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
         std::string current_texture_file = current_object_pointer->getTextureFile();
 
@@ -3311,11 +3066,11 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
         vec3 normal = current_object_pointer->getNormal();
         SphericalCoord rotation = cart2sphere(normal);
 
-        //for unique textures
+        // for unique textures
         for (uint j = 0; j < tex.size(); j++) {
-            //if the current tile object has the same texture file as the current unique texture file
+            // if the current tile object has the same texture file as the current unique texture file
             if (current_texture_file == tex.at(j)) {
-                //copy the template primitives and create a new tile with them
+                // copy the template primitives and create a new tile with them
                 std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
 
                 // change the objectID for the new primitives
@@ -3323,7 +3078,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
 
-                //delete the original object primitives
+                // delete the original object primitives
                 deletePrimitive(UUIDs_old);
 
                 float IM[16];
@@ -3332,7 +3087,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 
                 current_object_pointer->scale(make_vec3(size.x, size.y, 1));
 
-                //transform based on original object data
+                // transform based on original object data
                 if (rotation.elevation != 0) {
                     current_object_pointer->rotate(-rotation.elevation, "x");
                 }
@@ -3345,12 +3100,12 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
     }
 
 
-    //delete the template (objects and primitives)
+    // delete the template (objects and primitives)
     deleteObject(object_templates);
 }
 
 void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, float area_ratio) {
-    //check that all objects are Tile Objects, and get vector of texture files
+    // check that all objects are Tile Objects, and get vector of texture files
     std::vector<uint> tile_ObjectIDs;
     std::vector<uint> textured_tile_ObjectIDs;
 
@@ -3363,24 +3118,24 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         }
 #endif
 
-        //check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
+        // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
         } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
-            //test if the tile is textured and push into two different vectors
+            // test if the tile is textured and push into two different vectors
             Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
-            if (!p->hasTexture()) { //no texture
+            if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
-            } else { //texture
+            } else { // texture
                 textured_tile_ObjectIDs.push_back(ObjID);
                 tex.push_back(p->getTextureFile());
             }
         }
     }
 
-    //Here just call setSubdivisionCount directly for the non-textured tile objects
+    // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (uint i = 0; i < tile_ObjectIDs.size(); i++) {
         Tile *current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
@@ -3428,27 +3183,27 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
     it = std::unique(tex.begin(), tex.end());
     tex.resize(std::distance(tex.begin(), it));
 
-    //create object templates for all the unique texture files
-    // the assumption here is that all tile objects with the same texture have the same aspect ratio
-    //if this is not true then the copying method won't work well because a new template will need to be created for each texture/aspect ratio combination
+    // create object templates for all the unique texture files
+    //  the assumption here is that all tile objects with the same texture have the same aspect ratio
+    // if this is not true then the copying method won't work well because a new template will need to be created for each texture/aspect ratio combination
 
     std::vector<uint> object_templates;
-    std::vector<std::vector<uint> > template_primitives;
+    std::vector<std::vector<uint>> template_primitives;
     for (uint j = 0; j < tex.size(); j++) {
-        //here we just want to get one tile object with the matching texture
+        // here we just want to get one tile object with the matching texture
         uint ii;
         for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-            //get info from current object
+            // get info from current object
             Tile *current_object_pointer_b = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
             std::string current_texture_file_b = current_object_pointer_b->getTextureFile();
-            //if the current tile object has the same texture file as the current unique texture file
+            // if the current tile object has the same texture file as the current unique texture file
             if (current_texture_file_b == tex.at(j)) {
                 ii = i;
                 break;
             }
         }
 
-        //get info from current object
+        // get info from current object
         Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(ii));
         vec2 tile_size = current_object_pointer->getSize();
         float tile_area = current_object_pointer->getArea();
@@ -3470,17 +3225,17 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
             new_subdiv = make_int2(floor(subpatch_per_x), ceil(subpatch_per_y));
         }
 
-        //create a template object for the current texture
+        // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
         std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
-    //keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
-    //for each textured tile object
+    // keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
+    // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-        //get info from current object
+        // get info from current object
         Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
         // std::string current_texture_file = getPrimitivePointer_private(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
         std::string current_texture_file = current_object_pointer->getTextureFile();
@@ -3492,11 +3247,11 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         vec3 normal = current_object_pointer->getNormal();
         SphericalCoord rotation = cart2sphere(normal);
 
-        //for unique textures
+        // for unique textures
         for (uint j = 0; j < tex.size(); j++) {
-            //if the current tile object has the same texture file as the current unique texture file
+            // if the current tile object has the same texture file as the current unique texture file
             if (current_texture_file == tex.at(j)) {
-                //copy the template primitives and create a new tile with them
+                // copy the template primitives and create a new tile with them
                 std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
 
                 // change the objectID for the new primitives
@@ -3506,7 +3261,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
 
-                //delete the original object primitives
+                // delete the original object primitives
                 deletePrimitive(UUIDs_old);
 
                 float IM[16];
@@ -3526,7 +3281,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         }
     }
 
-    //delete the template (objects and primitives)
+    // delete the template (objects and primitives)
     deleteObject(object_templates);
 }
 
@@ -3572,24 +3327,20 @@ vec3 Tile::getCenter() const {
 }
 
 
-helios::int2 Tile::getSubdivisionCount() const {
-    return subdiv;
-}
+helios::int2 Tile::getSubdivisionCount() const { return subdiv; }
 
-void Tile::setSubdivisionCount(const helios::int2 &a_subdiv) {
-    subdiv = a_subdiv;
-}
+void Tile::setSubdivisionCount(const helios::int2 &a_subdiv) { subdiv = a_subdiv; }
 
 
 std::vector<helios::vec3> Tile::getVertices() const {
     std::vector<helios::vec3> vertices;
     vertices.resize(4);
 
-    //subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
-    //Y[0] = make_vec3( -0.5f, -0.5f, 0.f);
-    //Y[1] = make_vec3( 0.5f, -0.5f, 0.f);
-    //Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
-    //Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
+    // subcenter = make_vec3(-0.5*size.x+(float(i)+0.5)*subsize.x,-0.5*size.y+(float(j)+0.5)*subsize.y,0);
+    // Y[0] = make_vec3( -0.5f, -0.5f, 0.f);
+    // Y[1] = make_vec3( 0.5f, -0.5f, 0.f);
+    // Y[2] = make_vec3( 0.5f, 0.5f, 0.f);
+    // Y[3] = make_vec3( -0.5f, 0.5f, 0.f);
 
 
     vec3 Y[4];
@@ -3607,13 +3358,9 @@ std::vector<helios::vec3> Tile::getVertices() const {
     return vertices;
 }
 
-vec3 Tile::getNormal() const {
-    return context->getPrimitiveNormal(UUIDs.front());
-}
+vec3 Tile::getNormal() const { return context->getPrimitiveNormal(UUIDs.front()); }
 
-std::vector<helios::vec2> Tile::getTextureUV() const {
-    return {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
-}
+std::vector<helios::vec2> Tile::getTextureUV() const { return {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)}; }
 
 Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
     makeIdentityMatrix(transform);
@@ -3669,20 +3416,16 @@ vec3 Sphere::getCenter() const {
     return center;
 }
 
-uint Sphere::getSubdivisionCount() const {
-    return subdiv;
-}
+uint Sphere::getSubdivisionCount() const { return subdiv; }
 
-void Sphere::setSubdivisionCount(uint a_subdiv) {
-    subdiv = a_subdiv;
-}
+void Sphere::setSubdivisionCount(uint a_subdiv) { subdiv = a_subdiv; }
 
 float Sphere::getVolume() const {
     const vec3 &radii = getRadius();
     return 4.f / 3.f * PI_F * radii.x * radii.y * radii.z;
 }
 
-Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3> > &a_triangle_vertices,
+Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
            uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
     makeIdentityMatrix(transform);
 
@@ -3720,9 +3463,7 @@ std::vector<helios::vec3> Tube::getNodes() const {
     return nodes_T;
 }
 
-uint Tube::getNodeCount() const {
-    return scast<uint>(nodes.size());
-}
+uint Tube::getNodeCount() const { return scast<uint>(nodes.size()); }
 
 std::vector<float> Tube::getNodeRadii() const {
     std::vector<float> radius_T;
@@ -3739,17 +3480,11 @@ std::vector<float> Tube::getNodeRadii() const {
     return radius_T;
 }
 
-std::vector<helios::RGBcolor> Tube::getNodeColors() const {
-    return colors;
-}
+std::vector<helios::RGBcolor> Tube::getNodeColors() const { return colors; }
 
-std::vector<std::vector<helios::vec3> > Tube::getTriangleVertices() const {
-    return triangle_vertices;
-}
+std::vector<std::vector<helios::vec3>> Tube::getTriangleVertices() const { return triangle_vertices; }
 
-uint Tube::getSubdivisionCount() const {
-    return subdiv;
-}
+uint Tube::getSubdivisionCount() const { return subdiv; }
 
 float Tube::getLength() const {
     float length = 0.f;
@@ -3881,7 +3616,7 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
         }
     }
 
-    //add triangles for new segment
+    // add triangles for new segment
 
     for (int j = 0; j < radial_subdivisions; j++) {
         vec3 v0 = triangle_vertices.at(1).at(j);
@@ -3927,7 +3662,7 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
     triangle_vertices.resize(triangle_vertices.size() + 1);
     triangle_vertices.back().resize(radial_subdivisions + 1);
-    std::vector<std::vector<vec2> > uv;
+    std::vector<std::vector<vec2>> uv;
     resize_vector(uv, radial_subdivisions + 1, 2);
 
     nodes.push_back(node_position);
@@ -4202,13 +3937,9 @@ vec3 Box::getCenter() const {
     return center;
 }
 
-helios::int3 Box::getSubdivisionCount() const {
-    return subdiv;
-}
+helios::int3 Box::getSubdivisionCount() const { return subdiv; }
 
-void Box::setSubdivisionCount(const helios::int3 &a_subdiv) {
-    subdiv = a_subdiv;
-}
+void Box::setSubdivisionCount(const helios::int3 &a_subdiv) { subdiv = a_subdiv; }
 
 float Box::getVolume() const {
     const vec3 &size = getSize();
@@ -4263,13 +3994,9 @@ vec3 Disk::getCenter() const {
     return center;
 }
 
-int2 Disk::getSubdivisionCount() const {
-    return subdiv;
-}
+int2 Disk::getSubdivisionCount() const { return subdiv; }
 
-void Disk::setSubdivisionCount(const helios::int2 &a_subdiv) {
-    subdiv = a_subdiv;
-}
+void Disk::setSubdivisionCount(const helios::int2 &a_subdiv) { subdiv = a_subdiv; }
 
 Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_texturefile, helios::Context *a_context) {
     makeIdentityMatrix(transform);
@@ -4309,8 +4036,7 @@ float Polymesh::getVolume() const {
     return std::abs(volume);
 }
 
-Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0,
-           float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
+Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, const vec3 &a_node1, float a_radius0, float a_radius1, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
     makeIdentityMatrix(transform);
 
     OID = a_OID;
@@ -4359,9 +4085,7 @@ helios::vec3 Cone::getNodeCoordinate(int node_index) const {
     return node_T;
 }
 
-std::vector<float> Cone::getNodeRadii() const {
-    return radii;
-}
+std::vector<float> Cone::getNodeRadii() const { return radii; }
 
 float Cone::getNodeRadius(int node_index) const {
     if (node_index < 0 || node_index > 1) {
@@ -4371,13 +4095,9 @@ float Cone::getNodeRadius(int node_index) const {
     return radii.at(node_index);
 }
 
-uint Cone::getSubdivisionCount() const {
-    return subdiv;
-}
+uint Cone::getSubdivisionCount() const { return subdiv; }
 
-void Cone::setSubdivisionCount(uint a_subdiv) {
-    subdiv = a_subdiv;
-}
+void Cone::setSubdivisionCount(uint a_subdiv) { subdiv = a_subdiv; }
 
 helios::vec3 Cone::getAxisUnitVector() const {
     std::vector<vec3> nodes_T;
@@ -4411,7 +4131,7 @@ float Cone::getLength() const {
 }
 
 void Cone::scaleLength(float S) {
-    //get the nodes and radii of the nodes with transformation matrix applied
+    // get the nodes and radii of the nodes with transformation matrix applied
     const std::vector<helios::vec3> &nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
     const std::vector<float> &radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
 
@@ -4420,18 +4140,18 @@ void Cone::scaleLength(float S) {
     float length = powf(powf(axis_unit_vector.x, 2) + powf(axis_unit_vector.y, 2) + powf(axis_unit_vector.z, 2), 0.5);
     axis_unit_vector = axis_unit_vector / length;
 
-    //translate node 0 back to origin
+    // translate node 0 back to origin
     context->getConeObjectPointer(OID)->translate(-1.0 * nodes_T.at(0));
 
-    //rotate the cone to align with z axis
+    // rotate the cone to align with z axis
     helios::vec3 z_axis = make_vec3(0, 0, 1);
-    //get the axis about which to rotate
+    // get the axis about which to rotate
     vec3 ra = cross(z_axis, axis_unit_vector);
-    //get the angle to rotate
+    // get the angle to rotate
     float dot = axis_unit_vector.x * z_axis.x + axis_unit_vector.y * z_axis.y + axis_unit_vector.z * z_axis.z;
     float angle = acos_safe(dot);
 
-    //only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
+    // only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
     if (angle != float(0.0)) {
         context->getConeObjectPointer(OID)->rotate(-1 * angle, ra);
     }
@@ -4448,7 +4168,7 @@ void Cone::scaleLength(float S) {
         }
     }
 
-    //rotate back
+    // rotate back
     if (angle != 0.0) {
         context->getConeObjectPointer(OID)->rotate(angle, ra);
     }
@@ -4458,7 +4178,7 @@ void Cone::scaleLength(float S) {
 }
 
 void Cone::scaleGirth(float S) {
-    //get the nodes and radii of the nodes with transformation matrix applied
+    // get the nodes and radii of the nodes with transformation matrix applied
     const std::vector<helios::vec3> &nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
     const std::vector<float> &radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
 
@@ -4466,16 +4186,16 @@ void Cone::scaleGirth(float S) {
     vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z);
     axis_unit_vector.normalize();
 
-    //translate node 0 back to origin
+    // translate node 0 back to origin
     context->getConeObjectPointer(OID)->translate(-1.0 * nodes_T.at(0));
-    //rotate the cone to align with z axis
+    // rotate the cone to align with z axis
     helios::vec3 z_axis = make_vec3(0, 0, 1);
-    //get the axis about which to rotate
+    // get the axis about which to rotate
     vec3 ra = cross(z_axis, axis_unit_vector);
-    //get the angle to rotate
+    // get the angle to rotate
     float dot = axis_unit_vector * z_axis;
     float angle = acos_safe(dot);
-    //only rotate if the cone is not already aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
+    // only rotate if the cone is not already aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
     if (angle != float(0.0)) {
         context->getConeObjectPointer(OID)->rotate(-1 * angle, ra);
     }
@@ -4484,7 +4204,7 @@ void Cone::scaleGirth(float S) {
     context->scaleObject(OID, make_vec3(S, S, 1));
 
 
-    //rotate back
+    // rotate back
     if (angle != 0.0) {
         context->getConeObjectPointer(OID)->rotate(angle, ra);
     }
@@ -4505,19 +4225,15 @@ float Cone::getVolume() const {
 }
 
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius) {
-    return addSphereObject(Ndivs, center, {radius, radius, radius}, {0.f, 0.75f, 0.f}); //Default color is green
+    return addSphereObject(Ndivs, center, {radius, radius, radius}, {0.f, 0.75f, 0.f}); // Default color is green
 }
 
-uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color) {
-    return addSphereObject(Ndivs, center, {radius, radius, radius}, color);
-}
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color) { return addSphereObject(Ndivs, center, {radius, radius, radius}, color); }
 
-uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const char *texturefile) {
-    return addSphereObject(Ndivs, center, {radius, radius, radius}, texturefile);
-}
+uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius, const char *texturefile) { return addSphereObject(Ndivs, center, {radius, radius, radius}, texturefile); }
 
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius) {
-    return addSphereObject(Ndivs, center, radius, {0.f, 0.75f, 0.f}); //Default color is green
+    return addSphereObject(Ndivs, center, radius, {0.f, 0.75f, 0.f}); // Default color is green
 }
 
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color) {
@@ -4533,7 +4249,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
 
     vec3 cart;
 
-    //bottom cap
+    // bottom cap
     for (int j = 0; j < Ndivs; j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, -0.5f * PI_F, 0));
         vec3 v0 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
@@ -4545,7 +4261,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         UUID.push_back(addTriangle(v0, v1, v2, color));
     }
 
-    //top cap
+    // top cap
     for (int j = 0; j < Ndivs; j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
         vec3 v0 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
@@ -4557,7 +4273,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         UUID.push_back(addTriangle(v2, v1, v0, color));
     }
 
-    //middle
+    // middle
     for (int j = 0; j < Ndivs; j++) {
         for (int i = 1; i < Ndivs - 1; i++) {
             cart = sphere2cart(make_SphericalCoord(1.f, -0.5f * PI_F + float(i) * dtheta, float(j) * dphi));
@@ -4614,7 +4330,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
 
     vec3 cart;
 
-    //bottom cap
+    // bottom cap
     for (int j = 0; j < Ndivs; j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, -0.5f * PI_F, 0));
         vec3 v0 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
@@ -4641,14 +4357,15 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
 
-    //top cap
+    // top cap
     for (int j = 0; j < Ndivs; j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
         vec3 v0 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
         vec3 v1 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j) * dphi));
-        vec3 v2 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);;
+        vec3 v2 = center + make_vec3(cart.x * radius.x, cart.y * radius.y, cart.z * radius.z);
+        ;
 
         vec3 n0 = v0 - center;
         n0.normalize();
@@ -4668,7 +4385,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
         UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
 
-    //middle
+    // middle
     for (int j = 0; j < Ndivs; j++) {
         for (int i = 1; i < Ndivs - 1; i++) {
             cart = sphere2cart(make_SphericalCoord(1.f, -0.5f * PI_F + float(i) * dtheta, float(j) * dphi));
@@ -4727,7 +4444,7 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
 }
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv) {
-    RGBcolor color(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color(0.f, 0.75f, 0.f); // Default color is green
 
     return addTileObject(center, size, rotation, subdiv, color);
 }
@@ -4795,6 +4512,10 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 }
 
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile) {
+    return addTileObject(center, size, rotation, subdiv, texturefile, make_int2(1, 1));
+}
+
+uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile, const int2 &texture_repeat) {
     if (!validateTextureFileExtenstion(texturefile)) {
         helios_runtime_error("ERROR (Context::addTileObject): Texture file " + std::string(texturefile) + " is not PNG or JPEG format.");
     } else if (!doesTextureFileExist(texturefile)) {
@@ -4803,6 +4524,19 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         helios_runtime_error("ERROR (Context::addTileObject): Size of tile must be greater than 0.");
     } else if (subdiv.x < 1 || subdiv.y < 1) {
         helios_runtime_error("ERROR (Context::addTileObject): Number of tile subdivisions must be greater than 0.");
+    } else if (texture_repeat.x < 1 || texture_repeat.y < 1) {
+        helios_runtime_error("ERROR (Context::addTileObject): Number of texture repeats must be greater than 0.");
+    }
+
+    // Automatically resize the repeat count so that it evenly divides the subdivisions.
+    int2 repeat = texture_repeat;
+    repeat.x = std::min(subdiv.x, repeat.x);
+    repeat.y = std::min(subdiv.y, repeat.y);
+    while (subdiv.x % repeat.x != 0) {
+        repeat.x--;
+    }
+    while (subdiv.y % repeat.y != 0) {
+        repeat.y--;
     }
 
     std::vector<uint> UUID;
@@ -4813,14 +4547,17 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
     subsize.y = size.y / float(subdiv.y);
 
     std::vector<helios::vec2> uv(4);
+    int2 sub_per_repeat;
+    sub_per_repeat.x = subdiv.x / repeat.x;
+    sub_per_repeat.y = subdiv.y / repeat.y;
     vec2 uv_sub;
-    uv_sub.x = 1.f / float(subdiv.x);
-    uv_sub.y = 1.f / float(subdiv.y);
+    uv_sub.x = 1.f / float(sub_per_repeat.x);
+    uv_sub.y = 1.f / float(sub_per_repeat.y);
 
     addTexture(texturefile);
 
     const int2 &sz = textures.at(texturefile).getImageResolution();
-    if (subdiv.x >= sz.x || subdiv.y >= sz.y) {
+    if (subdiv.x >= repeat.x * sz.x || subdiv.y >= repeat.y * sz.y) {
         helios_runtime_error("ERROR (Context::addTileObject): The resolution of the texture image '" + std::string(texturefile) + "' is lower than the number of tile subdivisions. Increase resolution of the texture image.");
     }
 
@@ -4828,10 +4565,12 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
         for (uint i = 0; i < subdiv.x; i++) {
             vec3 subcenter = make_vec3(-0.5f * size.x + (float(i) + 0.5f) * subsize.x, -0.5f * size.y + (float(j) + 0.5f) * subsize.y, 0.f);
 
-            uv.at(0) = make_vec2(float(i) * uv_sub.x, float(j) * uv_sub.y);
-            uv.at(1) = make_vec2(float(i + 1) * uv_sub.x, float(j) * uv_sub.y);
-            uv.at(2) = make_vec2(float(i + 1) * uv_sub.x, float(j + 1) * uv_sub.y);
-            uv.at(3) = make_vec2(float(i) * uv_sub.x, float(j + 1) * uv_sub.y);
+            uint i_local = i % sub_per_repeat.x;
+            uint j_local = j % sub_per_repeat.y;
+            uv.at(0) = make_vec2(float(i_local) * uv_sub.x, float(j_local) * uv_sub.y);
+            uv.at(1) = make_vec2(float(i_local + 1) * uv_sub.x, float(j_local) * uv_sub.y);
+            uv.at(2) = make_vec2(float(i_local + 1) * uv_sub.x, float(j_local + 1) * uv_sub.y);
+            uv.at(3) = make_vec2(float(i_local) * uv_sub.x, float(j_local + 1) * uv_sub.y);
 
             auto *patch_new = (new Patch(texturefile, uv, textures, 0, currentUUID));
 
@@ -4841,7 +4580,7 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             //   continue;
             // }
 
-            assert(size.x>0.f && size.y>0.f);
+            assert(size.x > 0.f && size.y > 0.f);
             patch_new->scale(make_vec3(subsize.x, subsize.y, 1));
 
             patch_new->translate(subcenter);
@@ -4897,7 +4636,7 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
     std::vector<RGBcolor> color(node_count);
 
     for (uint i = 0; i < node_count; i++) {
-        color.at(i) = make_RGBcolor(0.f, 0.75f, 0.f); //Default color is green
+        color.at(i) = make_RGBcolor(0.f, 0.75f, 0.f); // Default color is green
     }
 
     return addTubeObject(radial_subdivisions, nodes, radius, color);
@@ -4917,7 +4656,7 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
     vec3 axial_vector;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > triangle_vertices;
+    std::vector<std::vector<vec3>> triangle_vertices;
     resize_vector(triangle_vertices, radial_subdivisions + 1, node_count);
 
     // Initialize trigonometric factors for circle points
@@ -5048,9 +4787,9 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
     vec3 axial_vector;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > triangle_vertices;
+    std::vector<std::vector<vec3>> triangle_vertices;
     resize_vector(triangle_vertices, radial_subdivisions + 1, node_count);
-    std::vector<std::vector<vec2> > uv;
+    std::vector<std::vector<vec2>> uv;
     resize_vector(uv, radial_subdivisions + 1, node_count);
 
     // Initialize trigonometric factors for circle points
@@ -5165,18 +4904,14 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 }
 
 uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv) {
-    RGBcolor color(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color(0.f, 0.75f, 0.f); // Default color is green
 
     return addBoxObject(center, size, subdiv, color, false);
 }
 
-uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color) {
-    return addBoxObject(center, size, subdiv, color, false);
-}
+uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color) { return addBoxObject(center, size, subdiv, color, false); }
 
-uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const char *texturefile) {
-    return addBoxObject(center, size, subdiv, texturefile, false);
-}
+uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const char *texturefile) { return addBoxObject(center, size, subdiv, texturefile, false); }
 
 uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals) {
     if (size.x <= 0 || size.y <= 0 || size.z <= 0) {
@@ -5196,77 +4931,77 @@ uint Context::addBoxObject(const vec3 &center, const vec3 &size, const int3 &sub
     vec3 subcenter;
     std::vector<uint> U, U_copy;
 
-    if (reverse_normals) { //normals point inward
+    if (reverse_normals) { // normals point inward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5f * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5f * PI_F, 0), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5f * PI_F, 1.5f * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5f * PI_F, 0.5f * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
-    } else { //normals point outward
+    } else { // normals point outward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5f * PI_F, 0), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5f * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5f * PI_F, 0.5f * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5f * PI_F, 1.5f * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
@@ -5314,77 +5049,77 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
     vec3 subcenter;
     std::vector<uint> U, U_copy;
 
-    if (reverse_normals) { //normals point inward
+    if (reverse_normals) { // normals point inward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
-    } else { //normals point outward
+    } else { // normals point outward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
@@ -5413,29 +5148,17 @@ uint Context::addBoxObject(vec3 center, const vec3 &size, const int3 &subdiv, co
     return currentObjectID - 1;
 }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size) {
-    return addDiskObject(make_int2(Ndivs, 1), center, size, make_SphericalCoord(0, 0), make_RGBAcolor(1, 0, 0, 1));
-}
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size) { return addDiskObject(make_int2(Ndivs, 1), center, size, make_SphericalCoord(0, 0), make_RGBAcolor(1, 0, 0, 1)); }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation) {
-    return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(1, 0, 0, 1));
-}
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation) { return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(1, 0, 0, 1)); }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) {
-    return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(color, 1));
-}
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) { return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(color, 1)); }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
-    return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, color);
-}
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) { return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, color); }
 
-uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char *texture_file) {
-    return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, texture_file);
-}
+uint Context::addDiskObject(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char *texture_file) { return addDiskObject(make_int2(Ndivs, 1), center, size, rotation, texture_file); }
 
-uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) {
-    return addDiskObject(Ndivs, center, size, rotation, make_RGBAcolor(color, 1));
-}
+uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) { return addDiskObject(Ndivs, center, size, rotation, make_RGBAcolor(color, 1)); }
 
 uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
     std::vector<uint> UUID(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2);
@@ -5587,7 +5310,7 @@ uint Context::addPolymeshObject(const std::vector<uint> &UUIDs) {
 }
 
 uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1) {
-    RGBcolor color(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color(0.f, 0.75f, 0.f); // Default color is green
     return addConeObject(Ndivs, node0, node1, radius0, radius1, color);
 }
 
@@ -5598,14 +5321,14 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     vec3 convec;
     std::vector<float> cfact(Ndivs + 1);
     std::vector<float> sfact(Ndivs + 1);
-    std::vector<std::vector<vec3> > xyz(Ndivs + 1);
-    std::vector<std::vector<vec3> > normal(Ndivs + 1);
+    std::vector<std::vector<vec3>> xyz(Ndivs + 1);
+    std::vector<std::vector<vec3>> normal(Ndivs + 1);
 
     for (uint j = 0; j < Ndivs + 1; j++) {
         xyz.at(j).resize(2);
         normal.at(j).resize(2);
     }
-    vec3 nvec(0.1817f, 0.6198f, 0.7634f); //random vector to get things going
+    vec3 nvec(0.1817f, 0.6198f, 0.7634f); // random vector to get things going
 
     for (int j = 0; j < Ndivs + 1; j++) {
         cfact[j] = cosf(2.f * PI_F * float(j) / float(Ndivs));
@@ -5614,7 +5337,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
     for (int i = 0; i < 2; i++) {
         vec3 vec;
-        //looping over cone segments
+        // looping over cone segments
 
         if (i == 0) {
             vec.x = nodes[i + 1].x - nodes[i].x;
@@ -5708,8 +5431,8 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
     vec3 convec;
     std::vector<float> cfact(Ndivs + 1);
     std::vector<float> sfact(Ndivs + 1);
-    std::vector<std::vector<vec3> > xyz, normal;
-    std::vector<std::vector<vec2> > uv;
+    std::vector<std::vector<vec3>> xyz, normal;
+    std::vector<std::vector<vec2>> uv;
     xyz.resize(Ndivs + 1);
     normal.resize(Ndivs + 1);
     uv.resize(Ndivs + 1);
@@ -5727,7 +5450,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 
     for (int i = 0; i < 2; i++) {
         vec3 vec;
-        //looping over cone segments
+        // looping over cone segments
 
         if (i == 0) {
             vec.x = nodes[i + 1].x - nodes[i].x;
@@ -5822,7 +5545,7 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
 }
 
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius) {
-    RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f); // Default color is green
 
     return addSphere(Ndivs, center, radius, color);
 }
@@ -5833,7 +5556,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
     float dtheta = PI_F / float(Ndivs);
     float dphi = 2.0f * PI_F / float(Ndivs);
 
-    //bottom cap
+    // bottom cap
     for (int j = 0; j < Ndivs; j++) {
         vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F, 0));
         vec3 v1 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F + dtheta, float(j) * dphi));
@@ -5842,7 +5565,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
         UUID.push_back(addTriangle(v0, v1, v2, color));
     }
 
-    //top cap
+    // top cap
     for (int j = 0; j < Ndivs; j++) {
         vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, 0.5f * PI_F, 0));
         vec3 v1 = center + sphere2cart(make_SphericalCoord(radius, 0.5f * PI_F - dtheta, float(j) * dphi));
@@ -5851,7 +5574,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
         UUID.push_back(addTriangle(v2, v1, v0, color));
     }
 
-    //middle
+    // middle
     for (int j = 0; j < Ndivs; j++) {
         for (int i = 1; i < Ndivs - 1; i++) {
             vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F + float(i) * dtheta, float(j) * dphi));
@@ -5879,7 +5602,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
     float dtheta = PI_F / float(Ndivs);
     float dphi = 2.0f * PI_F / float(Ndivs);
 
-    //bottom cap
+    // bottom cap
     for (int j = 0; j < Ndivs; j++) {
         vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F, 0));
         vec3 v1 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F + dtheta, float(j) * dphi));
@@ -5903,7 +5626,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
         UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
 
-    //top cap
+    // top cap
     for (int j = 0; j < Ndivs; j++) {
         vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, 0.5f * PI_F, 0));
         vec3 v1 = center + sphere2cart(make_SphericalCoord(radius, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
@@ -5927,7 +5650,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
         UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
 
-    //middle
+    // middle
     for (int j = 0; j < Ndivs; j++) {
         for (int i = 1; i < Ndivs - 1; i++) {
             vec3 v0 = center + sphere2cart(make_SphericalCoord(radius, -0.5f * PI_F + float(i) * dtheta, float(j) * dphi));
@@ -5963,7 +5686,7 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
 }
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv) {
-    RGBcolor color(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color(0.f, 0.75f, 0.f); // Default color is green
 
     return addTile(center, size, rotation, subdiv, color);
 }
@@ -5998,10 +5721,27 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 }
 
 std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile) {
+    return addTile(center, size, rotation, subdiv, texturefile, make_int2(1, 1));
+}
+
+std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile, const int2 &texture_repeat) {
     if (!validateTextureFileExtenstion(texturefile)) {
         helios_runtime_error("ERROR (Context::addTile): Texture file " + std::string(texturefile) + " is not PNG or JPEG format.");
     } else if (!doesTextureFileExist(texturefile)) {
         helios_runtime_error("ERROR (Context::addTile): Texture file " + std::string(texturefile) + " does not exist.");
+    } else if (texture_repeat.x < 1 || texture_repeat.y < 1) {
+        helios_runtime_error("ERROR (Context::addTile): Number of texture repeats must be greater than 0.");
+    }
+
+    // Automatically resize the repeat count so that it evenly divides the subdivisions.
+    int2 repeat = texture_repeat;
+    repeat.x = std::min(subdiv.x, repeat.x);
+    repeat.y = std::min(subdiv.y, repeat.y);
+    while (subdiv.x % repeat.x != 0) {
+        repeat.x--;
+    }
+    while (subdiv.y % repeat.y != 0) {
+        repeat.y--;
     }
 
     std::vector<uint> UUID;
@@ -6010,32 +5750,31 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
     subsize.x = size.x / float(subdiv.x);
     subsize.y = size.y / float(subdiv.y);
 
-    vec3 subcenter;
-
     std::vector<helios::vec2> uv(4);
+    int2 sub_per_repeat;
+    sub_per_repeat.x = subdiv.x / repeat.x;
+    sub_per_repeat.y = subdiv.y / repeat.y;
     vec2 uv_sub;
-    uv_sub.x = 1.f / float(subdiv.x);
-    uv_sub.y = 1.f / float(subdiv.y);
+    uv_sub.x = 1.f / float(sub_per_repeat.x);
+    uv_sub.y = 1.f / float(sub_per_repeat.y);
 
     addTexture(texturefile);
-    std::vector<std::vector<bool> > alpha;
-    if (textures.at(texturefile).hasTransparencyChannel()) {
-        alpha = *textures.at(texturefile).getTransparencyData();
-    }
 
-    int2 sz = textures.at(texturefile).getImageResolution();
-    if (subdiv.x >= sz.x || subdiv.y >= sz.y) {
+    const int2 &sz = textures.at(texturefile).getImageResolution();
+    if (subdiv.x >= repeat.x * sz.x || subdiv.y >= repeat.y * sz.y) {
         helios_runtime_error("ERROR (Context::addTile): The resolution of the texture image '" + std::string(texturefile) + "' is lower than the number of tile subdivisions. Increase resolution of the texture image.");
     }
 
     for (uint j = 0; j < subdiv.y; j++) {
         for (uint i = 0; i < subdiv.x; i++) {
-            subcenter = make_vec3(-0.5f * size.x + (float(i) + 0.5f) * subsize.x, -0.5f * size.y + (float(j) + 0.5f) * subsize.y, 0);
+            vec3 subcenter = make_vec3(-0.5f * size.x + (float(i) + 0.5f) * subsize.x, -0.5f * size.y + (float(j) + 0.5f) * subsize.y, 0.f);
 
-            uv[0] = make_vec2(float(i) * uv_sub.x, float(j) * uv_sub.y);
-            uv[1] = make_vec2(float(i + 1) * uv_sub.x, float(j) * uv_sub.y);
-            uv[2] = make_vec2(float(i + 1) * uv_sub.x, float(j + 1) * uv_sub.y);
-            uv[3] = make_vec2(float(i) * uv_sub.x, float(j + 1) * uv_sub.y);
+            uint i_local = i % sub_per_repeat.x;
+            uint j_local = j % sub_per_repeat.y;
+            uv.at(0) = make_vec2(float(i_local) * uv_sub.x, float(j_local) * uv_sub.y);
+            uv.at(1) = make_vec2(float(i_local + 1) * uv_sub.x, float(j_local) * uv_sub.y);
+            uv.at(2) = make_vec2(float(i_local + 1) * uv_sub.x, float(j_local + 1) * uv_sub.y);
+            uv.at(3) = make_vec2(float(i_local) * uv_sub.x, float(j_local + 1) * uv_sub.y);
 
             auto *patch_new = (new Patch(texturefile, uv, textures, 0, currentUUID));
 
@@ -6044,7 +5783,7 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
                 continue;
             }
 
-            assert(size.x>0.f && size.y>0.f);
+            assert(size.x > 0.f && size.y > 0.f);
             patch_new->scale(make_vec3(subsize.x, subsize.y, 1));
 
             patch_new->translate(subcenter);
@@ -6087,17 +5826,17 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
     vec3 vec, convec;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > xyz;
+    std::vector<std::vector<vec3>> xyz;
     resize_vector(xyz, node_count, radial_subdivisions + 1);
 
-    vec3 nvec(0.1817f, 0.6198f, 0.7634f); //random vector to get things going
+    vec3 nvec(0.1817f, 0.6198f, 0.7634f); // random vector to get things going
 
     for (int j = 0; j < radial_subdivisions + 1; j++) {
         cfact[j] = cosf(2.f * PI_F * float(j) / float(radial_subdivisions));
         sfact[j] = sinf(2.f * PI_F * float(j) / float(radial_subdivisions));
     }
 
-    for (int i = 0; i < node_count; i++) { //looping over tube segments
+    for (int i = 0; i < node_count; i++) { // looping over tube segments
 
         if (radius.at(i) < 0) {
             helios_runtime_error("ERROR (Context::addTube): Radius of tube must be positive.");
@@ -6177,20 +5916,20 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
     vec3 vec, convec;
     std::vector<float> cfact(radial_subdivisions + 1);
     std::vector<float> sfact(radial_subdivisions + 1);
-    std::vector<std::vector<vec3> > xyz, normal;
-    std::vector<std::vector<vec2> > uv;
+    std::vector<std::vector<vec3>> xyz, normal;
+    std::vector<std::vector<vec2>> uv;
     resize_vector(xyz, node_count, radial_subdivisions + 1);
     resize_vector(normal, node_count, radial_subdivisions + 1);
     resize_vector(uv, node_count, radial_subdivisions + 1);
 
-    vec3 nvec(0.1817f, 0.6198f, 0.7634f); //random vector to get things going
+    vec3 nvec(0.1817f, 0.6198f, 0.7634f); // random vector to get things going
 
     for (int j = 0; j < radial_subdivisions + 1; j++) {
         cfact[j] = cosf(2.f * PI_F * float(j) / float(radial_subdivisions));
         sfact[j] = sinf(2.f * PI_F * float(j) / float(radial_subdivisions));
     }
 
-    for (int i = 0; i < node_count; i++) { //looping over tube segments
+    for (int i = 0; i < node_count; i++) { // looping over tube segments
 
         if (radius.at(i) < 0) {
             helios_runtime_error("ERROR (Context::addTube): Radius of tube must be positive.");
@@ -6266,18 +6005,14 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
 }
 
 std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv) {
-    RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f); //Default color is green
+    RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f); // Default color is green
 
     return addBox(center, size, subdiv, color, false);
 }
 
-std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color) {
-    return addBox(center, size, subdiv, color, false);
-}
+std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color) { return addBox(center, size, subdiv, color, false); }
 
-std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char *texturefile) {
-    return addBox(center, size, subdiv, texturefile, false);
-}
+std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const char *texturefile) { return addBox(center, size, subdiv, texturefile, false); }
 
 std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const int3 &subdiv, const RGBcolor &color, bool reverse_normals) {
     std::vector<uint> UUID;
@@ -6290,77 +6025,77 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
     vec3 subcenter;
     std::vector<uint> U;
 
-    if (reverse_normals) { //normals point inward
+    if (reverse_normals) { // normals point inward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
-    } else { //normals point outward
+    } else { // normals point outward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), color);
         UUID.insert(UUID.end(), U.begin(), U.end());
@@ -6386,77 +6121,77 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
     vec3 subcenter;
     std::vector<uint> U;
 
-    if (reverse_normals) { //normals point inward
+    if (reverse_normals) { // normals point inward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
-    } else { //normals point outward
+    } else { // normals point outward
 
         // x-z faces (vertical)
 
-        //right
+        // right
         subcenter = center + make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, 0), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //left
+        // left
         subcenter = center - make_vec3(0, 0.5f * size.y, 0);
         U = addTile(subcenter, make_vec2(size.x, size.z), make_SphericalCoord(0.5 * PI_F, PI_F), make_int2(subdiv.x, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // y-z faces (vertical)
 
-        //front
+        // front
         subcenter = center + make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 0.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //back
+        // back
         subcenter = center - make_vec3(0.5f * size.x, 0, 0);
         U = addTile(subcenter, make_vec2(size.y, size.z), make_SphericalCoord(0.5 * PI_F, 1.5 * PI_F), make_int2(subdiv.y, subdiv.z), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
         // x-y faces (horizontal)
 
-        //top
+        // top
         subcenter = center + make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(0, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
 
-        //bottom
+        // bottom
         subcenter = center - make_vec3(0, 0, 0.5f * size.z);
         U = addTile(subcenter, make_vec2(size.x, size.y), make_SphericalCoord(PI_F, 0), make_int2(subdiv.x, subdiv.y), texturefile);
         UUID.insert(UUID.end(), U.begin(), U.end());
@@ -6465,29 +6200,17 @@ std::vector<uint> Context::addBox(const vec3 &center, const vec3 &size, const in
     return UUID;
 }
 
-std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size) {
-    return addDisk(make_int2(Ndivs, 1), center, size, make_SphericalCoord(0, 0), make_RGBAcolor(1, 0, 0, 1));
-}
+std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size) { return addDisk(make_int2(Ndivs, 1), center, size, make_SphericalCoord(0, 0), make_RGBAcolor(1, 0, 0, 1)); }
 
-std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation) {
-    return addDisk(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(1, 0, 0, 1));
-}
+std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation) { return addDisk(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(1, 0, 0, 1)); }
 
-std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) {
-    return addDisk(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(color, 1));
-}
+std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) { return addDisk(make_int2(Ndivs, 1), center, size, rotation, make_RGBAcolor(color, 1)); }
 
-std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
-    return addDisk(make_int2(Ndivs, 1), center, size, rotation, color);
-}
+std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) { return addDisk(make_int2(Ndivs, 1), center, size, rotation, color); }
 
-std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char *texture_file) {
-    return addDisk(make_int2(Ndivs, 1), center, size, rotation, texture_file);
-}
+std::vector<uint> Context::addDisk(uint Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char *texture_file) { return addDisk(make_int2(Ndivs, 1), center, size, rotation, texture_file); }
 
-std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) {
-    return addDisk(Ndivs, center, size, rotation, make_RGBAcolor(color, 1));
-}
+std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBcolor &color) { return addDisk(Ndivs, center, size, rotation, make_RGBAcolor(color, 1)); }
 
 std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
     std::vector<uint> UUID(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2);
@@ -6568,7 +6291,7 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
 
 std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1) {
     RGBcolor color;
-    color = make_RGBcolor(0.f, 0.75f, 0.f); //Default color is green
+    color = make_RGBcolor(0.f, 0.75f, 0.f); // Default color is green
 
     return addCone(Ndivs, node0, node1, radius0, radius1, color);
 }
@@ -6580,21 +6303,21 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
     vec3 vec, convec;
     std::vector<float> cfact(Ndivs + 1);
     std::vector<float> sfact(Ndivs + 1);
-    std::vector<std::vector<vec3> > xyz, normal;
+    std::vector<std::vector<vec3>> xyz, normal;
     xyz.resize(Ndivs + 1);
     normal.resize(Ndivs + 1);
     for (uint j = 0; j < Ndivs + 1; j++) {
         xyz.at(j).resize(2);
         normal.at(j).resize(2);
     }
-    vec3 nvec(0.1817f, 0.6198f, 0.7634f); //random vector to get things going
+    vec3 nvec(0.1817f, 0.6198f, 0.7634f); // random vector to get things going
 
     for (int j = 0; j < Ndivs + 1; j++) {
         cfact[j] = cosf(2.f * PI_F * float(j) / float(Ndivs));
         sfact[j] = sinf(2.f * PI_F * float(j) / float(Ndivs));
     }
 
-    for (int i = 0; i < 2; i++) { //looping over cone segments
+    for (int i = 0; i < 2; i++) { // looping over cone segments
 
         if (i == 0) {
             vec.x = nodes[i + 1].x - nodes[i].x;
@@ -6667,8 +6390,8 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
     vec3 vec, convec;
     std::vector<float> cfact(Ndivs + 1);
     std::vector<float> sfact(Ndivs + 1);
-    std::vector<std::vector<vec3> > xyz, normal;
-    std::vector<std::vector<vec2> > uv;
+    std::vector<std::vector<vec3>> xyz, normal;
+    std::vector<std::vector<vec2>> uv;
     xyz.resize(Ndivs + 1);
     normal.resize(Ndivs + 1);
     uv.resize(Ndivs + 1);
@@ -6684,7 +6407,7 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
         sfact[j] = sinf(2.f * PI_F * float(j) / float(Ndivs));
     }
 
-    for (int i = 0; i < 2; i++) { //looping over cone segments
+    for (int i = 0; i < 2; i++) { // looping over cone segments
 
         if (i == 0) {
             vec.x = nodes[i + 1].x - nodes[i].x;
@@ -6782,23 +6505,19 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
                 continue;
             }
 
-            if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
-                HELIOS_TYPE_FLOAT) {
+            if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_FLOAT) {
                 float data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = data;
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
-                       HELIOS_TYPE_DOUBLE) {
+            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_DOUBLE) {
                 double data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
-                       HELIOS_TYPE_INT) {
+            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) ==
-                       HELIOS_TYPE_UINT) {
+            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_UINT) {
                 uint data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
@@ -6824,7 +6543,7 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
 
     std::vector<RGBcolor> colormap_data = generateColormap(colormap, Ncolors);
 
-    std::map<std::string, std::vector<std::string> > cmap_texture_filenames;
+    std::map<std::string, std::vector<std::string>> cmap_texture_filenames;
 
     for (auto &[UUID, pdata]: pcolor_data) {
         std::string texturefile = getPrimitiveTextureFile(UUID);
@@ -7025,9 +6744,7 @@ std::vector<std::string> Context::generateTexturesFromColormap(const std::string
     return texture_filenames;
 }
 
-void Context::out_of_memory_handler() {
-    helios_runtime_error("ERROR: Out of host memory. The program has run out of memory and cannot continue.");
-}
+void Context::out_of_memory_handler() { helios_runtime_error("ERROR: Out of host memory. The program has run out of memory and cannot continue."); }
 
 void Context::install_out_of_memory_handler() { std::set_new_handler(out_of_memory_handler); }
 
@@ -7102,9 +6819,7 @@ std::vector<uint> Context::getPrimitiveParentObjectID(const std::vector<uint> &U
 }
 
 
-std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const {
-    return getUniquePrimitiveParentObjectIDs(UUIDs, false);
-}
+std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs) const { return getUniquePrimitiveParentObjectIDs(UUIDs, false); }
 
 
 std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<uint> &UUIDs, bool include_ObjID_zero) const {
@@ -7113,7 +6828,7 @@ std::vector<uint> Context::getUniquePrimitiveParentObjectIDs(const std::vector<u
         return primitiveObjIDs;
     }
 
-    //vector of parent object ID for each primitive
+    // vector of parent object ID for each primitive
     primitiveObjIDs.resize(UUIDs.size());
     for (uint i = 0; i < UUIDs.size(); i++) {
 #ifdef HELIOS_DEBUG
@@ -7192,17 +6907,11 @@ void Context::getPrimitiveBoundingBox(const std::vector<uint> &UUIDs, vec3 &min_
     }
 }
 
-helios::vec3 Context::getPrimitiveNormal(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getNormal();
-}
+helios::vec3 Context::getPrimitiveNormal(uint UUID) const { return getPrimitivePointer_private(UUID)->getNormal(); }
 
-void Context::getPrimitiveTransformationMatrix(uint UUID, float (&T)[16]) const {
-    getPrimitivePointer_private(UUID)->getTransformationMatrix(T);
-}
+void Context::getPrimitiveTransformationMatrix(uint UUID, float (&T)[16]) const { getPrimitivePointer_private(UUID)->getTransformationMatrix(T); }
 
-void Context::setPrimitiveTransformationMatrix(uint UUID, float (&T)[16]) {
-    getPrimitivePointer_private(UUID)->setTransformationMatrix(T);
-}
+void Context::setPrimitiveTransformationMatrix(uint UUID, float (&T)[16]) { getPrimitivePointer_private(UUID)->setTransformationMatrix(T); }
 
 void Context::setPrimitiveTransformationMatrix(const std::vector<uint> &UUIDs, float (&T)[16]) {
     for (uint UUID: UUIDs) {
@@ -7210,26 +6919,16 @@ void Context::setPrimitiveTransformationMatrix(const std::vector<uint> &UUIDs, f
     }
 }
 
-std::vector<helios::vec3> Context::getPrimitiveVertices(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getVertices();
-}
+std::vector<helios::vec3> Context::getPrimitiveVertices(uint UUID) const { return getPrimitivePointer_private(UUID)->getVertices(); }
 
 
-helios::RGBcolor Context::getPrimitiveColor(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getColor();
-}
+helios::RGBcolor Context::getPrimitiveColor(uint UUID) const { return getPrimitivePointer_private(UUID)->getColor(); }
 
-helios::RGBcolor Context::getPrimitiveColorRGB(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getColorRGB();
-}
+helios::RGBcolor Context::getPrimitiveColorRGB(uint UUID) const { return getPrimitivePointer_private(UUID)->getColorRGB(); }
 
-helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getColorRGBA();
-}
+helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const { return getPrimitivePointer_private(UUID)->getColorRGBA(); }
 
-void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) const {
-    getPrimitivePointer_private(UUID)->setColor(color);
-}
+void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) const { getPrimitivePointer_private(UUID)->setColor(color); }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) const {
     for (uint UUID: UUIDs) {
@@ -7237,9 +6936,7 @@ void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &
     }
 }
 
-void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) const {
-    getPrimitivePointer_private(UUID)->setColor(color);
-}
+void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) const { getPrimitivePointer_private(UUID)->setColor(color); }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) const {
     for (uint UUID: UUIDs) {
@@ -7247,13 +6944,9 @@ void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor 
     }
 }
 
-std::string Context::getPrimitiveTextureFile(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getTextureFile();
-}
+std::string Context::getPrimitiveTextureFile(uint UUID) const { return getPrimitivePointer_private(UUID)->getTextureFile(); }
 
-void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const {
-    getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
-}
+void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const { getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str()); }
 
 helios::int2 Context::getPrimitiveTextureSize(uint UUID) const {
     std::string texturefile = getPrimitivePointer_private(UUID)->getTextureFile();
@@ -7263,9 +6956,7 @@ helios::int2 Context::getPrimitiveTextureSize(uint UUID) const {
     return {0, 0};
 }
 
-std::vector<helios::vec2> Context::getPrimitiveTextureUV(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getTextureUV();
-}
+std::vector<helios::vec2> Context::getPrimitiveTextureUV(uint UUID) const { return getPrimitivePointer_private(UUID)->getTextureUV(); }
 
 bool Context::primitiveTextureHasTransparencyChannel(uint UUID) const {
     std::string texturefile = getPrimitivePointer_private(UUID)->getTextureFile();
@@ -7275,9 +6966,9 @@ bool Context::primitiveTextureHasTransparencyChannel(uint UUID) const {
     return false;
 }
 
-const std::vector<std::vector<bool> > *Context::getPrimitiveTextureTransparencyData(uint UUID) const {
+const std::vector<std::vector<bool>> *Context::getPrimitiveTextureTransparencyData(uint UUID) const {
     if (primitiveTextureHasTransparencyChannel(UUID)) {
-        const std::vector<std::vector<bool> > *data = textures.at(getPrimitivePointer_private(UUID)->getTextureFile()).getTransparencyData();
+        const std::vector<std::vector<bool>> *data = textures.at(getPrimitivePointer_private(UUID)->getTextureFile()).getTransparencyData();
         return data;
     }
 
@@ -7285,9 +6976,7 @@ const std::vector<std::vector<bool> > *Context::getPrimitiveTextureTransparencyD
     return nullptr;
 }
 
-void Context::overridePrimitiveTextureColor(uint UUID) const {
-    getPrimitivePointer_private(UUID)->overrideTextureColor();
-}
+void Context::overridePrimitiveTextureColor(uint UUID) const { getPrimitivePointer_private(UUID)->overrideTextureColor(); }
 
 void Context::overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
     for (uint UUID: UUIDs) {
@@ -7295,9 +6984,7 @@ void Context::overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) cons
     }
 }
 
-void Context::usePrimitiveTextureColor(uint UUID) const {
-    getPrimitivePointer_private(UUID)->useTextureColor();
-}
+void Context::usePrimitiveTextureColor(uint UUID) const { getPrimitivePointer_private(UUID)->useTextureColor(); }
 
 void Context::usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
     for (uint UUID: UUIDs) {
@@ -7305,13 +6992,9 @@ void Context::usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
     }
 }
 
-bool Context::isPrimitiveTextureColorOverridden(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->isTextureColorOverridden();
-}
+bool Context::isPrimitiveTextureColorOverridden(uint UUID) const { return getPrimitivePointer_private(UUID)->isTextureColorOverridden(); }
 
-float Context::getPrimitiveSolidFraction(uint UUID) const {
-    return getPrimitivePointer_private(UUID)->getSolidFraction();
-}
+float Context::getPrimitiveSolidFraction(uint UUID) const { return getPrimitivePointer_private(UUID)->getSolidFraction(); }
 
 void Context::printPrimitiveInfo(uint UUID) const {
     std::cout << "-------------------------------------------" << std::endl;
@@ -7945,9 +7628,7 @@ bool Context::isObjectHidden(uint ObjID) const {
     return objects.at(ObjID)->ishidden;
 }
 
-float Context::getObjectArea(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->getArea();
-}
+float Context::getObjectArea(uint ObjID) const { return getObjectPointer_private(ObjID)->getArea(); }
 
 helios::vec3 Context::getObjectAverageNormal(uint ObjID) const {
 #ifdef HELIOS_DEBUG
@@ -7967,25 +7648,15 @@ helios::vec3 Context::getObjectAverageNormal(uint ObjID) const {
     return norm_avg;
 }
 
-uint Context::getObjectPrimitiveCount(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->getPrimitiveCount();
-}
+uint Context::getObjectPrimitiveCount(uint ObjID) const { return getObjectPointer_private(ObjID)->getPrimitiveCount(); }
 
-helios::vec3 Context::getObjectCenter(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->getObjectCenter();
-}
+helios::vec3 Context::getObjectCenter(uint ObjID) const { return getObjectPointer_private(ObjID)->getObjectCenter(); }
 
-std::string Context::getObjectTextureFile(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->getTextureFile();
-}
+std::string Context::getObjectTextureFile(uint ObjID) const { return getObjectPointer_private(ObjID)->getTextureFile(); }
 
-void Context::getObjectTransformationMatrix(uint ObjID, float (&T)[16]) const {
-    getObjectPointer_private(ObjID)->getTransformationMatrix(T);
-}
+void Context::getObjectTransformationMatrix(uint ObjID, float (&T)[16]) const { getObjectPointer_private(ObjID)->getTransformationMatrix(T); }
 
-void Context::setObjectTransformationMatrix(uint ObjID, float (&T)[16]) const {
-    getObjectPointer_private(ObjID)->setTransformationMatrix(T);
-}
+void Context::setObjectTransformationMatrix(uint ObjID, float (&T)[16]) const { getObjectPointer_private(ObjID)->setTransformationMatrix(T); }
 
 void Context::setObjectTransformationMatrix(const std::vector<uint> &ObjIDs, float (&T)[16]) const {
     for (uint ObjID: ObjIDs) {
@@ -8010,9 +7681,7 @@ void Context::setObjectAverageNormal(uint ObjID, const vec3 &origin, const vec3 
     vec3 axis = cross(oldN, newN);
     if (axis.magnitude() < 1e-6f) {
         // pick any vector ⟂ oldN
-        axis = (std::abs(oldN.x) < std::abs(oldN.z))
-                   ? cross(oldN, {1, 0, 0})
-                   : cross(oldN, {0, 0, 1});
+        axis = (std::abs(oldN.x) < std::abs(oldN.z)) ? cross(oldN, {1, 0, 0}) : cross(oldN, {0, 0, 1});
     }
     axis = axis.normalize();
 
@@ -8036,16 +7705,15 @@ void Context::setObjectAverageNormal(uint ObjID, const vec3 &origin, const vec3 
     targ = normalize(targ);
 
     // 6) Compute signed twist about newN that carries t1→targ
-    float twist = atan2f(
-        newN * cross(t1, targ), // dot(newN, t1×targ)
-        t1 * targ // dot(t1, targ)
+    float twist = atan2f(newN * cross(t1, targ), // dot(newN, t1×targ)
+                         t1 * targ // dot(t1, targ)
     );
 
     // 7) Apply that compensating twist about the same origin
     rotateObject(ObjID, twist, origin, newN);
 }
 
-void Context::setObjectOrigin( uint ObjID, const vec3& origin ) const {
+void Context::setObjectOrigin(uint ObjID, const vec3 &origin) const {
 #ifdef HELIOS_DEBUG
     if (!doesObjectExist(ObjID)) {
         helios_runtime_error("ERROR (Context::setObjectOrigin): invalid objectID");
@@ -8054,13 +7722,9 @@ void Context::setObjectOrigin( uint ObjID, const vec3& origin ) const {
     objects.at(ObjID)->object_origin = origin;
 }
 
-bool Context::objectHasTexture(uint ObjID) const {
-    return getObjectPointer_private(ObjID)->hasTexture();
-}
+bool Context::objectHasTexture(uint ObjID) const { return getObjectPointer_private(ObjID)->hasTexture(); }
 
-void Context::setObjectColor(uint ObjID, const RGBcolor &color) const {
-    getObjectPointer_private(ObjID)->setColor(color);
-}
+void Context::setObjectColor(uint ObjID, const RGBcolor &color) const { getObjectPointer_private(ObjID)->setColor(color); }
 
 void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBcolor &color) const {
     for (const uint ObjID: ObjIDs) {
@@ -8068,9 +7732,7 @@ void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBcolor &co
     }
 }
 
-void Context::setObjectColor(uint ObjID, const RGBAcolor &color) const {
-    getObjectPointer_private(ObjID)->setColor(color);
-}
+void Context::setObjectColor(uint ObjID, const RGBAcolor &color) const { getObjectPointer_private(ObjID)->setColor(color); }
 
 void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBAcolor &color) const {
     for (const uint ObjID: ObjIDs) {
@@ -8078,13 +7740,9 @@ void Context::setObjectColor(const std::vector<uint> &ObjIDs, const RGBAcolor &c
     }
 }
 
-bool Context::doesObjectContainPrimitive(uint ObjID, uint UUID) const {
-    return getObjectPointer_private(ObjID)->doesObjectContainPrimitive(UUID);
-}
+bool Context::doesObjectContainPrimitive(uint ObjID, uint UUID) const { return getObjectPointer_private(ObjID)->doesObjectContainPrimitive(UUID); }
 
-void Context::overrideObjectTextureColor(uint ObjID) const {
-    getObjectPointer_private(ObjID)->overrideTextureColor();
-}
+void Context::overrideObjectTextureColor(uint ObjID) const { getObjectPointer_private(ObjID)->overrideTextureColor(); }
 
 void Context::overrideObjectTextureColor(const std::vector<uint> &ObjIDs) const {
     for (uint ObjID: ObjIDs) {
@@ -8092,9 +7750,7 @@ void Context::overrideObjectTextureColor(const std::vector<uint> &ObjIDs) const 
     }
 }
 
-void Context::useObjectTextureColor(uint ObjID) const {
-    getObjectPointer_private(ObjID)->useTextureColor();
-}
+void Context::useObjectTextureColor(uint ObjID) const { getObjectPointer_private(ObjID)->useTextureColor(); }
 
 void Context::useObjectTextureColor(const std::vector<uint> &ObjIDs) {
     for (uint ObjID: ObjIDs) {
@@ -8230,73 +7886,39 @@ Cone *Context::getConeObjectPointer_private(uint ObjID) const {
     return dynamic_cast<Cone *>(objects.at(ObjID));
 }
 
-helios::vec3 Context::getTileObjectCenter(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getCenter();
-}
+helios::vec3 Context::getTileObjectCenter(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getCenter(); }
 
-helios::vec2 Context::getTileObjectSize(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getSize();
-}
+helios::vec2 Context::getTileObjectSize(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getSize(); }
 
-helios::int2 Context::getTileObjectSubdivisionCount(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getSubdivisionCount();
-}
+helios::int2 Context::getTileObjectSubdivisionCount(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getSubdivisionCount(); }
 
-helios::vec3 Context::getTileObjectNormal(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getNormal();
-}
+helios::vec3 Context::getTileObjectNormal(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getNormal(); }
 
-std::vector<helios::vec2> Context::getTileObjectTextureUV(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getTextureUV();
-}
+std::vector<helios::vec2> Context::getTileObjectTextureUV(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getTextureUV(); }
 
-std::vector<helios::vec3> Context::getTileObjectVertices(uint ObjID) const {
-    return getTileObjectPointer_private(ObjID)->getVertices();
-}
+std::vector<helios::vec3> Context::getTileObjectVertices(uint ObjID) const { return getTileObjectPointer_private(ObjID)->getVertices(); }
 
-helios::vec3 Context::getSphereObjectCenter(uint ObjID) const {
-    return getSphereObjectPointer_private(ObjID)->getCenter();
-}
+helios::vec3 Context::getSphereObjectCenter(uint ObjID) const { return getSphereObjectPointer_private(ObjID)->getCenter(); }
 
-helios::vec3 Context::getSphereObjectRadius(uint ObjID) const {
-    return getSphereObjectPointer_private(ObjID)->getRadius();
-}
+helios::vec3 Context::getSphereObjectRadius(uint ObjID) const { return getSphereObjectPointer_private(ObjID)->getRadius(); }
 
-uint Context::getSphereObjectSubdivisionCount(uint ObjID) const {
-    return getSphereObjectPointer_private(ObjID)->getSubdivisionCount();
-}
+uint Context::getSphereObjectSubdivisionCount(uint ObjID) const { return getSphereObjectPointer_private(ObjID)->getSubdivisionCount(); }
 
-float Context::getSphereObjectVolume(uint ObjID) const {
-    return getSphereObjectPointer_private(ObjID)->getVolume();
-}
+float Context::getSphereObjectVolume(uint ObjID) const { return getSphereObjectPointer_private(ObjID)->getVolume(); }
 
-uint Context::getTubeObjectSubdivisionCount(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getSubdivisionCount();
-}
+uint Context::getTubeObjectSubdivisionCount(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getSubdivisionCount(); }
 
-std::vector<helios::vec3> Context::getTubeObjectNodes(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getNodes();
-}
+std::vector<helios::vec3> Context::getTubeObjectNodes(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getNodes(); }
 
-uint Context::getTubeObjectNodeCount(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getNodeCount();
-}
+uint Context::getTubeObjectNodeCount(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getNodeCount(); }
 
-std::vector<float> Context::getTubeObjectNodeRadii(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getNodeRadii();
-}
+std::vector<float> Context::getTubeObjectNodeRadii(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getNodeRadii(); }
 
-std::vector<RGBcolor> Context::getTubeObjectNodeColors(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getNodeColors();
-}
+std::vector<RGBcolor> Context::getTubeObjectNodeColors(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getNodeColors(); }
 
-float Context::getTubeObjectVolume(uint ObjID) const {
-    return getTubeObjectPointer_private(ObjID)->getVolume();
-}
+float Context::getTubeObjectVolume(uint ObjID) const { return getTubeObjectPointer_private(ObjID)->getVolume(); }
 
-float Context::getTubeObjectSegmentVolume(uint ObjID, uint segment_index) const {
-    return getTubeObjectPointer_private(ObjID)->getSegmentVolume(segment_index);
-}
+float Context::getTubeObjectSegmentVolume(uint ObjID, uint segment_index) const { return getTubeObjectPointer_private(ObjID)->getSegmentVolume(segment_index); }
 
 void Context::appendTubeSegment(uint ObjID, const helios::vec3 &node_position, float node_radius, const RGBcolor &node_color) {
 #ifdef HELIOS_DEBUG
@@ -8361,66 +7983,34 @@ void Context::setTubeNodes(uint ObjID, const std::vector<helios::vec3> &node_xyz
     dynamic_cast<Tube *>(objects.at(ObjID))->setTubeNodes(node_xyz);
 }
 
-helios::vec3 Context::getBoxObjectCenter(uint ObjID) const {
-    return getBoxObjectPointer_private(ObjID)->getCenter();
-}
+helios::vec3 Context::getBoxObjectCenter(uint ObjID) const { return getBoxObjectPointer_private(ObjID)->getCenter(); }
 
-helios::vec3 Context::getBoxObjectSize(uint ObjID) const {
-    return getBoxObjectPointer_private(ObjID)->getSize();
-}
+helios::vec3 Context::getBoxObjectSize(uint ObjID) const { return getBoxObjectPointer_private(ObjID)->getSize(); }
 
-helios::int3 Context::getBoxObjectSubdivisionCount(uint ObjID) const {
-    return getBoxObjectPointer_private(ObjID)->getSubdivisionCount();
-}
+helios::int3 Context::getBoxObjectSubdivisionCount(uint ObjID) const { return getBoxObjectPointer_private(ObjID)->getSubdivisionCount(); }
 
-float Context::getBoxObjectVolume(uint ObjID) const {
-    return getBoxObjectPointer_private(ObjID)->getVolume();
-}
+float Context::getBoxObjectVolume(uint ObjID) const { return getBoxObjectPointer_private(ObjID)->getVolume(); }
 
-helios::vec3 Context::getDiskObjectCenter(uint ObjID) const {
-    return getDiskObjectPointer_private(ObjID)->getCenter();
-}
+helios::vec3 Context::getDiskObjectCenter(uint ObjID) const { return getDiskObjectPointer_private(ObjID)->getCenter(); }
 
-helios::vec2 Context::getDiskObjectSize(uint ObjID) const {
-    return getDiskObjectPointer_private(ObjID)->getSize();
-}
+helios::vec2 Context::getDiskObjectSize(uint ObjID) const { return getDiskObjectPointer_private(ObjID)->getSize(); }
 
-uint Context::getDiskObjectSubdivisionCount(uint ObjID) const {
-    return getDiskObjectPointer_private(ObjID)->getSubdivisionCount().x;
-}
+uint Context::getDiskObjectSubdivisionCount(uint ObjID) const { return getDiskObjectPointer_private(ObjID)->getSubdivisionCount().x; }
 
-uint Context::getConeObjectSubdivisionCount(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getSubdivisionCount();
-}
+uint Context::getConeObjectSubdivisionCount(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getSubdivisionCount(); }
 
-std::vector<helios::vec3> Context::getConeObjectNodes(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getNodeCoordinates();
-}
+std::vector<helios::vec3> Context::getConeObjectNodes(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getNodeCoordinates(); }
 
-std::vector<float> Context::getConeObjectNodeRadii(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getNodeRadii();
-}
+std::vector<float> Context::getConeObjectNodeRadii(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getNodeRadii(); }
 
-helios::vec3 Context::getConeObjectNode(uint ObjID, int number) const {
-    return getConeObjectPointer_private(ObjID)->getNodeCoordinate(number);
-}
+helios::vec3 Context::getConeObjectNode(uint ObjID, int number) const { return getConeObjectPointer_private(ObjID)->getNodeCoordinate(number); }
 
-float Context::getConeObjectNodeRadius(uint ObjID, int number) const {
-    return getConeObjectPointer_private(ObjID)->getNodeRadius(number);
-}
+float Context::getConeObjectNodeRadius(uint ObjID, int number) const { return getConeObjectPointer_private(ObjID)->getNodeRadius(number); }
 
-helios::vec3 Context::getConeObjectAxisUnitVector(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getAxisUnitVector();
-}
+helios::vec3 Context::getConeObjectAxisUnitVector(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getAxisUnitVector(); }
 
-float Context::getConeObjectLength(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getLength();
-}
+float Context::getConeObjectLength(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getLength(); }
 
-float Context::getConeObjectVolume(uint ObjID) const {
-    return getConeObjectPointer_private(ObjID)->getVolume();
-}
+float Context::getConeObjectVolume(uint ObjID) const { return getConeObjectPointer_private(ObjID)->getVolume(); }
 
-float Context::getPolymeshObjectVolume(uint ObjID) const {
-    return getPolymeshObjectPointer_private(ObjID)->getVolume();
-}
+float Context::getPolymeshObjectVolume(uint ObjID) const { return getPolymeshObjectPointer_private(ObjID)->getVolume(); }

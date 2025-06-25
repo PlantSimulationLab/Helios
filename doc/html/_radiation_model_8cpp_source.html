@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -4179,15 +4179,15 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l03869" name="l03869"></a><span class="lineno"> 3869</span>    <span class="keywordflow">for</span>(<span class="keyword">auto</span> b=0; b &lt; Nbands_launch; b++ ) {</div>
 <div class="line"><a id="l03870" name="l03870"></a><span class="lineno"> 3870</span> </div>
 <div class="line"><a id="l03871" name="l03871"></a><span class="lineno"> 3871</span>        std::string prop = <span class="stringliteral">&quot;radiation_flux_&quot;</span> + band_labels.at(b);</div>
-<div class="line"><a id="l03872" name="l03872"></a><span class="lineno"> 3872</span>        std::vector&lt;float&gt; <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>(Nprimitives);</div>
+<div class="line"><a id="l03872" name="l03872"></a><span class="lineno"> 3872</span>        std::vector&lt;float&gt; <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>(Nprimitives);</div>
 <div class="line"><a id="l03873" name="l03873"></a><span class="lineno"> 3873</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> u = 0; u &lt; Nprimitives; u++) {</div>
 <div class="line"><a id="l03874" name="l03874"></a><span class="lineno"> 3874</span>            <span class="keywordtype">size_t</span> ind = u * Nbands_launch + b;</div>
-<div class="line"><a id="l03875" name="l03875"></a><span class="lineno"> 3875</span>            <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);</div>
+<div class="line"><a id="l03875" name="l03875"></a><span class="lineno"> 3875</span>            <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);</div>
 <div class="line"><a id="l03876" name="l03876"></a><span class="lineno"> 3876</span>            <span class="keywordflow">if</span> (radiation_flux_data.at(ind) != radiation_flux_data.at(ind)) {</div>
 <div class="line"><a id="l03877" name="l03877"></a><span class="lineno"> 3877</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;NaN here &quot;</span> &lt;&lt; ind &lt;&lt; std::endl;</div>
 <div class="line"><a id="l03878" name="l03878"></a><span class="lineno"> 3878</span>            }</div>
 <div class="line"><a id="l03879" name="l03879"></a><span class="lineno"> 3879</span>        }</div>
-<div class="line"><a id="l03880" name="l03880"></a><span class="lineno"> 3880</span>        context-&gt;setPrimitiveData( context_UUIDs, prop.c_str(), <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> );</div>
+<div class="line"><a id="l03880" name="l03880"></a><span class="lineno"> 3880</span>        context-&gt;setPrimitiveData( context_UUIDs, prop.c_str(), <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> );</div>
 <div class="line"><a id="l03881" name="l03881"></a><span class="lineno"> 3881</span> </div>
 <div class="line"><a id="l03882" name="l03882"></a><span class="lineno"> 3882</span>        <span class="keywordflow">if</span>( UUIDs_context_all.size()!=Nprimitives ){</div>
 <div class="line"><a id="l03883" name="l03883"></a><span class="lineno"> 3883</span>            <span class="keywordflow">for</span>( uint UUID : UUIDs_context_all ){</div>
@@ -4232,9 +4232,9 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l03918" name="l03918"></a><span class="lineno"> 3918</span> </div>
 <div class="line"><a id="l03919" name="l03919"></a><span class="lineno"> 3919</span>            std::string str = <span class="stringliteral">&quot;radiation_flux_&quot;</span> + label;</div>
 <div class="line"><a id="l03920" name="l03920"></a><span class="lineno"> 3920</span> </div>
-<div class="line"><a id="l03921" name="l03921"></a><span class="lineno"> 3921</span>            <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
-<div class="line"><a id="l03922" name="l03922"></a><span class="lineno"> 3922</span>            context-&gt;getPrimitiveData( p, str.c_str(), <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> );</div>
-<div class="line"><a id="l03923" name="l03923"></a><span class="lineno"> 3923</span>            total_flux.at(u) += <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
+<div class="line"><a id="l03921" name="l03921"></a><span class="lineno"> 3921</span>            <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
+<div class="line"><a id="l03922" name="l03922"></a><span class="lineno"> 3922</span>            context-&gt;getPrimitiveData( p, str.c_str(), <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> );</div>
+<div class="line"><a id="l03923" name="l03923"></a><span class="lineno"> 3923</span>            total_flux.at(u) += <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
 <div class="line"><a id="l03924" name="l03924"></a><span class="lineno"> 3924</span> </div>
 <div class="line"><a id="l03925" name="l03925"></a><span class="lineno"> 3925</span>        }</div>
 <div class="line"><a id="l03926" name="l03926"></a><span class="lineno"> 3926</span> </div>
@@ -6330,7 +6330,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="foldopen" id="foldopen05985" data-start="{" data-end="}">
 <div class="line"><a id="l05985" name="l05985"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e"> 5985</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e" title="Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0....">RadiationCamera::normalizePixels</a>() {</div>
 <div class="line"><a id="l05986" name="l05986"></a><span class="lineno"> 5986</span> </div>
-<div class="line"><a id="l05987" name="l05987"></a><span class="lineno"> 5987</span>    <span class="keywordtype">float</span> min_P = std::numeric_limits&lt;float&gt;::max();</div>
+<div class="line"><a id="l05987" name="l05987"></a><span class="lineno"> 5987</span>    <span class="keywordtype">float</span> min_P = (std::numeric_limits&lt;float&gt;::max)();</div>
 <div class="line"><a id="l05988" name="l05988"></a><span class="lineno"> 5988</span>    <span class="keywordtype">float</span> max_P = 0.0f;</div>
 <div class="line"><a id="l05989" name="l05989"></a><span class="lineno"> 5989</span>    <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span> &amp;[channel_label, data] : pixel_data ) {</div>
 <div class="line"><a id="l05990" name="l05990"></a><span class="lineno"> 5990</span>        <span class="keywordflow">for</span> ( <span class="keywordtype">float</span> v : data ) {</div>
@@ -6466,11 +6466,11 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l06114" name="l06114"></a><span class="lineno"> 6114</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
 <div class="line"><a id="l06115" name="l06115"></a><span class="lineno"> 6115</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
 <div class="line"><a id="l06116" name="l06116"></a><span class="lineno"> 6116</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06117" name="l06117"></a><span class="lineno"> 6117</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
-<div class="line"><a id="l06118" name="l06118"></a><span class="lineno"> 6118</span>        <span class="keywordtype">float</span> L = luminance(<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>,G,B);</div>
+<div class="line"><a id="l06117" name="l06117"></a><span class="lineno"> 6117</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
+<div class="line"><a id="l06118" name="l06118"></a><span class="lineno"> 6118</span>        <span class="keywordtype">float</span> L = luminance(<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>,G,B);</div>
 <div class="line"><a id="l06119" name="l06119"></a><span class="lineno"> 6119</span>        <span class="keywordtype">float</span> s = (L &gt; eps) ? (L / (1.0f + L)) / L : 0.0f;</div>
 <div class="line"><a id="l06120" name="l06120"></a><span class="lineno"> 6120</span> </div>
-<div class="line"><a id="l06121" name="l06121"></a><span class="lineno"> 6121</span>        data_red[i] = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * s;</div>
+<div class="line"><a id="l06121" name="l06121"></a><span class="lineno"> 6121</span>        data_red[i] = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * s;</div>
 <div class="line"><a id="l06122" name="l06122"></a><span class="lineno"> 6122</span>        data_green[i] = G * s;</div>
 <div class="line"><a id="l06123" name="l06123"></a><span class="lineno"> 6123</span>        data_blue[i] = B * s;</div>
 <div class="line"><a id="l06124" name="l06124"></a><span class="lineno"> 6124</span>    }</div>
@@ -6596,10 +6596,10 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l06238" name="l06238"></a><span class="lineno"> 6238</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
 <div class="line"><a id="l06239" name="l06239"></a><span class="lineno"> 6239</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
 <div class="line"><a id="l06240" name="l06240"></a><span class="lineno"> 6240</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06241" name="l06241"></a><span class="lineno"> 6241</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
-<div class="line"><a id="l06242" name="l06242"></a><span class="lineno"> 6242</span>        data_red[i] = color_correction_matrix[0]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[1]*G + color_correction_matrix[2]*B + color_correction_matrix[9];</div>
-<div class="line"><a id="l06243" name="l06243"></a><span class="lineno"> 6243</span>        data_green[i] = color_correction_matrix[3]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[4]*G + color_correction_matrix[5]*B + color_correction_matrix[10];</div>
-<div class="line"><a id="l06244" name="l06244"></a><span class="lineno"> 6244</span>        data_blue[i] = color_correction_matrix[6]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[7]*G + color_correction_matrix[8]*B + color_correction_matrix[11];</div>
+<div class="line"><a id="l06241" name="l06241"></a><span class="lineno"> 6241</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
+<div class="line"><a id="l06242" name="l06242"></a><span class="lineno"> 6242</span>        data_red[i] = color_correction_matrix[0]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[1]*G + color_correction_matrix[2]*B + color_correction_matrix[9];</div>
+<div class="line"><a id="l06243" name="l06243"></a><span class="lineno"> 6243</span>        data_green[i] = color_correction_matrix[3]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[4]*G + color_correction_matrix[5]*B + color_correction_matrix[10];</div>
+<div class="line"><a id="l06244" name="l06244"></a><span class="lineno"> 6244</span>        data_blue[i] = color_correction_matrix[6]*<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[7]*G + color_correction_matrix[8]*B + color_correction_matrix[11];</div>
 <div class="line"><a id="l06245" name="l06245"></a><span class="lineno"> 6245</span>    }</div>
 <div class="line"><a id="l06246" name="l06246"></a><span class="lineno"> 6246</span>}</div>
 </div>

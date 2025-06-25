@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -294,9 +294,9 @@ $(function(){initNavTree('aeriallidar_2src_2file_i_o_8cpp_source.html',''); init
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    <span class="comment">//create a temporary scan object</span></div>
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>    <a class="code hl_struct" href="struct_aerial_scan_metadata.html" title="Structure containing metadata for an aerial scan.">AerialScanMetadata</a> scan(center,extent,coneAngle,scanDensity,exitDiameter,beamDivergence);</div>
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span> </div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a2912db8a137ffa0add4261e63c6d72c2" title="Add a LiDAR scan to the point cloud.">addScan</a>( scan );</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a7ecc9802ec7285391f10562666227c99" title="Add a LiDAR scan to the point cloud.">addScan</a>( scan );</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    uint scanID = <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ab363717911dada3af4fdafa914532a6a" title="Get number of scans in point cloud.">getScanCount</a>()-1;</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    uint scanID = <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa20e625b8d7820ffbcfc8532be5ffb15" title="Get number of scans in point cloud.">getScanCount</a>()-1;</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="comment">// ----- ASCII data file name ------//</span></div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    std::string data_filename = <a class="code hl_function" href="group__functions.html#gad5aa3cd5124a2e1e526d6070e53c2bc8" title="Remove all whitespace from character array.">deblank</a>(s.child_value(<span class="stringliteral">&quot;filename&quot;</span>));</div>
@@ -426,7 +426,7 @@ $(function(){initNavTree('aeriallidar_2src_2file_i_o_8cpp_source.html',''); init
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> temp_direction(1.f, 0.5f*M_PI - temp_zenith, temp_azimuth);</div>
 <div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span> </div>
 <div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    <span class="comment">//add hit point to the scan</span></div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a746b984566c871ff37d87cd52ed046a2" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the origin and hit point.">addHitPoint</a>( scanID, temp_xyz, temp_direction, temp_rgb, data );</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a221bbfec00a8149e9a50d74861932f44" title="Specify a scan point as a hit by providing the (x,y,z) coordinates of the origin and hit point.">addHitPoint</a>( scanID, temp_xyz, temp_direction, temp_rgb, data );</div>
 <div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    </div>
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    total_hits ++;</div>
 <div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>      </div>
@@ -532,7 +532,7 @@ $(function(){initNavTree('aeriallidar_2src_2file_i_o_8cpp_source.html',''); init
 <div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>    </div>
 <div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    cout &lt;&lt; <span class="stringliteral">&quot;done.&quot;</span> &lt;&lt; endl;</div>
 <div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>  </div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    cout &lt;&lt; <span class="stringliteral">&quot;Successfully read &quot;</span> &lt;&lt; <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ab363717911dada3af4fdafa914532a6a" title="Get number of scans in point cloud.">getScanCount</a>() &lt;&lt; <span class="stringliteral">&quot; scan(s), which contain &quot;</span> &lt;&lt; total_hits &lt;&lt; <span class="stringliteral">&quot; total hit points.&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    cout &lt;&lt; <span class="stringliteral">&quot;Successfully read &quot;</span> &lt;&lt; <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa20e625b8d7820ffbcfc8532be5ffb15" title="Get number of scans in point cloud.">getScanCount</a>() &lt;&lt; <span class="stringliteral">&quot; scan(s), which contain &quot;</span> &lt;&lt; total_hits &lt;&lt; <span class="stringliteral">&quot; total hit points.&quot;</span> &lt;&lt; endl;</div>
 <div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span> </div>
 <div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>  }</div>
 <div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    </div>

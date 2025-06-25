@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -561,7 +561,7 @@ Periodic Boundary Conditions</h2>
 </div>
 <p>A periodic boundary condition is specified using the <a class="el" href="class_radiation_model.html#a46c60b11342d10feed8f3a431df415bd">enforcePeriodicBoundary()</a> function. The argument to this function is the lateral boundary that should be considered periodic: one of "x" (periodic in x-direction), "y" (periodic in y-direction), or "xy" (periodic in both x- and y-directions).</p>
 <div class="fragment"><div class="line">radiationmodel.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>); <span class="comment">//enforce periodic boundaries in horizontal</span></div>
-</div><!-- fragment --><p>Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.</p>
+</div><!-- fragment --><p>Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the <a class="el" href="classhelios_1_1_context.html#aea4ea9dfed93b6e75cdc49ab3a94b023">helios::Context::cropDomain()</a> function to crop the domain in the horizontal to the size of the ground.</p>
 <div class="fragment"><div class="line">vec2 ground_size(10,10);  <span class="comment">//lateral size of the ground</span></div>
 <div class="line">vec3 ground_center(0,0,0);  <span class="comment">//position of the ground center</span></div>
 <div class="line">context.addPatch( ground_center, ground_size );  <span class="comment">//ground patch</span></div>
@@ -607,7 +607,7 @@ Adding a Radiation Camera</h3>
 <div class="line">uint antialiasing_samples = 100;</div>
 <div class="line"> </div>
 <div class="line">radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
-</div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to RadiationModel::addBand().</p>
+</div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>.</p>
 <h3><a class="anchor" id="RadCamSpecular"></a>
 Radiation Camera Specular Reflection</h3>
 <p>Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.</p>
@@ -660,7 +660,7 @@ Radiation Camera Color Calibration</h3>
 <div class="line">truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</div>
 </div><!-- fragment --><p>It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.</p>
 <p>3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a>, and specify an initial guess for the camera channel spectral distribution(s) using <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a>.</p>
-<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8">CameraCalibration::addDefaultColorboard()</a>, or a custom color board CameraCalibration::addCustomColorboard().</p>
+<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8">CameraCalibration::addDefaultColorboard()</a>, or a custom color board helios::CameraCalibration::addCustomColorboard().</p>
 <h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p>Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>
@@ -803,7 +803,7 @@ Integrating Fluxes</h3>
 <div class="line"><span class="keywordtype">float</span> fPAR = PAR_tree/(PAR_tree+PAR_ground);</div>
 <div class="line"> </div>
 <div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Fraction of intercepted PAR is &quot;</span> &lt;&lt; fPAR &lt;&lt; std::endl;</div>
-</div><!-- fragment --><p>The above example assumes that we have already added some geometry to the Context, separated leaf and ground UUIDs, and declared and set up the radiation model. For a full example, see Tutorial 10.</p>
+</div><!-- fragment --><p>The above example assumes that we have already added some geometry to the Context, separated leaf and ground UUIDs, and declared and set up the radiation model. For a full example, see <a class="el" href="radiation_basics_tutorial.html">Tutorial 10</a>.</p>
 <h3><a class="anchor" id="RadCamOut"></a>
 Writing Camera Images to File</h3>
 <p>Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.</p>

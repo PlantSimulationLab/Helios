@@ -2310,3 +2310,36 @@ Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 - Added a project builder self-test to test the project builder plug-in.
 - Many stability and performance improvements to the project builder plug-in. Credit to Sean Banks for these updates.
 - Fixed SIGBUS error that happened when closing the project builder window.
+
+[1.3.36] 2025-06-25
+
+* Many minor fixes to documentation and docstrings.
+* Moved AGENTS.md to doc/AGENTS.md
+
+*Context*
+- When reading OBJ files with both map_Kd and map_d specified, ensured map_Kd is preserved when map_d specifies a different file and only use map_d when no diffuse texture is provided.
+- Added overloaded Context::addTile() and Context::addTileObject() that allow periodic tiling of the texture image.
+- Fixed Context::readPNGAlpha() to properly handle the case when the PNG file has no alpha channel.
+- Changed Context::cleanDeletedUUIDs() back to looping backward rather than using an iterator.
+
+*Plant Architecture*
+- Fixed an error with the leaf pitch and roll angles when calling Phytomer::rotateLeaf() with a non-compound leaf.
+- Some minor tweaks to model parameters for cowpea, bean, and tomato plants.
+
+*Visualizer*
+- Changed default lighting parameters in shader, which should give a bit more ambient lighting and make plant visualizations look a little better.
+- Fixed read_png_file() to properly hand the case when the PNG file has no alpha channel.
+- Fixed an issue with the sky dome where the sky texture mapping was not correct.
+- Changed clipping planes for camera and shadow rendering to be more robust, which should fix some issues with shadows not being rendered correctly.
+- Changed Helios watermark to version with white border, which should be more visible on dark backgrounds.
+- Fixed a bug where if you update the visualizer window with RGB coloring, then call colorContextPrimitivesByData()/colorContextObjectsByData(), then re-render, it would break the coloring.
+- Fixed an issue where the back side of primitives was being rendered way too dark.
+
+*Radiation*
+- Minor fix in RadiationModel::normalizePixels() to avoid a compiler error in some pixels (wrap (std::numeric_limits<float>::max)() in parentheses).
+
+*Energy Balance*
+- Made header variables cp_air_mol and lambda_mol constexpr instead of const, hopefully to fix some issues where they would not get properly defined in EnergyBalance.cu.
+
+*Project Builder*
+- Several updates to the project builder, including fixing the ground updating, changing some default values, adding option to set the light direction based on spherical coordinates, and some other features. Credit to Sean Banks for these updates.

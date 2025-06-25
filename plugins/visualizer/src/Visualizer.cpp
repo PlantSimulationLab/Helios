@@ -297,6 +297,29 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
 
     width = png_get_image_width(png_ptr, info_ptr);
     height = png_get_image_height(png_ptr, info_ptr);
+    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+    bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
+
+    if (bit_depth == 16) {
+        png_set_strip_16(png_ptr);
+    }
+    if (color_type == PNG_COLOR_TYPE_PALETTE) {
+        png_set_palette_to_rgb(png_ptr);
+    }
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+        png_set_expand_gray_1_2_4_to_8(png_ptr);
+    }
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+        png_set_tRNS_to_alpha(png_ptr);
+    }
+    if (!has_alpha) {
+        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+    }
+    if (color_type == PNG_COLOR_TYPE_GRAY ||
+        color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+        png_set_gray_to_rgb(png_ptr);
+    }
 
     png_read_update_info(png_ptr, info_ptr);
 
@@ -407,6 +430,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     frame_counter = 0;
 
     camera_FOV = 45;
+
+    minimum_view_radius = 0.05f;
 
     context = nullptr;
     primitiveColorsNeedUpdate = false;
@@ -988,8 +1013,8 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
     // }
 
     //normalize data and invert the color space so white=closest, black = furthest
-    float depth_min = std::numeric_limits<float>::max();
-    float depth_max = std::numeric_limits<float>::min();
+    float depth_min = (std::numeric_limits<float>::max)();
+    float depth_max = (std::numeric_limits<float>::min)();
     for (auto depth: depth_buffer_data) {
         if (depth < depth_min) {
             depth_min = depth;
@@ -1056,13 +1081,12 @@ void Visualizer::showWatermark() {
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
     float nearPlane = std::max(0.1f, 0.05f * dist); // avoid 0
-    float farPlane;
     if (shadow) {
-        farPlane = 2.0f * dist;
+        float farPlane = std::max(5.f * camera_eye_location.z, 2.0f * dist);
+        cameraProjectionMatrix = glm::perspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane, farPlane);
     } else {
-        farPlane = 100.0f * dist;
+        cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane);
     }
-    cameraProjectionMatrix = glm::perspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane, farPlane);
     cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
 
     perspectiveTransformationMatrix = cameraProjectionMatrix * cameraViewMatrix;
@@ -1567,7 +1591,7 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
     vec3 cart;
 
     //top cap
-    for (int j = 0; j < Ndivisions; j++) {
+    for (int j = 0; j < scast<int>(Ndivisions-1); j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
         vec3 v0 = center + radius * cart;
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
@@ -1586,7 +1610,7 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
         vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
         vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
 
-        if (j == Ndivisions - 1) {
+        if (j == scast<int>(Ndivisions - 2)) {
             uv2.x = 1;
         }
 
@@ -1594,8 +1618,8 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
     }
 
     //middle
-    for (int j = 0; j < Ndivisions; j++) {
-        for (int i = 0; i < Ndivisions - 1; i++) {
+    for (int j = 0; j < scast<int>(Ndivisions-1); j++) {
+        for (int i = 0; i < scast<int>(Ndivisions - 1); i++) {
             cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j) * dphi));
             vec3 v0 = center + radius * cart;
             cart = sphere2cart(make_SphericalCoord(1.f, float(i + 1) * dtheta, float(j) * dphi));
@@ -1619,7 +1643,7 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
             vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
             vec2 uv3 = make_vec2(1.f - atan2f(n3.x, -n3.y) / (2.f * PI_F) - 0.5f, 1.f - n3.z * 0.5f - 0.5f);
 
-            if (j == Ndivisions - 1) {
+            if (j == scast<int>(Ndivisions - 2)) {
                 uv2.x = 1;
                 uv3.x = 1;
             }
@@ -2216,10 +2240,10 @@ void Visualizer::buildContextGeometry_private() {
     // \todo Figure out how to avoid doing this when not necessary
 
     colormap_current.setRange(colorbar_min, colorbar_max);
-    if (colorbar_min == 0 && colorbar_max == 0) { //range was not set by user, use full range of values
+    if ( ( !colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty() ) && colorbar_min == 0 && colorbar_max == 0) { //range was not set by user, use full range of values
 
-        colorbar_min = std::numeric_limits<float>::max();
-        colorbar_max = std::numeric_limits<float>::lowest();
+        colorbar_min = (std::numeric_limits<float>::max)();
+        colorbar_max = (std::numeric_limits<float>::lowest)();
 
         for (uint UUID: contextUUIDs_build) {
             float colorValue = -9999;
@@ -2698,25 +2722,22 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     }
 
 
-    //Update the Context geometry (if needed)
-    if ( true ) {
-        buildContextGeometry_private();
-    } else {
-        colormap_current.setRange(colorbar_min, colorbar_max);
-    }
+    //Update the Context geometry
+    buildContextGeometry_private();
 
     //Set the view to fit window
     if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
 
             vec3 center_sph;
-            vec2 xbounds, ybounds, zbounds;
             vec3 radius;
             geometry_handler.getDomainBoundingSphere(center_sph, radius);
-            float R = radius.magnitude();
+            float domain_bounding_radius = radius.magnitude();
+
+            vec2 xbounds, ybounds, zbounds;
             geometry_handler.getDomainBoundingBox(xbounds, ybounds, zbounds);
-            camera_lookat_center = make_vec3(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y), 0.5f * (zbounds.x + zbounds.y));
-            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * R, 20.f * PI_F / 180.f, 0));
+            camera_lookat_center = make_vec3(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y), zbounds.x);
+            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * domain_bounding_radius, 20.f * PI_F / 180.f, 0));
         }
     }
 
@@ -2845,36 +2866,6 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 }
 
 void Visualizer::plotOnce(bool getKeystrokes) {
-    // // Render to the screen
-    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // glViewport(0, 0, Wframebuffer, Hframebuffer);
-    //
-    // glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
-    //
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //
-    // primaryShader.useShader();
-    //
-    // updatePerspectiveTransformation(false);
-    //
-    // glm::mat4 depthMVP = computeShadowDepthMVP();
-    //
-    // glm::mat4 DepthBiasMVP = biasMatrix * depthMVP;
-    //
-    // primaryShader.setDepthBiasMatrix(DepthBiasMVP);
-    //
-    // primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
-    //
-    // primaryShader.enableTextureMaps();
-    // primaryShader.enableTextureMasks();
-    //
-    // primaryShader.setLightingModel(primaryLightingModel.at(0));
-    // primaryShader.setLightIntensity(lightintensity);
-    //
-    // glBindTexture(GL_TEXTURE_2D, depthTexture);
-    // glUniform1i(primaryShader.shadowmapUniform, 1);
-    //
-    // render(false);
 
     bool shadow_flag = false;
     for (const auto &model: primaryLightingModel) {
@@ -3279,25 +3270,22 @@ void Visualizer::plotUpdate(bool hide_window) {
         glfwShowWindow(scast<GLFWwindow *>(window));
     }
 
-    //Update the Context geometry (if needed)
-    if ( true ) {
-        buildContextGeometry_private();
-    } else {
-        colormap_current.setRange(colorbar_min, colorbar_max);
-    }
+    //Update the Context geometry
+    buildContextGeometry_private();
 
     //Set the view to fit window
     if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
 
             vec3 center_sph;
-            vec2 xbounds, ybounds, zbounds;
             vec3 radius;
             geometry_handler.getDomainBoundingSphere(center_sph, radius);
-            float R = radius.magnitude();
+            float domain_bounding_radius = radius.magnitude();
+
+            vec2 xbounds, ybounds, zbounds;
             geometry_handler.getDomainBoundingBox(xbounds, ybounds, zbounds);
             camera_lookat_center = make_vec3(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y), 0.5f * (zbounds.x + zbounds.y));
-            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * R, 20.f * PI_F / 180.f, 0));
+            camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * domain_bounding_radius, 20.f * PI_F / 180.f, 0));
         }
     }
 
@@ -3358,7 +3346,6 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     // Render to the screen
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    //glViewport(0,0,Wdisplay,Hdisplay); // Render on the whole framebuffer, complete from the lower left corner to the upper right
     glViewport(0, 0, Wframebuffer, Hframebuffer);
 
     glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
@@ -3460,8 +3447,8 @@ void Visualizer::plotDepthMap() {
     updateDepthBuffer();
 
     //normalize data, flip in y direction, and invert the color space so white=closest, black = furthest
-    float depth_min = std::numeric_limits<float>::max();
-    float depth_max = std::numeric_limits<float>::min();
+    float depth_min = (std::numeric_limits<float>::max)();
+    float depth_max = (std::numeric_limits<float>::min)();
     for (auto depth: depth_buffer_data) {
         if (depth < depth_min) {
             depth_min = depth;
@@ -4027,7 +4014,7 @@ void Visualizer::getViewKeystrokes(vec3 &eye, vec3 &center) {
     dx = dy = 0.f;
     if (scroll) {
         if (dscroll > 0.0f) {
-            radius *= 0.9f;
+            radius = (radius * 0.9f > minimum_view_radius) ? radius * 0.9f : minimum_view_radius;
         } else {
             radius *= 1.1f;
         }
@@ -4083,7 +4070,7 @@ void Visualizer::getViewKeystrokes(vec3 &eye, vec3 &center) {
 
         //   Zoom in - "+" KEY
         if (glfwGetKey(_window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
-            radius *= 0.9;
+            radius = (radius * 0.9f > minimum_view_radius) ? radius * 0.9f : minimum_view_radius;
         }
         // Zoom out - "-" KEY
         else if (glfwGetKey(_window, GLFW_KEY_MINUS) == GLFW_PRESS) {
@@ -4092,8 +4079,7 @@ void Visualizer::getViewKeystrokes(vec3 &eye, vec3 &center) {
     }
 
     if (glfwGetKey(_window, GLFW_KEY_P) == GLFW_PRESS) {
-        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << camera_eye_location.x << "," << camera_eye_location.y << "," << camera_eye_location.z << ") looking at (" << center.x << "," <<
-                center.y << "," << center.z << ")" << std::endl;
+        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << camera_eye_location.x << "," << camera_eye_location.y << "," << camera_eye_location.z << ") looking at (" << center.x << "," << center.y << "," << center.z << ")" << std::endl;
     }
 
     camera_eye_location = sphere2cart(make_SphericalCoord(radius, theta, phi)) + center;

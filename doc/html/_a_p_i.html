@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -601,7 +601,7 @@ Patch geometric primitive.</div></div>
 <div class="line"><a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
 <div class="line"><a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0.25*M_PI,0.5*M_PI);</div>
 <div class="line">context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, rotation );</div>
-</div><!-- fragment --><p>This will first rotate the patch by 0.25 \(\pi\) rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 \(\pi\) rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the Primitive::rotate() function (see "Primitive Transformations" section below).</p>
+</div><!-- fragment --><p>This will first rotate the patch by 0.25 \(\pi\) rad about the x-axis such that its normal is pointing toward the +y direction, THEN it will apply a clockwise azimuthal rotation of 0.5 \(\pi\) rad such that its normal is pointing in the +x direction (which will be its final orientation). Note that in order to have more control over rotations, it is recommended to use the <a class="el" href="classhelios_1_1_context.html#aef025c766a7ad444ce77a2e8d2d24ab7">helios::Context::rotatePrimitive()</a> function (see "Primitive Transformations" section below).</p>
 <h3><a class="anchor" id="AddingTriangle"></a>
 Adding Triangles</h3>
 <p>Triangles are added by specifying the (x,y,z) coordinates of the triangle's three vertices, and optionally its r-g-b color. The following is an example of using the 'addTriangle()' function to add a simple triangle:</p>
@@ -660,8 +660,8 @@ Voxel geometric primitive.</div></div>
 </div><!-- fragment --><h2><a class="anchor" id="PrimTransform"></a>
 Primitive Transformations</h2>
 <p>After primitives have been added to the Context, their position, size, and orientation can be further modified through transformations.</p>
-<p>The scalePrimitive() function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The translatePrimitive() function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.</p>
-<p>The rotatePrimitive() function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument. By default, the axis passes through the origin, but there is also an option to specify an arbitrary axis of rotation passing through an arbitrary origin point.</p>
+<p>The <a class="el" href="classhelios_1_1_context.html#aaeafd65954d09be5773fbdaba35c694e">helios::Context::scalePrimitive()</a> function takes a vec3 that denotes a scaling factor to apply in each Cartesian direction (x,y,z). The <a class="el" href="classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1">helios::Context::translatePrimitive()</a> function moves the primitive based on values provided by a vec3 that specifies the distance to translate in the x-, y-, and z-directions.</p>
+<p>The <a class="el" href="classhelios_1_1_context.html#aef025c766a7ad444ce77a2e8d2d24ab7">helios::Context::rotatePrimitive()</a> function rotates the primitive about an axis through an angle specified in radians. To rotate about one of the x-, y-, or z-axes, the function can be supplied a string of 'x', 'y', or 'z', respectively. The primitive can also be rotated about an arbitrary axis described by a unit vector argument. By default, the axis passes through the origin, but there is also an option to specify an arbitrary axis of rotation passing through an arbitrary origin point.</p>
 <p>It is important to note that the order in which transformations are applied matters. Each transformation is applied based on the primitives current state. Rotating a primitive centered about the origin will cause the primitive to rotate about its own center. However, if a primitive is first translated then rotated, the primitive will be rotated about the origin (0,0,0), which does not necessarily coincide with the primitive's center if it has been translated.</p>
 <p>The table below gives a list of primitive transformation functions, each of which take either a single UUID or a vector of UUIDs to apply the same transformation to multiple primitives.</p>
 <table class="doxtable">
@@ -739,17 +739,17 @@ Primitive Properties</h2>
 <tr>
 <td>Diffuse R-G-B color code</td><td><ul>
 <li>
-helios::Context::setPrimitiveColor( uint, const helios::RGBcolor&amp; )</li>
+<a class="el" href="classhelios_1_1_context.html#a5f95e8537f22f83b8376806cf40768d6">helios::Context::setPrimitiveColor( uint, const helios::RGBcolor&amp; ) const</a></li>
 <li>
-helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBcolor&amp; )</li>
+<a class="el" href="classhelios_1_1_context.html#ac0125aaacf414d0222058f6246230295">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBcolor&amp; ) const</a></li>
 </ul>
 </td><td><a class="el" href="classhelios_1_1_context.html#a1223205f1080b0b7024b8f97950779b8">helios::Context::getPrimitiveColor( uint ) const</a> </td></tr>
 <tr>
 <td>Diffuse R-G-B-A color code</td><td><ul>
 <li>
-helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor&amp; )</li>
+<a class="el" href="classhelios_1_1_context.html#a04ec57cf76a849d72a152828984e07da">helios::Context::setPrimitiveColor( uint, const helios::RGBAcolor&amp; ) const</a></li>
 <li>
-helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBAcolor&amp; )</li>
+<a class="el" href="classhelios_1_1_context.html#ae0e2b4db459d6c29d466f2c12ed4c127">helios::Context::setPrimitiveColor( const std::vector&lt;uint&gt;&amp;, const helios::RGBAcolor&amp; ) const</a></li>
 </ul>
 </td><td><a class="el" href="classhelios_1_1_context.html#a4e29adcb908d55172efd239f294b49e5">helios::Context::getPrimitiveColorRGBA( uint ) const</a> </td></tr>
 <tr>

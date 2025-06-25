@@ -1076,6 +1076,9 @@ private:
     //! (x,y,z) coordinates of the camera (a.k.a. the `eye' location)
     helios::vec3 camera_eye_location;
 
+    //! Minimum allowable distance from the camera eye location to the lookat location
+    float minimum_view_radius;
+
     //! Handle to the OpenGL shader (primary)
     Shader primaryShader;
 

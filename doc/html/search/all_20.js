@@ -77,5 +77,5 @@ var searchData=
   ['writing_20ply_20stanford_20polygon_20files_74',['Writing PLY (Stanford Polygon) Files',['../_i_o.html#PLYwrite',1,'']]],
   ['writing_20results_20to_20file_75',['Writing results to file',['../_li_d_a_r_doc.html#LiDARoutput',1,'']]],
   ['wsl_76',['Manually installing OptiX if using Windows Subsystem for Linux (WSL)',['../_dependent_software.html#OptiXWSL',1,'']]],
-  ['wue_77',['11. Calculating WUE',['../canopy__w_u_e_tutorial.html#tutorial12_WUE',1,'']]]
+  ['wue_77',['11.    Calculating WUE',['../canopy__w_u_e_tutorial.html#tutorial12_WUE',1,'']]]
 ];

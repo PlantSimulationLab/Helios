@@ -88,13 +88,14 @@ void main(){
 
     if( textureFlag==0 ){//Color by interpolating the colors at vertices
         color = fragmentColor;
+        color.rgb = color.rgb*1.5;
     }else if( textureFlag==1 ){//Color by texture map
         color = texture(textureSampler, texcoord3);
         if(color.a<0.01 ){
             discard;
         }
     }else if( textureFlag==2 ){//Color by interpolating the colors at vertices, and set the transparency according to the red channel of the texture map given by textureSampler
-        color = fragmentColor;
+        color = fragmentColor*1.5;
         color.a = texture(textureSampler, texcoord3).a;
         if( color.a<0.01 ){
             discard;
@@ -108,7 +109,8 @@ void main(){
     }
 
     if( lightingModel>0 && coordinateFlag==1 ){ //Simplified Phong lighting model
-        color = vec4( lightIntensity*( 0.75*color.rgb + visibility*(0.75*dot(normal,ld)*color.rgb) ) , color.a );
+        vec3 intensity = lightIntensity*vec3(1.0,0.9,0.8);
+        color = vec4( intensity*( 0.75*color.rgb + visibility*max(0,dot(normal,ld))*color.rgb ) , color.a );
     }
 
 }

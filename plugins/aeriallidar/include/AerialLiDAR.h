@@ -135,35 +135,35 @@ class AerialLiDARcloud{
 
   std::vector<std::vector<float> > cover_fraction;
 
-  helios::vec2 rotatePoint2D( const helios::vec2 point, const float theta ) const;
+  helios::vec2 rotatePoint2D( const helios::vec2 &point, float theta ) const;
   
  public:
 
   //! Aerial LiDAR point cloud constructor
-  AerialLiDARcloud( void );
+  AerialLiDARcloud();
 
   //! Aerial LiDAR point cloud destructor
-  ~AerialLiDARcloud( void );
+  ~AerialLiDARcloud();
 
   //! Self-test (unit test) function
-  int selfTest( void );
+  int selfTest();
 
   //! Disable all print messages to the screen except for fatal error messages
-  void disableMessages( void );
+  void disableMessages();
 
   //! Enable all print messages to the screen
-  void enableMessages( void );
+  void enableMessages();
 
   // ------- SCANS -------- //
 
   //! Get number of scans in point cloud
-  uint getScanCount( void );
+  uint getScanCount();
 
   //! Add a LiDAR scan to the point cloud
   /**
    * \param[in] newscan LiDAR scan data structure
    */
-  void addScan( const AerialScanMetadata newscan );
+  void addScan( AerialScanMetadata newscan );
 
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates of the origin and hit point
   /** 
@@ -171,88 +171,91 @@ class AerialLiDARcloud{
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
     * \param[in] ray_origin (x,y,z) coordinates of ray origin
   */
-  void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::vec3 ray_origin );
+  void addHitPoint(uint scanID, const helios::vec3 &hit_xyz, const helios::vec3 &ray_origin);
     
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction
   /** 
     * \param[in] scanID ID of scan hit point to which hit point should be added.
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
-    * \param[in] direction Spherical coordinate cooresponding to the scanner ray direction for the hit point.
+    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction );
+  void addHitPoint(uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction);
 
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction
   /** 
     * \param[in] scanID ID of scan hit point to which hit point should be added.
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
-    * \param[in] direction Spherical coordinate cooresponding to the scanner ray direction for the hit point.
+    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
     * \param[in] color r-g-b color of the hit point
     * \note If only the (row,column) scan table coordinates are available, use \ref ScanMetadata::rc2direction() to convert them to a spherical scan direction coordinate.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const helios::RGBcolor color );
+  void addHitPoint(uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const helios::RGBcolor &color);
 
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction
   /** 
     * \param[in] scanID ID of scan hit point to which hit point should be added.
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
-    * \param[in] direction Spherical coordinate cooresponding to the scanner ray direction for the hit point.
+    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
     * \param[in] data Map data structure containing floating point data values for the hit point.  E.g., "reflectance" could be mapped to a value of 965.2.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const std::map<std::string, float> data );
+  void addHitPoint(uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const std::map<std::string, float> &data);
     
   //! Specify a scan point as a hit by providing the (x,y,z) coordinates of the hit and scan ray direction
   /** 
     * \param[in] scanID ID of scan hit point to which hit point should be added.
     * \param[in] hit_xyz (x,y,z) coordinates of hit point.
-    * \param[in] direction Spherical coordinate cooresponding to the scanner ray direction for the hit point.
+    * \param[in] direction Spherical coordinate corresponding to the scanner ray direction for the hit point.
     * \param[in] color r-g-b color of the hit point
     * \param[in] data Map data structure containing floating point data values for the hit point.  E.g., "reflectance" could be mapped to a value of 965.2.
   */
-  void addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, float> data );
+  void addHitPoint(uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const helios::RGBcolor &color, const std::map<std::string, float> &data);
 
   //! Delete a hit point in the scan
   /** 
     * \param[in] index Index of hit point in the point cloud
   */
-  void deleteHitPoint( const uint index );
+  void deleteHitPoint(uint index );
 
   //! Get the number of hit points in the point cloud
-  uint getHitCount( void ) const;
+  uint getHitCount() const;
     
   //! Get the (x,y,z) of scan surface center
   /** 
     * \param[in] scanID ID of scan.
   */
-  helios::vec3 getScanCenter( const uint scanID ) const;
+  helios::vec3 getScanCenter(uint scanID ) const;
 
   //! Get the (x,y) extent of scan surface
   /** 
     * \param[in] scanID ID of scan.
   */
-  helios::vec2 getScanExtent( const uint scanID ) const;
+  helios::vec2 getScanExtent(uint scanID ) const;
 
   //! Get the scan cone angle in degrees
   /** 
     * \param[in] scanID ID of scan.
   */
-  float getScanConeAngle( const uint scanID ) const;
+  float getScanConeAngle(uint scanID ) const;
 
   //! Get the scan point density in points/m^2
-  float getScanDensity( const uint scanID ) const;
+  /**
+    * \param[in] scanID ID of scan.
+  */
+  float getScanDensity(uint scanID ) const;
 
   //! Get the diameter of the laser beam at exit from the instrument
   /**
    * \param[in] scanID ID of scan.
    * \return Diameter of the beam at exit.
   */
-  float getScanBeamExitDiameter( const uint scanID ) const;
+  float getScanBeamExitDiameter(uint scanID ) const;
 
   //! Divergence angle of the laser beam in radians
    /**
     * \param[in] scanID ID of scan.
     * \return Divergence angle of the beam.
   */
-  float getScanBeamDivergence( const uint scanID ) const;
+  float getScanBeamDivergence(uint scanID ) const;
 
   //! Get (x,y,z) coordinate of hit point by index
   /**
@@ -264,39 +267,40 @@ class AerialLiDARcloud{
   /**
    * \param [in] index Hit number
    */
-  helios::SphericalCoord getHitRaydir( const uint index ) const;
+  helios::SphericalCoord getHitRaydir(uint index ) const;
 
   //! Get floating point data value associated with a hit point.
   /**
    * \param[in] index Hit number.
     * \param[in] label Label of the data value (e.g., "reflectance").
-    * \param[in] value Value of scalar data.
   */
-  float getHitData( const uint index, const char* label ) const;
+  float getHitData(uint index, const char* label ) const;
 
   //! Set floating point data value associated with a hit point.
   /**
    * \param[in] index Hit number.
-    * \param[in] label Label of the data value (e.g., "reflectance").
+   * \param[in] label Label of the data value (e.g., "reflectance").
   */
-  void setHitData( const uint index, const char* label, const float value );
+  void setHitData(uint index, const char* label, float value );
 
   //! Check if scalar data exists for a hit point
   /**
    * \param[in] index Hit number.
     * \param[in] label Label of the data value (e.g., "reflectance").
   */
-  bool doesHitDataExist( const uint index, const char* label ) const;
+  bool doesHitDataExist(uint index, const char* label ) const;
   
   //! Get color of hit point
-  /** \param[in] index Hit number */
-  helios::RGBcolor getHitColor( const uint index ) const;
+  /**
+   * \param[in] index Hit number
+   */
+  helios::RGBcolor getHitColor(uint index ) const;
 
   //! Get the scan with which a hit is associated
   /**
    * \param[in] index Hit number
    */
-  int getHitScanID( const uint index ) const;
+  int getHitScanID(uint index ) const;
   
   //! Get the grid cell in which the hit point resides
   /**
@@ -304,26 +308,31 @@ class AerialLiDARcloud{
    * \note If the point does not reside in any grid cells, this function returns `(-1,-1,-1)'.
    * \note Calling this function requires that the function calculateHitGridCell[*]() has been called previously.
    */
-  helios::int3 getHitGridCell( const uint index ) const;
+  helios::int3 getHitGridCell(uint index ) const;
 
   //! Set the grid cell in which the hit point resides
   /**
    * \param[in] index Hit number
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setHitGridCell( const uint index, const helios::int3 ijk );
+  void setHitGridCell(uint index, const helios::int3 &ijk);
 
-  void coordinateShift( const helios::vec3 shift );
+  //! Applies a coordinate shift to the current vector data.
+  /**
+   * \param[in] shift The vector by which to shift the coordinates.
+   */
+  void coordinateShift(const helios::vec3 &shift);
   
   // ------- FILE I/O --------- //
 
   //! Read an XML file containing scan information
-  /** \param[in] filename Path to XML file
+  /**
+   * \param[in] filename Path to XML file
    */
   void loadXML( const char* filename );
   
   //! Read all XML files currently loaded into the Helios context
-  void readContextXML( void );
+  void readContextXML();
 
   //! Export to file all points in the point cloud
   /** 
@@ -338,7 +347,7 @@ class AerialLiDARcloud{
    * \param[in] visualizer Pointer to the Visualizer plugin object.
     * \param[in] pointsize Size of scan point in font points.
   */
-  void addHitsToVisualizer( Visualizer* visualizer, const uint pointsize ) const;
+  void addHitsToVisualizer( Visualizer* visualizer, uint pointsize ) const;
   
   //! Add all hit points to the visualizer plug-in, and color them by a hit scalar data value
   /**
@@ -346,7 +355,7 @@ class AerialLiDARcloud{
     * \param[in] pointsize Size of scan point in font points.
     * \param[in] color_value Label for scalar hit data
   */
-  void addHitsToVisualizer( Visualizer* visualizer, const uint pointsize, const char* color_value ) const;
+  void addHitsToVisualizer( Visualizer* visualizer, uint pointsize, const char* color_value ) const;
 
   //! Add all grid cells to the visualizer plug-in
   /**
@@ -365,14 +374,14 @@ class AerialLiDARcloud{
   /**
    * \param[in] maxdistance Maximum hit point distance from scanner
    */
-  void distanceFilter( const float maxdistance );
+  void distanceFilter( float maxdistance );
   
   //! Filter scan by imposing a minimum reflectance value
   /**
-   * \param[in] minreflectance Miniimum hit point reflectance value
+   * \param[in] minreflectance Minimum hit point reflectance value
    * \note If `reflectance' data was not provided for a hit point when calling addHitPoint(), the point will not be filtered.
   */
-  void reflectanceFilter( const float minreflectance );
+  void reflectanceFilter(float minreflectance );
 
   //! Filter hit points based on a scalar field given by a column in the ASCII data
   /**
@@ -381,7 +390,7 @@ class AerialLiDARcloud{
    * \param[in] comparator Points will be filtered if "scalar (comparator) threshold", where (comparator) is one of ">", "<", or "="
    * \note As an example, imagine we wanted to remove all hit points where the reflectance is less than -10. In this case we would call scalarFilter( "reflectance", -10, "<" );
   */
-  void scalarFilter( const char* scalar_field, const float threshold, const char* comparator );
+  void scalarFilter( const char* scalar_field, float threshold, const char* comparator );
 
   // -------- GRID ----------- //
 
@@ -389,22 +398,22 @@ class AerialLiDARcloud{
   /**
    * \param[in] index Global grid cell index - ranges from 0 to Ncells-1
    */
-  helios::int3 gridindex2ijk( const int index ) const;
+  helios::int3 gridindex2ijk(int index ) const;
 
   //! Use a grid cell's local index in the x-, y-, and z-directions to retrieve the cells' global index (ranging from 0 to Ncells-1)
   /**
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  int gridijk2index( const helios::int3 ijk ) const;
+  int gridijk2index(const helios::int3 &ijk) const;
 
   //! Get the (x,y,z) coordinate of the grid center
-  helios::vec3 getGridCenter( void ) const;
+  helios::vec3 getGridCenter() const;
 
   //! Get the size of the global grid in the x-, y-, and z-directions
-  helios::vec3 getGridExtent( void ) const;
+  helios::vec3 getGridExtent() const;
   
   //! Get the total number of cells in the grid
-  helios::int3 getGridResolution( void ) const;
+  helios::int3 getGridResolution() const;
 
   //! Get the azimuthal rotation angle of the grid about its center point
   float getGridRotation() const;
@@ -413,7 +422,7 @@ class AerialLiDARcloud{
   /**
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  helios::vec3 getCellCenter( const helios::int3 ijk ) const;
+  helios::vec3 getCellCenter(const helios::int3 &ijk) const;
 
   //! Get the size of grid cells 
   helios::vec3 getCellSize() const;
@@ -441,7 +450,7 @@ class AerialLiDARcloud{
    * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
    * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
   */
-  void syntheticScan( helios::Context* context, const char* xml_file, const int rays_per_pulse, const float pulse_distance_threshold );
+  void syntheticScan( helios::Context* context, const char* xml_file, int rays_per_pulse, float pulse_distance_threshold );
 
   //! Calculate the surface area of all primitives in the context
   /**
@@ -453,23 +462,22 @@ class AerialLiDARcloud{
 
   //! Set the leaf area of a grid cell in m^2
   /**
-   *
    * \param[in] area Leaf area in cell in m^2
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  void setCellLeafArea( const float area, const helios::int3 ijk );
+  void setCellLeafArea(float area, const helios::int3 &ijk);
 
   //! Get the leaf area of a grid cell in m^2
   /**
-   * \param [in] index Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  float getCellLeafArea( const helios::int3 ijk ) const;
+  float getCellLeafArea(const helios::int3 &ijk) const;
 
   //! Get the leaf area density of a grid cell in 1/m
   /**
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  float getCellLeafAreaDensity( const helios::int3 ijk ) const;
+  float getCellLeafAreaDensity(const helios::int3 &ijk) const;
 
   //! Set the cell transmission probability counts
   /**
@@ -477,41 +485,41 @@ class AerialLiDARcloud{
    * \param[in] P_trans Number of rays transmitted through voxel (numerator of P)
    * \param[in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  void setCellTransmissionProbability( const int P_denom, const int P_trans, const helios::int3 ijk );
+  void setCellTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk);
 
   //! Get the cell transmission probability counts
   /**
-   * \param[in] index Index of a grid cell in the x-, y-, and z-directions.
+   * \param[in] ijk Index of a grid cell in the x-, y-, and z-directions.
    * \param[out] P_denom Number of rays reaching voxel (denominator of P)
    * \param[out] P_trans Number of rays transmitted through voxel (numerator of P)
   */
-  void getCellTransmissionProbability( const helios::int3 ijk, int& P_denom, int& P_trans ) const;
+  void getCellTransmissionProbability(const helios::int3 &ijk, int &P_denom, int &P_trans) const;
 
   //! Set the average ray propagation distance in meters
   /**
    * \param[in] r_bar Average ray propagation distance
    * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  void setCellRbar( const float r_bar, const helios::int3 ijk );
+  void setCellRbar(float r_bar, const helios::int3 &ijk);
 
   //! Get the average ray propagation distance in meters
   /**
-   * \param [in] index Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
    */
-  float getCellRbar( const helios::int3 ijk ) const;
+  float getCellRbar(const helios::int3 &ijk) const;
 
   //! Calculate the leaf area for each grid volume
   /**
    * \param[in] Gtheta G-function value to be assumed constant across all cells.
    */
-  void calculateLeafAreaGPU( const float Gtheta );
+  void calculateLeafAreaGPU(float Gtheta );
 
   //! Calculate the leaf area for each grid volume
   /**
    * \param[in] Gtheta G-function value to be assumed constant across all cells.
    * \param [in] minVoxelHits Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than minVoxelHits, the calculated leaf area will be set to zero.
    */
-  void calculateLeafAreaGPU( const float Gtheta, const int minVoxelHits );
+  void calculateLeafAreaGPU(float Gtheta, int minVoxelHits );
 
   // -------- HEIGHT MODEL -------- //
   
@@ -523,66 +531,66 @@ class AerialLiDARcloud{
    * \param[in] threshDist_vegetation Maximum distance from fitted plane to be considered an inlier - for vegetation height model.
    * \param[in] inlierRatio_vegetation Minimum fraction of total points that must be inliers to consider the fitted plane valid - for vegetation height model.
   */
-  void generateHeightModel( const int maxIter, const float threshDist_ground, const float inlierRatio_ground, const float threshDist_vegetation, const float inlierRatio_vegetation );
+  void generateHeightModel(int maxIter, float threshDist_ground, float inlierRatio_ground, float threshDist_vegetation, float inlierRatio_vegetation);
 
   //! Set the height of the vegetation at the (x,y) location of this gridcell. 
   /**
    * \param[in] height Average height of vegetation measured from the ground in meters.
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-directions.
   */
-  void setCellVegetationHeight( const float height, const helios::int2 ij );
+  void setCellVegetationHeight(float height, const helios::int2 &ij);
 
   //! Get the height of the vegetation at the (x,y) location of this gridcell. 
   /**
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-directions.
    * \return Average height of vegetation measured from the ground in meters.
   */
-  float getCellVegetationHeight( const helios::int2 ij )const;
+  float getCellVegetationHeight(const helios::int2 &ij) const;
 
   //! Set the height of the highest hit point at the (x,y) location of this gridcell. 
   /**
    * \param[in] height Maximum height of hit points at the (x,y) location of this gridcell.
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellMaximumHitHeight( const float height, const helios::int2 ij );
+  void setCellMaximumHitHeight(float height, const helios::int2 &ij);
 
   //! Get the height of the highest hit point at the (x,y) location of this gridcell.
   /**
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
    * \return Average height of vegetation measured from the ground in meters.
   */
-  float getCellMaximumHitHeight( const helios::int2 ij ) const;
+  float getCellMaximumHitHeight(const helios::int2 &ij) const;
 
   //! Set the height of the ground at the (x,y) location of this gridcell. 
   /**
    * \param[in] height Height of the ground in meters (in the coordinate system of the point cloud).
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellGroundHeight( const float height, const helios::int2 ij );
+  void setCellGroundHeight(float height, const helios::int2 &ij);
 
   //! Get the height of the ground at the (x,y) location of this gridcell. 
   /**
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
    * \return Height of the ground in meters (in the coordinate system of the point cloud).
   */
-  float getCellGroundHeight( const helios::int2 ij ) const;
+  float getCellGroundHeight(const helios::int2 &ij) const;
 
   //Run calculations for ground cover fraction
-  void calculateCoverFraction( void );
+  void calculateCoverFraction();
 
   //! Set the ground cover fraction at the (x,y) location of this gridcell. 
   /**
    * \param[in] cover_fraction Ground cover fraction.
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
   */
-  void setCellCoverFraction( const float cover_fraction, const helios::int2 ij );
+  void setCellCoverFraction(float cover_fraction, const helios::int2 &ij);
 
   //! Get the height of the ground at the (x,y) location of this gridcell. 
   /**
-   * \param [in] ijk Index of a grid cell in the x-, y-, and z-directions.
+   * \param [in] ij Index of a grid cell in the x-, y-, and z-directions.
    * \return Ground cover fraction.
   */
-  float getCellCoverFraction( const helios::int2 ij ) const;
+  float getCellCoverFraction(const helios::int2 &ij) const;
   
 };
 

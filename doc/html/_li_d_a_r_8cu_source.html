@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -387,13 +387,13 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="keywordtype">float</span> sd = sqrt(0.25*radius*radius);</div>
 <div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> </div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="comment">// formula from https://www.alanzucconi.com/2015/09/16/how-to-sample-from-a-gaussian-distribution/</span></div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sqrt(-2.f*logf(U1))*sd;</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sqrt(-2.f*logf(U1))*sd;</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    <span class="keywordtype">float</span> angle = 2.f*M_PI*U2;</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span> </div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    float2 sp;</div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="comment">//find x,y point on unit disk</span></div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    sp.x = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*cosf(angle);</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    sp.y = <a class="code hl_variable" href="_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*sinf(angle);</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    sp.x = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*cosf(angle);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    sp.y = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*sinf(angle);</div>
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <span class="keywordflow">return</span> sp;</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>}</div>

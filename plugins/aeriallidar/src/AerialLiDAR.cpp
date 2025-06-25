@@ -58,7 +58,7 @@ void AerialLiDARcloud::addScan( const AerialScanMetadata newscan ){
   scans.push_back(newscan);
 }
 
-void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xyz, helios::vec3 ray_origin ){
+void AerialLiDARcloud::addHitPoint( uint scanID, const helios::vec3 &hit_xyz, const helios::vec3 &ray_origin ){
 
   vec3 direction_cart = hit_xyz-ray_origin;
   SphericalCoord direction_sphere = cart2sphere(direction_cart);
@@ -73,7 +73,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
 
 }
 
-void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction ){
+void AerialLiDARcloud::addHitPoint( uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction ){
 
   //default color
   RGBcolor color = make_RGBcolor(1,0,0);
@@ -85,7 +85,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
 
 }
 
-void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const std::map<std::string, float> data ){
+void AerialLiDARcloud::addHitPoint( uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const std::map<std::string, float> &data ){
 
   //default color
   RGBcolor color = make_RGBcolor(1,0,0);
@@ -94,7 +94,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
   
 }
 
-void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const helios::RGBcolor color ){
+void AerialLiDARcloud::addHitPoint( uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const helios::RGBcolor &color ){
 
   //empty data
   std::map<std::string, float> data;
@@ -103,7 +103,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
   
 }
 
-void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xyz, const helios::SphericalCoord direction, const helios::RGBcolor color, const std::map<std::string, float> data ){
+void AerialLiDARcloud::addHitPoint( uint scanID, const helios::vec3 &hit_xyz, const helios::SphericalCoord &direction, const helios::RGBcolor &color, const std::map<std::string, float> &data ){
 
   //error checking
   if( scanID>=scans.size() ){
@@ -118,7 +118,7 @@ void AerialLiDARcloud::addHitPoint( const uint scanID, const helios::vec3 hit_xy
 
 }
 
-void AerialLiDARcloud::deleteHitPoint( const uint index ){
+void AerialLiDARcloud::deleteHitPoint( uint index ){
 
   if( index>=hits.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::deleteHitPoint): Hit point #" + std::to_string(index) + " cannot be deleted from the scan because there have only been " + std::to_string(hits.size()) +" hit points added.");
@@ -138,49 +138,49 @@ uint AerialLiDARcloud::getHitCount( void ) const{
   return hits.size();
 }
 
-helios::vec3 AerialLiDARcloud::getScanCenter( const uint scanID ) const{
+helios::vec3 AerialLiDARcloud::getScanCenter( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanCenter): Cannot get center of scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).center;
 }
 
-helios::vec2 AerialLiDARcloud::getScanExtent( const uint scanID ) const{
+helios::vec2 AerialLiDARcloud::getScanExtent( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanExtent): Cannot get extent for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).extent;
 }
 
-float AerialLiDARcloud::getScanConeAngle( const uint scanID ) const{
+float AerialLiDARcloud::getScanConeAngle( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanConeAngle): Cannot get cone angle for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).coneangle;
 }
 
-float AerialLiDARcloud::getScanDensity( const uint scanID ) const{
+float AerialLiDARcloud::getScanDensity( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanDensity): Cannot get point density for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).scandensity;
 }
 
-float AerialLiDARcloud::getScanBeamExitDiameter( const uint scanID ) const{
+float AerialLiDARcloud::getScanBeamExitDiameter( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanBeamExitDiameter): Cannot get exit diameter for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).exitDiameter;
 }
 
-float AerialLiDARcloud::getScanBeamDivergence( const uint scanID ) const{
+float AerialLiDARcloud::getScanBeamDivergence( uint scanID ) const{
   if( scanID>=scans.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getScanBeamDivergence): Cannot get beam divergence for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
   }
   return scans.at(scanID).beamDivergence;
 }
 
-helios::vec3 AerialLiDARcloud::getHitXYZ( const uint index ) const{
+helios::vec3 AerialLiDARcloud::getHitXYZ( uint index ) const{
 
   if( index>=hits.size() ){
       helios_runtime_error("ERROR (AerialLiDARcloud::getHitXYZ): Hit point index out of bounds. Requesting hit #" + std::to_string(index) + " but scan only has " + std::to_string(hits.size()) + " hits.");
@@ -190,7 +190,7 @@ helios::vec3 AerialLiDARcloud::getHitXYZ( const uint index ) const{
 
 }
 
-helios::SphericalCoord AerialLiDARcloud::getHitRaydir( const uint index ) const{
+helios::SphericalCoord AerialLiDARcloud::getHitRaydir( uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitRaydir): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -201,7 +201,7 @@ helios::SphericalCoord AerialLiDARcloud::getHitRaydir( const uint index ) const{
 
 }
 
-float AerialLiDARcloud::getHitData( const uint index, const char* label ) const{
+float AerialLiDARcloud::getHitData( uint index, const char* label ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitData): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -218,7 +218,7 @@ float AerialLiDARcloud::getHitData( const uint index, const char* label ) const{
 
 }
 
-void AerialLiDARcloud::setHitData( const uint index, const char* label, const float value ){
+void AerialLiDARcloud::setHitData( uint index, const char* label, float value ){
 
   if( index>=hits.size() ){
     cerr << "ERROR (setHitScalarData): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -229,7 +229,7 @@ void AerialLiDARcloud::setHitData( const uint index, const char* label, const fl
   
 }
 
-bool AerialLiDARcloud::doesHitDataExist( const uint index, const char* label ) const{
+bool AerialLiDARcloud::doesHitDataExist( uint index, const char* label ) const{
 
   if( index>=hits.size() ){
     return false;
@@ -244,7 +244,7 @@ bool AerialLiDARcloud::doesHitDataExist( const uint index, const char* label ) c
 
 }
 
-RGBcolor AerialLiDARcloud::getHitColor( const uint index ) const{
+RGBcolor AerialLiDARcloud::getHitColor( uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -255,7 +255,7 @@ RGBcolor AerialLiDARcloud::getHitColor( const uint index ) const{
 
 }
 
-int AerialLiDARcloud::getHitScanID( const uint index ) const{
+int AerialLiDARcloud::getHitScanID( uint index ) const{
 
   if( index>=hits.size() ){
     cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -266,7 +266,7 @@ int AerialLiDARcloud::getHitScanID( const uint index ) const{
   
 }
 
-helios::int3 AerialLiDARcloud::getHitGridCell( const uint index ) const{
+helios::int3 AerialLiDARcloud::getHitGridCell( uint index ) const{
   
   if( index>=hits.size() ){
     cerr << "ERROR (getHitGridCell): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -280,7 +280,7 @@ helios::int3 AerialLiDARcloud::getHitGridCell( const uint index ) const{
   
 }
 
-void AerialLiDARcloud::setHitGridCell( const uint index, const helios::int3 ijk ){
+void AerialLiDARcloud::setHitGridCell( uint index, const helios::int3 &ijk ){
 
   if( index>=hits.size() ){
     cerr << "ERROR (setHitGridCell): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
@@ -303,7 +303,7 @@ void AerialLiDARcloud::setHitGridCell( const uint index, const helios::int3 ijk 
   
 }
 
-void AerialLiDARcloud::coordinateShift( const helios::vec3 shift ){
+void AerialLiDARcloud::coordinateShift( const helios::vec3 &shift ){
 
   if( printmessages ){
     std::cout << "Performing coordinate shift..." << std::flush;
@@ -319,11 +319,11 @@ void AerialLiDARcloud::coordinateShift( const helios::vec3 shift ){
   
 }
 
-void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize ) const{
+void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, uint pointsize ) const{
   addHitsToVisualizer( visualizer, pointsize, "" );
 }
 
-void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, const uint pointsize, const char* color_value ) const{
+void AerialLiDARcloud::addHitsToVisualizer( Visualizer* visualizer, uint pointsize, const char* color_value ) const{
 
   if( printmessages && scans.size()==0 ){
     std::cout << "WARNING (addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
@@ -503,7 +503,7 @@ helios::int3 AerialLiDARcloud::gridindex2ijk( const int index ) const{
     
 }
 
-int AerialLiDARcloud::gridijk2index( const helios::int3 ijk ) const{
+int AerialLiDARcloud::gridijk2index( const helios::int3 &ijk ) const{
 
   int index = ijk.z*gridresolution.x*gridresolution.y+ijk.y*gridresolution.y+ijk.x;
 
@@ -537,7 +537,7 @@ float AerialLiDARcloud::getGridRotation( void ) const{
 
 }
 
-helios::vec3 AerialLiDARcloud::getCellCenter( const helios::int3 ijk ) const{
+helios::vec3 AerialLiDARcloud::getCellCenter( const helios::int3 &ijk ) const{
 
   float x = -0.5*gridextent.x+(float(ijk.x)+0.5f)*gridextent.x/float(gridresolution.x);
   float y = -0.5*gridextent.y+(float(ijk.y)+0.5f)*gridextent.y/float(gridresolution.y);
@@ -564,7 +564,7 @@ vec3 AerialLiDARcloud::getCellSize( void ) const{
 
 // -------- LEAF AREA -------- //
 
-void AerialLiDARcloud::setCellLeafArea( const float area, const int3 ijk ){
+void AerialLiDARcloud::setCellLeafArea( float area, const int3&ijk ){
 
   if( ijk.x<0 || ijk.x>=gridresolution.x ){
     cerr << "ERROR (setCellLeafArea): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -593,7 +593,7 @@ void AerialLiDARcloud::setCellLeafArea( const float area, const int3 ijk ){
 
 }
 
-float AerialLiDARcloud::getCellLeafArea( const int3 ijk ) const{
+float AerialLiDARcloud::getCellLeafArea( const int3 &ijk ) const{
 
   if( leaf_area.size()!=gridresolution.z ){
     cerr << "ERROR (getCellLeafArea): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
@@ -617,7 +617,7 @@ float AerialLiDARcloud::getCellLeafArea( const int3 ijk ) const{
 
 }
 
-float AerialLiDARcloud::getCellLeafAreaDensity( const int3 ijk ) const{
+float AerialLiDARcloud::getCellLeafAreaDensity( const int3 &ijk ) const{
 
   if( leaf_area.size()!=gridresolution.z ){
     cerr << "ERROR (getCellLeafAreaDensity): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
@@ -643,7 +643,7 @@ float AerialLiDARcloud::getCellLeafAreaDensity( const int3 ijk ) const{
 
 }
 
-void AerialLiDARcloud::setCellTransmissionProbability( const int P_denom, const int P_trans, const int3 ijk ){
+void AerialLiDARcloud::setCellTransmissionProbability( int P_denom, int P_trans, const int3 &ijk ){
 
   if( ijk.x<0 || ijk.x>=gridresolution.x ){
     cerr << "ERROR (setCellTransmissionProbability): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -672,7 +672,7 @@ void AerialLiDARcloud::setCellTransmissionProbability( const int P_denom, const 
 
 }
 
-void AerialLiDARcloud::getCellTransmissionProbability( const int3 ijk, int& P_denom, int& P_trans ) const{
+void AerialLiDARcloud::getCellTransmissionProbability( const int3 &ijk, int& P_denom, int& P_trans ) const{
 
   if( P_counts.size()!=gridresolution.z ){
     cerr << "ERROR (getCellTransmissionProbability): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
@@ -698,7 +698,7 @@ void AerialLiDARcloud::getCellTransmissionProbability( const int3 ijk, int& P_de
 
 }
 
-void AerialLiDARcloud::setCellRbar( const float rbar, const int3 ijk ){
+void AerialLiDARcloud::setCellRbar( float rbar, const int3 &ijk ){
 
   if( ijk.x<0 || ijk.x>=gridresolution.x ){
     cerr << "ERROR (setCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -727,7 +727,7 @@ void AerialLiDARcloud::setCellRbar( const float rbar, const int3 ijk ){
 
 }
 
-float AerialLiDARcloud::getCellRbar( const int3 ijk ) const{
+float AerialLiDARcloud::getCellRbar( const int3 &ijk ) const{
 
   if( r_bar.size()!=gridresolution.z ){
     cerr << "ERROR (getCellRbar): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
@@ -751,7 +751,7 @@ float AerialLiDARcloud::getCellRbar( const int3 ijk ) const{
 
 }
 
-helios::vec4 AerialLiDARcloud::RANSAC( const int maxIter, const float threshDist, const float inlierRatio, const std::vector<helios::vec3>& hits, std::vector<bool>& inliers ){
+helios::vec4 AerialLiDARcloud::RANSAC( int maxIter, float threshDist, float inlierRatio, const std::vector<helios::vec3>& hits, std::vector<bool>& inliers ){
 
   int N = hits.size();
 
@@ -833,7 +833,7 @@ helios::vec4 AerialLiDARcloud::RANSAC( const int maxIter, const float threshDist
   
 }
 
-void AerialLiDARcloud::generateHeightModel( const int maxIter, const float threshDist_ground, const float inlierRatio_ground, const float threshDist_vegetation, const float inlierRatio_vegetation ){
+void AerialLiDARcloud::generateHeightModel( int maxIter, float threshDist_ground, float inlierRatio_ground, float threshDist_vegetation, float inlierRatio_vegetation ){
 
   if( printmessages ){
     std::cout << "Calculating ground and vegetation heights..." << std::flush;
@@ -845,10 +845,10 @@ void AerialLiDARcloud::generateHeightModel( const int maxIter, const float thres
 
   std::srand(time(NULL));
 
-  const uint Nscans = getScanCount();
+  uint Nscans = getScanCount();
 
   helios::int3 gsize3 = getGridResolution();
-  const uint Ncells = gsize3.x*gsize3.y*gsize3.z;
+  uint Ncells = gsize3.x*gsize3.y*gsize3.z;
   size_t Nhits = getHitCount();
 
   if( Ncells==0 ){
@@ -1131,7 +1131,7 @@ void AerialLiDARcloud::generateHeightModel( const int maxIter, const float thres
 }
 
 
-void AerialLiDARcloud::setCellVegetationHeight( const float height, const int2 ij ){
+void AerialLiDARcloud::setCellVegetationHeight( float height, const int2 &ij ){
 
   if( ij.x<0 || ij.x>=gridresolution.x ){
     cerr << "ERROR (setCellVegetationHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -1153,7 +1153,7 @@ void AerialLiDARcloud::setCellVegetationHeight( const float height, const int2 i
   
 }
 
-float AerialLiDARcloud::getCellVegetationHeight( const int2 ij ) const{
+float AerialLiDARcloud::getCellVegetationHeight( const int2 &ij ) const{
 
   if( vegetation_height.size()!=gridresolution.y ){
     cerr << "ERROR (getCellVegetationHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
@@ -1173,7 +1173,7 @@ float AerialLiDARcloud::getCellVegetationHeight( const int2 ij ) const{
   
 }
 
-void AerialLiDARcloud::setCellMaximumHitHeight( const float height, const int2 ij ){
+void AerialLiDARcloud::setCellMaximumHitHeight( float height, const int2 &ij ){
 
   if( ij.x<0 || ij.x>=gridresolution.x ){
     cerr << "ERROR (setCellMaximumHitHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -1195,7 +1195,7 @@ void AerialLiDARcloud::setCellMaximumHitHeight( const float height, const int2 i
   
 }
 
-float AerialLiDARcloud::getCellMaximumHitHeight( const int2 ij ) const{
+float AerialLiDARcloud::getCellMaximumHitHeight( const int2 &ij ) const{
 
   if( maxhit_height.size()!=gridresolution.y ){
     cerr << "ERROR (getCellMaximumHitHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
@@ -1215,7 +1215,7 @@ float AerialLiDARcloud::getCellMaximumHitHeight( const int2 ij ) const{
   
 }
 
-void AerialLiDARcloud::setCellGroundHeight( const float height, const int2 ij ){
+void AerialLiDARcloud::setCellGroundHeight( float height, const int2 &ij ){
 
   if( ij.x<0 || ij.x>=gridresolution.x ){
     cerr << "ERROR (setCellGroundHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -1237,7 +1237,7 @@ void AerialLiDARcloud::setCellGroundHeight( const float height, const int2 ij ){
   
 }
 
-float AerialLiDARcloud::getCellGroundHeight( const int2 ij ) const{
+float AerialLiDARcloud::getCellGroundHeight( const int2 &ij ) const{
 
   if( ground_height.size()!=gridresolution.y ){
     cerr << "ERROR (getCellGroundHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
@@ -1309,7 +1309,7 @@ void AerialLiDARcloud::calculateCoverFraction( void ){
 
 }
 
-void AerialLiDARcloud::setCellCoverFraction( const float fcover, const int2 ij ){
+void AerialLiDARcloud::setCellCoverFraction( float fcover, const int2 &ij ){
 
   if( ij.x<0 || ij.x>=gridresolution.x ){
     cerr << "ERROR (setCellCoverFraction): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x-1 << std::endl;
@@ -1331,7 +1331,7 @@ void AerialLiDARcloud::setCellCoverFraction( const float fcover, const int2 ij )
   
 }
 
-float AerialLiDARcloud::getCellCoverFraction( const int2 ij ) const{
+float AerialLiDARcloud::getCellCoverFraction( const int2 &ij ) const{
 
   if( cover_fraction.size()!=gridresolution.y ){
     cerr << "ERROR (getCellCoverFraction): Cover fraction calculations have not been run yet. You must first call the function calculateCoverFraction()." << std::endl;
@@ -1353,7 +1353,7 @@ float AerialLiDARcloud::getCellCoverFraction( const int2 ij ) const{
 
 
 
-vec2 AerialLiDARcloud::rotatePoint2D( const vec2 point, const float theta ) const{
+vec2 AerialLiDARcloud::rotatePoint2D( const vec2 &point, float theta ) const{
 
   float st = sinf(theta);
   float ct = cosf(theta);
@@ -1381,7 +1381,7 @@ void AerialLiDARcloud::calculateHitGridCell( void ){
 
   std::size_t total_hits = getHitCount();
 
-  const uint N = total_hits;
+  uint N = total_hits;
 
   for( std::size_t r=0; r<N; r++ ){
     
