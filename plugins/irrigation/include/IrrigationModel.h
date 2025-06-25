@@ -18,56 +18,50 @@
 
 #include "Context.h"
 
-namespace helios {
-
-//! Node in irrigation network
+// ─────────────── Network primitives ──────────────────────────────────────── //
 struct IrrigationNode {
-    double x; //!< x coordinate
-    double y; //!< y coordinate
-    double pressure; //!< calculated pressure
-    bool fixed; //!< if true, pressure is fixed
+    double x{}, y{}; //!< plan-view coordinates (m)
+    double pressure{0.0}; //!< hydraulic head (psi)
+    bool fixed{false}; //!< true ⇔ boundary condition
 };
 
-//! Pipe in irrigation network
 struct IrrigationPipe {
-    int n1; //!< index of first node
-    int n2; //!< index of second node
-    double length; //!< pipe length
-    double diameter; //!< pipe diameter
-    double kminor; //!< minor loss coefficient
+    int n1{-1}, n2{-1}; //!< node indices
+    double length{0.0}; //!< centre-to-centre length (m)
+    double diameter{0.05}; //!< internal diameter (m)
+    double kminor{1.0}; //!< minor-loss coefficient (elbows, tees…)
 };
 
-//! Irrigation model class
+// ─────────────────────── Main class ─────────────────────────────────────── //
 class IrrigationModel {
 public:
-    //! Constructor
-    /**
-     * \param[in] context Pointer to the Helios context
-     */
-    explicit IrrigationModel(Context *context);
+    explicit IrrigationModel(helios::Context *context);
 
-    //! Read irrigation network from DXF file
-    int readDXF(const std::string &filename);
-
-    //! Solve for pressure distribution
-    int solve();
-
-    //! Write network with pressures to DXF file
+    int readDXF(const std::string &filename); //!< import network
+    int solve(); //!< compute pressures
     int writeDXF(const std::string &filename) const;
-
-    //! Self-test routine
     int selfTest();
 
 private:
-    Context *context; //!< Helios context
-    std::vector<IrrigationNode> nodes; //!< nodes in network
-    std::vector<IrrigationPipe> pipes; //!< pipes in network
+    // ――― utilities ――― //
+    int getOrCreateNode(double x, double y);
+    int addPipe(int n1, int n2, double length, double diameter, double kminor = 1.0);
 
+    static double pipeResistance(const IrrigationPipe &p);
+    void checkConnectivity() const;
+
+    // ――― DXF helpers ――― //
     int parseLineEntity(const std::map<int, std::string> &entity);
-    int buildNetwork();
-    std::vector<double> solveLinear(std::vector<std::vector<double>> A, std::vector<double> b) const;
-};
+    int parseLWPolylineEntity(const std::vector<std::pair<int, std::string>> &);
+    int parsePolylineEntity(const std::vector<std::pair<int, std::string>> &, const std::vector<std::vector<std::pair<int, std::string>>> &);
 
-}
+    // ――― linear solver ――― //
+    std::vector<double> solveLinear(std::vector<std::vector<double>> A, std::vector<double> b) const;
+
+    // ――― data ――― //
+    helios::Context *context{nullptr};
+    std::vector<IrrigationNode> nodes;
+    std::vector<IrrigationPipe> pipes;
+};
 
 #endif
