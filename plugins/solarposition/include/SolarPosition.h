@@ -23,7 +23,7 @@ class SolarPosition{
 
   //! Solar position model default constructor. Initializes location based on the location set in the Context.
   /**
-   * \param[in] context Pointer to the Helios context
+   * \param[in] context_ptr Pointer to the Helios context
   */
   explicit SolarPosition( helios::Context* context_ptr );
   

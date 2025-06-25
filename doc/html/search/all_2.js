@@ -1,7 +1,7 @@
 var searchData=
 [
   ['2_20add_20geometry_20to_20the_20visualizer_0',['Step 2. Add geometry to the Visualizer',['../visualizer_basics_tutorial.html#vis_step2',1,'']]],
-  ['2_20defining_20the_20context_1',['2.  Defining the Context',['../canopy__w_u_e_tutorial.html#tutorial12_context',1,'']]],
+  ['2_20defining_20the_20context_1',['2. Defining the Context',['../canopy__w_u_e_tutorial.html#tutorial12_context',1,'']]],
   ['2_20laminar_20inclined_20plate_20mixed_20free_20forced_20convection_2',['2. Laminar Inclined Plate, Mixed Free-Forced Convection',['../_b_l_conductance_doc.html#BLC2',1,'']]],
   ['2_20radiation_20model_20set_20up_3',['2. Radiation model set-up',['../radiation_basics_tutorial.html#Tutorial10_rad',1,'']]],
   ['2_20rotating_20and_20cropping_20optional_4',['2. Rotating and cropping (OPTIONAL)',['../_making_masks.html#Two',1,'']]],

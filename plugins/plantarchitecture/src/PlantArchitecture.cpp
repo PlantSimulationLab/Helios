@@ -1572,18 +1572,18 @@ void Phytomer::rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotatio
     float yaw;
     float roll;
     float compound_rotation = 0;
-    if (leaves_per_petiole > 1 && leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaf
+    if (leaves_per_petiole > 1 && leaf_index == float(leaves_per_petiole - 1) / 2.f) { // tip leaflet of compound leaf
         roll = 0;
         yaw = 0;
         compound_rotation = 0;
-    } else if (leaves_per_petiole > 1 && leaf_index < float(leaves_per_petiole - 1) / 2.f) {
+    } else if (leaves_per_petiole > 1 && leaf_index < float(leaves_per_petiole - 1) / 2.f) { // lateral leaflet of compound leaf
         yaw = -rotation.yaw;
         roll = -rotation.roll;
         compound_rotation = -0.5 * PI_F;
-    } else {
+    } else { // not a compound leaf
         yaw = -rotation.yaw;
         roll = rotation.roll;
-        compound_rotation = 0.5 * PI_F;
+        compound_rotation = 0;
     }
 
     // roll
@@ -2953,7 +2953,7 @@ void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<
         for (size_t i = 0; i < N; ++i) {
             for (size_t j = 0; j < N; ++j) {
                 double d = (V0[i] - V1[j]).magnitude();
-                C[i][j] = std::isfinite(d) ? d : (std::numeric_limits<double>::max() * 0.5);
+                C[i][j] = std::isfinite(d) ? d : ((std::numeric_limits<double>::max)() * 0.5);
             }
         }
         hung.Solve(C, assignment);

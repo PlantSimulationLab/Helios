@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -161,14 +161,14 @@ $(function(){initNavTree('visualizer_pdata_tutorial.html',''); initResizable(tru
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>This tutorial will illustrate how to use the Helios visualizer to visualize primitive data based on a pseudocolor mapping. The code below gives a main.cpp file that loads in a 3D model, sets primitive data for each primitive in the model, and creates a pseudocolor mapping to visualize the primitive data distribution.</p>
-<h2><a class="anchor" id="Tutorial8_geom"></a>
-Model geometry</h2>
+<h1><a class="anchor" id="Tutorial8_geom"></a>
+Model geometry</h1>
 <p>The first step is to declare the Context class in the usual way, then add some geometry to the Context. In this case, we'll load in a 3D model of the well-known <a href="https://en.wikipedia.org/wiki/Stanford_bunny">Stanford Bunny</a> from a <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY file</a>. This file is located in the "PLY" directory found in the base Helios code directory. It is important to either give an absolute path to this file, or a path relative to the build directory. Since this tutorial is build in the directory "Helios/samples/tutorial8/build", the relative path to the PLY file is "../../../PLY/StanfordBunny.ply".</p>
 <p>We can then use the <a class="el" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">helios::Context::loadPLY()</a> function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 2, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.</p>
 <p>Next, we will specify some primitive data that we'll visualize later. We will create a primitive data called "height" that corresponds to the z-coordinate of each primitive in the 3D model. To do this, we first loop over the UUID vector returned from the <a class="el" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85">helios::Context::loadPLY()</a> function we called previously. For each UUID, we get the vertices of the corresponding primitive. The Stanford Bunny model contains only triangles, so the <a class="el" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed">helios::Context::getPrimitiveVertices()</a> function returns a 3-element vector of vec3's, with each index of the vector corresponding to each of the 3 (x,y,z) vertex coordinates. As a simple approximation, we'll use only the first vertex in the triangle to determine the height of the primitive. Thus, we can index the vertex vector at element 0 to get the (x,y,z) coordinate of the first vertex. Getting the .z member of the vertex coordinate (which has type vec3) gets us the z-coordinate or height.</p>
 <p>Once we have the height of the primitive, we can create and set primitive data called "height" (or whatever name you choose) using the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">helios::Context::setPrimitiveData()</a>.</p>
-<h2><a class="anchor" id="Tutorial8_vis"></a>
-Visualization</h2>
+<h1><a class="anchor" id="Tutorial8_vis"></a>
+Visualization</h1>
 <p>Finally, we just need to visualize the result. We set up the Visualizer in a similar way as before, but if we add a call to <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData()</a>, it will color the primitives based on a pseudocolor mapping of primitive data values. This means that it will map the data values to colors in a colormap (array of colors) to determine its color. The argument to this function is the name of the primitive data created previously. If the primitive data does not exist for one or more primitives, they will be assigned a value of 0. You can also call this function with an optional argument of a UUID vector, which will only perform the pseudocolor mapping for the primitives referenced in the UUID vector.</p>
 <p>Details of the colormap and colorbar can be modified through a number of functions. Here' we've changed the colormap from the default of "HOT" to "PARULA". Available colormaps are listed in the <a class="el" href="_visualizer_doc.html">Visualizer documentation page</a>, as well as how to make custom colormaps. We've also added a title to the colorbar.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>

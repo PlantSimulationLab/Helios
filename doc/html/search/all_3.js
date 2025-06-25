@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['3_20creating_20our_20model_20geometry_0',['3. Creating Our Model Geometry',['../canopy__w_u_e_tutorial.html#tutorial12_geometry',1,'']]],
+  ['3_20creating_20our_20model_20geometry_0',['3.    Creating Our Model Geometry',['../canopy__w_u_e_tutorial.html#tutorial12_geometry',1,'']]],
   ['3_20laminar_20flow_20around_20a_20sphere_1',['3. Laminar flow around a sphere',['../_b_l_conductance_doc.html#BLC3',1,'']]],
   ['3_20modify_20visualizer_20options_2',['Step 3. Modify Visualizer options',['../visualizer_basics_tutorial.html#vis_step3',1,'']]],
   ['3_20radiation_20model_20set_20up_3',['3. Radiation model set-up',['../radiation__beers_law_tutorial.html#tutorial11_rad',1,'']]],

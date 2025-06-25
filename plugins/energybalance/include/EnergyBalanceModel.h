@@ -21,13 +21,13 @@
 // -- constants -- //
 
 //! specific heat capacity of air at constant pressure, J mol⁻¹ K⁻¹
-const float cp_air_mol = 29.25f;
+constexpr float cp_air_mol = 29.25f;
 //! latent heat of vaporization of water at 300 K, J mol⁻¹
-const float lambda_mol = 44000.f;
+constexpr float lambda_mol = 44000.f;
 //! von Karman constant, dimensionless
-const float von_Karman_constant = 0.41f;
+constexpr float von_Karman_constant = 0.41f;
 //! Gas constant, J mol⁻¹ K⁻¹
-const float R = 8.314462618f;
+constexpr float R = 8.314462618f;
 
 inline float esat_Pa(float T_K) {
     float Tc = T_K - 273.15f;

@@ -9,6 +9,8 @@ var class_project_builder =
     [ "buildFromXML", "class_project_builder.html#ac01838ac66704c1ecc3e8173447e0aba", null ],
     [ "buildFromXML", "class_project_builder.html#a7d145ccb5ca69acc2614fb14e312b6fe", null ],
     [ "buildTiledGround", "class_project_builder.html#afd95fd7243081f409ee87063d3cd910e", null ],
+    [ "buildTiledGround", "class_project_builder.html#ad736826a1c2836329107362406d0755b", null ],
+    [ "deleteGround", "class_project_builder.html#a23d86a63396745baa196488a1a60ecc6", null ],
     [ "deleteRig", "class_project_builder.html#a68139ee2c1e09013b341d31a04e059b0", null ],
     [ "dropDown", "class_project_builder.html#a7cf5c0d4e744dbb6a2b857ebf42ccf70", null ],
     [ "dropDown", "class_project_builder.html#acc2b47e23d358813e0c3f7c11c645efb", null ],

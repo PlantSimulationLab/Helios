@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.35</span>
+       <span id="projectnumber">&#160;v1.3.36</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -256,13 +256,13 @@ Setting Up ProjectBuilder</h2>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p> It is also possible to build a project from an input XML file without opening the GUI using the ProjectBuilder::build() method. The GUI can be opened later in the code after the project is built using the <a class="el" href="class_project_builder.html#a4d3008230c86ee12257d23c6c55e8e97">ProjectBuilder::visualize()</a> method. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_project_builder_8h.html">ProjectBuilder.h</a>&quot;</span></div>
+</div><!-- fragment --><p> It is also possible to build a project from an input XML file without opening the GUI using the <a class="el" href="class_project_builder.html#ac01838ac66704c1ecc3e8173447e0aba">ProjectBuilder::buildFromXML()</a> method. The GUI can be opened later in the code after the project is built using the <a class="el" href="class_project_builder.html#a4d3008230c86ee12257d23c6c55e8e97">ProjectBuilder::visualize()</a> method. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_project_builder_8h.html">ProjectBuilder.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_project_builder.html">ProjectBuilder</a> builder;</div>
 <div class="line"> </div>
-<div class="line">    builder.build(<span class="stringliteral">&quot;inputs.xml&quot;</span>);</div>
+<div class="line">    builder.<a class="code hl_function" href="class_project_builder.html#ac01838ac66704c1ecc3e8173447e0aba" title="Function to build context from XML.">buildFromXML</a>(<span class="stringliteral">&quot;inputs.xml&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line">    ...</div>
 <div class="line"> </div>

@@ -72,7 +72,7 @@ var searchData=
   ['organ_20prototypes_69',['Creating Plant Organ Prototypes',['../_plant_architecture_doc.html#PlantArchOrgans',1,'']]],
   ['organ_20sub_20components_70',['Getting Primitive UUIDs for Organ Sub-Components',['../_plant_architecture_doc.html#PlantArchQueryUUIDs',1,'']]],
   ['origin_71',['origin',['../struct_scan_metadata.html#a200bf65b728866855ace6456365d66a3',1,'ScanMetadata']]],
-  ['our_20model_20geometry_72',['3. Creating Our Model Geometry',['../canopy__w_u_e_tutorial.html#tutorial12_geometry',1,'']]],
+  ['our_20model_20geometry_72',['3.    Creating Our Model Geometry',['../canopy__w_u_e_tutorial.html#tutorial12_geometry',1,'']]],
   ['our_20timeseries_20data_73',['9. Reading in Our Timeseries Data',['../canopy__w_u_e_tutorial.html#tutorial12_timeseries',1,'']]],
   ['output_74',['File Input/Output',['../_i_o.html',1,'']]],
   ['output_20object_20data_75',['Optional Output Object Data',['../_plant_architecture_doc.html#PlantArchOutputData',1,'']]],

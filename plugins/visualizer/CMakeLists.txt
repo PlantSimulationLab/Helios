@@ -37,10 +37,10 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw-3.3.2")
 target_link_libraries( visualizer glfw )
 target_compile_options(glfw
 		PRIVATE
-		# for clang & gcc
-		$<$<AND:$<C_COMPILER_ID:Clang>,$<COMPILE_LANGUAGE:OBJC>>:-Wno-deprecated-declarations>
-		$<$<AND:$<C_COMPILER_ID:Clang>,$<COMPILE_LANGUAGE:C>>:-Wno-deprecated-declarations>
-		# for MSVC (if you ever compile GLFW on Windows)
+		# for clang, AppleClang & gcc
+		$<$<AND:$<OR:$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>,$<COMPILE_LANGUAGE:OBJC>>:-Wno-deprecated-declarations>
+		$<$<AND:$<OR:$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>,$<COMPILE_LANGUAGE:C>>:-Wno-deprecated-declarations>
+		# for MSVC
 		$<$<C_COMPILER_ID:MSVC>:/wd4996>
 )
 

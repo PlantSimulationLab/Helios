@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['r_0',['R',['../_energy_balance_model_8h.html#a247aeeed35717bee85fc2540c3591fd3',1,'EnergyBalanceModel.h']]],
+  ['r_0',['R',['../_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f',1,'EnergyBalanceModel.h']]],
   ['r_1',['r',['../structhelios_1_1_r_g_bcolor.html#a3e16659a90c69e6043c33c113b2fffe8',1,'helios::RGBcolor::r'],['../structhelios_1_1_r_g_b_acolor.html#a15af7f1c4d0e5e23a7ec2488fe0964df',1,'helios::RGBAcolor::r']]],
   ['radiation_2',['radiation',['../class_project_builder.html#afe1b87fff528c511b11b2f28558e914d',1,'ProjectBuilder']]],
   ['radius_3',['radius',['../structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906',1,'helios::SphericalCoord']]],

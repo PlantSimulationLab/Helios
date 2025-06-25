@@ -1119,12 +1119,11 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.petiole.length.uniformDistribution(0.06,0.08);
     phytomer_parameters_trifoliate.petiole.taper = 0.25;
     phytomer_parameters_trifoliate.petiole.curvature.uniformDistribution(-200,-50);
-    phytomer_parameters_trifoliate.petiole.color = make_RGBcolor(0.17,0.25,0.07);
+    phytomer_parameters_trifoliate.petiole.color = make_RGBcolor(0.2,0.25,0.06);
     phytomer_parameters_trifoliate.petiole.length_segments = 5;
     phytomer_parameters_trifoliate.petiole.radial_subdivisions = 6;
 
     phytomer_parameters_trifoliate.leaf.leaves_per_petiole = 3;
-//    phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(0, 10);
     phytomer_parameters_trifoliate.leaf.pitch.normalDistribution(45, 20);
     phytomer_parameters_trifoliate.leaf.yaw = 10;
     phytomer_parameters_trifoliate.leaf.roll = -15;
@@ -1134,11 +1133,11 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.prototype = leaf_prototype_trifoliate;
 
     phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.3,0.35);
-    phytomer_parameters_trifoliate.peduncle.radius = 0.0025;
+    phytomer_parameters_trifoliate.peduncle.radius = 0.003;
     phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
     phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(50, 250);
-    phytomer_parameters_trifoliate.peduncle.color = make_RGBcolor(0.15, 0.25, 0.1);
+    phytomer_parameters_trifoliate.peduncle.color = make_RGBcolor(0.17,0.213,0.051);
     phytomer_parameters_trifoliate.peduncle.length_segments = 6;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
@@ -2826,7 +2825,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.internode.pitch = 10;
     phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(140, 220);
     phytomer_parameters.internode.radius_initial = 0.001;
-    phytomer_parameters.internode.color = make_RGBcolor(0.213, 0.270, 0.056);
+    phytomer_parameters.internode.color = make_RGBcolor(0.217,0.275, 0.0571);
     phytomer_parameters.internode.length_segments = 1;
 
     phytomer_parameters.petiole.petioles_per_internode = 1;
@@ -2885,7 +2884,7 @@ void PlantArchitecture::initializeTomatoShoots() {
 
     shoot_parameters.phyllochron_min = 2;
     shoot_parameters.elongation_rate_max = 0.1;
-    shoot_parameters.girth_area_factor = 3.f;
+    shoot_parameters.girth_area_factor = 2.5f;
     shoot_parameters.vegetative_bud_break_time = 30;
     shoot_parameters.vegetative_bud_break_probability_min = 0.25;
     shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.25;
@@ -2945,7 +2944,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     phytomer_parameters.internode.pitch = 10;
     phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(14, 220);
     phytomer_parameters.internode.radius_initial = 0.001;
-    phytomer_parameters.internode.color = make_RGBcolor(0.2556, 0.3240, 0.0672);
+    phytomer_parameters.internode.color = make_RGBcolor(0.217,0.275, 0.0571);
     phytomer_parameters.internode.length_segments = 1;
     phytomer_parameters.internode.radial_subdivisions = 14;
 
@@ -2955,7 +2954,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     phytomer_parameters.petiole.length = 0.25;
     phytomer_parameters.petiole.taper = 0.25;
     phytomer_parameters.petiole.curvature.uniformDistribution(-250,0);
-    phytomer_parameters.petiole.color = make_RGBcolor(0.4, 0.46, 0.15);
+    phytomer_parameters.petiole.color = make_RGBcolor(0.32,0.37,0.12);
     phytomer_parameters.petiole.length_segments = 5;
 
     phytomer_parameters.leaf.leaves_per_petiole = 9;
@@ -2982,7 +2981,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     phytomer_parameters.inflorescence.roll.uniformDistribution(-10,10);
     phytomer_parameters.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters.inflorescence.flower_prototype_function = TomatoFlowerPrototype;
-    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.07;
+    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.09;
     phytomer_parameters.inflorescence.fruit_prototype_function = TomatoFruitPrototype;
     phytomer_parameters.inflorescence.fruit_gravity_factor_fraction = 0.2;
 

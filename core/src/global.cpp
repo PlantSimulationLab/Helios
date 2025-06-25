@@ -1514,12 +1514,21 @@ std::vector<std::vector<bool> > helios::readPNGAlpha(const std::string &filename
 
     uint width = png_get_image_width(png_ptr, info_ptr);
     uint height = png_get_image_height(png_ptr, info_ptr);
-    //  color_type = png_get_color_type(png_ptr, info_ptr);
-    //  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
 
     mask.resize(height);
     for (uint i = 0; i < height; i++) {
         mask.at(i).resize(width);
+    }
+
+    if (!has_alpha) {
+        for (uint j = 0; j < height; ++j) {
+            std::fill(mask.at(j).begin(), mask.at(j).end(), true);
+        }
+        fclose(fp);
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        return mask;
     }
 
     //  number_of_passes = png_set_interlace_handling(png_ptr);
@@ -1654,8 +1663,7 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         size_t w = png_get_image_width(png_ptr, info_ptr);
         size_t h = png_get_image_height(png_ptr, info_ptr);
         // Prevent overflow when resizing vectors
-        constexpr size_t max_pixels =
-                std::numeric_limits<size_t>::max() / sizeof(helios::RGBAcolor);
+        constexpr size_t max_pixels = (std::numeric_limits<size_t>::max)() / sizeof(helios::RGBAcolor);
         if (w == 0 || h == 0 || w > max_pixels / h) {
             throw std::runtime_error(
                 "Invalid image dimensions: " +

@@ -730,7 +730,6 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                     phytomer_ptr->scaleLeafPrototypeScale( petiole, 5);
 
                     for( int leaf=0; leaf<phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++ ){
-                        std::cout << "Rotating leaf " << leaf << " by pitch: " << leaf_pitch.at(petiole).at(leaf) << ", yaw: " << leaf_yaw.at(petiole).at(leaf) << ", roll: " << leaf_roll.at(petiole).at(leaf) << std::endl;
                         phytomer_ptr->rotateLeaf(petiole, leaf, make_AxisRotation(deg2rad(leaf_pitch.at(petiole).at(leaf)), deg2rad(leaf_yaw.at(petiole).at(leaf)), deg2rad(-leaf_roll.at(petiole).at(leaf))));
                     }
                 }

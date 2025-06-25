@@ -288,6 +288,9 @@ class ProjectBuilder {
     //! User input
     bool user_input;
 
+    //! Light coordinates type (false = Cartesian, true = Spherical)
+    bool light_coord_type = false;
+
     //! If true, the context has been updated since the last time the visualizer has been updated
     bool is_dirty = false;
 
@@ -365,6 +368,9 @@ class ProjectBuilder {
 
     //! Ground UUIDs
     std::vector<uint> ground_UUIDs;
+
+    //! Ground object ID
+    uint ground_objID;
 
     //! Leaf UUIDs
     std::vector<uint> leaf_UUIDs;
@@ -1249,10 +1255,10 @@ class ProjectBuilder {
     helios::vec3 light_direction{0, 0, 1};
 
     //! Light intensity factor in the visualizer
-    float light_intensity = 2.0;
+    float light_intensity = 1.0;
 
     //! Number of tiles
-    helios::int2 num_tiles{1,1};
+    helios::int2 num_tiles{5,5};
 
   public:
     //! Context
@@ -1761,6 +1767,9 @@ class ProjectBuilder {
     //! Update ground
     void updateGround();
 
+    //! Delete ground
+    void deleteGround();
+
     //! Update context
     void updateContext();
 
@@ -1783,6 +1792,17 @@ class ProjectBuilder {
      * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
     */
     void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation);
+
+    //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes (from `buildGround` Canopy Generator plugin)
+    /**
+     * \param[in] ground_origin x-, y-, and z-position of the ground center point.
+     * \param[in] ground_extent Width of the ground in the x- and y-directions.
+     * \param[in] texture_subtiles Number of sub-divisions of the ground into texture map tiles in the x- and y-directions.
+     * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
+     * \param[in] ground_color Ground color.
+     * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
+    */
+    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, helios::RGBcolor ground_color, float ground_rotation);
 
     //! Constructor
     ProjectBuilder(){
