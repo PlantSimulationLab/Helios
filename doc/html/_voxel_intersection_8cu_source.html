@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -243,9 +243,9 @@ $(function(){initNavTree('_voxel_intersection_8cu_source.html',''); initResizabl
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    </div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>}</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>__global__ <span class="keywordtype">void</span> insideVolume_vi( <span class="keyword">const</span> uint Nhits, <span class="keyword">const</span> float3* d_hit_xyz, <span class="keyword">const</span> uint Ngridcells, <span class="keyword">const</span> float3* d_grid_size, <span class="keyword">const</span> float3* d_grid_center, <span class="keyword">const</span> <span class="keywordtype">float</span>* d_grid_rotation, <span class="keywordtype">int</span>* d_hit_vol ){</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>__global__ <span class="keywordtype">void</span> insideVolume_vi( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nhits, <span class="keyword">const</span> float3* d_hit_xyz, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ngridcells, <span class="keyword">const</span> float3* d_grid_size, <span class="keyword">const</span> float3* d_grid_center, <span class="keyword">const</span> <span class="keywordtype">float</span>* d_grid_rotation, <span class="keywordtype">int</span>* d_hit_vol ){</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>  </div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>  uint t = blockIdx.x*blockDim.x+threadIdx.x;</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> t = blockIdx.x*blockDim.x+threadIdx.x;</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>  <span class="keywordflow">if</span>( t&gt;=Nhits ){</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordflow">return</span>;</div>
@@ -424,7 +424,7 @@ $(function(){initNavTree('_voxel_intersection_8cu_source.html',''); initResizabl
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>  <span class="comment">// ---- Determine Primitive positions and copy to GPU ---- //</span></div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>  <span class="keyword">const</span> uint N = Nprims;</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>  <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> N = Nprims;</div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span> </div>
 <div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>  float3* d_hit_xyz;</div>
 <div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>  float3* hit_xyz = (float3*)malloc(N * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
@@ -444,7 +444,7 @@ $(function(){initNavTree('_voxel_intersection_8cu_source.html',''); initResizabl
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>  float3* d_grid_size;</div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>  <span class="keywordtype">float</span>* d_grid_rotation;</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span> </div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>  <span class="keyword">const</span> uint Ncells = Nvoxels;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>  <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ncells = Nvoxels;</div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>  float3* center = (float3*)malloc(Ncells * <span class="keyword">sizeof</span>(float3)); <span class="comment">//allocate host memory</span></div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>  CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_grid_center,Ncells*<span class="keyword">sizeof</span>(float3)) ); <span class="comment">//allocate device memory</span></div>
@@ -494,8 +494,8 @@ $(function(){initNavTree('_voxel_intersection_8cu_source.html',''); initResizabl
 <div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    }</div>
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>  }</div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>  <span class="keywordflow">for</span>( std::map&lt;uint,std::vector&lt;uint&gt; &gt;::iterator it = vint.begin(); it!=vint.end(); ++it ){</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    uint UUID = it-&gt;first;</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>  <span class="keywordflow">for</span>( std::map&lt;<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>,std::vector&lt;uint&gt; &gt;::iterator it = vint.begin(); it!=vint.end(); ++it ){</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = it-&gt;first;</div>
 <div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordtype">size_t</span> s = vint.at(UUID).size();</div>
 <div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    context-&gt;setPrimitiveData( UUID, <span class="stringliteral">&quot;inside_UUIDs&quot;</span>, <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">helios::HELIOS_TYPE_UINT</a>, s, &amp;vint.at(UUID)[0] );</div>
 <div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>  }</div>

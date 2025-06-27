@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -171,7 +171,7 @@ Functions</h2></td></tr>
 <tr class="memitem:gab4e83017576a164eaa7c61cd0812d8a2" id="r_gab4e83017576a164eaa7c61cd0812d8a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab4e83017576a164eaa7c61cd0812d8a2">helios::Context::addTimeseriesData</a> (const char *label, float value, const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;date, const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;time)</td></tr>
 <tr class="memdesc:gab4e83017576a164eaa7c61cd0812d8a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a data point to timeseries of data.  <br /></td></tr>
 <tr class="separator:gab4e83017576a164eaa7c61cd0812d8a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga3ca2e5c0a2c1983d552fd7ee57d04997" id="r_ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3ca2e5c0a2c1983d552fd7ee57d04997">helios::Context::setCurrentTimeseriesPoint</a> (const char *label, uint index)</td></tr>
+<tr class="memitem:ga3ca2e5c0a2c1983d552fd7ee57d04997" id="r_ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3ca2e5c0a2c1983d552fd7ee57d04997">helios::Context::setCurrentTimeseriesPoint</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index)</td></tr>
 <tr class="memdesc:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the Context date and time by providing the index of a timeseries data point.  <br /></td></tr>
 <tr class="separator:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8845155a8f5df1e6db968b78f5a5fb18" id="r_ga8845155a8f5df1e6db968b78f5a5fb18"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a> (const char *label, const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;date, const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;time) const</td></tr>
@@ -180,16 +180,16 @@ Functions</h2></td></tr>
 <tr class="memitem:gab52bde84b96d02a4d928a610794ab146" id="r_gab52bde84b96d02a4d928a610794ab146"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab52bde84b96d02a4d928a610794ab146">helios::Context::queryTimeseriesData</a> (const char *label) const</td></tr>
 <tr class="memdesc:gab52bde84b96d02a4d928a610794ab146"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a timeseries data point at the time currently set in the Context.  <br /></td></tr>
 <tr class="separator:gab52bde84b96d02a4d928a610794ab146"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadffd45c3717c9255d035ce098349ca74" id="r_gadffd45c3717c9255d035ce098349ca74"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadffd45c3717c9255d035ce098349ca74">helios::Context::queryTimeseriesData</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:gadffd45c3717c9255d035ce098349ca74" id="r_gadffd45c3717c9255d035ce098349ca74"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadffd45c3717c9255d035ce098349ca74">helios::Context::queryTimeseriesData</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:gadffd45c3717c9255d035ce098349ca74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a timeseries data point by index in the timeseries.  <br /></td></tr>
 <tr class="separator:gadffd45c3717c9255d035ce098349ca74"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga520b33fad86d1514ceb5eeafa52c81ef" id="r_ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga520b33fad86d1514ceb5eeafa52c81ef">helios::Context::queryTimeseriesTime</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:ga520b33fad86d1514ceb5eeafa52c81ef" id="r_ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga520b33fad86d1514ceb5eeafa52c81ef">helios::Context::queryTimeseriesTime</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:ga520b33fad86d1514ceb5eeafa52c81ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the time associated with a timeseries data point.  <br /></td></tr>
 <tr class="separator:ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gae15d53565b2a699d212de636318290b8" id="r_gae15d53565b2a699d212de636318290b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_date.html">Date</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae15d53565b2a699d212de636318290b8">helios::Context::queryTimeseriesDate</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:gae15d53565b2a699d212de636318290b8" id="r_gae15d53565b2a699d212de636318290b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_date.html">Date</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae15d53565b2a699d212de636318290b8">helios::Context::queryTimeseriesDate</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:gae15d53565b2a699d212de636318290b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the date associated with a timeseries data point.  <br /></td></tr>
 <tr class="separator:gae15d53565b2a699d212de636318290b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga56d13f8c949e68137581a3c974790892" id="r_ga56d13f8c949e68137581a3c974790892"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a> (const char *label) const</td></tr>
+<tr class="memitem:ga56d13f8c949e68137581a3c974790892" id="r_ga56d13f8c949e68137581a3c974790892"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a> (const char *label) const</td></tr>
 <tr class="memdesc:ga56d13f8c949e68137581a3c974790892"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the length of timeseries data.  <br /></td></tr>
 <tr class="separator:ga56d13f8c949e68137581a3c974790892"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8beaa8454ad248064b74698f7f0534a2" id="r_ga8beaa8454ad248064b74698f7f0534a2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8beaa8454ad248064b74698f7f0534a2">helios::Context::doesTimeseriesVariableExist</a> (const char *label) const</td></tr>
@@ -277,7 +277,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Context::getTimeseriesLength </td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Context::getTimeseriesLength </td>
           <td>(</td>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>label</em></span></td><td>)</td>
           <td> const</td>
@@ -378,7 +378,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -411,7 +411,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -444,7 +444,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -477,7 +477,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

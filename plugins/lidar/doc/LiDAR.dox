@@ -88,7 +88,7 @@
 
  There is sometimes ambiguity or inconsistency in usage of the terms discrete-return and full-waveform LiDAR data in the literature. For the purposes of this documentation, we will call "discrete-return" data as a scan that records only a single hit point per laser pulse, and "full-waveform" data as a scan that can record a large number of hit points per laser pulse.
 
- \image html WaveformSchematic.jpeg
+ \image html plugins/lidar/doc/images/WaveformSchematic.jpeg
 
  \subsection ScanMetadata Scan metadata
 
@@ -242,7 +242,7 @@
  <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "temperature", etc. </td><td>N/A</td></tr>
  </table>
 
- The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
+ The XML file can be automatically loaded into the point cloud using the \ref LiDARcloud::loadXML() function, as illustrated below.
   
  ~~~~~~{.cpp}
   #include "LiDAR.h"
@@ -358,11 +358,12 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.
 
-  There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref leafReconstructionTriangular() function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
+  There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
 
-  The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the \ref leafReconstructionAlphaMask() function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.
+  The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the \ref LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*) function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.
 
-  There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is \ref addLeafReconstructionToContext().
+
+  There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is \ref LiDARcloud::addLeafReconstructionToContext().
   
   Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.
 
@@ -408,7 +409,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   
   \subsection LiDARsynthdiscrete Synthetic discrete-return data
 
-  Once the \ref LiDARcloud has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling \ref LiDARcloud::syntheticScan( helios::Context*, const char* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.
+  Once the \ref LiDARcloud has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling \ref LiDARcloud::syntheticScan( helios::Context* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.
 
   The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).
   
@@ -516,7 +517,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
  <table>
  <tr><th>Function</th><th>Description</th></tr>
  <tr><td>\ref LiDARcloud::addHitsToVisualizer</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
- <tr><td>\ref LiDARcloud::addGridToVisualizer( Visualizer * visualizer )</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
+ <tr><td>\ref LiDARcloud::addGridToVisualizer(Visualizer*)</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
  </table>

@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -170,16 +170,16 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>RT_PROGRAM <span class="keywordtype">void</span> direct_raygen()</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>{</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    uint Nrays = launch_dim.x*launch_dim.y;</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    uint ray_index = launch_dim.x*launch_index.y + launch_index.x;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nrays = launch_dim.x*launch_dim.y;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ray_index = launch_dim.x*launch_index.y + launch_index.x;</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    PerRayData prd;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    prd.seed = tea&lt;16&gt;(ray_index+Nrays*launch_index.z,random_seed);</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    uint objID = launch_offset+launch_index.z;</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = launch_offset+launch_index.z;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    uint pID = primitiveID[objID];</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    uint ptype = primitive_type[objID];</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> pID = primitiveID[objID];</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ptype = primitive_type[objID];</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">int</span> puvID = uvID[objID];</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    float3 sp;</div>
@@ -188,7 +188,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="comment">//transformation matrix</span></div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <span class="keywordtype">float</span> m_trans[16];</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">for</span>( uint i=0; i&lt;16; i++ ){</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;16; i++ ){</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        m_trans[i] = transform_matrix[ optix::make_uint2(i,objID) ];</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    }</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
@@ -198,7 +198,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> jj=0; jj&lt;NY; jj++ ){</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <span class="keywordflow">for</span>( <span class="keywordtype">int</span> ii=0; ii&lt;NX; ii++ ){</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>            uint UUID = pID + jj*NX + ii;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = pID + jj*NX + ii;</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>            <span class="comment">//two random samples [0,1]</span></div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>            <span class="keywordtype">float</span> Rx = rnd(prd.seed);</div>
@@ -206,8 +206,8 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>            <span class="keywordflow">if</span>( ptype == 0 || ptype == 3 ){ <span class="comment">//Patch or Tile</span></div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>                uint Nx = launch_dim.x;</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>                uint Ny = launch_dim.y;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nx = launch_dim.x;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ny = launch_dim.y;</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>                <span class="keywordtype">float</span> dx = 1.f/float(NX);</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>                <span class="keywordtype">float</span> dy = 1.f/float(NY);</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
@@ -301,7 +301,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>                    <span class="comment">//sample point on surface of sphere</span></div>
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>                    <span class="keywordtype">float</span> theta_s = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(1.f-2.f*rnd(prd.seed));</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>                    <span class="keywordtype">float</span> phi_s = rnd(prd.seed)*2.f*M_PI;</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>                    <span class="keywordtype">float</span> phi_s = rnd(prd.seed)*2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>                    float3 sphere_point = 0.5*source_widths[rr].x*make_float3( sin(theta_s)*cos(phi_s), sin(theta_s)*sin(phi_s), cos(theta_s) );</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>                    ray_direction = sphere_point+source_positions[rr]-ray_origin;</div>
@@ -309,11 +309,11 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>                    ray_magnitude = d_magnitude(ray_direction);</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>                    ray_direction = normalize( ray_direction );</div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>                    prd.strength = 0.f;</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>                    uint N = 10;</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>                    <span class="keywordflow">for</span>( uint j=0; j&lt;N; j++ ){</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>                        <span class="keywordflow">for</span>( uint i=0; i&lt;N; i++ ){</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>                    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> N = 10;</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>                    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> j=0; j&lt;N; j++ ){</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>                        <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;N; i++ ){</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>                            <span class="keywordtype">float</span> theta = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(1.f-2.f*(<span class="keywordtype">float</span>(i)+0.5f)/<span class="keywordtype">float</span>(N));</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>                            <span class="keywordtype">float</span> phi = (float(j)+0.5f)*2.f*M_PI/<span class="keywordtype">float</span>(N);</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>                            <span class="keywordtype">float</span> phi = (float(j)+0.5f)*2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/<span class="keywordtype">float</span>(N);</div>
 <div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>                            float3 light_direction = make_float3( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>                            <span class="keywordflow">if</span>( dot(light_direction,ray_direction)&lt;0 ){</div>
 <div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>                                prd.strength+=1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)/(N*N)*source_widths[rr].x*source_widths[rr].x;</div>
@@ -344,7 +344,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                    ray_magnitude = d_magnitude(ray_direction);</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>                    ray_direction = normalize( ray_direction );</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>                    prd.strength = 1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)*source_widths[rr].x*source_widths[rr].y/M_PI;</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>                    prd.strength = 1./double(launch_dim.x*launch_dim.y)*fabs(dot(normal,ray_direction))*fabs(dot(light_direction,ray_direction))/(ray_magnitude*ray_magnitude)*source_widths[rr].x*source_widths[rr].y/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span> </div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>                }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( source_types[rr]==4 ){ <span class="comment">//disk source</span></div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
@@ -407,25 +407,25 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>RT_PROGRAM <span class="keywordtype">void</span> diffuse_raygen(){</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    uint dimx = launch_dim.x*launch_dim.y;</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    uint indx = launch_dim.x*launch_index.y + launch_index.x;</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> dimx = launch_dim.x*launch_dim.y;</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> indx = launch_dim.x*launch_index.y + launch_index.x;</div>
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span> </div>
 <div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    PerRayData prd;</div>
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    prd.seed = tea&lt;16&gt;(indx+dimx*launch_index.z,random_seed);</div>
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    uint objID = launch_offset+launch_index.z;</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = launch_offset+launch_index.z;</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="keywordflow">if</span>( launch_face==0 &amp;&amp; twosided_flag[objID] == 0 ){ <span class="comment">//skip the launch if from the bottom face and twosided_flag = 0</span></div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    }</div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span> </div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    uint pID = primitiveID[objID];</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    uint ptype = primitive_type[objID];</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> pID = primitiveID[objID];</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ptype = primitive_type[objID];</div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    <span class="keywordtype">int</span> puvID = uvID[objID];</div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span> </div>
 <div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    <span class="comment">//transformation matrix</span></div>
 <div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    <span class="keywordtype">float</span> m_trans[16];</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <span class="keywordflow">for</span>( uint i=0; i&lt;16; i++ ){</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;16; i++ ){</div>
 <div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>        m_trans[i] = transform_matrix[ optix::make_uint2(i,objID) ];</div>
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    }</div>
 <div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
@@ -437,7 +437,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> jj=0; jj&lt;NY; jj++ ){</div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>        <span class="keywordflow">for</span>( <span class="keywordtype">int</span> ii=0; ii&lt;NX; ii++ ){</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span> </div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            uint UUID = pID + jj*NX + ii;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = pID + jj*NX + ii;</div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>            <span class="comment">//two random samples [0,1]</span></div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>            <span class="keywordtype">float</span> Rx = rnd(prd.seed);</div>
@@ -534,7 +534,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>                        }</div>
 <div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>                    }</div>
 <div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>                }</div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>                p*=0.25f*M_PI;</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>                p*=0.25f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span> </div>
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>                <span class="comment">//find x,y point on unit disk</span></div>
 <div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>                sp.x = r*cosf(p);</div>
@@ -573,7 +573,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>            }<span class="keywordflow">else</span>{ <span class="comment">//other</span></div>
 <div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>                t = <a class="code hl_function" href="group__functions.html#gac400d6d37ff2494ec592a9f0a17ee9ab" title="arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">asin_safe</a>(sqrtf(Rt));</div>
 <div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>            }</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>            <span class="keywordtype">float</span> p = 2.f*M_PI*Rp;</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>            <span class="keywordtype">float</span> p = 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*Rp;</div>
 <div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span> </div>
 <div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>            float3 ray_direction;</div>
 <div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>            ray_direction.x = sin(t)*cos(p);</div>
@@ -658,8 +658,8 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span> </div>
 <div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>RT_PROGRAM <span class="keywordtype">void</span> camera_raygen(){</div>
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span> </div>
-<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    uint dimx = launch_dim.x*launch_dim.y;  <span class="comment">// x number of ray, y width, z length</span></div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    uint indx = launch_dim.x*launch_index.y + launch_index.x;</div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> dimx = launch_dim.x*launch_dim.y;  <span class="comment">// x number of ray, y width, z length</span></div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> indx = launch_dim.x*launch_index.y + launch_index.x;</div>
 <div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span> </div>
 <div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    optix::int2 camera_resolution = optix::make_int2( launch_dim.y, launch_dim.z );</div>
 <div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span> </div>
@@ -668,8 +668,8 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span> </div>
 <div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>    float3 sp;</div>
 <div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span> </div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    uint ii = launch_index.y; <span class="comment">//x-pixel</span></div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    uint jj = launch_index.z; <span class="comment">//y-pixel</span></div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ii = launch_index.y; <span class="comment">//x-pixel</span></div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> jj = launch_index.z; <span class="comment">//y-pixel</span></div>
 <div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordtype">size_t</span> origin_ID = jj*launch_dim.y + ii; <span class="comment">//global pixel index</span></div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span> </div>
 <div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span> </div>
@@ -720,9 +720,9 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span> </div>
 <div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>    <span class="comment">//*** rotate ray origin and direction into the direction of the camera view *** //</span></div>
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span> </div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    ray_origin = d_rotatePoint( ray_origin, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y ) + camera_position;</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    ray_origin = d_rotatePoint( ray_origin, -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y ) + camera_position;</div>
 <div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span> </div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>    ray_direction = d_rotatePoint( ray_direction, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>    ray_direction = d_rotatePoint( ray_direction, -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y );</div>
 <div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    ray_direction /= d_magnitude(ray_direction);</div>
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span> </div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    optix::Ray ray;</div>
@@ -750,7 +750,7 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span> </div>
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>RT_PROGRAM <span class="keywordtype">void</span> pixel_label_raygen(){</div>
 <div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span> </div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    uint indx = launch_dim.y*launch_index.z + launch_index.y;</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> indx = launch_dim.y*launch_index.z + launch_index.y;</div>
 <div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span> </div>
 <div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    optix::int2 camera_resolution = optix::make_int2( launch_dim.y, launch_dim.z );</div>
 <div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span> </div>
@@ -759,9 +759,9 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span> </div>
 <div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    float3 sp;</div>
 <div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span> </div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    uint ii = launch_index.y; <span class="comment">//x-pixel</span></div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ii = launch_index.y; <span class="comment">//x-pixel</span></div>
 <div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span> </div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    uint jj = launch_index.z; <span class="comment">//y-pixel</span></div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> jj = launch_index.z; <span class="comment">//y-pixel</span></div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span> </div>
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>    <span class="keywordtype">size_t</span> origin_ID = jj*launch_dim.y + ii; <span class="comment">//global pixel index</span></div>
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span> </div>
@@ -788,9 +788,9 @@ $(function(){initNavTree('ray_generation_8cu_source.html',''); initResizable(tru
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span> </div>
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <span class="comment">//*** rotate ray origin and direction into the direction of the camera view *** //</span></div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span> </div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    ray_origin = d_rotatePoint( ray_origin, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y ) + camera_position;</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    ray_origin = d_rotatePoint( ray_origin, -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y ) + camera_position;</div>
 <div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span> </div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    ray_direction = d_rotatePoint( ray_direction, -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    ray_direction = d_rotatePoint( ray_direction, -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y );</div>
 <div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    ray_direction /= d_magnitude(ray_direction);</div>
 <div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span> </div>
 <div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    optix::Ray ray;</div>

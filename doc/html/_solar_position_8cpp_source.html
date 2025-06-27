@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -206,12 +206,12 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>  <span class="keywordtype">int</span> solstice_day, LSTM;</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  <span class="keywordtype">float</span> Gamma, delta, time_dec, B, EoT, TC, LST, h, theta, phi, rad;</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  rad=M_PI/180.f;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  rad=<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  solstice_day=81;</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  <span class="comment">//day angle (Iqbal Eq. 1.1.2)</span></div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  Gamma = 2.f*M_PI*(float(date.<a class="code hl_function" href="structhelios_1_1_date.html#abf3a401379adb23851174683a9191efc" title="Convert to Julian day.">JulianDay</a>()-1))/365.f;  </div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  Gamma = 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*(float(date.<a class="code hl_function" href="structhelios_1_1_date.html#abf3a401379adb23851174683a9191efc" title="Convert to Julian day.">JulianDay</a>()-1))/365.f;  </div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>  <span class="comment">//solar declination angle (Iqbal Eq. 1.3.1 after Spencer)</span></div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  delta = 0.006918f - 0.399912f*cos(Gamma) + 0.070257f*sin(Gamma) </div>
@@ -234,16 +234,16 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>  <span class="comment">//solar zenith angle</span></div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>  theta = <a class="code hl_function" href="group__functions.html#gac400d6d37ff2494ec592a9f0a17ee9ab" title="arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">asin_safe</a>( sin(latitude*rad)*sin(delta) + cos(latitude*rad)*cos(delta)*cos(h) ); <span class="comment">//(rad)</span></div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  assert( theta&gt;-0.5f*M_PI &amp;&amp; theta&lt;0.5f*M_PI );</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  assert( theta&gt;-0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> &amp;&amp; theta&lt;0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> );</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>  <span class="comment">//solar elevation angle</span></div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  phi = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>( (sin(delta) - sin(theta)*sin(latitude*rad))/(cos(theta)*cos(latitude*rad)));</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>  <span class="keywordflow">if</span>( LST&gt;12.f ){</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    phi=2.f*M_PI-phi;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    phi=2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-phi;</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>  }</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span> </div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>  assert( phi&gt;0 &amp;&amp; phi&lt;2.f*M_PI );</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>  assert( phi&gt;0 &amp;&amp; phi&lt;2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> );</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>  <span class="keywordflow">return</span> <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(theta,phi);</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
@@ -254,8 +254,8 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>  <span class="comment">//This is a lazy way to find the sunrise/sunset time.  If anyone wants to do the math and solve for it algebraically, go for it.</span></div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> sun_dir;</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>  <span class="keywordflow">for</span>( uint h=1; h&lt;=23; h++ ){</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordflow">for</span>( uint m=1; m&lt;=59; m++ ){</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> h=1; h&lt;=23; h++ ){</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> m=1; m&lt;=59; m++ ){</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>      <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> sun_dir = calculateSunDirection(<a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(h,m,0),context-&gt;getDate());</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>      <span class="keywordflow">if</span>( sun_dir.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>&gt;0 ){</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(h,m);</div>
@@ -272,8 +272,8 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno"><a class="line" href="class_solar_position.html#a4c58aa642b4fc2300d1c1447388bc0d8">  116</a></span><a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> <a class="code hl_function" href="class_solar_position.html#a4c58aa642b4fc2300d1c1447388bc0d8" title="Get the approximate time of sunset at the current location.">SolarPosition::getSunsetTime</a>()<span class="keyword"> const</span>{</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>  <span class="comment">// SphericalCoord sun_dir;</span></div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>  <span class="keywordflow">for</span>( uint h=23; h&gt;=1; h-- ){</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">for</span>( uint m=59; m&gt;=1; m-- ){</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> h=23; h&gt;=1; h-- ){</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> m=59; m&gt;=1; m-- ){</div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>      <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> sun_dir = calculateSunDirection(<a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(h,m,0),context-&gt;getDate());</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>      <span class="keywordflow">if</span>( sun_dir.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>&gt;0 ){</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(h,m);</div>
@@ -402,18 +402,18 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span> </div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>  <span class="keywordtype">float</span> beta = turbidity;</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span> </div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>  uint DOY = context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a23f2611ed71eeefe8cf772cab98de4d4" title="Get simulation date by Julian day.">getJulianDate</a>();</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> DOY = context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a23f2611ed71eeefe8cf772cab98de4d4" title="Get simulation date by Julian day.">getJulianDate</a>();</div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
 <div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>  <span class="keywordtype">float</span> theta = <a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>();</div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>  <span class="keywordflow">if</span>( theta&gt;0.5*M_PI ){</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>  <span class="keywordflow">if</span>( theta&gt;0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> ){</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    Eb_PAR = 0.f;</div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    Eb_NIR = 0.f;</div>
 <div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    fdiff = 1.f;</div>
 <div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>  }</div>
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>  </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>  <span class="keywordtype">float</span> m=pow(cos(theta)+0.15*pow(93.885-theta*180/M_PI,-1.25),-1);</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>  <span class="keywordtype">float</span> m=pow(cos(theta)+0.15*pow(93.885-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,-1.25),-1);</div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>  <span class="keywordtype">float</span> E0_PAR=635.4;</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>  <span class="keywordtype">float</span> E0_NIR=709.7;</div>
@@ -422,7 +422,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
 <div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>  <span class="comment">//---- Rayleigh ----//</span></div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>  <span class="comment">//NOTE: Rayleigh scattering dominates the atmospheric attenuation, and thus variations in the model predictions are almost entirely due to pressure (and theta)</span></div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>  <span class="keywordtype">float</span> mR=1.f/(cos(theta)+0.48353*pow(theta*180/M_PI,0.095846)/pow(96.741-theta*180/M_PI,1.754));</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>  <span class="keywordtype">float</span> mR=1.f/(cos(theta)+0.48353*pow(theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0.095846)/pow(96.741-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,1.754));</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>  <span class="keywordtype">float</span> mR_p=mR*pressure/101325;</div>
 <div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
@@ -431,7 +431,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>  <span class="keywordtype">float</span> TR_NIR=(1.f-0.010394*mR_p)/(1.f-0.00011042*mR_p*mR_p);</div>
 <div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span> </div>
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>  <span class="comment">//---- Uniform gasses ----//</span></div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>  mR=1.f/(cos(theta)+0.48353*pow(theta*180/M_PI,0.095846)/pow(96.741-theta*180/M_PI,1.754));</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>  mR=1.f/(cos(theta)+0.48353*pow(theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0.095846)/pow(96.741-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,1.754));</div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>  mR_p=mR*pressure/101325;</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
@@ -446,7 +446,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>  <span class="keywordtype">float</span> Ba=1.f-exp(-0.6931-1.8326*cos(theta));</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>  <span class="comment">//---- Ozone -----//</span></div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>  <span class="keywordtype">float</span> uo=(235+(150+40*sin(0.9856*(DOY-30)*M_PI/180.f)+20*sin(3*(longitude*M_PI/180.f+20)))*pow(sin(1.28*latitude*M_PI/180.f),2))*0.001f; <span class="comment">//O3 atm-cm</span></div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>  <span class="keywordtype">float</span> uo=(235+(150+40*sin(0.9856*(DOY-30)*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f)+20*sin(3*(longitude*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f+20)))*pow(sin(1.28*latitude*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f),2))*0.001f; <span class="comment">//O3 atm-cm</span></div>
 <div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>  <span class="comment">//NOTE: uo model from van Heuklon (1979)</span></div>
 <div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>  <span class="keywordtype">float</span> mo=m;</div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span> </div>
@@ -459,7 +459,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
 <div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>  <span class="comment">//---- Nitrogen ---- //</span></div>
 <div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>  <span class="keywordtype">float</span> un=0.0002; <span class="comment">//N atm-cm</span></div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>  <span class="keywordtype">float</span> mw=1.f/(cos(theta)+1.065*pow(theta*180/M_PI,1.6132)/pow(111.55-theta*180/M_PI,3.2629));</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>  <span class="keywordtype">float</span> mw=1.f/(cos(theta)+1.065*pow(theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,1.6132)/pow(111.55-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,3.2629));</div>
 <div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span> </div>
 <div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>  <span class="keywordtype">float</span> g1=(0.17499+41.654*un-2146.4*un*un)/(1+22295*un*un);</div>
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>  <span class="keywordtype">float</span> g2=un*(-1.2134+59.324*un)/(1.f+8847.8*un*un);</div>
@@ -475,7 +475,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>  <span class="keywordtype">float</span> tdp=243*gamma/(17.67-gamma)*9/5+32;<span class="comment">//dewpoint temperature in Fahrenheit</span></div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>  <span class="keywordtype">float</span> w=exp((0.1133-log(4.0+1))+0.0393*tdp); <span class="comment">//cm of precipitable water</span></div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>  <span class="comment">//NOTE: precipitable water model from Viswanadham (1981), Eq. 5</span></div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>  mw=1.f/(cos(theta)+1.1212*pow(theta*180/M_PI,0.6379)/pow(93.781-theta*180/M_PI,1.9203));</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>  mw=1.f/(cos(theta)+1.1212*pow(theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0.6379)/pow(93.781-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,1.9203));</div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span> </div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>  <span class="keywordtype">float</span> h1=w*(0.065445+0.00029901*w)/(1.f+1.2728*w);</div>
 <div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>  <span class="keywordtype">float</span> h2=w*(0.065687+0.0013218*w)/(1.f+1.2008*w);</div>
@@ -490,7 +490,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>  <span class="keywordtype">float</span> Tw_NIR_p=(1.f+c1*1.66+c2*1.66*1.66)/(1.f+c3*1.66+c4*1.66*1.66);</div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
 <div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>  <span class="comment">//---- Aerosol ----//</span></div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>  <span class="keywordtype">float</span> ma=1.f/(cos(theta)+0.16851*pow(theta*180/M_PI,0.18198)/pow(95.318-theta*180/M_PI,1.9542));</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>  <span class="keywordtype">float</span> ma=1.f/(cos(theta)+0.16851*pow(theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0.18198)/pow(95.318-theta*180/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,1.9542));</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>  <span class="keywordtype">float</span> ua=log(1.f+ma*beta);</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>  <span class="keywordtype">float</span> d0=0.57664-0.024743*alpha.x;</div>
@@ -577,7 +577,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable &quot;</span> + timeseries_shortwave_flux_label_Wm2 + <span class="stringliteral">&quot; does not exist.&quot;</span>);</div>
 <div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    }</div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span> </div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>    uint length = context-&gt;getTimeseriesLength(timeseries_shortwave_flux_label_Wm2.c_str() );</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> length = context-&gt;getTimeseriesLength(timeseries_shortwave_flux_label_Wm2.c_str() );</div>
 <div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span> </div>
 <div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    <span class="keywordtype">float</span> min_flux = 1e6;</div>
 <div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="keywordtype">float</span> max_flux = 0;</div>

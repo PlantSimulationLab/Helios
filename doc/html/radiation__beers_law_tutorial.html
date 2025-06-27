@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -291,7 +291,7 @@ $(function(){initNavTree('radiation__beers_law_tutorial.html',''); initResizable
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context);                      <span class="comment">//declare and initialize the radiation model class</span></div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// add a sun source. We&#39;ll assume collimated radiation since that is what is assumed in Beer&#39;s law</span></div>
-<div class="line">   uint sourceID = radiation.addCollimatedRadiationSource( sun_direction );</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> sourceID = radiation.addCollimatedRadiationSource( sun_direction );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// set up the PAR band. We&#39;ll use separate direct and diffuse bands to keep them separate for post-processing (normally you would combine them)</span></div>
 <div class="line">   radiation.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
@@ -301,7 +301,7 @@ $(function(){initNavTree('radiation__beers_law_tutorial.html',''); initResizable
 <div class="line"> </div>
 <div class="line">   radiation.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>);      <span class="comment">//use periodic boundary conditions in the horizontal to simulate an infinite canopy</span></div>
 <div class="line"> </div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>,uint(0)); <span class="comment">//only want ground to intercept/emit radiation from the top</span></div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>,<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0)); <span class="comment">//only want ground to intercept/emit radiation from the top</span></div>
 <div class="line"> </div>
 <div class="line">   radiation.updateGeometry();                            <span class="comment">//update the geometry in the radiation model</span></div>
 <div class="line"> </div>

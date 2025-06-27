@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -166,7 +166,7 @@ $(function(){initNavTree('struct_shoot.html',''); initResizable(true); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a8b2941ebd2f3c08157bcedf4dd966387" id="r_a8b2941ebd2f3c08157bcedf4dd966387"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b2941ebd2f3c08157bcedf4dd966387">Shoot</a> (uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node, uint parent_petiole_index, uint rank, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;shoot_base_position, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, uint current_node_number, float internode_length_shoot_initial, <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> &amp;shoot_params, std::string shoot_type_label, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plant_architecture_ptr)</td></tr>
+<tr class="memitem:a8b2941ebd2f3c08157bcedf4dd966387" id="r_a8b2941ebd2f3c08157bcedf4dd966387"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b2941ebd2f3c08157bcedf4dd966387">Shoot</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> plant_ID, int shoot_ID, int parent_shoot_ID, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> parent_node, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> parent_petiole_index, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> rank, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;shoot_base_position, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> current_node_number, float internode_length_shoot_initial, <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> &amp;shoot_params, std::string shoot_type_label, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plant_architecture_ptr)</td></tr>
 <tr class="memdesc:a8b2941ebd2f3c08157bcedf4dd966387"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:a8b2941ebd2f3c08157bcedf4dd966387"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a263f94fbb6cecf5b31f25e1a3563b720" id="r_a263f94fbb6cecf5b31f25e1a3563b720"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a263f94fbb6cecf5b31f25e1a3563b720">buildShootPhytomers</a> (float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper)</td></tr>
@@ -178,12 +178,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aab304a4f16758e32927dba357f6fb775" id="r_aab304a4f16758e32927dba357f6fb775"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab304a4f16758e32927dba357f6fb775">sampleChildShootType</a> () const</td></tr>
 <tr class="memdesc:aab304a4f16758e32927dba357f6fb775"><td class="mdescLeft">&#160;</td><td class="mdescRight">Randomly sample the type of a child shoot based on the probabilities defined in the shoot parameters.  <br /></td></tr>
 <tr class="separator:aab304a4f16758e32927dba357f6fb775"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a79c44586c03664cfe2e7e8e114821f4f" id="r_a79c44586c03664cfe2e7e8e114821f4f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a79c44586c03664cfe2e7e8e114821f4f">sampleVegetativeBudBreak</a> (uint node_index) const</td></tr>
+<tr class="memitem:a79c44586c03664cfe2e7e8e114821f4f" id="r_a79c44586c03664cfe2e7e8e114821f4f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a79c44586c03664cfe2e7e8e114821f4f">sampleVegetativeBudBreak</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> node_index) const</td></tr>
 <tr class="memdesc:a79c44586c03664cfe2e7e8e114821f4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Randomly sample whether a vegetative bud should break into a new shoot.  <br /></td></tr>
 <tr class="separator:a79c44586c03664cfe2e7e8e114821f4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afcc95b14afff1a3521641e1d13b9cd1d" id="r_afcc95b14afff1a3521641e1d13b9cd1d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcc95b14afff1a3521641e1d13b9cd1d">sampleVegetativeBudBreak_carb</a> (uint node_index) const</td></tr>
+<tr class="memitem:afcc95b14afff1a3521641e1d13b9cd1d" id="r_afcc95b14afff1a3521641e1d13b9cd1d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcc95b14afff1a3521641e1d13b9cd1d">sampleVegetativeBudBreak_carb</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> node_index) const</td></tr>
 <tr class="separator:afcc95b14afff1a3521641e1d13b9cd1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af363b7ac84688b5d948bb72473944b68" id="r_af363b7ac84688b5d948bb72473944b68"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af363b7ac84688b5d948bb72473944b68">sampleEpicormicShoot</a> (float dt, std::vector&lt; float &gt; &amp;epicormic_positions_fraction) const</td></tr>
+<tr class="memitem:af363b7ac84688b5d948bb72473944b68" id="r_af363b7ac84688b5d948bb72473944b68"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af363b7ac84688b5d948bb72473944b68">sampleEpicormicShoot</a> (float dt, std::vector&lt; float &gt; &amp;epicormic_positions_fraction) const</td></tr>
 <tr class="memdesc:af363b7ac84688b5d948bb72473944b68"><td class="mdescLeft">&#160;</td><td class="mdescRight">Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep.  <br /></td></tr>
 <tr class="separator:af363b7ac84688b5d948bb72473944b68"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aabd26ec09a87e64c2b575896016f0ac8" id="r_aabd26ec09a87e64c2b575896016f0ac8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabd26ec09a87e64c2b575896016f0ac8">terminateApicalBud</a> ()</td></tr>
@@ -204,13 +204,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a45286db4b3672dce29dcd6964c831d43" id="r_a45286db4b3672dce29dcd6964c831d43"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a45286db4b3672dce29dcd6964c831d43">getShootAxisVector</a> (float shoot_fraction) const</td></tr>
 <tr class="memdesc:a45286db4b3672dce29dcd6964c831d43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines the shoot axis vector based on a specified fraction along the shoot's length.  <br /></td></tr>
 <tr class="separator:a45286db4b3672dce29dcd6964c831d43"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fda7ac79d3730527fd14f3e049ea9b8" id="r_a3fda7ac79d3730527fd14f3e049ea9b8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fda7ac79d3730527fd14f3e049ea9b8">sumShootLeafArea</a> (uint start_node_index=0) const</td></tr>
+<tr class="memitem:a3fda7ac79d3730527fd14f3e049ea9b8" id="r_a3fda7ac79d3730527fd14f3e049ea9b8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fda7ac79d3730527fd14f3e049ea9b8">sumShootLeafArea</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> start_node_index=0) const</td></tr>
 <tr class="memdesc:a3fda7ac79d3730527fd14f3e049ea9b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total leaf area of a shoot starting from a given node index.  <br /></td></tr>
 <tr class="separator:a3fda7ac79d3730527fd14f3e049ea9b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a36ddfab936462e5dc508fb82f9dfb077" id="r_a36ddfab936462e5dc508fb82f9dfb077"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36ddfab936462e5dc508fb82f9dfb077">sumChildVolume</a> (uint start_node_index=0) const</td></tr>
+<tr class="memitem:a36ddfab936462e5dc508fb82f9dfb077" id="r_a36ddfab936462e5dc508fb82f9dfb077"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36ddfab936462e5dc508fb82f9dfb077">sumChildVolume</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> start_node_index=0) const</td></tr>
 <tr class="memdesc:a36ddfab936462e5dc508fb82f9dfb077"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total volume of all child shoots starting from a specified node index.  <br /></td></tr>
 <tr class="separator:a36ddfab936462e5dc508fb82f9dfb077"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf4056ac1b7cd3b9c0303fc720e3a2d8" id="r_aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf4056ac1b7cd3b9c0303fc720e3a2d8">propagateDownstreamLeafArea</a> (const <a class="el" href="struct_shoot.html">Shoot</a> *shoot, uint node_index, float leaf_area)</td></tr>
+<tr class="memitem:aaf4056ac1b7cd3b9c0303fc720e3a2d8" id="r_aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf4056ac1b7cd3b9c0303fc720e3a2d8">propagateDownstreamLeafArea</a> (const <a class="el" href="struct_shoot.html">Shoot</a> *shoot, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> node_index, float leaf_area)</td></tr>
 <tr class="memdesc:aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Propagates the given leaf area downstream through the specified shoot.  <br /></td></tr>
 <tr class="separator:aaf4056ac1b7cd3b9c0303fc720e3a2d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19eb5d6e3248c45de08774d11cbf329b" id="r_a19eb5d6e3248c45de08774d11cbf329b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19eb5d6e3248c45de08774d11cbf329b">updateShootNodes</a> (bool update_context_geometry=true)</td></tr>
@@ -223,9 +223,9 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr class="memitem:a2be00a58e15daa91cd4e01c51d062d51" id="r_a2be00a58e15daa91cd4e01c51d062d51"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2be00a58e15daa91cd4e01c51d062d51">current_node_number</a> = 0</td></tr>
+<tr class="memitem:a2be00a58e15daa91cd4e01c51d062d51" id="r_a2be00a58e15daa91cd4e01c51d062d51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2be00a58e15daa91cd4e01c51d062d51">current_node_number</a> = 0</td></tr>
 <tr class="separator:a2be00a58e15daa91cd4e01c51d062d51"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0cd1a287f3135e75ab927786c887b5a8" id="r_a0cd1a287f3135e75ab927786c887b5a8"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0cd1a287f3135e75ab927786c887b5a8">nodes_this_season</a> = 0</td></tr>
+<tr class="memitem:a0cd1a287f3135e75ab927786c887b5a8" id="r_a0cd1a287f3135e75ab927786c887b5a8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0cd1a287f3135e75ab927786c887b5a8">nodes_this_season</a> = 0</td></tr>
 <tr class="separator:a0cd1a287f3135e75ab927786c887b5a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50569df441e715498c135a749691c16c" id="r_a50569df441e715498c135a749691c16c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50569df441e715498c135a749691c16c">base_position</a></td></tr>
 <tr class="separator:a50569df441e715498c135a749691c16c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -237,13 +237,13 @@ Data Fields</h2></td></tr>
 <tr class="separator:ab2c448ffa14e2b38342628387b574903"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1140656b92ea1ecf6bc17faebb5c4df6" id="r_a1140656b92ea1ecf6bc17faebb5c4df6"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1140656b92ea1ecf6bc17faebb5c4df6">parent_shoot_ID</a></td></tr>
 <tr class="separator:a1140656b92ea1ecf6bc17faebb5c4df6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14406b94a472b2230135c63ca3e4d342" id="r_a14406b94a472b2230135c63ca3e4d342"><td class="memItemLeft" align="right" valign="top">const uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a14406b94a472b2230135c63ca3e4d342">plantID</a></td></tr>
+<tr class="memitem:a14406b94a472b2230135c63ca3e4d342" id="r_a14406b94a472b2230135c63ca3e4d342"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a14406b94a472b2230135c63ca3e4d342">plantID</a></td></tr>
 <tr class="separator:a14406b94a472b2230135c63ca3e4d342"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5302630bfec09a5dd971239afbfdd095" id="r_a5302630bfec09a5dd971239afbfdd095"><td class="memItemLeft" align="right" valign="top">const uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5302630bfec09a5dd971239afbfdd095">parent_node_index</a></td></tr>
+<tr class="memitem:a5302630bfec09a5dd971239afbfdd095" id="r_a5302630bfec09a5dd971239afbfdd095"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5302630bfec09a5dd971239afbfdd095">parent_node_index</a></td></tr>
 <tr class="separator:a5302630bfec09a5dd971239afbfdd095"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa4801c5157614bb271c789c0f5177b26" id="r_aa4801c5157614bb271c789c0f5177b26"><td class="memItemLeft" align="right" valign="top">const uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa4801c5157614bb271c789c0f5177b26">rank</a></td></tr>
+<tr class="memitem:aa4801c5157614bb271c789c0f5177b26" id="r_aa4801c5157614bb271c789c0f5177b26"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa4801c5157614bb271c789c0f5177b26">rank</a></td></tr>
 <tr class="separator:aa4801c5157614bb271c789c0f5177b26"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca6decb25760fb99ac8c720236493119" id="r_aca6decb25760fb99ac8c720236493119"><td class="memItemLeft" align="right" valign="top">const uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca6decb25760fb99ac8c720236493119">parent_petiole_index</a></td></tr>
+<tr class="memitem:aca6decb25760fb99ac8c720236493119" id="r_aca6decb25760fb99ac8c720236493119"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca6decb25760fb99ac8c720236493119">parent_petiole_index</a></td></tr>
 <tr class="separator:aca6decb25760fb99ac8c720236493119"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab08c0fae92963c119e416331e847310f" id="r_ab08c0fae92963c119e416331e847310f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab08c0fae92963c119e416331e847310f">carbohydrate_pool_molC</a> = 0</td></tr>
 <tr class="separator:ab08c0fae92963c119e416331e847310f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -257,7 +257,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:a13f4e47d9fee57a2526dbb19eb5bf8b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeb645f4149cc561d7164ba4ccf8ffa7b" id="r_aeb645f4149cc561d7164ba4ccf8ffa7b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb645f4149cc561d7164ba4ccf8ffa7b">isdormant</a></td></tr>
 <tr class="separator:aeb645f4149cc561d7164ba4ccf8ffa7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27e5a4e7605d7d6ce03874548f8704fa" id="r_a27e5a4e7605d7d6ce03874548f8704fa"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a27e5a4e7605d7d6ce03874548f8704fa">dormancy_cycles</a> = 0</td></tr>
+<tr class="memitem:a27e5a4e7605d7d6ce03874548f8704fa" id="r_a27e5a4e7605d7d6ce03874548f8704fa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a27e5a4e7605d7d6ce03874548f8704fa">dormancy_cycles</a> = 0</td></tr>
 <tr class="separator:a27e5a4e7605d7d6ce03874548f8704fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa721c516c578ccce73e767b88e286915" id="r_aa721c516c578ccce73e767b88e286915"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa721c516c578ccce73e767b88e286915">meristem_is_alive</a> = true</td></tr>
 <tr class="separator:aa721c516c578ccce73e767b88e286915"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -275,7 +275,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:a99963263e6bccfa05aaddfcadc8c4b81"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdf5431a1adec8501c193fa65f98127f" id="r_afdf5431a1adec8501c193fa65f98127f"><td class="memItemLeft" align="right" valign="top">const float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afdf5431a1adec8501c193fa65f98127f">internode_length_max_shoot_initial</a></td></tr>
 <tr class="separator:afdf5431a1adec8501c193fa65f98127f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbeb9baa8d57ee2ef4cdc4d9e6592150" id="r_abbeb9baa8d57ee2ef4cdc4d9e6592150"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbeb9baa8d57ee2ef4cdc4d9e6592150">internode_tube_objID</a> = 4294967294</td></tr>
+<tr class="memitem:abbeb9baa8d57ee2ef4cdc4d9e6592150" id="r_abbeb9baa8d57ee2ef4cdc4d9e6592150"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbeb9baa8d57ee2ef4cdc4d9e6592150">internode_tube_objID</a> = 4294967294</td></tr>
 <tr class="separator:abbeb9baa8d57ee2ef4cdc4d9e6592150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a015d7639bdca239254a87c7aae4f0546" id="r_a015d7639bdca239254a87c7aae4f0546"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a015d7639bdca239254a87c7aae4f0546">shoot_internode_vertices</a></td></tr>
 <tr class="separator:a015d7639bdca239254a87c7aae4f0546"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -313,7 +313,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">Shoot::Shoot </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>plant_ID</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>plant_ID</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -328,17 +328,17 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_node</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>parent_node</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>parent_petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>parent_petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>rank</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>rank</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -353,7 +353,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>current_node_number</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>current_node_number</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -656,7 +656,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>node_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>node_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -717,7 +717,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Shoot::sampleEpicormicShoot </td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::sampleEpicormicShoot </td>
           <td>(</td>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>dt</em></span>, </td>
         </tr>
@@ -755,7 +755,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">bool Shoot::sampleVegetativeBudBreak </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>node_index</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>node_index</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -791,7 +791,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">bool Shoot::sampleVegetativeBudBreak_carb </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>node_index</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>node_index</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -818,7 +818,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">float Shoot::sumChildVolume </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>start_node_index</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>start_node_index</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -855,7 +855,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="memname">float Shoot::sumShootLeafArea </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>start_node_index</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>start_node_index</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -1053,7 +1053,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Shoot::current_node_number = 0</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::current_node_number = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1101,7 +1101,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Shoot::dormancy_cycles = 0</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::dormancy_cycles = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1197,7 +1197,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Shoot::internode_tube_objID = 4294967294</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::internode_tube_objID = 4294967294</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1245,7 +1245,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Shoot::nodes_this_season = 0</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::nodes_this_season = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1277,7 +1277,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const uint Shoot::parent_node_index</td>
+          <td class="memname">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::parent_node_index</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1293,7 +1293,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const uint Shoot::parent_petiole_index</td>
+          <td class="memname">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::parent_petiole_index</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1437,7 +1437,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const uint Shoot::plantID</td>
+          <td class="memname">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::plantID</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1469,7 +1469,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const uint Shoot::rank</td>
+          <td class="memname">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Shoot::rank</td>
         </tr>
       </table>
 </div><div class="memdoc">

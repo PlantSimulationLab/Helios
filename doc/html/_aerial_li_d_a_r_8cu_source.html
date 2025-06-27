@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -344,19 +344,19 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    v=atan(y/x);</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>  }</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>  <span class="keywordflow">if</span>(y&gt;=0.f &amp;&amp; x&lt;0.f){</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    v=M_PI+atan(y/x);</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    v=<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+atan(y/x);</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>  }</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>  <span class="keywordflow">if</span>(y&lt;0.f &amp;&amp; x&lt;0.f){</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    v=-M_PI+atan(y/x);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    v=-<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+atan(y/x);</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>  }</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>  <span class="keywordflow">if</span>(y&gt;0.f &amp;&amp; x==0.f){</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    v=0.5f*M_PI;</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    v=0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>  }</div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>  <span class="keywordflow">if</span>(y&lt;0.f &amp;&amp; x==0.f){</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    v=-0.5f*M_PI;</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    v=-0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>  }</div>
 <div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>  <span class="keywordflow">if</span>(v&lt;0.f){</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    v=v+2.f*M_PI;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    v=v+2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>  }</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>  <span class="keywordflow">return</span> v;</div>
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span> </div>
@@ -380,7 +380,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    </div>
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>}</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>__device__ float2 AERIALLIDAR_CUDA::d_sampleDisk( <span class="keywordtype">float</span> radius, uint seed ){</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>__device__ float2 AERIALLIDAR_CUDA::d_sampleDisk( <span class="keywordtype">float</span> radius, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> seed ){</div>
 <div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
 <div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>  <span class="comment">// Map Sample to disk - from Suffern (2007) &quot;Ray tracing fom the ground up&quot; Chap. 6</span></div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
@@ -415,7 +415,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>      } </div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    }</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>  }</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>  p*=0.25f*M_PI;</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>  p*=0.25f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>  </div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>  <span class="comment">//find x,y point on unit disk</span></div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>  sp.x = radius*r*cosf(p);</div>
@@ -450,10 +450,10 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#abe3e99a406251c388a3d934a7519ddb2" title="Determine the grid cell in which each hit point resides for the whole point cloud *‍/.">calculateHitGridCell</a>();</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>  }</div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>  </div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>  <span class="keyword">const</span> uint Nscans = <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa20e625b8d7820ffbcfc8532be5ffb15" title="Get number of scans in point cloud.">getScanCount</a>();</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>  <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nscans = <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa20e625b8d7820ffbcfc8532be5ffb15" title="Get number of scans in point cloud.">getScanCount</a>();</div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span> </div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>  <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">helios::int3</a> N3 = <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a3c93e0a87a4ec2ce188ef95dbceaa9a2" title="Get the total number of cells in the grid.">getGridResolution</a>();</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>  <span class="keyword">const</span> uint Ncells = N3.<a class="code hl_variable" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50" title="First element in vector.">x</a>*N3.<a class="code hl_variable" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c" title="Second element in vector.">y</a>*N3.<a class="code hl_variable" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641" title="Third element in vector.">z</a>;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>  <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ncells = N3.<a class="code hl_variable" href="structhelios_1_1int3.html#a1ce8c8391637ea6e33bb30b1d0adfc50" title="First element in vector.">x</a>*N3.<a class="code hl_variable" href="structhelios_1_1int3.html#aeba3aa4380ec4d9c216f98be95083d5c" title="Second element in vector.">y</a>*N3.<a class="code hl_variable" href="structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641" title="Third element in vector.">z</a>;</div>
 <div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
 <div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>  <span class="comment">//variable aggregates over all scans where we just keep tacking hits on the end for all scans</span></div>
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>  std::vector&lt;float&gt; dr_agg; <span class="comment">//dr is path length through grid cell</span></div>
@@ -466,7 +466,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>  hit_inside_agg.resize(Ncells,0);</div>
 <div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>  </div>
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>  <span class="comment">// We are going to perform all calculations on a scan-by-scan basis: loop through each scan</span></div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>  <span class="keywordflow">for</span>( uint s=0; s&lt;Nscans; s++ ){</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> s=0; s&lt;Nscans; s++ ){</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="comment">// Perform ray-volume intersection tests to determine P</span></div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
@@ -540,7 +540,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">float</span>**)&amp;d_cell_rotation, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
 <div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    <span class="keywordtype">float</span>* cell_rotation = (<span class="keywordtype">float</span>*)malloc( Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>) );</div>
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span> </div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keywordflow">for</span>( uint c=0; c&lt;Ncells; c++ ){</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> c=0; c&lt;Ncells; c++ ){</div>
 <div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>      </div>
 <div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>      <span class="comment">//load the attributes of the grid cell</span></div>
 <div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>      cell_center[c] = vec3tofloat3(<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aab5f19895ad20c55a41b931b17d8fa3a" title="Get the center of the (i,j,k)th grid cell.">getCellCenter</a>( <a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ae2bf620b8456f52ce0291f26cb81d959" title="Use a global index of a grid cell (ranging from 0 to Ncells-1) to retrieve the local index in the x-,...">gridindex2ijk</a>(c) ));</div>
@@ -560,7 +560,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    CUDA_CHECK_ERROR( cudaMemset( d_hit_denom, 0, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
 <div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    CUDA_CHECK_ERROR( cudaMemset( d_hit_inside, 0, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
 <div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span> </div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    uint3 dimBlock = make_uint3( min(<span class="keywordtype">size_t</span>(32),Nhits), min(uint(32),Ncells), 1 );</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    uint3 dimBlock = make_uint3( min(<span class="keywordtype">size_t</span>(32),Nhits), min(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(32),Ncells), 1 );</div>
 <div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    uint3 dimGrid = make_uint3( ceil(<span class="keywordtype">float</span>(Nhits)/dimBlock.x), ceil(<span class="keywordtype">float</span>(Ncells)/dimBlock.y), 1  );</div>
 <div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span> </div>
 <div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    <span class="keywordflow">if</span>( dimBlock.x==0 || dimGrid.x==0 || dimBlock.y==0 || dimGrid.y==0 ){</div>
@@ -583,7 +583,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    CUDA_CHECK_ERROR( cudaMemcpy( hit_denom, d_hit_denom, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyDeviceToHost));</div>
 <div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>    CUDA_CHECK_ERROR( cudaMemcpy( hit_inside, d_hit_inside, Ncells*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyDeviceToHost));</div>
 <div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span> </div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    <span class="keywordflow">for</span>( uint c=0; c&lt;Ncells; c++ ){</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> c=0; c&lt;Ncells; c++ ){</div>
 <div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>      </div>
 <div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>    hit_denom_agg.at(c) += hit_denom[c];</div>
 <div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    hit_inside_agg.at(c) += hit_inside[c];</div>
@@ -730,7 +730,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>      </div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>  <span class="comment">// }</span></div>
 <div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span> </div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>  <span class="keywordflow">for</span>( uint v=0; v&lt;Ncells; v++ ){</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> v=0; v&lt;Ncells; v++ ){</div>
 <div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span> </div>
 <div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    dr_agg.at(v) /= float(hit_denom_agg.at(v));</div>
 <div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    dr_hit_agg.at(v) /= float(hit_inside_agg.at(v));</div>
@@ -860,7 +860,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span> </div>
 <div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>  c=0;</div>
 <div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> p=0; p&lt;UUIDs_all.size(); p++ ){</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>      uint UUID = UUIDs_all.at(p);</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>      <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = UUIDs_all.at(p);</div>
 <div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>      <span class="keywordflow">if</span>( context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949" title="Method to get the Primitive type.">getPrimitiveType</a>(UUID) == <a class="code hl_enumvalue" href="_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601a6fcd29f0c812849b3eb5bedec52cd744" title="&lt; Rectangular primitive">helios::PRIMITIVE_TYPE_PATCH</a> ){</div>
 <div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>          std::vector&lt;helios::vec3&gt; verts = context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed" title="Method to return the (x,y,z) coordinates of the vertices of a Primitive.">getPrimitiveVertices</a>(UUID);</div>
 <div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>          patch_vertex[4*c] = vec3tofloat3(verts.at(0));</div>
@@ -925,7 +925,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>  </div>
 <div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>  c=0;</div>
 <div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>  <span class="keywordflow">for</span>( <span class="keywordtype">int</span> p=0; p&lt;UUIDs_all.size(); p++ ){</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>      uint UUID = UUIDs_all.at(p);</div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>      <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = UUIDs_all.at(p);</div>
 <div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>      <span class="keywordflow">if</span>( context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a67bfd66f0a445f6485f1099f9eadc949" title="Method to get the Primitive type.">getPrimitiveType</a>(UUID) == <a class="code hl_enumvalue" href="_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601aeed8005c1692d92beefcbafe8147207c" title="&lt; Triangular primitive">helios::PRIMITIVE_TYPE_TRIANGLE</a> ){</div>
 <div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>          std::vector&lt;helios::vec3&gt; verts = context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed" title="Method to return the (x,y,z) coordinates of the vertices of a Primitive.">getPrimitiveVertices</a>(UUID);</div>
 <div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>          tri_vertex[3*c] = vec3tofloat3(verts.at(0));</div>
@@ -1050,8 +1050,8 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span> </div>
 <div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>      rayorigin.at(i) = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">helios::make_vec3</a>(x,y,z);</div>
 <div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span> </div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>      <span class="keywordtype">float</span> theta = -0.5f*M_PI+0.5f*coneangle*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>      <span class="keywordtype">float</span> phi = 2.f*M_PI*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>      <span class="keywordtype">float</span> theta = -0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+0.5f*coneangle*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>      <span class="keywordtype">float</span> phi = 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a4caa001e21890bca8bb952e1206153dc" title="Draw a random number from a uniform distribution between 0 and 1.">randu</a>();</div>
 <div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span> </div>
 <div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>      raydir.at(i) = <a class="code hl_function" href="group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12" title="Convert Spherical coordinates to Cartesian coordinates.">helios::sphere2cart</a>(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">helios::make_SphericalCoord</a>(theta,phi));</div>
 <div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
@@ -1075,10 +1075,10 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_xyz, hit_xyz, N*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_hit_origin, hit_origin, N*<span class="keyword">sizeof</span>(float3), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span> </div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    uint* bb_hit = (uint*)malloc(N * <span class="keyword">sizeof</span>(uint)); <span class="comment">//allocate host memory</span></div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    uint* d_bb_hit;</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_bb_hit,N*<span class="keyword">sizeof</span>(uint)) ); <span class="comment">//allocate device memory</span></div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    CUDA_CHECK_ERROR( cudaMemset( d_bb_hit, 0, N*<span class="keyword">sizeof</span>(uint)) ); <span class="comment">//initialize to zero, set equal to 1 if the ray is found to intersect bounding box</span></div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* bb_hit = (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>*)malloc(N * <span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)); <span class="comment">//allocate host memory</span></div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* d_bb_hit;</div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_bb_hit,N*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)) ); <span class="comment">//allocate device memory</span></div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    CUDA_CHECK_ERROR( cudaMemset( d_bb_hit, 0, N*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)) ); <span class="comment">//initialize to zero, set equal to 1 if the ray is found to intersect bounding box</span></div>
 <div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    </div>
 <div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="comment">//Launch kernel to determine which rays intersect bounding box</span></div>
 <div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    uint3 dimBlock = make_uint3( 512, 1, 1 );</div>
@@ -1089,14 +1089,14 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    CUDA_CHECK_ERROR( cudaPeekAtLastError() ); <span class="comment">//if there was an error inside the kernel, it will show up here</span></div>
 <div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span> </div>
 <div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>    <span class="comment">//copy hit flag back to host</span></div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    CUDA_CHECK_ERROR( cudaMemcpy(bb_hit, d_bb_hit, N*<span class="keyword">sizeof</span>(uint), cudaMemcpyDeviceToHost) );</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    CUDA_CHECK_ERROR( cudaMemcpy(bb_hit, d_bb_hit, N*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>), cudaMemcpyDeviceToHost) );</div>
 <div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span> </div>
 <div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    CUDA_CHECK_ERROR( cudaFree(d_hit_xyz) );</div>
 <div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>    CUDA_CHECK_ERROR( cudaFree(d_hit_origin) );</div>
 <div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>    CUDA_CHECK_ERROR( cudaFree(d_bb_hit) );</div>
 <div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span> </div>
 <div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    <span class="comment">//determine how many rays hit the bounding box</span></div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    uint Nbb = 0;</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nbb = 0;</div>
 <div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;N; i++ ){</div>
 <div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>      <span class="keywordflow">if</span>( bb_hit[i]==1 ){</div>
 <div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    Nbb++;</div>
@@ -1406,7 +1406,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01248" name="l01248"></a><span class="lineno"> 1248</span>}</div>
 </div>
 <div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span> </div>
-<div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span>__global__ <span class="keywordtype">void</span> AERIALLIDAR_CUDA::intersectBoundingBox( <span class="keyword">const</span> <span class="keywordtype">size_t</span> scanSize, float3* d_hit_origin, <span class="keyword">const</span> float3* d_scan_xyz, <span class="keyword">const</span> float3 bbcenter, <span class="keyword">const</span> float3 bbsize, uint* d_boundingbox_hit ){</div>
+<div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span>__global__ <span class="keywordtype">void</span> AERIALLIDAR_CUDA::intersectBoundingBox( <span class="keyword">const</span> <span class="keywordtype">size_t</span> scanSize, float3* d_hit_origin, <span class="keyword">const</span> float3* d_scan_xyz, <span class="keyword">const</span> float3 bbcenter, <span class="keyword">const</span> float3 bbsize, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* d_boundingbox_hit ){</div>
 <div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>  </div>
 <div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span>  <span class="keywordtype">size_t</span> i = blockIdx.x*blockDim.x+threadIdx.x;</div>
 <div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span> </div>
@@ -1618,15 +1618,15 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span> </div>
 <div class="line"><a id="l01460" name="l01460"></a><span class="lineno"> 1460</span>  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
 <div class="line"><a id="l01461" name="l01461"></a><span class="lineno"> 1461</span> </div>
-<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span>  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
+<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> seed = tea&lt;16&gt;(subpulse,i_global);</div>
 <div class="line"><a id="l01463" name="l01463"></a><span class="lineno"> 1463</span> </div>
 <div class="line"><a id="l01464" name="l01464"></a><span class="lineno"> 1464</span>  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
 <div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span>  </div>
-<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
+<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-0.5*beam_divergence*rnd(seed), 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*rnd(seed) );</div>
 <div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span> </div>
 <div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>  <span class="keywordtype">float</span> zenith = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
 <div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>  <span class="keywordtype">float</span> azimuth = <a class="code hl_function" href="group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf" title="Four quadrant arc tangent between 0 and 2*pi.">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-azimuth );</div>
 <div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span> </div>
 <div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span>  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
 <div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span> </div>
@@ -1715,15 +1715,15 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01556" name="l01556"></a><span class="lineno"> 1556</span> </div>
 <div class="line"><a id="l01557" name="l01557"></a><span class="lineno"> 1557</span>  <span class="keywordtype">int</span> i_global = idx*rays_per_pulse+subpulse;</div>
 <div class="line"><a id="l01558" name="l01558"></a><span class="lineno"> 1558</span> </div>
-<div class="line"><a id="l01559" name="l01559"></a><span class="lineno"> 1559</span>  uint seed = tea&lt;16&gt;(subpulse,i_global);</div>
+<div class="line"><a id="l01559" name="l01559"></a><span class="lineno"> 1559</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> seed = tea&lt;16&gt;(subpulse,i_global);</div>
 <div class="line"><a id="l01560" name="l01560"></a><span class="lineno"> 1560</span> </div>
 <div class="line"><a id="l01561" name="l01561"></a><span class="lineno"> 1561</span>  float2 disk_pt = d_sampleDisk( 0.5*exit_diameter, seed );</div>
 <div class="line"><a id="l01562" name="l01562"></a><span class="lineno"> 1562</span>  </div>
-<div class="line"><a id="l01563" name="l01563"></a><span class="lineno"> 1563</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*M_PI-0.5*beam_divergence*rnd(seed), 2.f*M_PI*rnd(seed) );</div>
+<div class="line"><a id="l01563" name="l01563"></a><span class="lineno"> 1563</span>  float3 raydir = d_sphere2cart( 1.f, 0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-0.5*beam_divergence*rnd(seed), 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*rnd(seed) );</div>
 <div class="line"><a id="l01564" name="l01564"></a><span class="lineno"> 1564</span> </div>
 <div class="line"><a id="l01565" name="l01565"></a><span class="lineno"> 1565</span>  <span class="keywordtype">float</span> zenith = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>( d_raydir[idx].z/sqrt(d_raydir[idx].x*d_raydir[idx].x+d_raydir[idx].y*d_raydir[idx].y+d_raydir[idx].z*d_raydir[idx].z) );</div>
 <div class="line"><a id="l01566" name="l01566"></a><span class="lineno"> 1566</span>  <span class="keywordtype">float</span> azimuth = <a class="code hl_function" href="group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf" title="Four quadrant arc tangent between 0 and 2*pi.">atan2_2pi</a>( d_raydir[idx].x, d_raydir[idx].y );</div>
-<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*M_PI-azimuth );</div>
+<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span>  raydir = d_rotatePoint( raydir, zenith, 0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-azimuth );</div>
 <div class="line"><a id="l01568" name="l01568"></a><span class="lineno"> 1568</span> </div>
 <div class="line"><a id="l01569" name="l01569"></a><span class="lineno"> 1569</span>  float3 disk_pt3 = d_rotatePoint( make_float3(disk_pt.x,disk_pt.y,0), zenith, azimuth );</div>
 <div class="line"><a id="l01570" name="l01570"></a><span class="lineno"> 1570</span> </div>

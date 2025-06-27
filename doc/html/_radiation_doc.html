@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -361,9 +361,9 @@ Model Class Constructor</h2>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel(&amp;context); <span class="comment">//declare the model class</span></div>
 </div><!-- fragment --><h2><a class="anchor" id="RadTwoSided"></a>
 Area Basis for Calculating Fluxes</h2>
-<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the helios::Primitive::getArea() function).</p>
+<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the helios::Context::getPrimitiveArea(uint) function).</p>
 <p>By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):</p>
-<div class="fragment"><div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(1) );</div>
+<div class="fragment"><div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(1) );</div>
 </div><!-- fragment --><p>Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.</p>
 <p>A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.</p>
 <p>Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0.</p>
@@ -408,7 +408,7 @@ Radiative Properties</h2>
 <div class="line">Context context;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">uint UUID = context.addPatch();</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.addPatch();</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> rho = 0.1; <span class="comment">//reflectivity value</span></div>
 <div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, rho);</div>
@@ -427,7 +427,7 @@ Radiative Properties</h2>
 <div class="line">Context context;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">uint UUID = context.addPatch();</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.addPatch();</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Load the surface spectral library</span></div>
 <div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
@@ -467,7 +467,7 @@ Adding Collimated Sources</h3>
 <p>The radiation model also requires the specification of the number of rays per primitive to be used in the simulation (default is 100 rays per primitive). The more rays used in the simulation the more accurate the answer will be, but this will result in a longer simulation time.</p>
 <p>Below is an example of adding a collimated source oriented in the direction of the sun, with a flux of 800 and using 200 rays per primitive:</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
-<div class="line">uint SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SunSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 <div class="line">radiationmodel.setDirectRayCount(<span class="stringliteral">&quot;PAR&quot;</span>,200); <span class="comment">//set the ray count for sources</span></div>
 </div><!-- fragment --><p>The <a class="el" href="class_radiation_model.html#adea522844d6fe85df2f1dc3b78f514eb">RadiationModel::addCollimatedRadiationSource()</a> method can also be called with no argument, in which case it will set the sun direction to be vertical. It can also be called based on a <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>.</p>
@@ -476,28 +476,28 @@ Adding Spherical Sun Source</h3>
 <p>To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.</p>
 <p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the <a class="el" href="class_radiation_model.html#a8edb972e53fecddc21f0c23d08e355d0">addSunSphereRadiationSource()</a> function. Below is an example of adding a spherical sun source, with a flux of 800:</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
-<div class="line">uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SunSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="PointSource"></a>
 Adding Spherical Radiation Sources</h3>
 <p>Spherical sources are added using the <a class="el" href="class_radiation_model.html#a44fbd20dd6ee50666f8d693dbba89822">addSphereRadiationSource()</a> function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the surface of the source can also be set using the source identifier.</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
 <div class="line"><span class="keywordtype">float</span> sphere_radius = 1.0;</div>
-<div class="line">uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); <span class="comment">//add the source, whose identifier is stored in the &#39;SphereSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); <span class="comment">//add the source, whose identifier is stored in the &#39;SphereSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SphereSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="DiskSource"></a>
 Adding Disk Radiation Sources</h3>
 <p>A disk radiation source emits directionally from one surface of a circular disk. Disk sources are added using the <a class="el" href="class_radiation_model.html#a8ef94c0bf6286d3e64d7d8c8b96f33bc">addDiskRadiationSource()</a> function, which takes an (x,y,z) location of the disk source center, its radius, and its rotation as arguments. By default, the disk is horizontal and emits from its upper face. The rotation argument specifies the rotation angle in radians about its x-, y-, and z-axes. For example, to have a downward-emitting disk, the rotation would be ( \(\pi\), 0, 0). The flux emanating from the surface of the disk can also be set using the source identifier.</p>
-<div class="fragment"><div class="line">vec3 rotation(M_PI,0,0); <span class="comment">//emitting downward</span></div>
+<div class="fragment"><div class="line">vec3 rotation(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0,0); <span class="comment">//emitting downward</span></div>
 <div class="line"><span class="keywordtype">float</span> disk_radius = 1.0;</div>
-<div class="line">uint DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );</div>
 <div class="line">radiationmodel.setSourceFlux(DiskSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="RectSource"></a>
 Adding Rectangular Radiation Sources</h3>
 <p>Adding a rectangular radiation source is nearly the same as adding a disk source, except that the horizontal and lateral dimensions of the source can be specified independently. As with the disk source, the rectangle is horizontal by default and emits from its upper face.</p>
-<div class="fragment"><div class="line">vec3 rotation(M_PI,0,0); <span class="comment">//emitting downward</span></div>
+<div class="fragment"><div class="line">vec3 rotation(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0,0); <span class="comment">//emitting downward</span></div>
 <div class="line">vec2 size(2.0, 1.0);</div>
-<div class="line">uint RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );</div>
 <div class="line">radiationmodel.setSourceFlux(RectSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="SourceDist"></a>
 Setting the Radiation Source Spectral Distribution and Normalization</h3>
@@ -512,13 +512,13 @@ Setting the Radiation Source Spectral Distribution and Normalization</h3>
 \[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \]
 </p>
 <p>However, users typically want to change the integral of the source flux distribution dynamically throughout a simulation. This can be done using the <a class="el" href="class_radiation_model.html#a0d07935957cc6651d38a621513581189">RadiationModel::setSourceSpectrumIntegral()</a> method. The user can either set the integral of the source flux spectral distribution across all wavelengths to a prescribed value. The source flux spectral distribution can also be scaled based on a prescribed integral between two wavelengths. For example, if only the total PAR flux was known, the entire solar source flux distribution could be scaled based on the integral from 400-700nm. When called, the <a class="el" href="class_radiation_model.html#a0d07935957cc6651d38a621513581189">RadiationModel::setSourceSpectrumIntegral()</a> function properly normalizes the source spectral distribution, calculates radiative source fluxes for all bands through integration, then calls the <a class="el" href="class_radiation_model.html#a2fa24d994612857ddc889e705b0444b1">RadiationModel::setSourceFlux()</a> method for all bands based on the updated fluxes.</p>
-<div class="fragment"><div class="line">uint SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
 <div class="line">radiationmodel.setSourceSpectrum(SourceID, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span>); <span class="comment">//set the source flux spectral distribution to ASTMG173 solar spectrum</span></div>
 <div class="line">radiationmodel.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>, 400, 700); <span class="comment">//add a radiation band called &quot;PAR&quot; defined between 400-700nm</span></div>
 <div class="line">radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); <span class="comment">//set the integral of solar flux spectrum across all bands to 1000 W/m^2</span></div>
 </div><!-- fragment --><p>In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a> method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.</p>
 <p>A user may want to set the source integral based on only a subset of wavelengths contained in the entire spectrum. For example, if only the PAR (400-700nm) flux was known, the entire source flux distribution could be normalized to produce a given PAR flux.</p>
-<div class="fragment"><div class="line">uint SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
 <div class="line">radiationmodel.setSourceSpectrum(SourceID, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span>); <span class="comment">//set the source flux spectral distribution to ASTMG173 solar spectrum (direct)</span></div>
 <div class="line">radiationmodel.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>, 400, 700); <span class="comment">//add a radiation band called &quot;PAR&quot; defined between 400-700nm</span></div>
 <div class="line">radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); <span class="comment">//set the integral of solar flux spectrum from 400-700nm to 300 W/m^2</span></div>
@@ -604,7 +604,7 @@ Adding a Radiation Camera</h3>
 <div class="line"> </div>
 <div class="line">vec3 camera_position(0,0,3);</div>
 <div class="line">vec3 camera_lookat(0,0,0);</div>
-<div class="line">uint antialiasing_samples = 100;</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> antialiasing_samples = 100;</div>
 <div class="line"> </div>
 <div class="line">radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
 </div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>.</p>
@@ -660,7 +660,7 @@ Radiation Camera Color Calibration</h3>
 <div class="line">truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</div>
 </div><!-- fragment --><p>It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.</p>
 <p>3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a>, and specify an initial guess for the camera channel spectral distribution(s) using <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a>.</p>
-<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8">CameraCalibration::addDefaultColorboard()</a>, or a custom color board helios::CameraCalibration::addCustomColorboard().</p>
+<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method ef CameraCalibration::addDefaultColorboard(), or a custom color board ef CameraCalibration::addColorboard().</p>
 <h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p>Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>
@@ -708,7 +708,7 @@ Integrating with the SolarPosition Plug-in</h2>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel( &amp;context ); <span class="comment">//initialize the radiation model</span></div>
 <div class="line"> </div>
-<div class="line">   uint SunSource = radiationmodel.addCollimatedRadiationSource(); <span class="comment">//add the source (sun), we&#39;ll set it&#39;s direction later</span></div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addCollimatedRadiationSource(); <span class="comment">//add the source (sun), we&#39;ll set it&#39;s direction later</span></div>
 <div class="line"> </div>
 <div class="line">   radiationmodel.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
 <div class="line">   radiationmodel.setDirectRayCount(<span class="stringliteral">&quot;SW&quot;</span>,1000); <span class="comment">//set the ray count for source</span></div>
@@ -832,7 +832,7 @@ Writing Camera Images to File</h3>
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Add a sun sphere radiation source</span></div>
-<div class="line">   uint source = radiationmodel.addSunSphereRadiationSource(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(90-50), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(40)));</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> source = radiationmodel.addSunSphereRadiationSource(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(90-50), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(40)));</div>
 <div class="line">   <span class="comment">// Set the solar spectrum to ASTMG173 from the library</span></div>
 <div class="line">   radiationmodel.setSourceSpectrum( source, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span> );</div>
 <div class="line"> </div>
@@ -852,11 +852,11 @@ Writing Camera Images to File</h3>
 <div class="line">   <span class="keywordtype">float</span> camera_height = 2;</div>
 <div class="line">   <a class="code hl_struct" href="struct_camera_properties.html" title="Properties defining a radiation camera.">CameraProperties</a> properties; <span class="comment">//default camera properties</span></div>
 <div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#a7eae760b6f6729b2e391d0b96d07b209" title="Distance from the viewing plane to the focal plane.">focal_plane_distance</a> = camera_height-0.75;</div>
-<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#ac1419dfa651f1f8343f5fb5a2fad2148" title="Camera horizontal field of view in degrees.">HFOV</a> = std::atan(1.5f/camera_height)*180.f/M_PI*2.f; <span class="comment">//exactly frame the ground</span></div>
+<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#ac1419dfa651f1f8343f5fb5a2fad2148" title="Camera horizontal field of view in degrees.">HFOV</a> = std::atan(1.5f/camera_height)*180.f/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*2.f; <span class="comment">//exactly frame the ground</span></div>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> camera_position(0,0,camera_height);</div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> camera_lookat(0,0,0);</div>
-<div class="line">   uint antialiasing_samples = 100;</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> antialiasing_samples = 100;</div>
 <div class="line"> </div>
 <div class="line">   radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
 <div class="line"> </div>

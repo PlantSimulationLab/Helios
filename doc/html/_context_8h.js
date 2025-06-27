@@ -1,7 +1,7 @@
 var _context_8h =
 [
     [ "helios::Texture", "classhelios_1_1_texture.html", "classhelios_1_1_texture" ],
-    [ "helios::GlobalData", "structhelios_1_1_global_data.html", null ],
+    [ "helios::GlobalData", "structhelios_1_1_global_data.html", "structhelios_1_1_global_data" ],
     [ "helios::CompoundObject", "classhelios_1_1_compound_object.html", "classhelios_1_1_compound_object" ],
     [ "helios::Tile", "classhelios_1_1_tile.html", "classhelios_1_1_tile" ],
     [ "helios::Sphere", "classhelios_1_1_sphere.html", "classhelios_1_1_sphere" ],

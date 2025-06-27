@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -356,7 +356,7 @@ $(function(){initNavTree('_initialize_radiation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        radiation_ptr-&gt;<a class="code hl_function" href="class_radiation_model.html#a764f6cfd8e79569cc7a110fccd36857b" title="Disable emission calculations for all primitives in this band.">disableEmission</a>( <span class="stringliteral">&quot;NIR&quot;</span> );</div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        radiation_ptr-&gt;<a class="code hl_function" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054" title="Add a spectral radiation band to the model.">addRadiationBand</a>(<span class="stringliteral">&quot;LW&quot;</span>);</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span> </div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        uint sun_ID = radiation_ptr-&gt;<a class="code hl_function" href="class_radiation_model.html#a8edb972e53fecddc21f0c23d08e355d0" title="Add a sphere radiation source that models the sun assuming the default direction of (0,...">addSunSphereRadiationSource</a>();</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> sun_ID = radiation_ptr-&gt;<a class="code hl_function" href="class_radiation_model.html#a8edb972e53fecddc21f0c23d08e355d0" title="Add a sphere radiation source that models the sun assuming the default direction of (0,...">addSunSphereRadiationSource</a>();</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;sun_ID&quot;</span>, sun_ID );</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span> </div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        <span class="keywordflow">if</span>( direct_ray_count&gt;0 ){</div>

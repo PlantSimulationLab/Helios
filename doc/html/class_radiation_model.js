@@ -15,7 +15,7 @@ var class_radiation_model =
     [ "addSunSphereRadiationSource", "class_radiation_model.html#a8edb972e53fecddc21f0c23d08e355d0", null ],
     [ "addSunSphereRadiationSource", "class_radiation_model.html#ab6220aa1f1e5ad425df93c9abdef3d07", null ],
     [ "addSunSphereRadiationSource", "class_radiation_model.html#a5ffce4db04c85848d55c895f9aedc5f5", null ],
-    [ "applyImageProcessingPipeline", "class_radiation_model.html#a07a2720ece9ce049bee0deb6d16b9576", null ],
+    [ "applyImageProcessingPipeline", "class_radiation_model.html#aa5a066898eb6cfe59f91839c08cbf631", null ],
     [ "blendSpectra", "class_radiation_model.html#a43a328dde4dd5f1a431afe9dc5e8664e", null ],
     [ "blendSpectraRandomly", "class_radiation_model.html#a3f52651f2144aaca702824028964a076", null ],
     [ "calculateGtheta", "class_radiation_model.html#a12d9870f22e5f3719baa7fde8e07fb0a", null ],

@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -186,7 +186,7 @@ $(function(){initNavTree('_geometry_handler_8cpp_source.html',''); initResizable
 <div class="foldopen" id="foldopen00035" data-start="{" data-end="}">
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="class_geometry_handler.html#a9edc7d1e8d58fa82e729407df568c058">   35</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_geometry_handler.html#a9edc7d1e8d58fa82e729407df568c058" title="Adds a geometric element to the geometry handler using provided vertices, color, UV mapping,...">GeometryHandler::addGeometry</a>(<span class="keywordtype">size_t</span> UUID, <span class="keyword">const</span> <a class="code hl_enumeration" href="class_geometry_handler.html#a6b777fd59c0ceee97cd80fae4e5f4005" title="Enum representing different types of visualizer geometry.">VisualizerGeometryType</a>&amp; geometry_type, <span class="keyword">const</span> std::vector&lt;helios::vec3&gt;&amp; vertices,</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>                                  <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_r_g_b_acolor.html" title="R-G-B-A color vector.">helios::RGBAcolor</a> &amp;color, <span class="keyword">const</span> std::vector&lt;helios::vec2&gt;&amp; uvs, <span class="keywordtype">int</span> textureID,</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>                                  <span class="keywordtype">bool</span> override_texture_color, <span class="keywordtype">bool</span> has_glyph_texture, uint coordinate_system, <span class="keywordtype">bool</span> visible_flag, <span class="keywordtype">bool</span> iscontextgeometry, <span class="keywordtype">int</span> size) {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>                                  <span class="keywordtype">bool</span> override_texture_color, <span class="keywordtype">bool</span> has_glyph_texture, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> coordinate_system, <span class="keywordtype">bool</span> visible_flag, <span class="keywordtype">bool</span> iscontextgeometry, <span class="keywordtype">int</span> size) {</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordtype">char</span> vertex_count = <a class="code hl_function" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2" title="Returns the vertex count for a given geometry type.">getVertexCount</a>( geometry_type );</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
@@ -1035,7 +1035,7 @@ $(function(){initNavTree('_geometry_handler_8cpp_source.html',''); initResizable
 <div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> dfi = newDeleteFlag.size();</div>
 <div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span> </div>
 <div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>            <span class="comment">// Copy raw data</span></div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            newFace.insert( newFace.end(), vcount, scast&lt;int&gt;(newVisible.size()) ); <span class="comment">//the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.</span></div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            newFace.insert( newFace.end(), vcount, <a class="code hl_function" href="global_8h.html#ab41db2f933a3e448d99437bf66ae9520" title="Static cast for converting between types.">scast&lt;int&gt;</a>(newVisible.size()) ); <span class="comment">//the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.</span></div>
 <div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span> </div>
 <div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            newVertex.insert(newVertex.end(),</div>
 <div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>                             oldVertex.begin() + prim.vertex_index,</div>

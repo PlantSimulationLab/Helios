@@ -37,19 +37,18 @@ inline float esat_Pa(float T_K) {
 
 //! Energy balance model class
 /** This model computes surface temperatures based on a local energy balance */
-class EnergyBalanceModel{
+class EnergyBalanceModel {
 public:
-
     //! Constructor
     /**
      * \param[in] context Pointer to the Helios context
-    */
-    EnergyBalanceModel( helios::Context* context );
+     */
+    EnergyBalanceModel(helios::Context *context);
 
     //! Self-test
     /**
      * \return 0 if test was successful, 1 if test failed.
-    */
+     */
     int selfTest();
 
     //! Enable standard output from this plug-in (default)
@@ -59,38 +58,38 @@ public:
     void disableMessages();
 
     //! Function to run the energy balance model for all primitives in the Context
-    void run() ;
+    void run();
 
     //! Function to run the dynamic /non steady state energy balance model for one timestep of length "dt" seconds
     /**
      * \param[in] dt Time step in seconds.
-    */
-    void run( float dt ) ;
+     */
+    void run(float dt);
 
     //! Function to run the energy balance model for a select set of primitives
     /**
      * \param[in] UUIDs Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
-    */
-    void run( const std::vector<uint> &UUIDs );
+     */
+    void run(const std::vector<uint> &UUIDs);
 
     //! Function to run the energy balance model for a select set of primitives for one timestep of length "dt" seconds
     /**
      * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives that should be included in energy balance calculations. All other primitives will be skipped by the model.
      * \param[in] dt Time step in seconds.
-    */
-    void run( const std::vector<uint> &UUIDs, float dt );
+     */
+    void run(const std::vector<uint> &UUIDs, float dt);
 
     //! Add the label of a radiation band in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
     /**
      * \param[in] band Name of radiation band (e.g., PAR, NIR, LW, etc.)
      */
-    void addRadiationBand( const char* band );
+    void addRadiationBand(const char *band);
 
     //! Add the labels of radiation bands in the RadiationModel plug-in that should be used in calculation of the absorbed all-wave radiation flux
     /**
      * \param[in] bands Vector of names of radiation bands (e.g., PAR, NIR, LW, etc.)
      */
-    void addRadiationBand( const std::vector<std::string> &bands );
+    void addRadiationBand(const std::vector<std::string> &bands);
 
     //! Enable the air energy balance model, which computes the average air temperature and water vapor mole fraction based on the energy balance of the air layer in the canopy
     /**
@@ -106,14 +105,14 @@ public:
      * \param[in] canopy_height_m Height of the canopy in meters.
      * \param[in] reference_height_m Height at which the ambient air temperature, humidity, and wind speed are measured in meters.
      */
-    void enableAirEnergyBalance( float canopy_height_m, float reference_height_m );
+    void enableAirEnergyBalance(float canopy_height_m, float reference_height_m);
 
     //! Advance the air energy balance over time for all primitives in the Context
     /**
      * \param[in] dt_sec Time step in seconds.
      * \param[in] time_advance_sec Total time to advance the model in seconds (T must be greater than or equal to dt).
      */
-    void evaluateAirEnergyBalance( float dt_sec, float time_advance_sec );
+    void evaluateAirEnergyBalance(float dt_sec, float time_advance_sec);
 
     //! Advance the air energy balance over time for primitives specified by UUIDs
     /**
@@ -121,13 +120,13 @@ public:
      * \param[in] dt_sec Time step in seconds.
      * \param[in] time_advance_sec Total time to advance the model in seconds (T must be greater than or equal to dt).
      */
-    void evaluateAirEnergyBalance( const std::vector<uint> &UUIDs, float dt_sec, float time_advance_sec );
+    void evaluateAirEnergyBalance(const std::vector<uint> &UUIDs, float dt_sec, float time_advance_sec);
 
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)
-    */
-    void optionalOutputPrimitiveData( const char* label );
+     */
+    void optionalOutputPrimitiveData(const char *label);
 
     //! Print a report detailing usage of default input values for all primitives in the Context
     void printDefaultValueReport() const;
@@ -139,11 +138,10 @@ public:
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 
 private:
-
-    void evaluateSurfaceEnergyBalance( const std::vector<uint> &UUIDs, float dt );
+    void evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt);
 
     //! Copy of a pointer to the context
-    helios::Context* context;
+    helios::Context *context;
 
     //! Default surface temperature if it was not specified in the context
     float temperature_default;
@@ -188,7 +186,6 @@ private:
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;
-
 };
 
 #endif

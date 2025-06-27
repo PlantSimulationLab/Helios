@@ -113,10 +113,10 @@ var searchData=
   ['toggle_5fbutton_110',['toggle_button',['../_project_builder_8h.html#a0aab4524594812184433a3198d7174a5',1,'ProjectBuilder.cpp']]],
   ['tomato_111',['tomato',['../class_canopy_generator.html#a47b1aef12b71a5a406b6ac1caa7c7363',1,'CanopyGenerator']]],
   ['tomatoparameters_112',['TomatoParameters',['../struct_tomato_parameters.html',1,'TomatoParameters'],['../struct_tomato_parameters.html#ab799d673013e4ef5c257293d9951a462',1,'TomatoParameters::TomatoParameters()'],['../struct_tomato_parameters.html#ab687e0d3051c1c94fff2c61e5db971b4',1,'TomatoParameters::TomatoParameters(const pugi::xml_node canopy_node)']]],
-  ['toneflatten_113',['toneFlatten',['../struct_radiation_camera.html#a23854e6544c7cd4aff655f451946b60d',1,'RadiationCamera']]],
-  ['toolchains_114',['Setting up CMake and compilers (Toolchains)',['../_c_lion_i_d_e.html#CLionToolchains',1,'']]],
-  ['tools_115',['Install Microsoft Visual Studio C++ compiler tools',['../_dependent_software.html#SetupPCMSVC',1,'']]],
-  ['tortuosity_116',['tortuosity',['../struct_shoot_parameters.html#a5c7b984627bdcc6711c71e6e19778a85',1,'ShootParameters::tortuosity'],['../_plant_architecture_doc.html#ShootParam_tortuosity',1,'tortuosity']]],
+  ['toolchains_113',['Setting up CMake and compilers (Toolchains)',['../_c_lion_i_d_e.html#CLionToolchains',1,'']]],
+  ['tools_114',['Install Microsoft Visual Studio C++ compiler tools',['../_dependent_software.html#SetupPCMSVC',1,'']]],
+  ['tortuosity_115',['tortuosity',['../struct_shoot_parameters.html#a5c7b984627bdcc6711c71e6e19778a85',1,'ShootParameters::tortuosity'],['../_plant_architecture_doc.html#ShootParam_tortuosity',1,'tortuosity']]],
+  ['tosrgb_116',['toSRGB',['../struct_radiation_camera.html#a18e4adc26e7e1fc28c7e4633eb1677cb',1,'RadiationCamera']]],
   ['total_5fflower_5fcost_117',['total_flower_cost',['../struct_carbohydrate_parameters.html#a67ad0a53d8f4e6769887c59962de62cd',1,'CarbohydrateParameters']]],
   ['transformations_118',['Primitive Transformations',['../_a_p_i.html#PrimTransform',1,'']]],
   ['translate_119',['translate',['../classhelios_1_1_compound_object.html#aa16f6ad8ec100173147c89bb2c5e0446',1,'helios::CompoundObject']]],
@@ -167,6 +167,7 @@ var searchData=
   ['tutorial_209_3a_20customizing_20visualizations_164',['Tutorial 9: Customizing visualizations',['../visualizer_custom_tutorial.html',1,'Tutorials']]],
   ['tutorials_165',['Tutorials',['../_tutorials.html',1,'']]],
   ['txt_20file_166',['CMakeLists.txt File',['../_a_p_i.html#CMake',1,'']]],
-  ['types_167',['Types',['../_a_p_i.html#PrimitiveTypes',1,'Primitive Types'],['../_a_p_i.html#VecTypes',1,'Vector Types']]],
-  ['types_20tutorial_168',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors_tutorial.html',1,'Tutorials']]]
+  ['type_167',['type',['../structhelios_1_1_global_data.html#aaaeff19f66532e98f44155ab6a9620b0',1,'helios::GlobalData']]],
+  ['types_168',['Types',['../_a_p_i.html#PrimitiveTypes',1,'Primitive Types'],['../_a_p_i.html#VecTypes',1,'Vector Types']]],
+  ['types_20tutorial_169',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors_tutorial.html',1,'Tutorials']]]
 ];

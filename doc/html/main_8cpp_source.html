@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -175,7 +175,7 @@ $(function(){initNavTree('main_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(7,7), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, </div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(50,50)); </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0)); </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0)); </div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>( <span class="stringliteral">&quot;../RadiationSampleData.csv&quot;</span>, {}, <span class="stringliteral">&quot;,&quot;</span>); </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
@@ -195,7 +195,7 @@ $(function(){initNavTree('main_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context); </div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    uint sourceID = radiation.addCollimatedRadiationSource(); </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> sourceID = radiation.addCollimatedRadiationSource(); </div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    radiation.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>); </div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    radiation.disableEmission(<span class="stringliteral">&quot;PAR&quot;</span>); </div>

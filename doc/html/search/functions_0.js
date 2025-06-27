@@ -77,7 +77,7 @@ var searchData=
   ['applyccm_74',['applyCCM',['../struct_radiation_camera.html#a1775a8a965d84eafef6fee9f0e7e3b9a',1,'RadiationCamera']]],
   ['applydistribution_75',['applyDistribution',['../class_project_builder.html#abb974ed02aebf8e690edba3f9e1752f2',1,'ProjectBuilder::applyDistribution(std::string var_name, taggedPtr ptr)'],['../class_project_builder.html#a81a901d16e6f7df195007d0e5c5b5b2a',1,'ProjectBuilder::applyDistribution(std::string var_name, distribution dist, taggedPtr ptr)']]],
   ['applygain_76',['applyGain',['../struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49',1,'RadiationCamera']]],
-  ['applyimageprocessingpipeline_77',['applyImageProcessingPipeline',['../class_radiation_model.html#a07a2720ece9ce049bee0deb6d16b9576',1,'RadiationModel']]],
+  ['applyimageprocessingpipeline_77',['applyImageProcessingPipeline',['../class_radiation_model.html#aa5a066898eb6cfe59f91839c08cbf631',1,'RadiationModel']]],
   ['approxsame_78',['approxSame',['../class_voxel_intersection.html#a7b67a822c84c1086e3d0a8e05114c4bc',1,'VoxelIntersection::approxSame(float a, float b, float absTol, float relTol)'],['../class_voxel_intersection.html#af78fea330c0c2e38e3a02db732ed7dd7',1,'VoxelIntersection::approxSame(helios::vec3 a, helios::vec3 b, float absTol)']]],
   ['areobjectprimitivescomplete_79',['areObjectPrimitivesComplete',['../classhelios_1_1_context.html#ad1ad7d600c2d436ae48d218c1aa19668',1,'helios::Context']]],
   ['areprimitivescomplete_80',['arePrimitivesComplete',['../classhelios_1_1_compound_object.html#a74e4a36175853a8e14153678c035accb',1,'helios::CompoundObject']]],

@@ -23,7 +23,7 @@ float PlantArchitecture::interpolateTube(const std::vector<float> &P, const floa
     assert(frac >= 0 && frac <= 1);
     assert(!P.empty());
 
-    float dl = 1.f / float(P.size());
+    float dl = 1.f / float(P.size() - 1);
 
     float f = 0;
     for (int i = 0; i < P.size() - 1; i++) {

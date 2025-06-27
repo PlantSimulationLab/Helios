@@ -11,7 +11,7 @@ var searchData=
   ['toggle_5fbutton_8',['toggle_button',['../_project_builder_8h.html#a0aab4524594812184433a3198d7174a5',1,'ProjectBuilder.cpp']]],
   ['tomato_9',['tomato',['../class_canopy_generator.html#a47b1aef12b71a5a406b6ac1caa7c7363',1,'CanopyGenerator']]],
   ['tomatoparameters_10',['TomatoParameters',['../struct_tomato_parameters.html#ab799d673013e4ef5c257293d9951a462',1,'TomatoParameters::TomatoParameters()'],['../struct_tomato_parameters.html#ab687e0d3051c1c94fff2c61e5db971b4',1,'TomatoParameters::TomatoParameters(const pugi::xml_node canopy_node)']]],
-  ['toneflatten_11',['toneFlatten',['../struct_radiation_camera.html#a23854e6544c7cd4aff655f451946b60d',1,'RadiationCamera']]],
+  ['tosrgb_11',['toSRGB',['../struct_radiation_camera.html#a18e4adc26e7e1fc28c7e4633eb1677cb',1,'RadiationCamera']]],
   ['translate_12',['translate',['../classhelios_1_1_compound_object.html#aa16f6ad8ec100173147c89bb2c5e0446',1,'helios::CompoundObject']]],
   ['translateobject_13',['translateObject',['../classhelios_1_1_context.html#a3b155f5cfc630f4dad7f780b98c4c28e',1,'helios::Context::translateObject(uint ObjID, const vec3 &amp;shift) const'],['../classhelios_1_1_context.html#a20dd792c410a041d80007606013d1d81',1,'helios::Context::translateObject(const std::vector&lt; uint &gt; &amp;ObjIDs, const vec3 &amp;shift) const']]],
   ['translateprimitive_14',['translatePrimitive',['../classhelios_1_1_context.html#a1ae827c4e0c90a883430bd1db95993e1',1,'helios::Context::translatePrimitive(uint UUID, const vec3 &amp;shift)'],['../classhelios_1_1_context.html#a1e98dca73f3e6282b2d1c3a0458b14a4',1,'helios::Context::translatePrimitive(const std::vector&lt; uint &gt; &amp;UUIDs, const vec3 &amp;shift)']]],

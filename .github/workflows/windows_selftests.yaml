@@ -23,6 +23,11 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Bash script
+        shell: bash
         run: |
           cd utilities
-          sh run_samples.sh --nogpu --visbuildonly
+          if ! ./run_samples.sh --nogpu --visbuildonly --log-file windows_selftests.log; then
+            echo "==== run_samples.sh failed; dumping windows_selftests.log ===="
+            cat windows_selftests.log
+            exit 1
+          fi

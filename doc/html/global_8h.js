@@ -2,6 +2,9 @@ var global_8h =
 [
     [ "helios::PixelUVKey", "structhelios_1_1_pixel_u_v_key.html", null ],
     [ "helios::PixelUVKeyHash", "structhelios_1_1_pixel_u_v_key_hash.html", null ],
+    [ "DEPRECATED", "global_8h.html#aaf225a2b96038de3a42d61a1fa63654b", null ],
+    [ "M_PI", "global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3", null ],
+    [ "uint", "global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14", null ],
     [ "helios::acos_safe", "group__functions.html#ga9f732ec5c2153020247c879034f81432", null ],
     [ "helios::asin_safe", "group__functions.html#gac400d6d37ff2494ec592a9f0a17ee9ab", null ],
     [ "helios::atan2_2pi", "group__functions.html#ga37a64a73b3318125a778bb77c29f7dcf", null ],
@@ -78,6 +81,7 @@ var global_8h =
     [ "helios::rotatePointAboutLine", "global_8h.html#a09ae9efe6ba5dddb144519931bcf94b5", null ],
     [ "helios::sample_Beta_distribution", "global_8h.html#aa9adbbb2cb1b5784701c056062a00458", null ],
     [ "helios::sample_ellipsoidal_azimuth", "global_8h.html#ae106b1ce1d55432f4d0da489092e167b", null ],
+    [ "scast", "global_8h.html#ab41db2f933a3e448d99437bf66ae9520", null ],
     [ "helios::separate_string_by_delimiter", "group__functions.html#gae239abbec7c2ff618b3603bf69ccf2ed", null ],
     [ "helios::sphere2cart", "group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12", null ],
     [ "helios::spline_interp3", "group__functions.html#ga7f8e948aa3a70481ebd3a829531bee4e", null ],
@@ -111,5 +115,6 @@ var global_8h =
     [ "helios::XMLloadvec3", "global_8h.html#aa4c58cabe7bc5244435613ffdb00cf34", null ],
     [ "helios::XMLloadvec4", "global_8h.html#a928c91522128145370150652ca59f3af", null ],
     [ "helios::nullorigin", "global_8h.html#a876dc18d1da8ace50c131f428f8883be", null ],
-    [ "helios::nullrotation", "global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51", null ]
+    [ "helios::nullrotation", "global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51", null ],
+    [ "PI_F", "global_8h.html#a2d6b12d3f019b61b427ec3c63270143d", null ]
 ];

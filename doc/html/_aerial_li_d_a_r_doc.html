@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -291,7 +291,7 @@ Difference between discrete-return and full-waveform LiDAR data</h2>
 </div>
 <h1><a class="anchor" id="AerialSetup"></a>
 Data processing setup</h1>
-<p>Processing begins by constructing an instance of AerialLiDAR::AerialLiDARcloud and adding one or more aerial scans. Scans may be created manually using AerialLiDAR::addScan() and AerialLiDAR::addHitPoint(), but are usually imported from an XML file with AerialLiDAR::loadXML(). The same XML description can also define the 3-D grid used for binning hits. After the scans and grid are loaded, call AerialLiDAR::calculateHitGridCell() so that each return is associated with the appropriate grid cell.</p>
+<p>Processing begins by constructing an instance of <a class="el" href="class_aerial_li_d_a_rcloud.html">AerialLiDARcloud</a> and adding one or more aerial scans. Scans may be created manually using <a class="el" href="class_aerial_li_d_a_rcloud.html#a7ecc9802ec7285391f10562666227c99">AerialLiDARcloud::addScan()</a> and <a class="el" href="class_aerial_li_d_a_rcloud.html#a221bbfec00a8149e9a50d74861932f44">AerialLiDARcloud::addHitPoint()</a>, but are usually imported from an XML file with <a class="el" href="class_aerial_li_d_a_rcloud.html#aa87abfc0d5538d3d8fe28458c7093c2c">AerialLiDARcloud::loadXML()</a>. The same XML description can also define the 3-D grid used for binning hits. After the scans and grid are loaded, call <a class="el" href="class_aerial_li_d_a_rcloud.html#abe3e99a406251c388a3d934a7519ddb2">AerialLiDARcloud::calculateHitGridCell()</a> so that each return is associated with the appropriate grid cell.</p>
 <h1><a class="anchor" id="AerialScanIO"></a>
 Loading scan data from file</h1>
 <p>Scan metadata is typically specified by loading an XML file containing the relevant metadata for each scan. The XML file specifies the path to an ASCII text file that contains the data for each scan. The code below gives a sample XML file for loading multiple scans. Not all entries are required. At a minimum, this consists of the Cartesian (x,y,z) coordinates of each hit in the scan. Additional optional information can be specified for each hit point, as given in the table below.</p>
@@ -330,7 +330,7 @@ Loading scan data from file</h1>
 <tr>
 <td>(label) </td><td>User-defined floating-point data value. "label" can be any string describing data. For example, "reflectance", "temperature", etc.  </td><td>N/A  </td></tr>
 </table>
-<p>The XML file can be automatically loaded into the point cloud using the loadXML() function, as illustrated below.</p>
+<p>The XML file can be automatically loaded into the point cloud using the <a class="el" href="class_aerial_li_d_a_rcloud.html#aa87abfc0d5538d3d8fe28458c7093c2c">AerialLiDARcloud::loadXML()</a> function, as illustrated below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="preprocessor"> #include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -377,19 +377,19 @@ Establishing grid cells</h1>
 Processing LiDAR data</h1>
 <h2><a class="anchor" id="AerialRasters"></a>
 2D raster height maps</h2>
-<p>Run AerialLiDAR::generateHeightModel() to create rasters of ground elevation, vegetation height and the maximum observed hit height. The routine fits planes to the lowest and highest points within each grid cell using a RANSAC algorithm. Heights for a given cell can later be queried using AerialLiDAR::getCellGroundHeight(), AerialLiDAR::getCellVegetationHeight() and AerialLiDAR::getCellMaximumHitHeight().</p>
+<p>Run <a class="el" href="class_aerial_li_d_a_rcloud.html#a1df082e2c4cfbadba9ed2b5f139e2091">AerialLiDARcloud::generateHeightModel()</a> to create rasters of ground elevation, vegetation height and the maximum observed hit height. The routine fits planes to the lowest and highest points within each grid cell using a RANSAC algorithm. Heights for a given cell can later be queried using <a class="el" href="class_aerial_li_d_a_rcloud.html#a12ee268ab4307ff551f9389d4e1113de">AerialLiDARcloud::getCellGroundHeight()</a>, <a class="el" href="class_aerial_li_d_a_rcloud.html#a19dbe5a2e4c9d33192e7d68eab229c29">AerialLiDARcloud::getCellVegetationHeight()</a> and <a class="el" href="class_aerial_li_d_a_rcloud.html#a70596fede0b34aacb47d1bc1543c9d31">AerialLiDARcloud::getCellMaximumHitHeight()</a>.</p>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_aerial_li_d_a_rcloud.html" title="Primary class for aerial LiDAR scan.">AerialLiDARcloud</a> cloud;</div>
 <div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aa87abfc0d5538d3d8fe28458c7093c2c" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/file.xml&quot;</span>);</div>
 <div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#abe3e99a406251c388a3d934a7519ddb2" title="Determine the grid cell in which each hit point resides for the whole point cloud *‍/.">calculateHitGridCell</a>();</div>
 <div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#a1df082e2c4cfbadba9ed2b5f139e2091" title="Determine the ground and vegetation height for each x-y grid cell. Inputs to this function are parame...">generateHeightModel</a>(1000,0.2f,0.6f,0.4f,0.6f);</div>
 </div><!-- fragment --><h2><a class="anchor" id="AerialGroundCover"></a>
 2D raster ground cover fraction</h2>
-<p>After the hit points have been associated with grid cells, call AerialLiDAR::calculateCoverFraction() to compute the fraction of ground returns within each (x,y) cell. Values are retrieved via AerialLiDAR::getCellCoverFraction().</p>
+<p>After the hit points have been associated with grid cells, call calculateCoverFraction() to compute the fraction of ground returns within each (x,y) cell. Values are retrieved via <a class="el" href="class_aerial_li_d_a_rcloud.html#aaaca6e083b0195ea95a12ffb455f76f5">AerialLiDARcloud::getCellCoverFraction()</a>.</p>
 <div class="fragment"><div class="line">cloud.calculateCoverFraction();</div>
 <div class="line"><span class="keywordtype">float</span> f = cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#aaaca6e083b0195ea95a12ffb455f76f5" title="Get the height of the ground at the (x,y) location of this gridcell.">getCellCoverFraction</a>( <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">helios::make_int2</a>(0,0) );</div>
 </div><!-- fragment --><h2><a class="anchor" id="AerialLeafArea"></a>
 Leaf area</h2>
-<p>Leaf area index and leaf area density per voxel are obtained with AerialLiDAR::calculateLeafAreaGPU(). This function assumes a constant leaf angle distribution and uses the ray statistics computed for each grid cell. Individual voxel totals are accessed with AerialLiDAR::getCellLeafArea() and AerialLiDAR::getCellLeafAreaDensity().</p>
+<p>Leaf area index and leaf area density per voxel are obtained with <a class="el" href="class_aerial_li_d_a_rcloud.html#ac395fd2640af864792df68609b3bd938">AerialLiDARcloud::calculateLeafAreaGPU()</a>. This function assumes a constant leaf angle distribution and uses the ray statistics computed for each grid cell. Individual voxel totals are accessed with <a class="el" href="class_aerial_li_d_a_rcloud.html#af1925088a7d828004cd83fef4bbe66ee">AerialLiDARcloud::getCellLeafArea()</a> and <a class="el" href="class_aerial_li_d_a_rcloud.html#a3c97affbd6166c2026d7335b880e75d4">AerialLiDARcloud::getCellLeafAreaDensity()</a>.</p>
 <div class="fragment"><div class="line">cloud.<a class="code hl_function" href="class_aerial_li_d_a_rcloud.html#ac395fd2640af864792df68609b3bd938" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(0.5f);</div>
 </div><!-- fragment --></div></div><!-- contents -->
 </div><!-- PageDoc -->

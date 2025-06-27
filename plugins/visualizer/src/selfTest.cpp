@@ -15,7 +15,7 @@ int Visualizer::selfTest() {
     {
         visualizer.enableMessages();
         if (!visualizer.message_flag) {
-            std::cout << "failed enableMessages() test." << std::endl;
+            std::cerr << "failed enableMessages() test." << std::endl;
             error_count++;
         }
     }
@@ -24,7 +24,7 @@ int Visualizer::selfTest() {
     {
         visualizer.disableMessages();
         if (visualizer.message_flag) {
-            std::cout << "failed disableMessages() test." << std::endl;
+            std::cerr << "failed disableMessages() test." << std::endl;
             error_count++;
         }
     }
@@ -34,11 +34,11 @@ int Visualizer::selfTest() {
         try {
             visualizer.openWindow();
             if (visualizer.window == nullptr) {
-                std::cout << "failed openWindow() test - window is null." << std::endl;
+                std::cerr << "failed openWindow() test - window is null." << std::endl;
                 error_count++;
             }
         } catch (const std::exception &e) {
-            std::cout << "failed openWindow() test: " << e.what() << std::endl;
+            std::cerr << "failed openWindow() test: " << e.what() << std::endl;
             error_count++;
         }
     }
@@ -52,7 +52,7 @@ int Visualizer::selfTest() {
         // Verify that the transformation matrix updates correctly
         if (visualizer.camera_eye_location != initial_position ||
             visualizer.camera_lookat_center != initial_lookat) {
-            std::cout << "failed setCameraPosition() test." << std::endl;
+            std::cerr << "failed setCameraPosition() test." << std::endl;
             error_count++;
         }
     }
@@ -75,7 +75,7 @@ int Visualizer::selfTest() {
             visualizer.initialize(1024, 768, 8, false);
             visualizer.initialize(1280, 720, 0, false); // Edge case: No aliasing
         } catch (const std::exception &e) {
-            std::cout << "failed initialize() test: " << e.what() << std::endl;
+            std::cerr << "failed initialize() test: " << e.what() << std::endl;
             error_count++;
         }
     }
@@ -88,7 +88,7 @@ int Visualizer::selfTest() {
         read_png_file(filename.c_str(), texture, height, width);
 
         if (texture.empty() || height == 0 || width == 0) {
-            std::cout << "failed read_png_file() test." << std::endl;
+            std::cerr << "failed read_png_file() test." << std::endl;
             error_count++;
         }
     }
@@ -100,7 +100,7 @@ int Visualizer::selfTest() {
         if (visualizer.window != nullptr) {
             int result = write_JPEG_file("plugins/visualizer/textures/dirt.jpg", 800, 600, visualizer.window);
             if (result != 1) {
-                std::cout << "ERROR: write_JPEG_file(window) failed.\n";
+                std::cerr << "ERROR: write_JPEG_file(window) failed.\n";
                 error_count++;
             }
         }
@@ -112,7 +112,7 @@ int Visualizer::selfTest() {
         std::vector<helios::RGBcolor> data(width * height, helios::RGBcolor(1.0, 0.0, 0.0));
         int result = write_JPEG_file("plugins/visualizer/textures/dirt.jpg", width, height, data);
         if (result != 1) {
-            std::cout << "ERROR: write_JPEG_file(data) failed.\n";
+            std::cerr << "ERROR: write_JPEG_file(data) failed.\n";
             error_count++;
         }
     }
@@ -125,10 +125,10 @@ int Visualizer::selfTest() {
 
         try {
             read_png_file(filename.c_str(), texture, height, width);
-            std::cout << "ERROR: read_png_file should have failed but didn't.\n";
+            std::cerr << "ERROR: read_png_file should have failed but didn't.\n";
             error_count++;
         } catch (...) {
-            std::cout << "Passed read_png_file() error handling test.\n";
+            std::cerr << "Passed read_png_file() error handling test.\n";
         }
     }
 
@@ -142,7 +142,7 @@ int Visualizer::selfTest() {
             Visualizer v3(1280, 720, 8, false);
             std::cout << "Passed Visualizer constructors test.\n";
         } catch (...) {
-            std::cout << "ERROR: Visualizer constructors test failed.\n";
+            std::cerr << "ERROR: Visualizer constructors test failed.\n";
             error_count++;
         }
     }
@@ -154,7 +154,7 @@ int Visualizer::selfTest() {
             visualizer.printWindow();
             std::cout << "Passed printWindow() test.\n";
         } catch (...) {
-            std::cout << "ERROR: printWindow() test failed.\n";
+            std::cerr << "ERROR: printWindow() test failed.\n";
             error_count++;
         }
     }
@@ -165,7 +165,7 @@ int Visualizer::selfTest() {
             visualizer.setLightDirection(make_vec3(1, 1, 1));
             std::cout << "Passed setLightDirection() test.\n";
         } catch (...) {
-            std::cout << "ERROR: setLightDirection() test failed.\n";
+            std::cerr << "ERROR: setLightDirection() test failed.\n";
             error_count++;
         }
     }
@@ -177,7 +177,7 @@ int Visualizer::selfTest() {
             visualizer.getDomainBoundingBox(xbounds, ybounds, zbounds);
             std::cout << "Passed getDomainBoundingBox() test.\n";
         } catch (...) {
-            std::cout << "ERROR: getDomainBoundingBox() test failed.\n";
+            std::cerr << "ERROR: getDomainBoundingBox() test failed.\n";
             error_count++;
         }
     }
@@ -188,7 +188,7 @@ int Visualizer::selfTest() {
             float radius = visualizer.getDomainBoundingRadius();
             std::cout << "Passed getDomainBoundingRadius() test.\n";
         } catch (...) {
-            std::cout << "ERROR: getDomainBoundingRadius() test failed.\n";
+            std::cerr << "ERROR: getDomainBoundingRadius() test failed.\n";
             error_count++;
         }
     }
@@ -199,7 +199,7 @@ int Visualizer::selfTest() {
             visualizer.updatePerspectiveTransformation(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
             std::cout << "Passed updatePerspectiveTransformation() test.\n";
         } catch (...) {
-            std::cout << "ERROR: updatePerspectiveTransformation() test failed.\n";
+            std::cerr << "ERROR: updatePerspectiveTransformation() test failed.\n";
             error_count++;
         }
     }
@@ -210,7 +210,7 @@ int Visualizer::selfTest() {
             visualizer.addRectangleByCenter(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addRectangleByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addRectangleByCenter() test failed.\n";
+            std::cerr << "ERROR: addRectangleByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -221,7 +221,7 @@ int Visualizer::selfTest() {
             visualizer.addRectangleByCenter(make_vec3(1e6, 1e6, 1e6), make_vec2(1e6, 1e6), make_SphericalCoord(0, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "PASSED: addRectangleByCenter() executed successfully with extreme values." << std::endl;
         } catch (...) {
-            std::cout << "FAILED: addRectangleByCenter() threw an exception on extreme values." << std::endl;
+            std::cerr << "FAILED: addRectangleByCenter() threw an exception on extreme values." << std::endl;
             error_count++;
         }
     }
@@ -232,7 +232,7 @@ int Visualizer::selfTest() {
             visualizer.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::blue, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addTriangle() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addTriangle() test failed.\n";
+            std::cerr << "ERROR: addTriangle() test failed.\n";
             error_count++;
         }
     }
@@ -243,7 +243,7 @@ int Visualizer::selfTest() {
             visualizer.addVoxelByCenter(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_SphericalCoord(0, 0), RGB::green, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addVoxelByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addVoxelByCenter() test failed.\n";
+            std::cerr << "ERROR: addVoxelByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -254,7 +254,7 @@ int Visualizer::selfTest() {
             visualizer.addSphereByCenter(1.0f, make_vec3(0, 0, 0), 10, RGB::blue, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addSphereByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addSphereByCenter() test failed.\n";
+            std::cerr << "ERROR: addSphereByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -265,7 +265,7 @@ int Visualizer::selfTest() {
             visualizer.addSkyDomeByCenter(5.0f, make_vec3(0, 0, 0), 10, "plugins/visualizer/textures/SkyDome_clouds.jpg");
             std::cout << "Passed addSkyDomeByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addSkyDomeByCenter() test failed.\n";
+            std::cerr << "ERROR: addSkyDomeByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -286,7 +286,7 @@ int Visualizer::selfTest() {
             visualizer.addColorbarByCenter("Colorbar", safe_size, safe_position, RGB::black, colormap);
             std::cout << "Passed addColorbarByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addColorbarByCenter() test failed.\n";
+            std::cerr << "ERROR: addColorbarByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -297,7 +297,7 @@ int Visualizer::selfTest() {
             visualizer.addCoordinateAxes(make_vec3(0, 0, 0), make_vec3(1, 1, 1), "XYZ");
             std::cout << "Passed addCoordinateAxes() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addCoordinateAxes() test failed.\n";
+            std::cerr << "ERROR: addCoordinateAxes() test failed.\n";
             error_count++;
         }
     }
@@ -308,7 +308,7 @@ int Visualizer::selfTest() {
             visualizer.addDiskByCenter(make_vec3(0, 3, 0), make_vec2(sqrtf(2) / 2.f, sqrtf(2) / 2.f), make_SphericalCoord(0, 0), 50, RGB::blue, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addDiskByCenter() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addDiskByCenter() test failed.\n";
+            std::cerr << "ERROR: addDiskByCenter() test failed.\n";
             error_count++;
         }
     }
@@ -322,7 +322,7 @@ int Visualizer::selfTest() {
             visualizer.addLine(make_vec3(0, 2, 0), make_vec3(-1, 3, 0), RGB::red, 1, Visualizer::COORDINATES_CARTESIAN);
             std::cout << "Passed addLine() test.\n";
         } catch (...) {
-            std::cout << "ERROR: addLine() test failed.\n";
+            std::cerr << "ERROR: addLine() test failed.\n";
             error_count++;
         }
     }
@@ -335,7 +335,7 @@ int Visualizer::selfTest() {
     if (error_count > 0) {
         std::cout << "completed with " << error_count << " errors." << std::endl;
     } else {
-        std::cout << "passed all tests." << std::endl;
+        std::cerr << "passed all tests." << std::endl;
     }
 
     return error_count;

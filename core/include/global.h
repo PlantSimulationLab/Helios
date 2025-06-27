@@ -16,6 +16,7 @@
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
 
+//! Macro for marking functions as deprecated.
 #ifdef __GNUC__
 #define DEPRECATED(func) func __attribute__ ((deprecated))
 #elif defined(_MSC_VER)
@@ -25,10 +26,12 @@
 #define DEPRECATED(func) func
 #endif
 
+//! Pi constant.
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
+//! Pi constant as a float.
 constexpr float PI_F = 3.14159265358979323846f;
 
 #include <cstdlib>
@@ -59,8 +62,10 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <omp.h>
 #endif
 
+//! Unsigned integer type.
 typedef unsigned int uint;
 
+//! Static cast for converting between types.
 template<typename To, typename From>
 constexpr To scast(From&& v) noexcept
 {
@@ -126,8 +131,7 @@ namespace helios {
      * \param[out] transform Transformation matrix in a 1D array
      * \ingroup functions
     */
-    void makeRotationMatrix(float rotation, const helios::vec3 &origin, const helios::vec3 &axis,
-                            float (&transform)[16]);
+    void makeRotationMatrix(float rotation, const helios::vec3 &origin, const helios::vec3 &axis, float (&transform)[16]);
 
     //! Construct translation matrix
     /** 4x4 Affine translation matrix
@@ -603,7 +607,6 @@ namespace helios {
      * \param[in] year Year in YYYY format
      * \return int3, with int3::x = day, int3::y = month, int3::z = year
      * \sa JulianDay()
-     * \ingroup sun
     */
     [[nodiscard]] Date CalendarDay(int Julian_day, int year);
 
@@ -614,7 +617,6 @@ namespace helios {
      * \param[in] year Year in YYYY format
      * \return Julian day of year
      * \sa CalendarDay()
-     * \ingroup sun
     */
     [[nodiscard]] int JulianDay(int day, int month, int year);
 
@@ -624,7 +626,6 @@ namespace helios {
      * \return Julian day of year
      * \sa CalendarDay()
      * \ingroup functions
-     * \ingroup sun
     */
     [[nodiscard]] int JulianDay(const Date &date);
 

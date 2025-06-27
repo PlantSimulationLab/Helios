@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -221,7 +221,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    labelPrimitives( context-&gt;getAllUUIDs(), label );</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>}</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="keywordtype">void</span> SyntheticAnnotation::labelPrimitives( <span class="keyword">const</span> uint UUIDs, <span class="keyword">const</span> <span class="keywordtype">char</span>* label ){</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="keywordtype">void</span> SyntheticAnnotation::labelPrimitives( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUIDs, <span class="keyword">const</span> <span class="keywordtype">char</span>* label ){</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    std::vector&lt;uint&gt; UUID_vect = {UUIDs};</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    labelPrimitives( UUID_vect, label );</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>}</div>
@@ -268,7 +268,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span><span class="keywordtype">void</span> SyntheticAnnotation::labelUnlabeledPrimitives(<span class="keyword">const</span> <span class="keywordtype">char</span> *label) {</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    std::vector&lt;uint&gt; UUIDs_all = context-&gt;getAllUUIDs();</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">for</span>( uint p=0; p&lt;UUIDs_all.size(); p++ ){</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p=0; p&lt;UUIDs_all.size(); p++ ){</div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
@@ -283,7 +283,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>}</div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span><span class="keywordtype">void</span> SyntheticAnnotation::setWindowSize( <span class="keyword">const</span> uint __window_width, <span class="keyword">const</span> uint __window_height) {</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span><span class="keywordtype">void</span> SyntheticAnnotation::setWindowSize( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> __window_width, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> __window_height) {</div>
 <div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    window_width = __window_width;</div>
 <div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    window_height = __window_height;</div>
 <div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>}</div>
@@ -451,7 +451,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        }</div>
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    }</div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    uint framebufferW, framebufferH;</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> framebufferW, framebufferH;</div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>    std::stringstream outfile;</div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    <span class="comment">//------ RGB rendering with no labels --------//</span></div>
@@ -469,7 +469,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#a90d0c5630620d30d062c0af4bace0a99" title="Make Helios logo watermark invisible.">hideWatermark</a>();</div>
 <div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#a6e54e59d971acaadbf4cef72a28585ce" title="Set the background color for the visualizer window.">setBackgroundColor</a>(background_color);</div>
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#a266e9ff3e825dcbd283f9e403688e09d" title="Add a Sky Dome, which is a hemispherical dome colored by a sky texture map.">addSkyDomeByCenter</a>( 20, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 30, <span class="stringliteral">&quot;plugins/visualizer/textures/SkyDome_clouds.jpg&quot;</span> );</div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#a492533fe226fa92d08b010dc9a3f6e93" title="Set the direction of the light source.">setLightDirection</a>(<a class="code hl_function" href="group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12" title="Convert Spherical coordinates to Cartesian coordinates.">sphere2cart</a>(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(30 * M_PI / 180.f, 205 * M_PI / 180.f)));</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#a492533fe226fa92d08b010dc9a3f6e93" title="Set the direction of the light source.">setLightDirection</a>(<a class="code hl_function" href="group__functions.html#ga97e12cf9fda6bf8b65b3ccc17e788c12" title="Convert Spherical coordinates to Cartesian coordinates.">sphere2cart</a>(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(30 * <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 180.f, 205 * <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 180.f)));</div>
 <div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    vis_RGB.<a class="code hl_function" href="class_visualizer.html#afc496b8bd99bbb786d553c4b3e8dfded" title="Set the lighting model for shading of all primitives.">setLightingModel</a>(<a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573afe63a1dd4fcd9bbf57ad0dc2c168c864" title="Phong lighting model plus shadowing is applied to add shading effects to the diffuse color.">Visualizer::LIGHTING_PHONG_SHADOWED</a>);</div>
 <div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span> </div>
 <div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    <span class="comment">//todo: need to add option to tell which sky dome image file to use</span></div>
@@ -595,7 +595,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = framebufferH; j &gt; 0; j--) {</div>
 <div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; framebufferW; i++) {</div>
 <div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span> </div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>                uint ID = rgb2int(<a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f));</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID = rgb2int(<a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f));</div>
 <div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>                file &lt;&lt; ID &lt;&lt; <span class="stringliteral">&quot; &quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span> </div>
 <div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>                t += 3;</div>
@@ -626,7 +626,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span> </div>
 <div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>                    gID = g-&gt;second.at(group);</div>
 <div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span> </div>
-<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>                    uint pixelcount = getGroupRectangularBBox( gID, pixels, framebufferW, framebufferH, bbox );</div>
+<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>                    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> pixelcount = getGroupRectangularBBox( gID, pixels, framebufferW, framebufferH, bbox );</div>
 <div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span> </div>
 <div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>                    <span class="keywordflow">if</span>( pixelcount&gt;=labelminpixels  ){</div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span> </div>
@@ -804,7 +804,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>}</div>
 </div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span> </div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>uint SyntheticAnnotation::getGroupRectangularBBox( <span class="keyword">const</span> uint ID, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;pixels, <span class="keyword">const</span> uint framebuffer_width, <span class="keyword">const</span> uint framebuffer_height, <a class="code hl_struct" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">helios::int4</a>&amp; bbox )<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SyntheticAnnotation::getGroupRectangularBBox( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;pixels, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> framebuffer_width, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> framebuffer_height, <a class="code hl_struct" href="structhelios_1_1int4.html" title="Vector of four elements of type &#39;int&#39;.">helios::int4</a>&amp; bbox )<span class="keyword"> const </span>{</div>
 <div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span> </div>
 <div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    <span class="keywordtype">int</span> t=0;</div>
 <div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    <span class="keywordtype">int</span> xmin = framebuffer_width;</div>
@@ -881,7 +881,7 @@ $(function(){initNavTree('_synthetic_annotation_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span> </div>
 <div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span><span class="keywordtype">void</span> SyntheticAnnotation::writePixelID( <span class="keyword">const</span> <span class="keywordtype">char</span>* filename, <span class="keyword">const</span> <span class="keywordtype">int</span> labelminpixels, <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a>* vis )<span class="keyword"> const</span>{</div>
 <div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span> </div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    uint framebufferH, framebufferW;</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> framebufferH, framebufferW;</div>
 <div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span> </div>
 <div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    vis-&gt;<a class="code hl_function" href="class_visualizer.html#ab3b0261a21e7f552d55e4d2fda55f94f" title="Get the size of the framebuffer in pixels.">getFramebufferSize</a>(framebufferW,framebufferH);</div>
 <div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span> </div>

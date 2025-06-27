@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -205,7 +205,7 @@ $(function(){initNavTree('radiation_basics_tutorial.html',''); initResizable(tru
 <div class="line">  <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// Add a sun radiation source with elevation angle of 60 degrees and an azimuth of 45 degrees (note that we need to convert to radians)</span></div>
-<div class="line">  uint sourceID = radiation.addSunSphereRadiationSource( <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>( <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(60), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(45) ));</div>
+<div class="line">  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> sourceID = radiation.addSunSphereRadiationSource( <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>( <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(60), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(45) ));</div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// Add a shortwave radiation band called &quot;PAR&quot; (you can call it anything you want, just be consistent)</span></div>
 <div class="line">  radiation.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
@@ -214,7 +214,7 @@ $(function(){initNavTree('radiation_basics_tutorial.html',''); initResizable(tru
 <div class="line">  radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>, 50.f);   <span class="comment">//set diffuse (ambient) solar radiation flux of 50 W/m^2</span></div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// We only want the ground to absorb radiation from the top. If we left the default &quot;twosided_flag=1&quot;, our ground would absorb diffuse radiation from below</span></div>
-<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
+<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0));</div>
 <div class="line"> </div>
 <div class="line">  radiation.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>);  <span class="comment">//Use periodic lateral boundaries so we have repeating trees</span></div>
 <div class="line"> </div>

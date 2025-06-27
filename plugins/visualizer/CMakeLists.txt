@@ -9,6 +9,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 add_library(visualizer STATIC "src/Visualizer.cpp;src/GeometryHandler.cpp")
 
+#External libraries
+set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
+set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+
 #freetype
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/freetype-2.7/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/freetype-2.7")
@@ -61,6 +65,8 @@ if(X11_FOUND)
 	include_directories(${X11_INCLUDE_DIRS})
 	target_link_libraries( visualizer ${X11_LIBRARIES} )
 endif(X11_FOUND)
+
+set(CMAKE_MESSAGE_LOG_LEVEL ${SAVED_LOG_LEVEL})
 
 target_link_libraries( visualizer helios )
 

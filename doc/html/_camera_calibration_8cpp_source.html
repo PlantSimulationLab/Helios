@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -195,7 +195,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>            <span class="keywordtype">float</span> xp = 0-patchsize*(float(boardsidesize.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>)-1)/2+patchsize*<span class="keywordtype">float</span>(inpr);</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>            <span class="keywordtype">float</span> yp = 0-patchsize*(float(boardsidesize.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>)-1)/2+patchsize*<span class="keywordtype">float</span>(inpc);</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>            uint UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp,yp,0),patchfullsize,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>,binarycolor);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp,yp,0),patchfullsize,<a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>,binarycolor);</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>            <span class="keywordflow">if</span> (bw==1){</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>                UUIDs_white.push_back(UUID);</div>
@@ -207,7 +207,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>            }</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;transmissivity_spectrum&quot;</span>, <span class="stringliteral">&quot;&quot;</span>);</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0));</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>            UUIDs.push_back(UUID);</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>        }</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    }</div>
@@ -239,8 +239,8 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="foldopen" id="foldopen00086" data-start="{" data-end="}">
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno"><a class="line" href="struct_camera_calibration.html#ad1c0a4605b3b3ea355b9f3dee1706ec9">   86</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="struct_camera_calibration.html#ad1c0a4605b3b3ea355b9f3dee1706ec9" title="Add color board geometry into context.">CameraCalibration::addColorboard</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;centrelocation, <span class="keywordtype">float</span> patchsize, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;rotationrad, <span class="keyword">const</span> std::vector&lt;std::vector&lt;helios::RGBcolor&gt;&gt; &amp;colorassignment, <span class="keyword">const</span> std::vector&lt;std::vector&lt;std::string&gt;&gt; &amp;spectrumassignment) {</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    uint Nrow;</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    uint Ncol;</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nrow;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ncol;</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <span class="keywordflow">if</span>( !colorassignment.empty() ){</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        Nrow=colorassignment.size();</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        Ncol=colorassignment.back().size();</div>
@@ -252,7 +252,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    }</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    std::vector&lt;uint&gt; UUIDs;</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    uint UUID;</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID;</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> irow=0; irow &lt; Nrow; irow++){</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> icolumn=0; icolumn &lt; Ncol; icolumn++){</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span> </div>
@@ -267,7 +267,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>            }<span class="keywordflow">else</span>{</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>                UUID = context-&gt;addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(xp, yp, centrelocation.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(patchsize, patchsize), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>);</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            }</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(0));</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0));</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            UUIDs.push_back(UUID);</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>            <span class="keywordflow">if</span>( !spectrumassignment.empty() ){</div>
@@ -476,7 +476,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    <span class="keywordflow">return</span> extendedspectrum;</div>
 <div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>}</div>
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span><span class="keyword">static</span> <span class="keywordtype">float</span> normalizevalue( std::vector&lt;std::vector&lt;helios::vec2&gt;&gt; cameraresponsespectra, <span class="keyword">const</span> std::map&lt;uint, std::vector&lt;vec2&gt;&gt; &amp;simulatedinputspectra){</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span><span class="keyword">static</span> <span class="keywordtype">float</span> normalizevalue( std::vector&lt;std::vector&lt;helios::vec2&gt;&gt; cameraresponsespectra, <span class="keyword">const</span> std::map&lt;<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>, std::vector&lt;vec2&gt;&gt; &amp;simulatedinputspectra){</div>
 <div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span> </div>
 <div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    <span class="comment">// Find the maximum value of the simulated input spectra multiplied by the camera response spectra</span></div>
 <div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    <span class="keywordtype">float</span> normvalue = 0;</div>
@@ -499,7 +499,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
 <div class="foldopen" id="foldopen00329" data-start="{" data-end="}">
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno"><a class="line" href="struct_camera_calibration.html#a8187123a8969af3d1eb69aa6425f39ee">  329</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="struct_camera_calibration.html#a8187123a8969af3d1eb69aa6425f39ee" title="Update camera response spectra.">CameraCalibration::updateCameraResponseSpectra</a>(<span class="keyword">const</span> std::vector&lt;std::string&gt;&amp; camerareponselabels, <span class="keyword">const</span> std::string &amp;label,</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>                                                                  <span class="keyword">const</span> std::map&lt;uint, std::vector&lt;vec2&gt;&gt; &amp;simulatedinputspectra,</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>                                                                  <span class="keyword">const</span> std::map&lt;<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>, std::vector&lt;vec2&gt;&gt; &amp;simulatedinputspectra,</div>
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>                                                                  <span class="keyword">const</span> std::vector&lt;std::vector&lt;float&gt;&gt; &amp;truevalues) {</div>
 <div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span> </div>
 <div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordtype">float</span> learningrate = responseupdateparameters.learningrate;</div>
@@ -518,7 +518,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordtype">float</span> normvalue = normalizevalue(cameraresponsespectra, simulatedinputspectra);</div>
 <div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span> </div>
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    std::vector&lt;std::vector&lt;float&gt;&gt; expandedcameraspectra;</div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    uint bandsnumber = cameraresponsespectra.size();</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> bandsnumber = cameraresponsespectra.size();</div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; cameraspectrum : cameraresponsespectra){</div>
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>        expandedcameraspectra.push_back(CameraCalibration::expandSpectrum(cameraspectrum, normvalue));</div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    }</div>
@@ -733,7 +733,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span> </div>
 <div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="comment">// Check if object spectra in global data has been added to UUIDs but are not in the provided object labels;</span></div>
 <div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>    std::vector&lt;uint&gt; exist_UUIDs = context-&gt;getAllUUIDs();</div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    <span class="keywordflow">for</span> (uint UUID:exist_UUIDs){</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID:exist_UUIDs){</div>
 <div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>        <span class="keywordflow">if</span> (context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>)) {</div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>            std::string spectralreflectivitylabel;</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>            context-&gt;getPrimitiveData(UUID, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, spectralreflectivitylabel);</div>
@@ -830,9 +830,9 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span> </div>
 <div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>            <span class="keywordtype">float</span> count = 0;</div>
 <div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>            <span class="keywordtype">float</span> <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a> = 0;</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>            <span class="keywordflow">for</span> (uint j = 0; j &lt; cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>; j++) {</div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>                <span class="keywordflow">for</span> (uint i = 0; i &lt; cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>; i++) {</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>                    uint UUID = camera_UUIDs.at(j*cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> + i)-1;</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>            <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> j = 0; j &lt; cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>; j++) {</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>                <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a>; i++) {</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>                    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = camera_UUIDs.at(j*cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> + i)-1;</div>
 <div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>                    <span class="keywordflow">if</span> (UUID == UUIDs_colorboard.at(icu)){</div>
 <div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>                        <span class="keywordtype">float</span> value = camera_data.at(j*cameraresolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> + i);</div>
 <div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>                        <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a> += value;</div>
@@ -862,7 +862,7 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>        std::vector&lt;float&gt; poslf;</div>
 <div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>        std::vector&lt;float&gt; rotatelf_cos;</div>
 <div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>        std::vector&lt;float&gt; rotatelf_sc(2);</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>        <span class="keyword">auto</span> widthlengthlf = float(sqrt(0.01f*M_PI));</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>        <span class="keyword">auto</span> widthlengthlf = float(sqrt(0.01f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>));</div>
 <div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 7; i++) {</div>
 <div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>            inputFile &gt;&gt; idata;</div>
 <div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span> </div>
@@ -877,10 +877,10 @@ $(function(){initNavTree('_camera_calibration_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        rotatelf_sc.at(0) = float(asin(rotatelf_cos.at(2)));</div>
 <div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>        rotatelf_sc.at(1) =  float(atan2(rotatelf_cos.at(1), rotatelf_cos.at(0)));</div>
 <div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>        <span class="keywordflow">if</span> ( rotatelf_sc.at(1) &lt; 0) {</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>            rotatelf_sc.at(1) += 2 * M_PI;</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>            rotatelf_sc.at(1) += 2 * <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        }</div>
 <div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> iposlf = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(poslf.at(0),poslf.at(1),poslf.at(2));</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        iCUUIDs.push_back(context-&gt;addPatch(iposlf,<a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>(widthlengthlf,widthlengthlf), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<span class="keywordtype">float</span>(0.5*M_PI+rotatelf_sc.at(0)), rotatelf_sc.at(1))));</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        iCUUIDs.push_back(context-&gt;addPatch(iposlf,<a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a>(widthlengthlf,widthlengthlf), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<span class="keywordtype">float</span>(0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+rotatelf_sc.at(0)), rotatelf_sc.at(1))));</div>
 <div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    }</div>
 <div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    inputFile.close();</div>
 <div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    <span class="keywordflow">return</span> iCUUIDs;</div>

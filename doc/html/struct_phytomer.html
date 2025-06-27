@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -168,7 +168,7 @@ $(function(){initNavTree('struct_phytomer.html',''); initResizable(true); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a588596baf890a4b4e6431096deaa8690" id="r_a588596baf890a4b4e6431096deaa8690"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a588596baf890a4b4e6431096deaa8690">Phytomer</a> (const <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> &amp;params, <a class="el" href="struct_shoot.html">Shoot</a> *parent_shoot, uint phytomer_index, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_internode_axis, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_petiole_axis, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> internode_base_origin, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plantarchitecture_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
+<tr class="memitem:a588596baf890a4b4e6431096deaa8690" id="r_a588596baf890a4b4e6431096deaa8690"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a588596baf890a4b4e6431096deaa8690">Phytomer</a> (const <a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a> &amp;params, <a class="el" href="struct_shoot.html">Shoot</a> *parent_shoot, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> phytomer_index, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_internode_axis, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;parent_petiole_axis, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> internode_base_origin, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> rank, <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> *plantarchitecture_ptr, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="memdesc:a588596baf890a4b4e6431096deaa8690"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:a588596baf890a4b4e6431096deaa8690"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada205c30db69f8b310c8c683cb3c7933" id="r_ada205c30db69f8b310c8c683cb3c7933"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada205c30db69f8b310c8c683cb3c7933">getInternodeNodePositions</a> () const</td></tr>
@@ -177,13 +177,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0b15ed1ee74bc95f5a8489022ac8e6e2" id="r_a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b15ed1ee74bc95f5a8489022ac8e6e2">getInternodeNodeRadii</a> () const</td></tr>
 <tr class="memdesc:a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve the radii of nodes associated with an internode.  <br /></td></tr>
 <tr class="separator:a0b15ed1ee74bc95f5a8489022ac8e6e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a83343a9f7a4ad6e241fda48facc52273" id="r_a83343a9f7a4ad6e241fda48facc52273"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83343a9f7a4ad6e241fda48facc52273">calculatePhytomerVolume</a> (uint node_number) const</td></tr>
+<tr class="memitem:a83343a9f7a4ad6e241fda48facc52273" id="r_a83343a9f7a4ad6e241fda48facc52273"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83343a9f7a4ad6e241fda48facc52273">calculatePhytomerVolume</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> node_number) const</td></tr>
 <tr class="memdesc:a83343a9f7a4ad6e241fda48facc52273"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the volume of a phytomer.  <br /></td></tr>
 <tr class="separator:a83343a9f7a4ad6e241fda48facc52273"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44a1c87c905746ca31befed25f2dd647" id="r_a44a1c87c905746ca31befed25f2dd647"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44a1c87c905746ca31befed25f2dd647">getInternodeAxisVector</a> (float stem_fraction) const</td></tr>
 <tr class="memdesc:a44a1c87c905746ca31befed25f2dd647"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the axis vector of the internode at a given fraction along the internode.  <br /></td></tr>
 <tr class="separator:a44a1c87c905746ca31befed25f2dd647"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a42a7e97e8c89a8707852869990933a01" id="r_a42a7e97e8c89a8707852869990933a01"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42a7e97e8c89a8707852869990933a01">getPetioleAxisVector</a> (float stem_fraction, uint petiole_index) const</td></tr>
+<tr class="memitem:a42a7e97e8c89a8707852869990933a01" id="r_a42a7e97e8c89a8707852869990933a01"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42a7e97e8c89a8707852869990933a01">getPetioleAxisVector</a> (float stem_fraction, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index) const</td></tr>
 <tr class="memdesc:a42a7e97e8c89a8707852869990933a01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the petiole axis vector for a given stem fraction and petiole index.  <br /></td></tr>
 <tr class="separator:a42a7e97e8c89a8707852869990933a01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb8e9c145c85075812f98503c4a6bc44" id="r_acb8e9c145c85075812f98503c4a6bc44"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb8e9c145c85075812f98503c4a6bc44">getInternodeLength</a> () const</td></tr>
@@ -201,7 +201,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a78acccf5f57c43c794c85d9170be4656" id="r_a78acccf5f57c43c794c85d9170be4656"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a78acccf5f57c43c794c85d9170be4656">getLeafArea</a> () const</td></tr>
 <tr class="memdesc:a78acccf5f57c43c794c85d9170be4656"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the total leaf area for the current phytomer.  <br /></td></tr>
 <tr class="separator:a78acccf5f57c43c794c85d9170be4656"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6a9cc6c21a82817eee8091481ab8f73" id="r_ab6a9cc6c21a82817eee8091481ab8f73"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab6a9cc6c21a82817eee8091481ab8f73">getLeafBasePosition</a> (uint petiole_index, uint leaf_index) const</td></tr>
+<tr class="memitem:ab6a9cc6c21a82817eee8091481ab8f73" id="r_ab6a9cc6c21a82817eee8091481ab8f73"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab6a9cc6c21a82817eee8091481ab8f73">getLeafBasePosition</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> leaf_index) const</td></tr>
 <tr class="memdesc:ab6a9cc6c21a82817eee8091481ab8f73"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the position of the base of a leaf within the phytomer.  <br /></td></tr>
 <tr class="separator:ab6a9cc6c21a82817eee8091481ab8f73"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c3196c1b186e116f85d8a8514a2df40" id="r_a8c3196c1b186e116f85d8a8514a2df40"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c3196c1b186e116f85d8a8514a2df40">hasLeaf</a> () const</td></tr>
@@ -222,19 +222,19 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a70aa0f62afdf829d9f2af6167d30f8ca" id="r_a70aa0f62afdf829d9f2af6167d30f8ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a70aa0f62afdf829d9f2af6167d30f8ca">setInternodeMaxRadius</a> (float internode_radius_max_new)</td></tr>
 <tr class="memdesc:a70aa0f62afdf829d9f2af6167d30f8ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the maximum radius of the internode.  <br /></td></tr>
 <tr class="separator:a70aa0f62afdf829d9f2af6167d30f8ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5720d1157b8f99aaa86bf6ea7a5e6d64" id="r_a5720d1157b8f99aaa86bf6ea7a5e6d64"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5720d1157b8f99aaa86bf6ea7a5e6d64">setLeafScaleFraction</a> (uint petiole_index, float leaf_scale_factor_fraction)</td></tr>
+<tr class="memitem:a5720d1157b8f99aaa86bf6ea7a5e6d64" id="r_a5720d1157b8f99aaa86bf6ea7a5e6d64"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5720d1157b8f99aaa86bf6ea7a5e6d64">setLeafScaleFraction</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, float leaf_scale_factor_fraction)</td></tr>
 <tr class="memdesc:a5720d1157b8f99aaa86bf6ea7a5e6d64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the leaf scale as a fraction of its total fully-elongated scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.  <br /></td></tr>
 <tr class="separator:a5720d1157b8f99aaa86bf6ea7a5e6d64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab089057c5102fd40a09a92d5a424bfdb" id="r_ab089057c5102fd40a09a92d5a424bfdb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab089057c5102fd40a09a92d5a424bfdb">setLeafScaleFraction</a> (float leaf_scale_factor_fraction)</td></tr>
 <tr class="memdesc:ab089057c5102fd40a09a92d5a424bfdb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the leaf scale as a fraction of its total fully-elongated scale factor for all petioles in the phytomer. Value is uniformly applied for all leaves/leaflets in the phytomer.  <br /></td></tr>
 <tr class="separator:ab089057c5102fd40a09a92d5a424bfdb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ee7b2bd314cfebe875b09f6128a5b45" id="r_a0ee7b2bd314cfebe875b09f6128a5b45"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0ee7b2bd314cfebe875b09f6128a5b45">setLeafPrototypeScale</a> (uint petiole_index, float leaf_prototype_scale)</td></tr>
+<tr class="memitem:a0ee7b2bd314cfebe875b09f6128a5b45" id="r_a0ee7b2bd314cfebe875b09f6128a5b45"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0ee7b2bd314cfebe875b09f6128a5b45">setLeafPrototypeScale</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, float leaf_prototype_scale)</td></tr>
 <tr class="memdesc:a0ee7b2bd314cfebe875b09f6128a5b45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the fully-elongated (maximum) leaf prototype scale. Value is uniformly applied for all leaves/leaflets in the petiole.  <br /></td></tr>
 <tr class="separator:a0ee7b2bd314cfebe875b09f6128a5b45"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae6bbbd7dcf85fb3b11062e2b0cb415e3" id="r_ae6bbbd7dcf85fb3b11062e2b0cb415e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae6bbbd7dcf85fb3b11062e2b0cb415e3">setLeafPrototypeScale</a> (float leaf_prototype_scale)</td></tr>
 <tr class="memdesc:ae6bbbd7dcf85fb3b11062e2b0cb415e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the fully-elongated (maximum) leaf prototype scale for all petioles in the phytomer. Value is uniformly applied for all leaves/leaflets in the petiole.  <br /></td></tr>
 <tr class="separator:ae6bbbd7dcf85fb3b11062e2b0cb415e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad6db5a357b8449910a19341dbb6f95fb" id="r_ad6db5a357b8449910a19341dbb6f95fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6db5a357b8449910a19341dbb6f95fb">scaleLeafPrototypeScale</a> (uint petiole_index, float scale_factor)</td></tr>
+<tr class="memitem:ad6db5a357b8449910a19341dbb6f95fb" id="r_ad6db5a357b8449910a19341dbb6f95fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6db5a357b8449910a19341dbb6f95fb">scaleLeafPrototypeScale</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, float scale_factor)</td></tr>
 <tr class="memdesc:ad6db5a357b8449910a19341dbb6f95fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scales the leaf prototype by the given scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.  <br /></td></tr>
 <tr class="separator:ad6db5a357b8449910a19341dbb6f95fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3221b2aca2b12fcb2c83997391c6d7b1" id="r_a3221b2aca2b12fcb2c83997391c6d7b1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3221b2aca2b12fcb2c83997391c6d7b1">scaleLeafPrototypeScale</a> (float scale_factor)</td></tr>
@@ -246,19 +246,19 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5e4e644f128df490344671e847fb31c2" id="r_a5e4e644f128df490344671e847fb31c2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e4e644f128df490344671e847fb31c2">setPetioleBase</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;base_position)</td></tr>
 <tr class="memdesc:a5e4e644f128df490344671e847fb31c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the base position of the petiole to the specified position.  <br /></td></tr>
 <tr class="separator:a5e4e644f128df490344671e847fb31c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a698f243e83c9d52282ac60f8e6d4afa9" id="r_a698f243e83c9d52282ac60f8e6d4afa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a698f243e83c9d52282ac60f8e6d4afa9">rotateLeaf</a> (uint petiole_index, uint leaf_index, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;rotation)</td></tr>
+<tr class="memitem:a698f243e83c9d52282ac60f8e6d4afa9" id="r_a698f243e83c9d52282ac60f8e6d4afa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a698f243e83c9d52282ac60f8e6d4afa9">rotateLeaf</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> leaf_index, const <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &amp;rotation)</td></tr>
 <tr class="memdesc:a698f243e83c9d52282ac60f8e6d4afa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotates a specified leaf around its base using the given rotation parameters.  <br /></td></tr>
 <tr class="separator:a698f243e83c9d52282ac60f8e6d4afa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b5659880128988e290b0084b775cc15" id="r_a1b5659880128988e290b0084b775cc15"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b5659880128988e290b0084b775cc15">setVegetativeBudState</a> (BudState state)</td></tr>
 <tr class="memdesc:a1b5659880128988e290b0084b775cc15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the vegetative bud state for all axillary vegetative buds in the phytomer.  <br /></td></tr>
 <tr class="separator:a1b5659880128988e290b0084b775cc15"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac875e12ad2a6d85e68fcac53f338d0b9" id="r_ac875e12ad2a6d85e68fcac53f338d0b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac875e12ad2a6d85e68fcac53f338d0b9">setVegetativeBudState</a> (BudState state, uint petiole_index, uint bud_index)</td></tr>
+<tr class="memitem:ac875e12ad2a6d85e68fcac53f338d0b9" id="r_ac875e12ad2a6d85e68fcac53f338d0b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac875e12ad2a6d85e68fcac53f338d0b9">setVegetativeBudState</a> (BudState state, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> bud_index)</td></tr>
 <tr class="memdesc:ac875e12ad2a6d85e68fcac53f338d0b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the state of a vegetative bud at the specified petiole and bud indices.  <br /></td></tr>
 <tr class="separator:ac875e12ad2a6d85e68fcac53f338d0b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b1d72e55ff65f9bd83b415b3ed34fc6" id="r_a1b1d72e55ff65f9bd83b415b3ed34fc6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b1d72e55ff65f9bd83b415b3ed34fc6">setFloralBudState</a> (BudState state)</td></tr>
 <tr class="memdesc:a1b1d72e55ff65f9bd83b415b3ed34fc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the floral bud state for all non-terminal buds.  <br /></td></tr>
 <tr class="separator:a1b1d72e55ff65f9bd83b415b3ed34fc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a433831209c45baebf77a4ce61192bc7b" id="r_a433831209c45baebf77a4ce61192bc7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a433831209c45baebf77a4ce61192bc7b">setFloralBudState</a> (BudState state, uint petiole_index, uint bud_index)</td></tr>
+<tr class="memitem:a433831209c45baebf77a4ce61192bc7b" id="r_a433831209c45baebf77a4ce61192bc7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a433831209c45baebf77a4ce61192bc7b">setFloralBudState</a> (BudState state, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> petiole_index, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> bud_index)</td></tr>
 <tr class="memdesc:a433831209c45baebf77a4ce61192bc7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the state of a specific floral bud.  <br /></td></tr>
 <tr class="separator:a433831209c45baebf77a4ce61192bc7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac012241d44bc67a7a2c933abc835e82d" id="r_ac012241d44bc67a7a2c933abc835e82d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac012241d44bc67a7a2c933abc835e82d">setFloralBudState</a> (BudState state, <a class="el" href="struct_floral_bud.html">FloralBud</a> &amp;fbud)</td></tr>
@@ -307,20 +307,20 @@ Data Fields</h2></td></tr>
 <tr class="separator:a79acd9100f568508b44f47f61d8a4991"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad86e3da23773f4e3108a64037ea41e58" id="r_ad86e3da23773f4e3108a64037ea41e58"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad86e3da23773f4e3108a64037ea41e58">petiole_colors</a></td></tr>
 <tr class="separator:ad86e3da23773f4e3108a64037ea41e58"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abef3a686bfd9f574adb2f734b10e5a63" id="r_abef3a686bfd9f574adb2f734b10e5a63"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; uint &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abef3a686bfd9f574adb2f734b10e5a63">petiole_objIDs</a></td></tr>
+<tr class="memitem:abef3a686bfd9f574adb2f734b10e5a63" id="r_abef3a686bfd9f574adb2f734b10e5a63"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abef3a686bfd9f574adb2f734b10e5a63">petiole_objIDs</a></td></tr>
 <tr class="separator:abef3a686bfd9f574adb2f734b10e5a63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a531bc3e78586bf997584ff6312e411eb" id="r_a531bc3e78586bf997584ff6312e411eb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; uint &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a531bc3e78586bf997584ff6312e411eb">leaf_objIDs</a></td></tr>
+<tr class="memitem:a531bc3e78586bf997584ff6312e411eb" id="r_a531bc3e78586bf997584ff6312e411eb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a531bc3e78586bf997584ff6312e411eb">leaf_objIDs</a></td></tr>
 <tr class="separator:a531bc3e78586bf997584ff6312e411eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac72b8ee6ab2dcbbfd92813d256d80835" id="r_ac72b8ee6ab2dcbbfd92813d256d80835"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_phytomer_parameters.html">PhytomerParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac72b8ee6ab2dcbbfd92813d256d80835">phytomer_parameters</a></td></tr>
 <tr class="separator:ac72b8ee6ab2dcbbfd92813d256d80835"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae8dcbfd69c7495a5fceb43a28c14756b" id="r_ae8dcbfd69c7495a5fceb43a28c14756b"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae8dcbfd69c7495a5fceb43a28c14756b">rank</a></td></tr>
+<tr class="memitem:ae8dcbfd69c7495a5fceb43a28c14756b" id="r_ae8dcbfd69c7495a5fceb43a28c14756b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae8dcbfd69c7495a5fceb43a28c14756b">rank</a></td></tr>
 <tr class="separator:ae8dcbfd69c7495a5fceb43a28c14756b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa35d5da6c2d3ae761d1b4ce491db2e17" id="r_aa35d5da6c2d3ae761d1b4ce491db2e17"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int3.html">helios::int3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa35d5da6c2d3ae761d1b4ce491db2e17">shoot_index</a></td></tr>
 <tr class="memdesc:aa35d5da6c2d3ae761d1b4ce491db2e17"><td class="mdescLeft">&#160;</td><td class="mdescRight">.x = index of phytomer along shoot, .y = current number of phytomers on parent shoot, .z = maximum number of phytomers on parent shoot  <br /></td></tr>
 <tr class="separator:aa35d5da6c2d3ae761d1b4ce491db2e17"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa2bc27aaa5c5a7b994be3f6b0f097237" id="r_aa2bc27aaa5c5a7b994be3f6b0f097237"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa2bc27aaa5c5a7b994be3f6b0f097237">plantID</a></td></tr>
+<tr class="memitem:aa2bc27aaa5c5a7b994be3f6b0f097237" id="r_aa2bc27aaa5c5a7b994be3f6b0f097237"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa2bc27aaa5c5a7b994be3f6b0f097237">plantID</a></td></tr>
 <tr class="separator:aa2bc27aaa5c5a7b994be3f6b0f097237"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6c3f84acb2922307042497801542ced9" id="r_a6c3f84acb2922307042497801542ced9"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c3f84acb2922307042497801542ced9">parent_shoot_ID</a></td></tr>
+<tr class="memitem:a6c3f84acb2922307042497801542ced9" id="r_a6c3f84acb2922307042497801542ced9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c3f84acb2922307042497801542ced9">parent_shoot_ID</a></td></tr>
 <tr class="separator:a6c3f84acb2922307042497801542ced9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad0579ca045eb78ab945e6af11d419f50" id="r_ad0579ca045eb78ab945e6af11d419f50"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_shoot.html">Shoot</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad0579ca045eb78ab945e6af11d419f50">parent_shoot_ptr</a></td></tr>
 <tr class="separator:ad0579ca045eb78ab945e6af11d419f50"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -382,7 +382,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>phytomer_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>phytomer_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -427,7 +427,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>rank</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>rank</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -491,7 +491,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">float Phytomer::calculatePhytomerVolume </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>node_number</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>node_number</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -812,12 +812,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> Phytomer::getLeafBasePosition </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>leaf_index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>leaf_index</em></span>&#160;) const</td>
         </tr>
       </table>
   </td>
@@ -858,7 +858,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>&#160;) const</td>
         </tr>
       </table>
   </td>
@@ -973,12 +973,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void Phytomer::rotateLeaf </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>leaf_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>leaf_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1066,7 +1066,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void Phytomer::scaleLeafPrototypeScale </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1162,12 +1162,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>bud_index</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>bud_index</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1340,7 +1340,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void Phytomer::setLeafPrototypeScale </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1399,7 +1399,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void Phytomer::setLeafScaleFraction </td>
           <td>(</td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1491,12 +1491,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>petiole_index</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>bud_index</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>bud_index</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1870,7 +1870,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;std::vector&lt;uint&gt; &gt; Phytomer::leaf_objIDs</td>
+          <td class="memname">std::vector&lt;std::vector&lt;<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&gt; &gt; Phytomer::leaf_objIDs</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1934,7 +1934,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Phytomer::parent_shoot_ID</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Phytomer::parent_shoot_ID</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -2014,7 +2014,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;std::vector&lt;uint&gt; &gt; Phytomer::petiole_objIDs</td>
+          <td class="memname">std::vector&lt;std::vector&lt;<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&gt; &gt; Phytomer::petiole_objIDs</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -2096,7 +2096,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Phytomer::plantID</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Phytomer::plantID</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -2112,7 +2112,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Phytomer::rank</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Phytomer::rank</td>
         </tr>
       </table>
 </div><div class="memdoc">
