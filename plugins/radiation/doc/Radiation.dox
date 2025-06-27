@@ -165,7 +165,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadTwoSided Area Basis for Calculating Fluxes
 
- The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the \ref helios::Primitive::getArea() function).
+ The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the \ref helios::Context::getPrimitiveArea(uint) function).
 
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
@@ -650,7 +650,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
- 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref helios::CameraCalibration::addCustomColorboard().
+ 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method ef CameraCalibration::addDefaultColorboard(), or a custom color board ef CameraCalibration::addColorboard().
 
  \subsection RadRun Running Simulations
 

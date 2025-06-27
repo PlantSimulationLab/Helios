@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -232,13 +232,13 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
 <div class="foldopen" id="foldopen00081" data-start="{" data-end="}">
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559">   81</a></span>uint <a class="code hl_function" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559" title="Construct a Weber-Penn tree using a tree already in the library.">WeberPennTree::buildTree</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* treename, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin  ){</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559">   81</a></span><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> <a class="code hl_function" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559" title="Construct a Weber-Penn tree using a tree already in the library.">WeberPennTree::buildTree</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* treename, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin  ){</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>  <span class="keywordflow">return</span> <a class="code hl_function" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559" title="Construct a Weber-Penn tree using a tree already in the library.">buildTree</a>(treename,origin,1);</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>}</div>
 </div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span> </div>
 <div class="foldopen" id="foldopen00085" data-start="{" data-end="}">
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#af1dc9499df0c1cc26f3d0c5782da10bd">   85</a></span>uint <a class="code hl_function" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559" title="Construct a Weber-Penn tree using a tree already in the library.">WeberPennTree::buildTree</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* treename, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin, <span class="keywordtype">float</span> scale  ){</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#af1dc9499df0c1cc26f3d0c5782da10bd">   85</a></span><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> <a class="code hl_function" href="class_weber_penn_tree.html#a49f706c54cbf91ea5c40fb247d4e3559" title="Construct a Weber-Penn tree using a tree already in the library.">WeberPennTree::buildTree</a>( <span class="keyword">const</span> <span class="keywordtype">char</span>* treename, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin, <span class="keywordtype">float</span> scale  ){</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  <span class="keywordflow">if</span>( trees_library.find(treename)==trees_library.end() ){</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::buildTree): Tree &quot;</span> &lt;&lt; treename &lt;&lt; <span class="stringliteral">&quot; does not exist in the tree library.&quot;</span> &lt;&lt; std::endl;</div>
@@ -247,7 +247,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <a class="code hl_struct" href="struct_weber_penn_tree_parameters.html">WeberPennTreeParameters</a> parameters = trees_library.at(treename);</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>  uint TreeID = UUID_trunk.size();</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> TreeID = UUID_trunk.size();</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>  UUID_trunk.resize(TreeID+1);</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>  UUID_branch.resize(TreeID+1);</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>  UUID_leaf.resize(TreeID+1);</div>
@@ -264,13 +264,13 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="preprocessor">  #endif</span></div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>  }</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>  uint ID_leaf_template = context-&gt;addTileObject( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,M_PI), leaf_segs, parameters.LeafFile.c_str() );</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID_leaf_template = context-&gt;addTileObject( <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(parameters.LeafScale*scale, parameters.LeafScale*parameters.LeafScaleX*scale), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0,<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>), leaf_segs, parameters.LeafFile.c_str() );</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>     </div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>  uint base_nodes = 20;</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> base_nodes = 20;</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0);</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>  uint n;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> n;</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>  <span class="keywordtype">float</span> z, theta, phi;</div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>  </div>
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>  std::vector&lt;vec3&gt; nodes;</div>
@@ -280,7 +280,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>  <span class="comment">// --- Main trunk ---- //</span></div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>  <span class="comment">// Vectors to be passed to &quot;addTube()&quot;</span></div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>  uint node_length;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> node_length;</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>  <span class="keywordflow">if</span>( parameters.BaseSplits == 0 ){</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    node_length = parameters.nCurveRes.at(0)+1;</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  }<span class="keywordflow">else</span>{</div>
@@ -299,10 +299,10 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>  <span class="keywordtype">float</span> dlength0;</div>
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>  <span class="comment">// Total number of stems along trunk</span></div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  uint stems = parameters.nBranches.at(1);</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> stems = parameters.nBranches.at(1);</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>  </div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>  <span class="comment">// Number of stems per trunk segment</span></div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>  uint stems_per_segment = round(<span class="keywordtype">float</span>(stems)/<span class="keywordtype">float</span>(parameters.nCurveRes.at(0)));</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> stems_per_segment = round(<span class="keywordtype">float</span>(stems)/<span class="keywordtype">float</span>(parameters.nCurveRes.at(0)));</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>  <span class="comment">//first (0) node of trunk @ ground</span></div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>  nodes.at(0) = center;</div>
@@ -315,11 +315,11 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>  <span class="comment">//Make base of trunk (region between ground and split or first branches)</span></div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>  theta = 1e-5;</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>  phi = getVariation(2.f*M_PI);</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>  phi = getVariation(2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>);</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>  uint base_splits = parameters.BaseSplits;</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> base_splits = parameters.BaseSplits;</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>  <span class="keywordflow">if</span>( base_splits &gt; 0 &amp;&amp; parameters.BaseSplitsV &gt; 0 )</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    base_splits += <span class="keyword">static_cast&lt;</span>uint<span class="keyword">&gt;</span>(round(getVariation(parameters.BaseSplitsV)));</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    base_splits += <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a><span class="keyword">&gt;</span>(round(getVariation(parameters.BaseSplitsV)));</div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span> </div>
 <div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>  <span class="keywordtype">float</span> base_split_size = parameters.BaseSplitSize;</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>  <span class="keywordflow">if</span>( base_split_size &gt; 0 &amp;&amp; parameters.BaseSplitSizeV &gt; 0 )</div>
@@ -343,7 +343,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>      base0 = base_size;</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    }</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keywordflow">for</span>( uint i=1; i&lt;base_nodes; i++ ){</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=1; i&lt;base_nodes; i++ ){</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>      <span class="comment">//nodes.at(i) = nodes.at(i-1) + rotatePoint( make_vec3( 0, 0, length0*(1-parameters.BaseSize)/parameters.nCurveRes.at(0) ), theta, phi );</span></div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>      nodes.at(i) = nodes.at(i-1) + <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>( 0, 0, length0*base0/<span class="keywordtype">float</span>(base_nodes) );</div>
@@ -362,9 +362,9 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    </div>
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="keywordtype">float</span> phi_split = 0;<span class="comment">//getVariation(2.f*M_PI);</span></div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    </div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="keywordflow">for</span>( uint j=0; j&lt;base_splits+1; j++ ){ <span class="comment">//looping over clones (splits)</span></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> j=0; j&lt;base_splits+1; j++ ){ <span class="comment">//looping over clones (splits)</span></div>
 <div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span> </div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>      <span class="keywordtype">float</span> angle_split = (parameters.nSplitAngle.at(0)-getVariation(parameters.nSplitAngleV.at(0)))*M_PI/180.f;</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>      <span class="keywordtype">float</span> angle_split = (parameters.nSplitAngle.at(0)-getVariation(parameters.nSplitAngleV.at(0)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>      </div>
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>      <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> current_normal = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
@@ -373,7 +373,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>      recursiveBranch( parameters, 0, 0, base_position, current_normal, child_rotation, length0-offset_child, radius.at(base_nodes-1), offset_child, origin, scale, ID_leaf_template, base_size, base_splits );</div>
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>      </div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>      <span class="comment">//phi_split += (20+0.75*120*pow(getVariation(1),2))*M_PI/180.f;</span></div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>      phi_split += 2.f*M_PI/float(base_splits+1);</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>      phi_split += 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/float(base_splits+1);</div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span> </div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    }</div>
@@ -382,10 +382,10 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    dlength0 = length0/float(parameters.nCurveRes.at(0));</div>
 <div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordtype">float</span> phi_child = getVariation(2.f*M_PI);</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordtype">float</span> phi_child = getVariation(2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>);</div>
 <div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    <span class="comment">// Loop over trunk segments 1-0CurveRes</span></div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    <span class="keywordflow">for</span>( uint i=1; i&lt;parameters.nCurveRes.at(0); i++ ){</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=1; i&lt;parameters.nCurveRes.at(0); i++ ){</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>      <span class="comment">//---- nodes ----//      </span></div>
 <div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
@@ -422,11 +422,11 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>      <span class="keywordflow">if</span>( parameters.Levels&gt;0 &amp;&amp; Zplus&gt;=base_size ){</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>      </div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="keywordflow">for</span>( uint s=0; s&lt;stems_per_segment; s++ ){</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> s=0; s&lt;stems_per_segment; s++ ){</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    </div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>      <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> base_position = nodes.at(i-1) + (nodes.at(i)-nodes.at(i-1))*float(s+0.5)/float(stems_per_segment);</div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>      </div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>      <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(1)+getVariation(parameters.nDownAngleV.at(1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>      <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(1)+getVariation(parameters.nDownAngleV.at(1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>      <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> child_rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(downangle,phi_child);</div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>      </div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>      <span class="keywordtype">float</span> radius_parent = radius.at(i-1)+base_position.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>/length0*(radius.at(i)-radius.at(i-1));</div>
@@ -435,7 +435,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>      <span class="keywordtype">float</span> base_nodes = floor(base_size*parameters.nCurveRes.at(0));</div>
 <div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>      <span class="keywordtype">float</span> offset_child = (Zminus-base_size)*length0+<span class="keywordtype">float</span>(s+0.5)/float(stems_per_segment-1)*dlength0;</div>
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span> </div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>      phi_child += (parameters.nRotate.at(1)+getVariation(parameters.nRotateV.at(1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>      phi_child += (parameters.nRotate.at(1)+getVariation(parameters.nRotateV.at(1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
 <div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>      <span class="keywordflow">if</span>( offset_child&gt;0 ){</div>
 <div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        recursiveBranch( parameters, 1, 0, base_position, current_normal, child_rotation, length0, radius_parent, offset_child, origin, scale, ID_leaf_template, base_size, base_splits );</div>
@@ -444,14 +444,14 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    }</div>
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>      }</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>      </div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>      theta += (-parameters.nCurve.at(0)+getVariation(parameters.nCurveV.at(0)))/float(parameters.nCurveRes.at(0))*M_PI/180.f;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>      theta += (-parameters.nCurve.at(0)+getVariation(parameters.nCurveV.at(0)))/float(parameters.nCurveRes.at(0))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    </div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    }</div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span> </div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>  }</div>
 <div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>  <span class="comment">//shift to origin</span></div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>  <span class="keywordflow">for</span>( uint i=0; i&lt;nodes.size(); i++ ){</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;nodes.size(); i++ ){</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    nodes.at(i) = nodes.at(i) + origin;</div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>  }</div>
 <div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span> </div>
@@ -479,7 +479,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>  <span class="comment">//context-&gt;deletePrimitive( UUID_leaf_template );</span></div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>  context-&gt;deleteObject( ID_leaf_template );</div>
 <div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span> </div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>  uint flag=1;</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> flag=1;</div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>  <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> i=0; i&lt;UUID_leaf.at(TreeID).size(); i++ ){</div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    context-&gt;setPrimitiveData(UUID_leaf.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>,1,&amp;flag);</div>
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>  }</div>
@@ -495,7 +495,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>}</div>
 </div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span><span class="keywordtype">void</span> WeberPennTree::recursiveBranch( <a class="code hl_struct" href="struct_weber_penn_tree_parameters.html">WeberPennTreeParameters</a> parameters, uint n, uint seg_start, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> base_position, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> parent_normal, <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> child_rotation, <span class="keywordtype">float</span> length_parent, <span class="keywordtype">float</span> radius_parent, <span class="keywordtype">float</span> offset_child, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin, <span class="keywordtype">float</span> scale, <span class="keyword">const</span> uint leaf_template, <span class="keywordtype">float</span> base_size, uint base_splits ){</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span><span class="keywordtype">void</span> WeberPennTree::recursiveBranch( <a class="code hl_struct" href="struct_weber_penn_tree_parameters.html">WeberPennTreeParameters</a> parameters, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> n, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> seg_start, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> base_position, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> parent_normal, <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> child_rotation, <span class="keywordtype">float</span> length_parent, <span class="keywordtype">float</span> radius_parent, <span class="keywordtype">float</span> offset_child, <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> origin, <span class="keywordtype">float</span> scale, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> leaf_template, <span class="keywordtype">float</span> base_size, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> base_splits ){</div>
 <div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span> </div>
 <div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>  <span class="keywordflow">if</span>( n&lt;parameters.Levels ){ <span class="comment">//Branches</span></div>
 <div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span> </div>
@@ -558,7 +558,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    assert( dlength_child&gt;=0 );</div>
 <div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span> </div>
 <div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="comment">// Total number of stems along branch</span></div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    uint stems;</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> stems;</div>
 <div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    <span class="keywordflow">if</span>( n==parameters.Levels-1 ){ <span class="comment">//leaves</span></div>
 <div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>      <span class="comment">//stems = 2.f*round(parameters.Leaves*ShapeRatio(4,ratio));</span></div>
 <div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>      <span class="comment">//-- testing here --//</span></div>
@@ -569,7 +569,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    }</div>
 <div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>    </div>
 <div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    <span class="comment">// Number of stems per branch segment</span></div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    uint stems_per_segment = round(<span class="keywordtype">float</span>(stems)/<span class="keywordtype">float</span>(parameters.nCurveRes.at(n)));</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> stems_per_segment = round(<span class="keywordtype">float</span>(stems)/<span class="keywordtype">float</span>(parameters.nCurveRes.at(n)));</div>
 <div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>    </div>
 <div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>    <span class="comment">// First node</span></div>
 <div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    <span class="keywordflow">if</span>( n==0 ){</div>
@@ -584,11 +584,11 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span> </div>
 <div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    SphericalCoord parent_rotation = <a class="code hl_function" href="group__functions.html#ga32a34b00e0a28f4b35e501b8b34cfccd" title="Convert Cartesian coordinates to spherical coordinates.">cart2sphere</a>(parent_normal);</div>
 <div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span> </div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    <span class="keywordtype">float</span> phi = getVariation(2.f*M_PI);</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    <span class="keywordtype">float</span> phi_child = getVariation(2.f*M_PI);</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    <span class="keywordtype">float</span> phi = getVariation(2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>);</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    <span class="keywordtype">float</span> phi_child = getVariation(2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>);</div>
 <div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span> </div>
 <div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    <span class="comment">// Loop over branch segments 1-0CurveRes</span></div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    <span class="keywordflow">for</span>( uint i=seg_start+1; i&lt;parameters.nCurveRes.at(n)+1; i++ ){</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=seg_start+1; i&lt;parameters.nCurveRes.at(n)+1; i++ ){</div>
 <div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>      </div>
 <div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>      <span class="comment">//---- radius ----//</span></div>
 <div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>      </div>
@@ -621,9 +621,9 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span>      </div>
 <div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>      <span class="comment">// ---Branch recursion ---- //</span></div>
 <div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>      </div>
-<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>      <span class="keywordflow">for</span>( uint s=0; s&lt;stems_per_segment; s++ ){</div>
+<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>      <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> s=0; s&lt;stems_per_segment; s++ ){</div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span> </div>
-<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>    child_rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906" title="Radius.">radius</a>, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a> + (parameters.nCurve.at(n)+getVariation(parameters.nCurveV.at(n)))/<span class="keywordtype">float</span>(parameters.nCurveRes.at(n))/<span class="keywordtype">float</span>(stems_per_segment)*M_PI/180.f, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>);</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>    child_rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a017f345f74aeaa332cdd36b66b22c906" title="Radius.">radius</a>, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a> + (parameters.nCurve.at(n)+getVariation(parameters.nCurveV.at(n)))/<span class="keywordtype">float</span>(parameters.nCurveRes.at(n))/<span class="keywordtype">float</span>(stems_per_segment)*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f, child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>);</div>
 <div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span> </div>
 <div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span>    <span class="keywordtype">float</span> theta_child = child_rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#abaa336d9a00b67f486ab1ff040420a73" title="Elevation angle (radians)">elevation</a>;</div>
 <div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>      </div>
@@ -647,15 +647,15 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span>    </div>
 <div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>        <span class="keywordtype">float</span> offset_child = dlength_child*(i-seg_start-1)+dlength_child*<span class="keywordtype">float</span>(s)/float(stems_per_segment);</div>
 <div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span> </div>
-<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>        <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(n+1)+getVariation(parameters.nDownAngleV.at(n+1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>        <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(n+1)+getVariation(parameters.nDownAngleV.at(n+1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>        SphericalCoord rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(downangle,phi_child);</div>
 <div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>    </div>
 <div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>        recursiveBranch( parameters, n+1, 0, base_position, normal, rotation, length_child, radius_p, offset_child, origin, scale, leaf_template, base_size, base_splits );</div>
 <div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span> </div>
 <div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>    <span class="keywordflow">if</span>( n == parameters.Levels-1 ){<span class="comment">//leaves</span></div>
-<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>      phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>      phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    }<span class="keywordflow">else</span>{<span class="comment">//branches</span></div>
-<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>      phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>      phi_child += (parameters.nRotate.at(n+1)+getVariation(parameters.nRotateV.at(n+1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>    }</div>
 <div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span> </div>
 <div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>      }</div>
@@ -663,15 +663,15 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>      <span class="comment">// if nSegSplits&gt;0, split into children and terminate current branch</span></div>
 <div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>      <span class="keywordflow">if</span>( parameters.nSegSplits.at(n)&gt;0 &amp;&amp; i&lt;parameters.nCurveRes.at(n) ){</div>
 <div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span> </div>
-<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keywordtype">float</span> angle_split = (parameters.nSplitAngle.at(n+1)-getVariation(parameters.nSplitAngleV.at(n+1)))*M_PI/180.f;</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keywordtype">float</span> angle_split = (parameters.nSplitAngle.at(n+1)-getVariation(parameters.nSplitAngleV.at(n+1)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    </div>
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>    vec3 base_position = nodes.back();</div>
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    </div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    <span class="keywordtype">float</span> phi_split = 2.f*M_PI*getVariation(1);</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    <span class="keywordtype">float</span> phi_split = 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*getVariation(1);</div>
 <div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span> </div>
 <div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    <span class="keywordtype">float</span> radius_p = radius.at(i-seg_start);</div>
 <div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    </div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordflow">for</span>( uint j=0; j&lt;parameters.nSegSplits.at(n)+1; j++ ){ <span class="comment">//looping over clones (splits)</span></div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> j=0; j&lt;parameters.nSegSplits.at(n)+1; j++ ){ <span class="comment">//looping over clones (splits)</span></div>
 <div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>      </div>
 <div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>      vec3 normal = nodes.at(i-seg_start)-nodes.at(i-seg_start-1);</div>
 <div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>      normal.<a class="code hl_function" href="structhelios_1_1vec3.html#a7a6826239394edc32ce6ae58b4622524" title="Normalize vector components such that the magnitude is unity.">normalize</a>();</div>
@@ -680,7 +680,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>      </div>
 <div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>      recursiveBranch( parameters, n, i, base_position, normal, rotation, length_parent, radius_p, offset_child, origin, scale, leaf_template, base_size, base_splits );</div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>      </div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>      phi_split += 2.f*M_PI/float(parameters.nSegSplits.at(n)+1);</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>      phi_split += 2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/float(parameters.nSegSplits.at(n)+1);</div>
 <div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>      </div>
 <div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    }</div>
 <div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>    </div>
@@ -691,7 +691,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span> </div>
 <div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>    <span class="keywordflow">if</span>( n&lt;=branchLevels ){</div>
 <div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>      <span class="comment">//shift to origin</span></div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>      <span class="keywordflow">for</span>( uint i=0; i&lt;nodes.size(); i++ ){</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>      <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;nodes.size(); i++ ){</div>
 <div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    nodes.at(i) = nodes.at(i) + origin;</div>
 <div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>      }</div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span> </div>
@@ -716,23 +716,23 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>    <span class="comment">//shift to origin</span></div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    position = position + origin;</div>
 <div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span> </div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(n)+getVariation(parameters.nDownAngleV.at(n)))*M_PI/180.f;</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <span class="keywordtype">float</span> downangle = (parameters.nDownAngle.at(n)+getVariation(parameters.nDownAngleV.at(n)))*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180.f;</div>
 <div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span> </div>
 <div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    <span class="comment">//calculate leaf angle from distibution</span></div>
 <div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>    <span class="keywordflow">if</span>( parameters.leafAngleCDF.size()&gt;0 ){</div>
 <div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>      <span class="keywordtype">float</span> rt = context-&gt;randu();</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>      <span class="keywordtype">float</span> dTheta = M_PI/float(parameters.leafAngleCDF.size());</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>      <span class="keywordtype">float</span> dTheta = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/float(parameters.leafAngleCDF.size());</div>
 <div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>      <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;parameters.leafAngleCDF.size(); i++ ){</div>
 <div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>    <span class="keywordflow">if</span>( rt&lt;parameters.leafAngleCDF.at(i) ){</div>
 <div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>      <span class="keywordtype">float</span> theta = (i+context-&gt;randu())*dTheta;</div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>      rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(theta,context-&gt;randu()*2.f*M_PI);</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>      rotation = <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(theta,context-&gt;randu()*2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>);</div>
 <div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>      <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>    }</div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>      }</div>
 <div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    }</div>
 <div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span> </div>
 <div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    <span class="comment">//add to Context</span></div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    uint ID = context-&gt;copyObject( leaf_template );</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID = context-&gt;copyObject( leaf_template );</div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    std::vector&lt;uint&gt; UUIDs = context-&gt;getObjectPointer(ID)-&gt;getPrimitiveUUIDs();</div>
 <div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>    UUID_leaf.back().insert( UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end() ); </div>
 <div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>      </div>
@@ -743,18 +743,18 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>      context-&gt;getObjectPointer(ID)-&gt;translate(position);</div>
 <div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    }<span class="keywordflow">else</span>{</div>
 <div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span> </div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( M_PI, <span class="stringliteral">&quot;x&quot;</span> ); <span class="comment">//flip leaf (this is so lighting looks right based on leaf normal)</span></div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>, <span class="stringliteral">&quot;x&quot;</span> ); <span class="comment">//flip leaf (this is so lighting looks right based on leaf normal)</span></div>
 <div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span> </div>
 <div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>      <span class="comment">//rotate leaf so the tip is pointing in the same direction as the branch</span></div>
-<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( 0.5*M_PI - rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643" title="Zenithal angle (radians)">zenith</a>, <span class="stringliteral">&quot;y&quot;</span> );</div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( -0.5*M_PI - rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>, <span class="stringliteral">&quot;z&quot;</span> );</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( 0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> - rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643" title="Zenithal angle (radians)">zenith</a>, <span class="stringliteral">&quot;y&quot;</span> );</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> - rotation.<a class="code hl_variable" href="structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59" title="Azimuthal angle (radians)">azimuth</a>, <span class="stringliteral">&quot;z&quot;</span> );</div>
 <div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span> </div>
 <div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>      vec3 lnorm = context-&gt;getTileObjectPointer(ID)-&gt;getNormal(); <span class="comment">// current leaf normal vector</span></div>
 <div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>      vec3 pvec = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>( parent_normal, lnorm );</div>
 <div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
 <div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>      <span class="comment">//rotate leaf based on downangle</span></div>
 <div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>      <span class="keywordflow">if</span>( downangle&lt;0.f ){</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    downangle = M_PI+downangle;</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    downangle = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+downangle;</div>
 <div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>      }</div>
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>      context-&gt;getObjectPointer(ID)-&gt;rotate( -downangle, pvec );</div>
 <div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span> </div>
@@ -775,14 +775,14 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span> </div>
 <div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>}</div>
 <div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span> </div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span><span class="keywordtype">float</span> WeberPennTree::ShapeRatio( uint shape, <span class="keywordtype">float</span> ratio ){</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span><span class="keywordtype">float</span> WeberPennTree::ShapeRatio( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> shape, <span class="keywordtype">float</span> ratio ){</div>
 <div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span> </div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>  <span class="keywordflow">if</span>( shape==0 ){ <span class="comment">//conical</span></div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>    <span class="keywordflow">return</span> 0.2+0.8*ratio;</div>
 <div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( shape==1 ){ <span class="comment">//spherical</span></div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    <span class="keywordflow">return</span> 0.2+0.8*sin(M_PI*ratio);</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    <span class="keywordflow">return</span> 0.2+0.8*sin(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*ratio);</div>
 <div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( shape==2 ){ <span class="comment">//hemispherical</span></div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    <span class="keywordflow">return</span> 0.2+0.8*sin(0.5*M_PI*ratio);</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    <span class="keywordflow">return</span> 0.2+0.8*sin(0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*ratio);</div>
 <div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( shape==3 ){ <span class="comment">//cylindrical</span></div>
 <div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    <span class="keywordflow">return</span> 1.f;</div>
 <div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>  }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( shape==4 ){ <span class="comment">//tapered cylinder</span></div>
@@ -818,7 +818,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>}</div>
 <div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span> </div>
 <div class="foldopen" id="foldopen00663" data-start="{" data-end="}">
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#ab247d9368368263dfdded18a43917f98">  663</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#ab247d9368368263dfdded18a43917f98" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree trunk.">WeberPennTree::getTrunkUUIDs</a>( <span class="keyword">const</span> uint TreeID ){</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#ab247d9368368263dfdded18a43917f98">  663</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#ab247d9368368263dfdded18a43917f98" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree trunk.">WeberPennTree::getTrunkUUIDs</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> TreeID ){</div>
 <div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span> </div>
 <div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>  <span class="keywordflow">if</span>( TreeID &gt;= UUID_trunk.size() ){</div>
 <div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::getTrunkUUIDs): Tree ID &quot;</span> &lt;&lt; TreeID &lt;&lt; <span class="stringliteral">&quot; does not exist.&quot;</span> &lt;&lt; std::endl;</div>
@@ -830,7 +830,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span> </div>
 <div class="foldopen" id="foldopen00673" data-start="{" data-end="}">
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a813cb8959272b535050dc97aa49d3ed3">  673</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#a813cb8959272b535050dc97aa49d3ed3" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree branches.">WeberPennTree::getBranchUUIDs</a>( <span class="keyword">const</span> uint TreeID ){</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a813cb8959272b535050dc97aa49d3ed3">  673</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#a813cb8959272b535050dc97aa49d3ed3" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree branches.">WeberPennTree::getBranchUUIDs</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> TreeID ){</div>
 <div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span> </div>
 <div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>  <span class="keywordflow">if</span>( TreeID &gt;= UUID_branch.size() ){</div>
 <div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::getBranchUUIDs): Tree ID &quot;</span> &lt;&lt; TreeID &lt;&lt; <span class="stringliteral">&quot; does not exist.&quot;</span> &lt;&lt; std::endl;</div>
@@ -842,7 +842,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span> </div>
 <div class="foldopen" id="foldopen00683" data-start="{" data-end="}">
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5">  683</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree leaves.">WeberPennTree::getLeafUUIDs</a>( <span class="keyword">const</span> uint TreeID ){</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5">  683</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#af4368c1f900503f6d72f0c0e569fe8e5" title="Get the unique universal identifiers (UUIDs) for the primitives that make up the tree leaves.">WeberPennTree::getLeafUUIDs</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> TreeID ){</div>
 <div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span> </div>
 <div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>  <span class="keywordflow">if</span>( TreeID &gt;= UUID_leaf.size() ){</div>
 <div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::getLeafUUIDs): Tree ID &quot;</span> &lt;&lt; TreeID &lt;&lt; <span class="stringliteral">&quot; does not exist.&quot;</span> &lt;&lt; std::endl;</div>
@@ -854,7 +854,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span> </div>
 <div class="foldopen" id="foldopen00693" data-start="{" data-end="}">
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a19e16f9a51493680afebc38f3c434400">  693</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#a19e16f9a51493680afebc38f3c434400" title="Get the unique universal identifiers (UUIDs) for all primitives that make up the tree.">WeberPennTree::getAllUUIDs</a>( <span class="keyword">const</span> uint TreeID ){</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a19e16f9a51493680afebc38f3c434400">  693</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_weber_penn_tree.html#a19e16f9a51493680afebc38f3c434400" title="Get the unique universal identifiers (UUIDs) for all primitives that make up the tree.">WeberPennTree::getAllUUIDs</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> TreeID ){</div>
 <div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span> </div>
 <div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>  <span class="keywordflow">if</span>( TreeID &gt;= UUID_leaf.size() ){</div>
 <div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::getAllUUIDs): Tree ID &quot;</span> &lt;&lt; TreeID &lt;&lt; <span class="stringliteral">&quot; does not exist.&quot;</span> &lt;&lt; std::endl;</div>
@@ -870,13 +870,13 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span> </div>
 <div class="foldopen" id="foldopen00707" data-start="{" data-end="}">
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522">  707</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522" title="Only create branch primitives up to a certain recursion level (leaves are still created for all level...">WeberPennTree::setBranchRecursionLevel</a>( <span class="keyword">const</span> uint level ){</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522">  707</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522" title="Only create branch primitives up to a certain recursion level (leaves are still created for all level...">WeberPennTree::setBranchRecursionLevel</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> level ){</div>
 <div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>  branchLevels = level;</div>
 <div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>}</div>
 </div>
 <div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span> </div>
 <div class="foldopen" id="foldopen00711" data-start="{" data-end="}">
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#ab7ee7dfc8e8d599ea6875203af7ec002">  711</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#ab7ee7dfc8e8d599ea6875203af7ec002" title="Set the radial triangle subdivisions for trunks.">WeberPennTree::setTrunkSegmentResolution</a>( <span class="keyword">const</span> uint segs ){</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#ab7ee7dfc8e8d599ea6875203af7ec002">  711</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#ab7ee7dfc8e8d599ea6875203af7ec002" title="Set the radial triangle subdivisions for trunks.">WeberPennTree::setTrunkSegmentResolution</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> segs ){</div>
 <div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>  <span class="keywordflow">if</span>( segs&lt;3 ){</div>
 <div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (WeberPennTree::setTrunkSegmentResolution): cannot set trunk segment resolution less than 3. Ignoring this command.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>  }<span class="keywordflow">else</span>{</div>
@@ -886,7 +886,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span> </div>
 <div class="foldopen" id="foldopen00719" data-start="{" data-end="}">
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a8b39281ab94cb9d77bcc4aa67a226796">  719</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a8b39281ab94cb9d77bcc4aa67a226796" title="Set the radial triangle subdivisions for branches.">WeberPennTree::setBranchSegmentResolution</a>( <span class="keyword">const</span> uint segs ){</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a8b39281ab94cb9d77bcc4aa67a226796">  719</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a8b39281ab94cb9d77bcc4aa67a226796" title="Set the radial triangle subdivisions for branches.">WeberPennTree::setBranchSegmentResolution</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> segs ){</div>
 <div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>  <span class="keywordflow">if</span>( segs&lt;3 ){</div>
 <div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (WeberPennTree::setBranchSegmentResolution): cannot set branch segment resolution less than 3. Ignoring this command.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>  }<span class="keywordflow">else</span>{</div>
@@ -932,7 +932,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 </div>
 <div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span> </div>
 <div class="foldopen" id="foldopen00757" data-start="{" data-end="}">
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a8a9df18ae61815739063b0baff142f9d">  757</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a8a9df18ae61815739063b0baff142f9d" title="Seed the random number generator. This can be useful for generating repeatable trees,...">WeberPennTree::seedRandomGenerator</a>( <span class="keyword">const</span> uint seed ){</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno"><a class="line" href="class_weber_penn_tree.html#a8a9df18ae61815739063b0baff142f9d">  757</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_weber_penn_tree.html#a8a9df18ae61815739063b0baff142f9d" title="Seed the random number generator. This can be useful for generating repeatable trees,...">WeberPennTree::seedRandomGenerator</a>( <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> seed ){</div>
 <div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>  generator.seed(seed);</div>
 <div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>}</div>
 </div>
@@ -1035,7 +1035,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    <span class="keywordflow">if</span>( strlen(basesplitsv_str)==0 ){</div>
 <div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>      params.BaseSplitsV = 0;</div>
 <div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>      uint bsv = atoi(basesplitsv_str);</div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>      <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> bsv = atoi(basesplitsv_str);</div>
 <div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>      <span class="keywordflow">if</span> ( params.BaseSplits - bsv &lt; 0 ){</div>
 <div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;failed.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR (WeberPennTree::loadXML): Given BaseSplitsV (&quot;</span> &lt;&lt; bsv &lt;&lt; <span class="stringliteral">&quot;) is too big for tree &quot;</span> &lt;&lt; label &lt;&lt; <span class="stringliteral">&quot;. BaseSplits - BaseSplitsV should be positive.&quot;</span> &lt;&lt; std::endl;</div>
@@ -1611,7 +1611,7 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l01431" name="l01431"></a><span class="lineno"> 1431</span>    }</div>
 <div class="line"><a id="l01432" name="l01432"></a><span class="lineno"> 1432</span>    <span class="comment">//calculate leaf angle CDF</span></div>
 <div class="line"><a id="l01433" name="l01433"></a><span class="lineno"> 1433</span>    <span class="keywordflow">if</span>( leafAngleDist.size()&gt;0 ){</div>
-<div class="line"><a id="l01434" name="l01434"></a><span class="lineno"> 1434</span>      <span class="keywordtype">float</span> dTheta = M_PI/float(leafAngleDist.size());</div>
+<div class="line"><a id="l01434" name="l01434"></a><span class="lineno"> 1434</span>      <span class="keywordtype">float</span> dTheta = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/float(leafAngleDist.size());</div>
 <div class="line"><a id="l01435" name="l01435"></a><span class="lineno"> 1435</span>      params.leafAngleCDF.resize( leafAngleDist.size() );</div>
 <div class="line"><a id="l01436" name="l01436"></a><span class="lineno"> 1436</span>      <span class="keywordtype">float</span> tsum = 0;</div>
 <div class="line"><a id="l01437" name="l01437"></a><span class="lineno"> 1437</span>      <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;leafAngleDist.size(); i++ ){</div>

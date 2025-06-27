@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -429,7 +429,7 @@ Running the Steady-State Model</h2>
 <div class="line">    <span class="comment">// Add `Patch&#39; primitive</span></div>
 <div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_energy_balance_model.html" title="Energy balance model class.">EnergyBalanceModel</a> energybalance(&amp;context);</div>
 <div class="line"> </div>
@@ -473,11 +473,11 @@ Unsteady model with heat storage</h3>
 <div class="line">   <span class="comment">// Add one &#39;Patch&#39; primitive</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
-<div class="line">   uint UUID1 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID1 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Add a second `Patch&#39; primitive</span></div>
 <div class="line">   center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2,0,1);</div>
-<div class="line">   uint UUID2 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID2 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Set the heat capacity of the first patch so that the unsteady energy balance model will be run</span></div>
 <div class="line">   <span class="keywordtype">float</span> Cp = 10000; <span class="comment">//J/m^2-oC</span></div>

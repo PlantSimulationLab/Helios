@@ -1,0 +1,1196 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: PlantHydraulicsModel Class Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.37</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('class_plant_hydraulics_model.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
+  <div class="headertitle"><div class="title">PlantHydraulicsModel Class Reference</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>PlantHydraulics model class.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:acab25f541a25a9aa1a663eaeb7fb6e60" id="r_acab25f541a25a9aa1a663eaeb7fb6e60"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acab25f541a25a9aa1a663eaeb7fb6e60">PlantHydraulicsModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
+<tr class="memdesc:acab25f541a25a9aa1a663eaeb7fb6e60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
+<tr class="separator:acab25f541a25a9aa1a663eaeb7fb6e60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5a921cd4d362da05cda21e056284179" id="r_ad5a921cd4d362da05cda21e056284179"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad5a921cd4d362da05cda21e056284179">setModelCoefficients</a> (const <a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients)</td></tr>
+<tr class="memdesc:ad5a921cd4d362da05cda21e056284179"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the PlantHydraulics model coefficients for all primitives.  <br /></td></tr>
+<tr class="separator:ad5a921cd4d362da05cda21e056284179"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a00373c1a4adebd6f54b6afb7ae85fcab" id="r_a00373c1a4adebd6f54b6afb7ae85fcab"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a00373c1a4adebd6f54b6afb7ae85fcab">setModelCoefficients</a> (const <a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a00373c1a4adebd6f54b6afb7ae85fcab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the PlantHydraulics model coefficients for a subset of primitives based on their UUIDs.  <br /></td></tr>
+<tr class="separator:a00373c1a4adebd6f54b6afb7ae85fcab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77a9792c8ebe9e95aff2531c33b81755" id="r_a77a9792c8ebe9e95aff2531c33b81755"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77a9792c8ebe9e95aff2531c33b81755">setModelCoefficientsFromLibrary</a> (const std::string &amp;species, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:a77a9792c8ebe9e95aff2531c33b81755"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the species from the library of species coefficients.  <br /></td></tr>
+<tr class="separator:a77a9792c8ebe9e95aff2531c33b81755"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e5fe159e96b23a77c68f917fdddf5cf" id="r_a6e5fe159e96b23a77c68f917fdddf5cf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e5fe159e96b23a77c68f917fdddf5cf">setModelCoefficientsFromLibrary</a> (const std::string &amp;species)</td></tr>
+<tr class="memdesc:a6e5fe159e96b23a77c68f917fdddf5cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the PlantHydraulics model coefficients for all primitives.  <br /></td></tr>
+<tr class="separator:a6e5fe159e96b23a77c68f917fdddf5cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03f9952185b34338e05cf5fb8a68d67f" id="r_a03f9952185b34338e05cf5fb8a68d67f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03f9952185b34338e05cf5fb8a68d67f">setModelCoefficientsFromLibrary</a> (const std::string &amp;species, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a03f9952185b34338e05cf5fb8a68d67f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the PlantHydraulics model coefficients for a subset of primitives based on their UUIDs and the name of the species from the library of species coefficients.  <br /></td></tr>
+<tr class="separator:a03f9952185b34338e05cf5fb8a68d67f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa887808bd121fe1274412c8ce8a36ee3" id="r_aa887808bd121fe1274412c8ce8a36ee3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa887808bd121fe1274412c8ce8a36ee3">getModelCoefficientsFromLibrary</a> (const std::string &amp;species)</td></tr>
+<tr class="memdesc:aa887808bd121fe1274412c8ce8a36ee3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the PlantHydraulics model coefficients for a species from the library of species coefficients.  <br /></td></tr>
+<tr class="separator:aa887808bd121fe1274412c8ce8a36ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5706b7814682d1e4f7f774e43107b1a" id="r_ad5706b7814682d1e4f7f774e43107b1a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad5706b7814682d1e4f7f774e43107b1a">getModelCoefficients</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:ad5706b7814682d1e4f7f774e43107b1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the PlantHydraulics model coefficients for a primitive based on its UUID.  <br /></td></tr>
+<tr class="separator:ad5706b7814682d1e4f7f774e43107b1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1c1fb1768c21adc54fabbe51c7c7a76" id="r_ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1c1fb1768c21adc54fabbe51c7c7a76">getOrInitializePrimitiveData</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID, const std::string &amp;primitive_data_label, float default_value, bool message_flag)</td></tr>
+<tr class="memdesc:ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check for existing primitive data, and set default value if it does not exist.  <br /></td></tr>
+<tr class="separator:ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a822bfb2681f1a55400b880eef057b4" id="r_a9a822bfb2681f1a55400b880eef057b4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9a822bfb2681f1a55400b880eef057b4">getUniquePlantIDs</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a9a822bfb2681f1a55400b880eef057b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query the unique plantIDs of leaf primitives.  <br /></td></tr>
+<tr class="separator:a9a822bfb2681f1a55400b880eef057b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29a7c6d6e8ad7083e9b961860ff29b27" id="r_a29a7c6d6e8ad7083e9b961860ff29b27"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29a7c6d6e8ad7083e9b961860ff29b27">getPlantID</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:a29a7c6d6e8ad7083e9b961860ff29b27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the plantID primitive data of a leaf primitive.  <br /></td></tr>
+<tr class="separator:a29a7c6d6e8ad7083e9b961860ff29b27"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb7073a94feecf11aa33ff080c70dd7f" id="r_acb7073a94feecf11aa33ff080c70dd7f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb7073a94feecf11aa33ff080c70dd7f">getPlantID</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:acb7073a94feecf11aa33ff080c70dd7f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the plantID primitive data of leaf primitives.  <br /></td></tr>
+<tr class="separator:acb7073a94feecf11aa33ff080c70dd7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4023e3bb07bcbf6d01487430a5e4cba" id="r_ab4023e3bb07bcbf6d01487430a5e4cba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab4023e3bb07bcbf6d01487430a5e4cba">outputConductancePrimitiveData</a> (bool toggle)</td></tr>
+<tr class="memdesc:ab4023e3bb07bcbf6d01487430a5e4cba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle the writing out of optional primitive data - hydraulic conductance.  <br /></td></tr>
+<tr class="separator:ab4023e3bb07bcbf6d01487430a5e4cba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d479e3d31becec145ad67324753d493" id="r_a5d479e3d31becec145ad67324753d493"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5d479e3d31becec145ad67324753d493">outputCapacitancePrimitiveData</a> (bool toggle)</td></tr>
+<tr class="memdesc:a5d479e3d31becec145ad67324753d493"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle the writing out of optional primitive data - hydraulic capacitance.  <br /></td></tr>
+<tr class="separator:a5d479e3d31becec145ad67324753d493"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9dbad0931560f408812c49097afd2b24" id="r_a9dbad0931560f408812c49097afd2b24"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9dbad0931560f408812c49097afd2b24">groupPrimitivesIntoPlantObject</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a9dbad0931560f408812c49097afd2b24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Group leaf primitives into a plant that share stem, root, and soil hydraulics.  <br /></td></tr>
+<tr class="separator:a9dbad0931560f408812c49097afd2b24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a00d965751037afaafa09dac580fd53b3" id="r_a00d965751037afaafa09dac580fd53b3"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a00d965751037afaafa09dac580fd53b3">getStemWaterPotentialOfPlant</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> plantID)</td></tr>
+<tr class="memdesc:a00d965751037afaafa09dac580fd53b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the stem water potential of a plant given its plantID.  <br /></td></tr>
+<tr class="separator:a00d965751037afaafa09dac580fd53b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbb09a215f6a807b1cd274ea992d8721" id="r_afbb09a215f6a807b1cd274ea992d8721"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbb09a215f6a807b1cd274ea992d8721">getStemWaterPotential</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:afbb09a215f6a807b1cd274ea992d8721"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the stem water potential of a leaf primitive given its UUID.  <br /></td></tr>
+<tr class="separator:afbb09a215f6a807b1cd274ea992d8721"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab050550784e9b3b12c5d9d3ff7822e63" id="r_ab050550784e9b3b12c5d9d3ff7822e63"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab050550784e9b3b12c5d9d3ff7822e63">getStemWaterPotential</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:ab050550784e9b3b12c5d9d3ff7822e63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the stem water potential of the leaf primitives of one plant.  <br /></td></tr>
+<tr class="separator:ab050550784e9b3b12c5d9d3ff7822e63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab8bbc1fb73d1222b58a3824506fc208a" id="r_ab8bbc1fb73d1222b58a3824506fc208a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab8bbc1fb73d1222b58a3824506fc208a">getRootWaterPotentialOfPlant</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> plantID)</td></tr>
+<tr class="memdesc:ab8bbc1fb73d1222b58a3824506fc208a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the root water potential of a plant given its plantID.  <br /></td></tr>
+<tr class="separator:ab8bbc1fb73d1222b58a3824506fc208a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ec9309646baef05fd5b564ea185fa09" id="r_a8ec9309646baef05fd5b564ea185fa09"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ec9309646baef05fd5b564ea185fa09">getRootWaterPotential</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:a8ec9309646baef05fd5b564ea185fa09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the root water potential of a leaf primitive given its UUID.  <br /></td></tr>
+<tr class="separator:a8ec9309646baef05fd5b564ea185fa09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa979fc21cbbd052108ec0818889c0666" id="r_aa979fc21cbbd052108ec0818889c0666"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa979fc21cbbd052108ec0818889c0666">getRootWaterPotential</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:aa979fc21cbbd052108ec0818889c0666"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the root water potential of the leaf primitives of one plant.  <br /></td></tr>
+<tr class="separator:aa979fc21cbbd052108ec0818889c0666"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a886c7e7b4a02992036410994a14f4c21" id="r_a886c7e7b4a02992036410994a14f4c21"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a886c7e7b4a02992036410994a14f4c21">getSoilWaterPotentialOfPlant</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> plantID)</td></tr>
+<tr class="memdesc:a886c7e7b4a02992036410994a14f4c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the soil water potential of a plant given its plantID.  <br /></td></tr>
+<tr class="separator:a886c7e7b4a02992036410994a14f4c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a307d9ccc5af00f60d0c4e9e58877081a" id="r_a307d9ccc5af00f60d0c4e9e58877081a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a307d9ccc5af00f60d0c4e9e58877081a">getSoilWaterPotential</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:a307d9ccc5af00f60d0c4e9e58877081a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the soil water potential of a leaf primitive given its UUID.  <br /></td></tr>
+<tr class="separator:a307d9ccc5af00f60d0c4e9e58877081a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b3acf5aa180b715470aa870e0b6aecd" id="r_a0b3acf5aa180b715470aa870e0b6aecd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b3acf5aa180b715470aa870e0b6aecd">getSoilWaterPotential</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a0b3acf5aa180b715470aa870e0b6aecd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the soil water potential of the leaf primitives of one plant.  <br /></td></tr>
+<tr class="separator:a0b3acf5aa180b715470aa870e0b6aecd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18332626b5f94563a12c2a76f9cebac3" id="r_a18332626b5f94563a12c2a76f9cebac3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18332626b5f94563a12c2a76f9cebac3">setSoilWaterPotentialOfPlant</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> plantID, float soil_water_potential)</td></tr>
+<tr class="memdesc:a18332626b5f94563a12c2a76f9cebac3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the soil water potential of a plant given its plantID.  <br /></td></tr>
+<tr class="separator:a18332626b5f94563a12c2a76f9cebac3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa453a7854225bba47f363280d40f3e30" id="r_aa453a7854225bba47f363280d40f3e30"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa453a7854225bba47f363280d40f3e30">getPrimitivesWithoutPlantID</a> (std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; UUIDs)</td></tr>
+<tr class="memdesc:aa453a7854225bba47f363280d40f3e30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the primitives without plantID parent object data.  <br /></td></tr>
+<tr class="separator:aa453a7854225bba47f363280d40f3e30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade095e1eb07599fbb183ca85256bcb5a" id="r_ade095e1eb07599fbb183ca85256bcb5a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade095e1eb07599fbb183ca85256bcb5a">run</a> (int timespan, int timestep)</td></tr>
+<tr class="memdesc:ade095e1eb07599fbb183ca85256bcb5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with primitive data "plantID".  <br /></td></tr>
+<tr class="separator:ade095e1eb07599fbb183ca85256bcb5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a506353d1ff124bff3d620e4157eff06a" id="r_a506353d1ff124bff3d620e4157eff06a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a506353d1ff124bff3d620e4157eff06a">run</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID, int timespan=0, int timestep=100)</td></tr>
+<tr class="memdesc:a506353d1ff124bff3d620e4157eff06a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the model for a primitive based on its UUID for a given timespan and timestep.  <br /></td></tr>
+<tr class="separator:a506353d1ff124bff3d620e4157eff06a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30593be441d04e1b5c30a8ad77363407" id="r_a30593be441d04e1b5c30a8ad77363407"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30593be441d04e1b5c30a8ad77363407">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, int timespan=0, int timestep=100)</td></tr>
+<tr class="memdesc:a30593be441d04e1b5c30a8ad77363407"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the model for a primitives based on their UUIDs for a given timespan and timestep.  <br /></td></tr>
+<tr class="separator:a30593be441d04e1b5c30a8ad77363407"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:ac8f3910cd207ed9bb1df39a975fe254e" id="r_ac8f3910cd207ed9bb1df39a975fe254e"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac8f3910cd207ed9bb1df39a975fe254e">selfTest</a> ()</td></tr>
+<tr class="memdesc:ac8f3910cd207ed9bb1df39a975fe254e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs a self-test of the PlantHydraulicsModel, verifying its functionality.  <br /></td></tr>
+<tr class="separator:ac8f3910cd207ed9bb1df39a975fe254e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>PlantHydraulics model class. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00434">434</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="acab25f541a25a9aa1a663eaeb7fb6e60" name="acab25f541a25a9aa1a663eaeb7fb6e60"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acab25f541a25a9aa1a663eaeb7fb6e60">&#9670;&#160;</a></span>PlantHydraulicsModel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">PlantHydraulicsModel::PlantHydraulicsModel </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Constructor. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00130">130</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="ad5706b7814682d1e4f7f774e43107b1a" name="ad5706b7814682d1e4f7f774e43107b1a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5706b7814682d1e4f7f774e43107b1a">&#9670;&#160;</a></span>getModelCoefficients()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> PlantHydraulicsModel::getModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the PlantHydraulics model coefficients for a primitive based on its UUID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier for primitive to be set. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00190">190</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa887808bd121fe1274412c8ce8a36ee3" name="aa887808bd121fe1274412c8ce8a36ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa887808bd121fe1274412c8ce8a36ee3">&#9670;&#160;</a></span>getModelCoefficientsFromLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> PlantHydraulicsModel::getModelCoefficientsFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>species</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the PlantHydraulics model coefficients for a species from the library of species coefficients. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>String of species name in library of model coefficients. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00167">167</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab1c1fb1768c21adc54fabbe51c7c7a76" name="ab1c1fb1768c21adc54fabbe51c7c7a76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1c1fb1768c21adc54fabbe51c7c7a76">&#9670;&#160;</a></span>getOrInitializePrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getOrInitializePrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>primitive_data_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>default_value</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>message_flag</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Check for existing primitive data, and set default value if it does not exist. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Primitive UUID </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">primitive_data_label</td><td>String label of primitive data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">default_value</td><td>Default value to be set if primitive data does not exist </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">message_flag</td><td>Toggle printed message warning that existing data does not exist and default value has been used </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float primitive data </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00195">195</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="acb7073a94feecf11aa33ff080c70dd7f" name="acb7073a94feecf11aa33ff080c70dd7f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb7073a94feecf11aa33ff080c70dd7f">&#9670;&#160;</a></span>getPlantID() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int PlantHydraulicsModel::getPlantID </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the plantID primitive data of leaf primitives. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Leaf primitives </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>int plantID The primitives shared plantID, if exists </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00450">450</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a29a7c6d6e8ad7083e9b961860ff29b27" name="a29a7c6d6e8ad7083e9b961860ff29b27"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29a7c6d6e8ad7083e9b961860ff29b27">&#9670;&#160;</a></span>getPlantID() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int PlantHydraulicsModel::getPlantID </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the plantID primitive data of a leaf primitive. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Leaf primitive </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>int plantID The primitive's plantID </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00444">444</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa453a7854225bba47f363280d40f3e30" name="aa453a7854225bba47f363280d40f3e30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa453a7854225bba47f363280d40f3e30">&#9670;&#160;</a></span>getPrimitivesWithoutPlantID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; PlantHydraulicsModel::getPrimitivesWithoutPlantID </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the primitives without plantID parent object data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Universal unique identifiers for primitives to checked for plantID parent object data </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>std::vector&lt;uint&gt; ungroupedPrimitives The UUIDs of primitives without plantID parent object data </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00533">533</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa979fc21cbbd052108ec0818889c0666" name="aa979fc21cbbd052108ec0818889c0666"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa979fc21cbbd052108ec0818889c0666">&#9670;&#160;</a></span>getRootWaterPotential() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getRootWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the root water potential of the leaf primitives of one plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Leaf primitive UUIDs of a plant </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float root_water_potential The shared root water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00505">505</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8ec9309646baef05fd5b564ea185fa09" name="a8ec9309646baef05fd5b564ea185fa09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ec9309646baef05fd5b564ea185fa09">&#9670;&#160;</a></span>getRootWaterPotential() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getRootWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the root water potential of a leaf primitive given its UUID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Leaf primitive UUID </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float root_water_potential The root water potential of the plant of a leaf primitive </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab8bbc1fb73d1222b58a3824506fc208a" name="ab8bbc1fb73d1222b58a3824506fc208a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8bbc1fb73d1222b58a3824506fc208a">&#9670;&#160;</a></span>getRootWaterPotentialOfPlant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getRootWaterPotentialOfPlant </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>plantID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the root water potential of a plant given its plantID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>The plant ID of a collection of primitives </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float root_water_potential The shared root water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00511">511</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0b3acf5aa180b715470aa870e0b6aecd" name="a0b3acf5aa180b715470aa870e0b6aecd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b3acf5aa180b715470aa870e0b6aecd">&#9670;&#160;</a></span>getSoilWaterPotential() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getSoilWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the soil water potential of the leaf primitives of one plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Leaf primitive UUIDs of a plant </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The shared soil water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00520">520</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a307d9ccc5af00f60d0c4e9e58877081a" name="a307d9ccc5af00f60d0c4e9e58877081a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a307d9ccc5af00f60d0c4e9e58877081a">&#9670;&#160;</a></span>getSoilWaterPotential() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getSoilWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the soil water potential of a leaf primitive given its UUID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Leaf primitive UUID </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The soil water potential of the plant of a leaf primitive </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00515">515</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a886c7e7b4a02992036410994a14f4c21" name="a886c7e7b4a02992036410994a14f4c21"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a886c7e7b4a02992036410994a14f4c21">&#9670;&#160;</a></span>getSoilWaterPotentialOfPlant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getSoilWaterPotentialOfPlant </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>plantID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the soil water potential of a plant given its plantID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>The plant ID of a collection of primitives </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The shared soil water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00525">525</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab050550784e9b3b12c5d9d3ff7822e63" name="ab050550784e9b3b12c5d9d3ff7822e63"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab050550784e9b3b12c5d9d3ff7822e63">&#9670;&#160;</a></span>getStemWaterPotential() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getStemWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the stem water potential of the leaf primitives of one plant. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Leaf primitive UUIDs of a plant </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The shared stem water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00491">491</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afbb09a215f6a807b1cd274ea992d8721" name="afbb09a215f6a807b1cd274ea992d8721"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbb09a215f6a807b1cd274ea992d8721">&#9670;&#160;</a></span>getStemWaterPotential() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getStemWaterPotential </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the stem water potential of a leaf primitive given its UUID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Leaf primitive UUID </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The stem water potential of the plant of a leaf primitive </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00486">486</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a00d965751037afaafa09dac580fd53b3" name="a00d965751037afaafa09dac580fd53b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a00d965751037afaafa09dac580fd53b3">&#9670;&#160;</a></span>getStemWaterPotentialOfPlant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantHydraulicsModel::getStemWaterPotentialOfPlant </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>plantID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the stem water potential of a plant given its plantID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>The plant ID of a collection of primitives </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The shared stem water potential of a plant </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00496">496</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9a822bfb2681f1a55400b880eef057b4" name="a9a822bfb2681f1a55400b880eef057b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a822bfb2681f1a55400b880eef057b4">&#9670;&#160;</a></span>getUniquePlantIDs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; int &gt; PlantHydraulicsModel::getUniquePlantIDs </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Query the unique plantIDs of leaf primitives. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>List of leaf primitives who have plantID primitive data </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>std::vector&lt;int&gt; plantIDs List of unique plantIDs found in the input leaf primitive data </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00471">471</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9dbad0931560f408812c49097afd2b24" name="a9dbad0931560f408812c49097afd2b24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9dbad0931560f408812c49097afd2b24">&#9670;&#160;</a></span>groupPrimitivesIntoPlantObject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::groupPrimitivesIntoPlantObject </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Group leaf primitives into a plant that share stem, root, and soil hydraulics. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Leaf primitives </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00437">437</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5d479e3d31becec145ad67324753d493" name="a5d479e3d31becec145ad67324753d493"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d479e3d31becec145ad67324753d493">&#9670;&#160;</a></span>outputCapacitancePrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::outputCapacitancePrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>toggle</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Toggle the writing out of optional primitive data - hydraulic capacitance. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">toggle</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00433">433</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab4023e3bb07bcbf6d01487430a5e4cba" name="ab4023e3bb07bcbf6d01487430a5e4cba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4023e3bb07bcbf6d01487430a5e4cba">&#9670;&#160;</a></span>outputConductancePrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::outputConductancePrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>toggle</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Toggle the writing out of optional primitive data - hydraulic conductance. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">toggle</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00429">429</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a30593be441d04e1b5c30a8ad77363407" name="a30593be441d04e1b5c30a8ad77363407"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30593be441d04e1b5c30a8ad77363407">&#9670;&#160;</a></span>run() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::run </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timespan</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timestep</em></span><span class="paramdefsep"> = </span><span class="paramdefval">100</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run the model for a primitives based on their UUIDs for a given timespan and timestep. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Universal unique identifiers for primitives to be run the model on. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">timespan</td><td>Timespan in seconds of simulation run </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">timestep</td><td>Timestep in seconds of simulation run </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>A timespan of "0" will enact steady-state simulation, while a timespan &gt; 0 will run the non-steady-state simulation </dd>
+<dd>
+UUIDs with the same primitive data "plantID" will be assumed to be a collection of a single plant's leaves, with one shared stem, root, and soil water potential </dd>
+<dd>
+All plantIDs within given UUIDs will have the model separately run on them </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00594">594</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ade095e1eb07599fbb183ca85256bcb5a" name="ade095e1eb07599fbb183ca85256bcb5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade095e1eb07599fbb183ca85256bcb5a">&#9670;&#160;</a></span>run() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::run </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timespan</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timestep</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with primitive data "plantID". </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">timespan</td><td>Timespan in seconds of simulation run </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">timestep</td><td>Timestep in seconds of simulation run </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>A timespan of "0" will enact steady-state simulation, while a timespan &gt; 0 will run the non-steady-state simulation. </dd>
+<dd>
+All UUIDs in context with primitive data "plantID" will be assumed to be a collection of a single plant's leaves, with one shared stem, root, and soil water potential </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00559">559</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a506353d1ff124bff3d620e4157eff06a" name="a506353d1ff124bff3d620e4157eff06a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a506353d1ff124bff3d620e4157eff06a">&#9670;&#160;</a></span>run() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::run </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timespan</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>timestep</em></span><span class="paramdefsep"> = </span><span class="paramdefval">100</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run the model for a primitive based on its UUID for a given timespan and timestep. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier for primitive to be set. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">timespan</td><td>Timespan in seconds of simulation run </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">timestep</td><td>Timestep in seconds of simulation run </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>A timespan of "0" will enact steady-state simulation, while a timespan &gt; 0 will run the non-steady-state simulation. </dd>
+<dd>
+UUID is assumed to be a single leaf, with one stem, root, and soil water potential </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00582">582</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac8f3910cd207ed9bb1df39a975fe254e" name="ac8f3910cd207ed9bb1df39a975fe254e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac8f3910cd207ed9bb1df39a975fe254e">&#9670;&#160;</a></span>selfTest()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int PlantHydraulicsModel::selfTest </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Runs a self-test of the PlantHydraulicsModel, verifying its functionality. </p>
+<p>The self-test executes a series of internal tests, validating critical methods and functionalities of the PlantHydraulicsModel. Errors encountered during the process are counted and reported.</p>
+<dl class="section return"><dt>Returns</dt><dd>The number of errors encountered during the self-test. Returns 0 if all tests pass successfully. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="plugins_2planthydraulics_2src_2self_test_8cpp_source.html#l00020">20</a> of file <a class="el" href="plugins_2planthydraulics_2src_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad5a921cd4d362da05cda21e056284179" name="ad5a921cd4d362da05cda21e056284179"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5a921cd4d362da05cda21e056284179">&#9670;&#160;</a></span>setModelCoefficients() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>modelcoefficients</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the PlantHydraulics model coefficients for all primitives. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">modelcoefficients</td><td>Set of model coefficients. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to setModelCoefficients(). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00134">134</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a00373c1a4adebd6f54b6afb7ae85fcab" name="a00373c1a4adebd6f54b6afb7ae85fcab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a00373c1a4adebd6f54b6afb7ae85fcab">&#9670;&#160;</a></span>setModelCoefficients() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setModelCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>modelcoefficients</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the PlantHydraulics model coefficients for a subset of primitives based on their UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">modelcoefficients</td><td>Set of model coefficients. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Universal unique identifiers for primitives to be set. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The model type will be set based on the most recent call to setModelCoefficients(). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00139">139</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6e5fe159e96b23a77c68f917fdddf5cf" name="a6e5fe159e96b23a77c68f917fdddf5cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e5fe159e96b23a77c68f917fdddf5cf">&#9670;&#160;</a></span>setModelCoefficientsFromLibrary() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setModelCoefficientsFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>species</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the PlantHydraulics model coefficients for all primitives. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>String of species name in library of model coefficients. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00145">145</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a03f9952185b34338e05cf5fb8a68d67f" name="a03f9952185b34338e05cf5fb8a68d67f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03f9952185b34338e05cf5fb8a68d67f">&#9670;&#160;</a></span>setModelCoefficientsFromLibrary() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setModelCoefficientsFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>species</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the PlantHydraulics model coefficients for a subset of primitives based on their UUIDs and the name of the species from the library of species coefficients. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>String of species name in library of model coefficients. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Universal unique identifiers for primitives to be set. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00158">158</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a77a9792c8ebe9e95aff2531c33b81755" name="a77a9792c8ebe9e95aff2531c33b81755"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77a9792c8ebe9e95aff2531c33b81755">&#9670;&#160;</a></span>setModelCoefficientsFromLibrary() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setModelCoefficientsFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>species</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the species from the library of species coefficients. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>String of species name in library of model coefficients. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>Universal unique identifier for primitive to be set. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00152">152</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a18332626b5f94563a12c2a76f9cebac3" name="a18332626b5f94563a12c2a76f9cebac3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18332626b5f94563a12c2a76f9cebac3">&#9670;&#160;</a></span>setSoilWaterPotentialOfPlant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModel::setSoilWaterPotentialOfPlant </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>plantID</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>soil_water_potential</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the soil water potential of a plant given its plantID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>The plant ID of a collection of primitives </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">soil_water_potential</td><td>The shared soil water potential of a plant </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00529">529</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>plugins/planthydraulics/include/<a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a></li>
+<li>plugins/planthydraulics/src/<a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a></li>
+<li>plugins/planthydraulics/src/<a class="el" href="plugins_2planthydraulics_2src_2self_test_8cpp_source.html">selfTest.cpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="class_plant_hydraulics_model.html">PlantHydraulicsModel</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

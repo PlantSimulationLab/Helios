@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -195,7 +195,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">float</span> errtol = 0.001f;</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    uint UUID = context_test.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context_test.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <a class="code hl_function" href="class_photosynthesis_model.html#a2cfdf33f994c6b6cb84432dcb7e57b3b" title="Default constructor.">PhotosynthesisModel</a> photomodel(&amp;context_test);</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
@@ -329,7 +329,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="foldopen" id="foldopen00172" data-start="{" data-end="}">
 <div class="line"><a id="l00172" name="l00172"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#a5a17e8185dd7ad90b4d155bb4f610d85">  172</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">PhotosynthesisModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> &amp;modelcoefficients,</div>
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>                                               <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        empiricalmodel_coefficients[UUID] = modelcoefficients;</div>
 <div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    }</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    model = <span class="stringliteral">&quot;empirical&quot;</span>;</div>
@@ -347,7 +347,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="foldopen" id="foldopen00186" data-start="{" data-end="}">
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#a37ee0175960589edf257726c2a3e0356">  186</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_photosynthesis_model.html#a80a8bb51f617da1a7e2d03a67890bf1d" title="Set the empirical model coefficients for all primitives.">PhotosynthesisModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> &amp;modelcoefficients,</div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>                                               <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        farquharmodel_coefficients[UUID] = modelcoefficients;</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    }</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    model = <span class="stringliteral">&quot;farquhar&quot;</span>;</div>
@@ -361,7 +361,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>               modelcoefficients.size(), UUIDs.size());</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    }</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="keywordflow">for</span> (uint i = 0; i &lt; UUIDs.size(); i++) {</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; UUIDs.size(); i++) {</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        farquharmodel_coefficients[UUIDs.at(i)] = modelcoefficients.at(i);</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    }</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    model = <span class="stringliteral">&quot;farquhar&quot;</span>;</div>
@@ -382,7 +382,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#afc73dbd1a744c6f4aae456349e040b27">  214</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_photosynthesis_model.html#a3e47f7c5fe8100cf93ba9454b911bba4" title="Set the Farquhar-von Caemmerer-Berry model coefficients for all primitives based on a species from th...">PhotosynthesisModel::setFarquharCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> fmc;</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    fmc = <a class="code hl_function" href="class_photosynthesis_model.html#ae40570ef642d5d4dc070dce9ba093f16" title="Get Farquhar-von Caemmerer-Berry model coefficients for a species from the library.">getFarquharCoefficientsFromLibrary</a>(species);</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        farquharmodel_coefficients[UUID] = fmc;</div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    }</div>
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    model = <span class="stringliteral">&quot;farquhar&quot;</span>;</div>
@@ -524,7 +524,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="foldopen" id="foldopen00351" data-start="{" data-end="}">
 <div class="line"><a id="l00351" name="l00351"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#a837fd2c9c8a84c584e31c5cf3ce7de89">  351</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_photosynthesis_model.html#abb06ce82388d1147e720c3591f9d17b6" title="Run the model for all UUIDs in the Context.">PhotosynthesisModel::run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;lUUIDs) {</div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordflow">for</span> (uint UUID: lUUIDs) {</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: lUUIDs) {</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="keywordtype">float</span> i_PAR;</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        <span class="keywordflow">if</span> (context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) &amp;&amp;</div>
@@ -585,9 +585,9 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>        }</div>
 <div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span> </div>
 <div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        <span class="comment">//Number of sides</span></div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        uint Nsides = 2; <span class="comment">//default is 2</span></div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nsides = 2; <span class="comment">//default is 2</span></div>
 <div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a> ){</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>            uint flag;</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> flag;</div>
 <div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>            context-&gt;getPrimitiveData(UUID,<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>            <span class="keywordflow">if</span>( flag==0 ){</div>
 <div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>                Nsides=1;</div>
@@ -898,7 +898,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>}</div>
 <div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span> </div>
 <div class="foldopen" id="foldopen00725" data-start="{" data-end="}">
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#a86094d579852c2dc846acc2a97e6ac44">  725</a></span><a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> <a class="code hl_function" href="class_photosynthesis_model.html#a86094d579852c2dc846acc2a97e6ac44" title="Get the current model coefficients for the empirical model.">PhotosynthesisModel::getEmpiricalModelCoefficients</a>(uint UUID) {</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#a86094d579852c2dc846acc2a97e6ac44">  725</a></span><a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> <a class="code hl_function" href="class_photosynthesis_model.html#a86094d579852c2dc846acc2a97e6ac44" title="Get the current model coefficients for the empirical model.">PhotosynthesisModel::getEmpiricalModelCoefficients</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
 <div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span> </div>
 <div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>    <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> coeffs;</div>
 <div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    <span class="keywordflow">if</span> (empiricalmodel_coefficients.empty() ||</div>
@@ -914,7 +914,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 </div>
 <div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span> </div>
 <div class="foldopen" id="foldopen00739" data-start="{" data-end="}">
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#aeab92cd73298c5f89626b30ce8c41cf9">  739</a></span><a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> <a class="code hl_function" href="class_photosynthesis_model.html#aeab92cd73298c5f89626b30ce8c41cf9" title="Get the current model coefficients for the Farquhar-von Caemmerer-Berry model.">PhotosynthesisModel::getFarquharModelCoefficients</a>(uint UUID) {</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno"><a class="line" href="class_photosynthesis_model.html#aeab92cd73298c5f89626b30ce8c41cf9">  739</a></span><a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> <a class="code hl_function" href="class_photosynthesis_model.html#aeab92cd73298c5f89626b30ce8c41cf9" title="Get the current model coefficients for the Farquhar-von Caemmerer-Berry model.">PhotosynthesisModel::getFarquharModelCoefficients</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
 <div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
 <div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> coeffs;</div>
 <div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    <span class="keywordflow">if</span> (farquharmodel_coefficients.empty() ||</div>
@@ -972,7 +972,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span> </div>
 <div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="keywordtype">size_t</span> Nprimitives = UUIDs.size();</div>
 <div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span> </div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span> </div>
 <div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        <span class="keywordflow">if</span> (!context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) ||</div>
 <div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>            context-&gt;getPrimitiveDataType(UUID, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) != <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>) {</div>

@@ -90,5 +90,6 @@ var searchData=
   ['location_87',['Location',['../structhelios_1_1_location.html',1,'helios::Location'],['../structhelios_1_1_location.html#a15dfbb1d375999d28e857fca72e12b74',1,'helios::Location::Location()'],['../structhelios_1_1_location.html#aa91915971c5c6f75a99540b5517bea2b',1,'helios::Location::Location(float latitude_deg, float longitude_deg, float UTC_offset)']]],
   ['longitude_5fdeg_88',['longitude_deg',['../structhelios_1_1_location.html#a29c4f6f1b7453821766f833673eeaff3',1,'helios::Location']]],
   ['longitudinal_5fcurvature_89',['longitudinal_curvature',['../struct_leaf_prototype.html#af14f092796a2c241521be4f50cad1552',1,'LeafPrototype']]],
-  ['longwave_20flux_90',['Longwave Flux',['../_solar_position_doc.html#LWTheory',1,'Ambient Longwave Flux'],['../_solar_position_doc.html#LWFlux',1,'Getting the Sky Longwave Flux']]]
+  ['longwave_20flux_90',['Longwave Flux',['../_solar_position_doc.html#LWTheory',1,'Ambient Longwave Flux'],['../_solar_position_doc.html#LWFlux',1,'Getting the Sky Longwave Flux']]],
+  ['luminance_91',['luminance',['../struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f',1,'RadiationCamera']]]
 ];

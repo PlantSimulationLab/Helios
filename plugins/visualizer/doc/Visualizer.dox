@@ -440,7 +440,7 @@
    </tr>
  </table>
 
- The colormap to be used is set using the following command \ref Visualizer::setColormap( Ctable colormap_name ) "setColormap( Ctable colormap_name )", where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
+ The colormap to be used is set using the following command \ref Visualizer::setColormap( Ctable ) "setColormap( Ctable colormap_name )", where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
 
   ~~~~~~{.cpp}
    vis.setColormap( Visualizer::COLORMAP_HOT );

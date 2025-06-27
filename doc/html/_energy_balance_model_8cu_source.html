@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -177,7 +177,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    }</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>}</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>__device__ <span class="keywordtype">float</span> evaluateEnergyBalance( <span class="keywordtype">float</span> T, <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, <span class="keywordtype">float</span> Qother, <span class="keywordtype">float</span> eps, <span class="keywordtype">float</span> Ta, <span class="keywordtype">float</span> ea, <span class="keywordtype">float</span> pressure, <span class="keywordtype">float</span> gH, <span class="keywordtype">float</span> gS, uint Nsides, <span class="keywordtype">float</span> stomatal_sidedness, <span class="keywordtype">float</span> heatcapacity, <span class="keywordtype">float</span> surfacehumidity, <span class="keywordtype">float</span> dt, <span class="keywordtype">float</span> Tprev ){</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>__device__ <span class="keywordtype">float</span> evaluateEnergyBalance( <span class="keywordtype">float</span> T, <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, <span class="keywordtype">float</span> Qother, <span class="keywordtype">float</span> eps, <span class="keywordtype">float</span> Ta, <span class="keywordtype">float</span> ea, <span class="keywordtype">float</span> pressure, <span class="keywordtype">float</span> gH, <span class="keywordtype">float</span> gS, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nsides, <span class="keywordtype">float</span> stomatal_sidedness, <span class="keywordtype">float</span> heatcapacity, <span class="keywordtype">float</span> surfacehumidity, <span class="keywordtype">float</span> dt, <span class="keywordtype">float</span> Tprev ){</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="comment">//Outgoing emission flux</span></div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">float</span> Rout = float(Nsides)*eps*5.67e-8F*T*T*T*T;</div>
@@ -205,9 +205,9 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>}</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>__global__ <span class="keywordtype">void</span> solveEnergyBalance( uint Nprimitives, <span class="keywordtype">float</span>* To, <span class="keywordtype">float</span>* <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, <span class="keywordtype">float</span>* Qother, <span class="keywordtype">float</span>* eps, <span class="keywordtype">float</span>* Ta, <span class="keywordtype">float</span>* ea, <span class="keywordtype">float</span>* pressure, <span class="keywordtype">float</span>* gH, <span class="keywordtype">float</span>* gS, uint* Nsides, <span class="keywordtype">float</span>* stomatal_sidedness, <span class="keywordtype">float</span>* TL, <span class="keywordtype">float</span>* heatcapacity, <span class="keywordtype">float</span>* surfacehumidity, <span class="keywordtype">float</span> dt ){</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>__global__ <span class="keywordtype">void</span> solveEnergyBalance( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nprimitives, <span class="keywordtype">float</span>* To, <span class="keywordtype">float</span>* <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, <span class="keywordtype">float</span>* Qother, <span class="keywordtype">float</span>* eps, <span class="keywordtype">float</span>* Ta, <span class="keywordtype">float</span>* ea, <span class="keywordtype">float</span>* pressure, <span class="keywordtype">float</span>* gH, <span class="keywordtype">float</span>* gS, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* Nsides, <span class="keywordtype">float</span>* stomatal_sidedness, <span class="keywordtype">float</span>* TL, <span class="keywordtype">float</span>* heatcapacity, <span class="keywordtype">float</span>* surfacehumidity, <span class="keywordtype">float</span> dt ){</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    uint p = blockIdx.x*blockDim.x+threadIdx.x;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p = blockIdx.x*blockDim.x+threadIdx.x;</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">if</span>( p&gt;=Nprimitives ){</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        <span class="keywordflow">return</span>;</div>
@@ -216,7 +216,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keywordtype">float</span> T;</div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keywordtype">float</span> err_max = 0.0001;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    uint max_iter = 100;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> max_iter = 100;</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">float</span> T_old_old = To[p];</div>
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span> </div>
@@ -228,7 +228,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordtype">float</span> resid = 100;</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">float</span> err = resid;</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    uint iter = 0;</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> iter = 0;</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordflow">while</span>( err&gt;err_max &amp;&amp; iter&lt;max_iter ){</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span> </div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        <span class="keywordflow">if</span>( resid_old==resid_old_old ){<span class="comment">//this condition will cause NaN</span></div>
@@ -273,7 +273,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    }</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="keyword">const</span> uint Nprimitives = UUIDs.size();</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nprimitives = UUIDs.size();</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    std::vector&lt;float&gt; Rn;</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    Rn.resize(Nprimitives,0);</div>
@@ -347,9 +347,9 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="keywordtype">float</span>* d_gS;</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_gS, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>)) );</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    uint* Nsides = (uint*)malloc( Nprimitives*<span class="keyword">sizeof</span>(uint) );</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    uint* d_Nsides;</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_Nsides, Nprimitives*<span class="keyword">sizeof</span>(uint)) );</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* Nsides = (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>*)malloc( Nprimitives*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) );</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>* d_Nsides;</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    CUDA_CHECK_ERROR( cudaMalloc((<span class="keywordtype">void</span>**)&amp;d_Nsides, Nprimitives*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)) );</div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span> </div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordtype">float</span>* stomatal_sidedness = (<span class="keywordtype">float</span>*)malloc( Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>) );</div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="keywordtype">float</span>* d_stomatal_sidedness;</div>
@@ -366,7 +366,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keywordtype">bool</span> calculated_blconductance_used = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="keywordtype">bool</span> primitive_length_used = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span> </div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keywordflow">for</span>( uint u=0; u&lt;Nprimitives; u++ ){</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> u=0; u&lt;Nprimitives; u++ ){</div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <span class="keywordtype">size_t</span> p = UUIDs.at(u);</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="comment">//Initial guess for surface temperature</span></div>
@@ -429,7 +429,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>        <span class="comment">//Number of sides emitting radiation</span></div>
 <div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>        Nsides[u] = 2; <span class="comment">//default is 2</span></div>
 <div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>)==helios::HELIOS_TYPE_UINT ){</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>          uint flag;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>          <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> flag;</div>
 <div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>          context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>          <span class="keywordflow">if</span>( flag==0 ){</div>
 <div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>            Nsides[u]=1;</div>
@@ -442,7 +442,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>            context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;stomatal_sidedness&quot;</span>,stomatal_sidedness[u]);</div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        <span class="comment">//this is for backward compatability prior to v1.3.17</span></div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( Nsides[u]==2 &amp;&amp; context-&gt;doesPrimitiveDataExist(p,<span class="stringliteral">&quot;evaporating_faces&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(p,<span class="stringliteral">&quot;evaporating_faces&quot;</span>)==helios::HELIOS_TYPE_UINT ){</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>          uint flag;</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>          <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> flag;</div>
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>          context-&gt;getPrimitiveData(p,<span class="stringliteral">&quot;evaporating_faces&quot;</span>,flag);</div>
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>          <span class="keywordflow">if</span>( flag==1 ) { <span class="comment">//stomata on one side</span></div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>            stomatal_sidedness[u] = 0.f;</div>
@@ -473,7 +473,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>                    primitive_length_used = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>                }</div>
 <div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>            }<span class="keywordflow">else</span> <span class="keywordflow">if</span>( context-&gt;getPrimitiveParentObjectID(p)&gt;0 ){</div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>              uint objID = context-&gt;getPrimitiveParentObjectID(p);</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>              <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = context-&gt;getPrimitiveParentObjectID(p);</div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>              L = sqrt(context-&gt;getObjectArea(objID));</div>
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>            }<span class="keywordflow">else</span>{</div>
 <div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>                L = sqrt(context-&gt;getPrimitiveArea(p));</div>
@@ -544,7 +544,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_pressure, pressure, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_gH, gH, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_gS, gS, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*<span class="keyword">sizeof</span>(uint), cudaMemcpyHostToDevice) );</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_Nsides, Nsides, Nprimitives*<span class="keyword">sizeof</span>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_stomatal_sidedness, stomatal_sidedness, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_heatcapacity, heatcapacity, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
 <div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    CUDA_CHECK_ERROR( cudaMemcpy(d_surfacehumidity, surfacehumidity, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyHostToDevice) );</div>
@@ -564,7 +564,7 @@ $(function(){initNavTree('_energy_balance_model_8cu_source.html',''); initResiza
 <div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span> </div>
 <div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>    CUDA_CHECK_ERROR( cudaMemcpy(T, d_T, Nprimitives*<span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), cudaMemcpyDeviceToHost) );</div>
 <div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span> </div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    <span class="keywordflow">for</span>( uint u=0; u&lt;Nprimitives; u++ ){</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> u=0; u&lt;Nprimitives; u++ ){</div>
 <div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>        <span class="keywordtype">size_t</span> UUID = UUIDs.at(u);</div>
 <div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span> </div>
 <div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>        <span class="keywordflow">if</span>( T[u]!=T[u] ){</div>

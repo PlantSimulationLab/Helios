@@ -1,0 +1,635 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: plugins/planthydraulics/include/PlantHydraulicsModel.h Source File</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.37</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('_plant_hydraulics_model_8h_source.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">PlantHydraulicsModel.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="_plant_hydraulics_model_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#ifndef PLANTHYDRAULICS_MODEL</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#define PLANTHYDRAULICS_MODEL</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="foldopen" id="foldopen00021" data-start="{" data-end="};">
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="struct_hydraulic_conductance.html">   21</a></span><span class="keyword">struct </span>HydraulicConductance {</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    HydraulicConductance() {</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>        saturated_conductance = 0.5f;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>        potential_at_half_saturated = 0.f;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        sensitivity = 0.f;</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>        temperature_dependence = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    }</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keyword">explicit</span> HydraulicConductance(<span class="keywordtype">float</span> saturated_conductance) {</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>        this-&gt;saturated_conductance = saturated_conductance;</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>        this-&gt;potential_at_half_saturated = 0.f;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>        this-&gt;sensitivity = 0.f;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        this-&gt;temperature_dependence = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    }</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    HydraulicConductance(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated) {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        this-&gt;saturated_conductance = saturated_conductance;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        this-&gt;potential_at_half_saturated = potential_at_half_saturated;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        this-&gt;sensitivity = 5.f;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        this-&gt;temperature_dependence = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    }</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    HydraulicConductance(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity) {</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        this-&gt;saturated_conductance = saturated_conductance;</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        this-&gt;potential_at_half_saturated = potential_at_half_saturated;</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        this-&gt;sensitivity = sensitivity;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        this-&gt;temperature_dependence = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    }</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    HydraulicConductance(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity, <span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        this-&gt;saturated_conductance = saturated_conductance;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        this-&gt;potential_at_half_saturated = potential_at_half_saturated;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        this-&gt;sensitivity = sensitivity;</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        this-&gt;temperature_dependence = temperature_dependence;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    }</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordtype">void</span> setTemperatureDependence(<span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        this-&gt;temperature_dependence = temperature_dependence;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    }</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordtype">float</span> saturated_conductance; <span class="comment">// mol/m²/s/MPa</span></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">float</span> potential_at_half_saturated; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordtype">float</span> sensitivity; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keywordtype">bool</span> temperature_dependence; <span class="comment">// 1 or true to toggle on temperature dependence</span></div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>};</div>
+</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
+<div class="foldopen" id="foldopen00067" data-start="{" data-end="};">
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="struct_hydraulic_capacitance.html">   67</a></span><span class="keyword">struct </span>HydraulicCapacitance {</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    HydraulicCapacitance() {</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>        this-&gt;osmotic_potential_at_full_turgor = -2.f; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>        this-&gt;relative_water_content_at_turgor_loss = 0.8f; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        this-&gt;cell_wall_elasticity_exponent = 1.f; <span class="comment">// unitless, affects the slope of turgor versus water content</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        this-&gt;saturated_specific_water_content = 1.f; <span class="comment">// mol/m²</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    }</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">explicit</span> HydraulicCapacitance(<span class="keywordtype">float</span> capacitance) {</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>        <span class="keywordflow">if</span> (capacitance &lt;= 0.f) {</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>            std::string message = <span class="stringliteral">&quot;PlantHydraulicsModel::HydraulicCapacitance Capacitance given must be greater than zero. Given value was &quot;</span> + std::to_string(capacitance);</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>            <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios::helios_runtime_error</a>(message);</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>        }</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>        this-&gt;fixed_constant_capacitance = capacitance;</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    }</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    HydraulicCapacitance(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss) {</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>        this-&gt;osmotic_potential_at_full_turgor = osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        this-&gt;relative_water_content_at_turgor_loss = relative_water_content_at_turgor_loss; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        this-&gt;cell_wall_elasticity_exponent = 1.f; <span class="comment">// unitless, affects the slope of turgor versus water content</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        this-&gt;saturated_specific_water_content = 1.f; <span class="comment">// mol/m²</span></div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    }</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    HydraulicCapacitance(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss, <span class="keywordtype">float</span> cell_wall_elasticity_exponent) {</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        this-&gt;osmotic_potential_at_full_turgor = osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        this-&gt;relative_water_content_at_turgor_loss = relative_water_content_at_turgor_loss; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        this-&gt;cell_wall_elasticity_exponent = cell_wall_elasticity_exponent; <span class="comment">// unitless, affects the slope of turgor versus water content</span></div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        this-&gt;saturated_specific_water_content = 1.f; <span class="comment">// mol/m²</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    }</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    HydraulicCapacitance(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss, <span class="keywordtype">float</span> cell_wall_elasticity_exponent, <span class="keywordtype">float</span> saturated_specific_water_content) {</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        this-&gt;osmotic_potential_at_full_turgor = osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        this-&gt;relative_water_content_at_turgor_loss = relative_water_content_at_turgor_loss; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        this-&gt;cell_wall_elasticity_exponent = cell_wall_elasticity_exponent; <span class="comment">// unitless, affects the slope of turgor versus water content</span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        this-&gt;saturated_specific_water_content = saturated_specific_water_content; <span class="comment">// mol/m²</span></div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    }</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordtype">float</span> osmotic_potential_at_full_turgor = -2.f; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="keywordtype">float</span> relative_water_content_at_turgor_loss = 0.8f; <span class="comment">// unitless</span></div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    <span class="keywordtype">float</span> cell_wall_elasticity_exponent = 1.f; <span class="comment">// unitless, affects the slope of turgor versus water content</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordtype">float</span> saturated_specific_water_content = 1.f; <span class="comment">// mol/m²</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <span class="keywordtype">float</span> fixed_constant_capacitance = -1.f; <span class="comment">// mol/m²/MPa optional fixed, constant capacitance</span></div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>};</div>
+</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span></div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5a976d4ed98dddb65eeffb2be7055ead" title="Compute osmotic potential as a function of water content, osmotic content, temperature using paramete...">computeOsmoticPotential</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content);</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span></div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span></div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d" title="Compute turgor pressure as a function of water content using parameterized pressure-volume relationsh...">computeTurgorPressure</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content);</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span></div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span></div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content);</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span></div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span></div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(<span class="keywordtype">float</span> pressure_potential, <span class="keywordtype">float</span> osmotic_potential);</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span> </div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span></div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span></div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a> &amp;coeffs, <span class="keywordtype">float</span> water_potential, <span class="keywordtype">float</span> temperature);</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span></div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content);</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
+<div class="foldopen" id="foldopen00161" data-start="{" data-end="};">
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html">  161</a></span><span class="keyword">struct </span>PlantHydraulicsModelCoefficients {</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    PlantHydraulicsModelCoefficients() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span></div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span></div>
+<div class="foldopen" id="foldopen00169" data-start="{" data-end="}">
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a54e5ac493d7df3aa4ed0edc270ad682f">  169</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a54e5ac493d7df3aa4ed0edc270ad682f" title="Set leaf hydraulic conductance as a constant value.">setLeafHydraulicConductance</a>(<span class="keywordtype">float</span> conductance) {</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        this-&gt;LeafHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(conductance);</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    }</div>
+</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span></div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span></div>
+<div class="foldopen" id="foldopen00178" data-start="{" data-end="}">
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a1d793463365017646b8de2946e7665d9">  178</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a1d793463365017646b8de2946e7665d9" title="Set leaf hydraulic conductance as a function of leaf water potential.">setLeafHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated) {</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        this-&gt;LeafHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated);</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    }</div>
+</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span></div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span></div>
+<div class="foldopen" id="foldopen00188" data-start="{" data-end="}">
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#aca560ebd531b6b5d90a7b4244baafceb">  188</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#aca560ebd531b6b5d90a7b4244baafceb" title="Set leaf hydraulic conductance as a function of leaf water potential.">setLeafHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity) {</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        this-&gt;LeafHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    }</div>
+</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span></div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span></div>
+<div class="foldopen" id="foldopen00199" data-start="{" data-end="}">
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#af3c878b881030cacc908d204ed970d62">  199</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#af3c878b881030cacc908d204ed970d62" title="Set leaf hydraulic conductance as a function of leaf water potential.">setLeafHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity, <span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        this-&gt;LeafHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity, temperature_dependence);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    }</div>
+</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span></div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span></div>
+<div class="foldopen" id="foldopen00207" data-start="{" data-end="}">
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a1e62458aaeaa6e8276a51dc0f0c6c7e4">  207</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a1e62458aaeaa6e8276a51dc0f0c6c7e4" title="Toggle leaf hydraulic conductance&#39;s temperature dependence.">setLeafHydraulicConductanceTemperatureDependence</a>(<span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>        this-&gt;LeafHydraulicConductance.setTemperatureDependence(temperature_dependence);</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    }</div>
+</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span></div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span></div>
+<div class="foldopen" id="foldopen00215" data-start="{" data-end="}">
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a40ee11aba3a775eb488358742646a3e8">  215</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a40ee11aba3a775eb488358742646a3e8" title="Set stem hydraulic conductance as a constant value.">setStemHydraulicConductance</a>(<span class="keywordtype">float</span> conductance) {</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        this-&gt;StemHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(conductance);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    }</div>
+</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span></div>
+<div class="foldopen" id="foldopen00224" data-start="{" data-end="}">
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a2f7ce3dfb3de6d3c44d46d05d867b5b6">  224</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a2f7ce3dfb3de6d3c44d46d05d867b5b6" title="Set stem hydraulic conductance as a function of stem water potential.">setStemHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated) {</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        this-&gt;StemHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated);</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    }</div>
+</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span></div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span></div>
+<div class="foldopen" id="foldopen00234" data-start="{" data-end="}">
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#ab5d683e17753fa8ee78de1bf5335f090">  234</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ab5d683e17753fa8ee78de1bf5335f090" title="Set stem hydraulic conductance as a function of stem water potential.">setStemHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity) {</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>        this-&gt;StemHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity);</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    }</div>
+</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span></div>
+<div class="foldopen" id="foldopen00245" data-start="{" data-end="}">
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a4960a575ddec350631feb269fc62301d">  245</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a4960a575ddec350631feb269fc62301d" title="Set stem hydraulic conductance as a function of stem water potential.">setStemHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity, <span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        this-&gt;StemHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity, temperature_dependence);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    }</div>
+</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span></div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span></div>
+<div class="foldopen" id="foldopen00253" data-start="{" data-end="}">
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a60f4eb7fd5f03acb0f795e6b61c82c5c">  253</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a60f4eb7fd5f03acb0f795e6b61c82c5c" title="Toggle stem hydraulic conductance&#39;s temperature dependence.">setStemHydraulicConductanceTemperatureDependence</a>(<span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        this-&gt;RootHydraulicConductance.setTemperatureDependence(temperature_dependence);</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    }</div>
+</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span></div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span></div>
+<div class="foldopen" id="foldopen00261" data-start="{" data-end="}">
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a1486b283e8fc64a24c1f39062a553bc2">  261</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a1486b283e8fc64a24c1f39062a553bc2" title="Set root hydraulic conductance as a constant value.">setRootHydraulicConductance</a>(<span class="keywordtype">float</span> conductance) {</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        this-&gt;RootHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(conductance);</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    }</div>
+</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span></div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span></div>
+<div class="foldopen" id="foldopen00270" data-start="{" data-end="}">
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#aaef7fc462084d133c8c85d03d05ff331">  270</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#aaef7fc462084d133c8c85d03d05ff331" title="Set root hydraulic conductance as a function of root water potential.">setRootHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated) {</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        this-&gt;RootHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated);</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    }</div>
+</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span></div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span></div>
+<div class="foldopen" id="foldopen00280" data-start="{" data-end="}">
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#ada1e586010ac45db3495797ad58306a2">  280</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ada1e586010ac45db3495797ad58306a2" title="Set root hydraulic conductance as a function of root water potential.">setRootHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity) {</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>        this-&gt;RootHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity);</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    }</div>
+</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span></div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span></div>
+<div class="foldopen" id="foldopen00291" data-start="{" data-end="}">
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#ab8d6b8041c18a6c27cb60c180a9b77b2">  291</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ab8d6b8041c18a6c27cb60c180a9b77b2" title="Set root hydraulic conductance as a function of root water potential.">setRootHydraulicConductance</a>(<span class="keywordtype">float</span> saturated_conductance, <span class="keywordtype">float</span> potential_at_half_saturated, <span class="keywordtype">float</span> sensitivity, <span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        this-&gt;RootHydraulicConductance = <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a>(saturated_conductance, potential_at_half_saturated, sensitivity, temperature_dependence);</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    }</div>
+</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span></div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span></div>
+<div class="foldopen" id="foldopen00299" data-start="{" data-end="}">
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a3a3a2efb9b9654f2452a8d208d6375f7">  299</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3a3a2efb9b9654f2452a8d208d6375f7" title="Toggle root hydraulic conductance&#39;s temperature dependence.">setRootHydraulicConductanceTemperatureDependence</a>(<span class="keywordtype">bool</span> temperature_dependence) {</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        this-&gt;RootHydraulicConductance.setTemperatureDependence(temperature_dependence);</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    }</div>
+</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span></div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span></div>
+<div class="foldopen" id="foldopen00307" data-start="{" data-end="}">
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd">  307</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(<span class="keywordtype">float</span> capacitance) {</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>        this-&gt;LeafHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(capacitance);</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    }</div>
+</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span></div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span></div>
+<div class="foldopen" id="foldopen00316" data-start="{" data-end="}">
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a8de3dc067e00d1cd8eb2f40edc682ee3">  316</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a8de3dc067e00d1cd8eb2f40edc682ee3" title="Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setLeafHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss) {</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        this-&gt;LeafHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss);</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    }</div>
+</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span></div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span></div>
+<div class="foldopen" id="foldopen00326" data-start="{" data-end="}">
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#aef9f7101175e1c306a259caa2d8b2e1e">  326</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#aef9f7101175e1c306a259caa2d8b2e1e" title="Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setLeafHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss, <span class="keywordtype">float</span> cell_wall_elasticity_exponent) {</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        this-&gt;LeafHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    }</div>
+</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span></div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span></div>
+<div class="foldopen" id="foldopen00334" data-start="{" data-end="}">
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#ab34641d1be31de6a6d9afdf88b053868">  334</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ab34641d1be31de6a6d9afdf88b053868" title="Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setLeafHydraulicCapacitanceFromLibrary</a>(std::string species) {</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        <span class="keyword">const</span> std::string &amp;s = species;</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>        <span class="keywordtype">float</span> osmotic_potential_at_full_turgor;</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>        <span class="keywordtype">float</span> relative_water_content_at_turgor_loss;</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        <span class="keywordtype">float</span> cell_wall_elasticity_exponent;</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span> </div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>        <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Walnut&quot;</span> || s == <span class="stringliteral">&quot;walnut&quot;</span>) {</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>            osmotic_potential_at_full_turgor = -1.6386;</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>            relative_water_content_at_turgor_loss = 0.7683;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>            cell_wall_elasticity_exponent = 2.f;</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;PistachioFemale&quot;</span> || s == <span class="stringliteral">&quot;pistachiofemale&quot;</span> || s == <span class="stringliteral">&quot;pistachio_female&quot;</span> || s == <span class="stringliteral">&quot;Pistachio_Female&quot;</span> || s == <span class="stringliteral">&quot;Pistachio_female&quot;</span> || s == <span class="stringliteral">&quot;pistachio&quot;</span> || s == <span class="stringliteral">&quot;Pistachio&quot;</span>) {</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>            osmotic_potential_at_full_turgor = 0.7652;</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>            relative_water_content_at_turgor_loss = 0.7683;</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>            cell_wall_elasticity_exponent = 2.f;</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Elderberry&quot;</span> || s == <span class="stringliteral">&quot;elderberry&quot;</span> || s == <span class="stringliteral">&quot;blue_elderberry&quot;</span>) {</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>            osmotic_potential_at_full_turgor = -2.011;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>            relative_water_content_at_turgor_loss = 0.8135;</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>            cell_wall_elasticity_exponent = 2.f;</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Western_Redbud&quot;</span> || s == <span class="stringliteral">&quot;western_redbud&quot;</span> || s == <span class="stringliteral">&quot;Redbud&quot;</span> || s == <span class="stringliteral">&quot;redbud&quot;</span>) {</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>            osmotic_potential_at_full_turgor = -2.1963;</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>            relative_water_content_at_turgor_loss = 0.8872;</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            cell_wall_elasticity_exponent = 1.5f;</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantHydraulicsModel::getModelCoefficientsFromLibrary): unknown species &quot;</span> &lt;&lt; s &lt;&lt; <span class="stringliteral">&quot;. Setting default (Walnut).&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            osmotic_potential_at_full_turgor = -2.1963;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>            relative_water_content_at_turgor_loss = 0.8872;</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>            cell_wall_elasticity_exponent = 1.5f;</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>        }</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>        this-&gt;LeafHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    }</div>
+</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span></div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span></div>
+<div class="foldopen" id="foldopen00370" data-start="{" data-end="}">
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a4dfb16791fd826d4119d6415aa600d83">  370</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a4dfb16791fd826d4119d6415aa600d83" title="Set stem hydraulic capacitance as a constant value.">setStemHydraulicCapacitance</a>(<span class="keywordtype">float</span> capacitance) {</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>        this-&gt;StemHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(capacitance);</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    }</div>
+</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span></div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span></div>
+<div class="foldopen" id="foldopen00379" data-start="{" data-end="}">
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a0c2f21b8926e18b6bb00d25d8bcc6c39">  379</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a0c2f21b8926e18b6bb00d25d8bcc6c39" title="Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setStemHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss) {</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>        this-&gt;StemHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss);</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    }</div>
+</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span></div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span></div>
+<div class="foldopen" id="foldopen00389" data-start="{" data-end="}">
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#a78f0c0ea94fe968ff9e76fde4c97aa2f">  389</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a78f0c0ea94fe968ff9e76fde4c97aa2f" title="Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setStemHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss, <span class="keywordtype">float</span> cell_wall_elasticity_exponent) {</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        this-&gt;StemHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    }</div>
+</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span></div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span></div>
+<div class="foldopen" id="foldopen00397" data-start="{" data-end="}">
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#af29774866221243f00020b57e9b4da30">  397</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#af29774866221243f00020b57e9b4da30" title="Set root hydraulic capacitance as a constant value.">setRootHydraulicCapacitance</a>(<span class="keywordtype">float</span> capacitance) {</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        this-&gt;RootHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(capacitance);</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    }</div>
+</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span></div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span></div>
+<div class="foldopen" id="foldopen00406" data-start="{" data-end="}">
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#ac5ea24a8a7162d7412bfb5e9afb9d42f">  406</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ac5ea24a8a7162d7412bfb5e9afb9d42f" title="Set root hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setRootHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss) {</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>        this-&gt;RootHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss);</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    }</div>
+</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span></div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span></div>
+<div class="foldopen" id="foldopen00416" data-start="{" data-end="}">
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno"><a class="line" href="struct_plant_hydraulics_model_coefficients.html#acc7987374b4dbda9c2d720971faddc48">  416</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#acc7987374b4dbda9c2d720971faddc48" title="Set root hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setRootHydraulicCapacitance</a>(<span class="keywordtype">float</span> osmotic_potential_at_full_turgor, <span class="keywordtype">float</span> relative_water_content_at_turgor_loss, <span class="keywordtype">float</span> cell_wall_elasticity_exponent) {</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>        this-&gt;RootHydraulicCapacitance = <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a>(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    }</div>
+</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span> </div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span> </div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>    <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a> LeafHydraulicConductance;</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>    <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a> StemHydraulicConductance;</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>    <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a> RootHydraulicConductance;</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span> </div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> LeafHydraulicCapacitance;</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> StemHydraulicCapacitance;</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> RootHydraulicCapacitance;</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span> </div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    <span class="keyword">friend</span> <span class="keyword">class </span><a class="code hl_class" href="class_plant_hydraulics_model.html" title="PlantHydraulics model class.">PlantHydraulicsModel</a>;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>};</div>
+</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span></div>
+<div class="foldopen" id="foldopen00434" data-start="{" data-end="};">
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html">  434</a></span><span class="keyword">class </span><a class="code hl_function" href="class_plant_hydraulics_model.html#acab25f541a25a9aa1a663eaeb7fb6e60" title="Constructor.">PlantHydraulicsModel</a> {</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    <span class="keyword">explicit</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#acab25f541a25a9aa1a663eaeb7fb6e60" title="Constructor.">PlantHydraulicsModel</a>(<a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context);</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span></div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span></div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    <span class="keyword">static</span> <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ac8f3910cd207ed9bb1df39a975fe254e" title="Runs a self-test of the PlantHydraulicsModel, verifying its functionality.">selfTest</a>();</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span></div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span></div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5a921cd4d362da05cda21e056284179" title="Set the PlantHydraulics model coefficients for all primitives.">setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients);</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span></div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span></div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5a921cd4d362da05cda21e056284179" title="Set the PlantHydraulics model coefficients for all primitives.">setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span></div>
+<div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span></div>
+<div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span></div>
+<div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span></div>
+<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species);</div>
+<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span></div>
+<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span></div>
+<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00482" name="l00482"></a><span class="lineno">  482</span></div>
+<div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span></div>
+<div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> <a class="code hl_function" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3" title="Get the PlantHydraulics model coefficients for a species from the library of species coefficients.">getModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species);</div>
+<div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span></div>
+<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span></div>
+<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5706b7814682d1e4f7f774e43107b1a" title="Get the PlantHydraulics model coefficients for a primitive based on its UUID.">getModelCoefficients</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span></div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span></div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keyword">const</span> std::string &amp;primitive_data_label, <span class="keywordtype">float</span> default_value, <span class="keywordtype">bool</span> message_flag);</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span></div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span></div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    std::vector&lt;int&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#a9a822bfb2681f1a55400b880eef057b4" title="Query the unique plantIDs of leaf primitives.">getUniquePlantIDs</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span></div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span></div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span></div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span></div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span></div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span></div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab4023e3bb07bcbf6d01487430a5e4cba" title="Toggle the writing out of optional primitive data - hydraulic conductance.">outputConductancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span></div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span></div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a5d479e3d31becec145ad67324753d493" title="Toggle the writing out of optional primitive data - hydraulic capacitance.">outputCapacitancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span></div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span></div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span></div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span></div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a00d965751037afaafa09dac580fd53b3" title="Get the stem water potential of a plant given its plantID.">getStemWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span></div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span></div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span> </div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span></div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span></div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span></div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span></div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab8bbc1fb73d1222b58a3824506fc208a" title="Get the root water potential of a plant given its plantID.">getRootWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span></div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span></div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span> </div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span></div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span></div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span></div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span></div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a886c7e7b4a02992036410994a14f4c21" title="Get the soil water potential of a plant given its plantID.">getSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span></div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span></div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span> </div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span></div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span></div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span></div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span></div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a18332626b5f94563a12c2a76f9cebac3" title="Set the soil water potential of a plant given its plantID.">setSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID, <span class="keywordtype">float</span> soil_water_potential);</div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span></div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span></div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">getPrimitivesWithoutPlantID</a>(std::vector&lt;uint&gt; UUIDs);</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span></div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span></div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span></div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span></div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span></div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span></div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span> </div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span> </div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context;</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> modelcoeffs;</div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    std::map&lt;uint, PlantHydraulicsModelCoefficients&gt; modelcoeffs_map;</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>    std::map&lt;uint, float&gt; stemWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>    std::map&lt;uint, float&gt; rootWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>    std::map&lt;uint, float&gt; soilWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    std::vector&lt;uint&gt; plantIDs;</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    <span class="keywordtype">bool</span> message_flag = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span> </div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    <span class="keywordtype">bool</span> OutputConductance = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <span class="keywordtype">bool</span> OutputCapacitance = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span> </div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    <span class="keywordtype">void</span> updateRootAndStemWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span> </div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="keywordtype">void</span> updateLeafWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span> </div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordtype">int</span> adjustTimestep(<span class="keywordtype">float</span> time_step, <span class="keywordtype">float</span> min_time_step, <span class="keywordtype">float</span> max_time_step, <span class="keywordtype">float</span> gradient, <span class="keywordtype">float</span> gradient_upper_bound);</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span> </div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    std::vector&lt;std::vector&lt;std::vector&lt;float&gt;&gt;&gt; meshgrid(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;x, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;y);</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>};</div>
+</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span> </div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span><span class="preprocessor">#endif</span></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_38c8d24aef3972a7f87b834274e76e31.html">plugins</a></li><li class="navelem"><a class="el" href="dir_573e455db1a1be7a7a4e0493806d6db3.html">planthydraulics</a></li><li class="navelem"><a class="el" href="dir_8aec6d2b135ee46c71288625d128d8ec.html">include</a></li><li class="navelem"><a class="el" href="_plant_hydraulics_model_8h.html">PlantHydraulicsModel.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

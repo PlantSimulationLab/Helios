@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -178,7 +178,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    {</div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>        visualizer.<a class="code hl_function" href="class_visualizer.html#aaf6a79caee464bfe52cb4fd34d3882d2" title="Enable standard output from this plug-in (default)">enableMessages</a>();</div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>        <span class="keywordflow">if</span> (!visualizer.message_flag) {</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed enableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed enableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>            error_count++;</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>        }</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    }</div>
@@ -187,7 +187,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    {</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        visualizer.<a class="code hl_function" href="class_visualizer.html#ab095acf8151f5825077b2ff36846c7df" title="Disable standard output from this plug-in.">disableMessages</a>();</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>        <span class="keywordflow">if</span> (visualizer.message_flag) {</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed disableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed disableMessages() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>            error_count++;</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>        }</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    }</div>
@@ -197,11 +197,11 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>        <span class="keywordflow">try</span> {</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>            visualizer.openWindow();</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>            <span class="keywordflow">if</span> (visualizer.window == <span class="keyword">nullptr</span>) {</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;failed openWindow() test - window is null.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>                std::cerr &lt;&lt; <span class="stringliteral">&quot;failed openWindow() test - window is null.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>                error_count++;</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>            }</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception &amp;e) {</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed openWindow() test: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed openWindow() test: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>            error_count++;</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        }</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    }</div>
@@ -215,7 +215,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        <span class="comment">// Verify that the transformation matrix updates correctly</span></div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        <span class="keywordflow">if</span> (visualizer.camera_eye_location != initial_position ||</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>            visualizer.camera_lookat_center != initial_lookat) {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed setCameraPosition() test.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed setCameraPosition() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>            error_count++;</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        }</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    }</div>
@@ -238,7 +238,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            visualizer.initialize(1024, 768, 8, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>            visualizer.initialize(1280, 720, 0, <span class="keyword">false</span>); <span class="comment">// Edge case: No aliasing</span></div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>        } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception &amp;e) {</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed initialize() test: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed initialize() test: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>            error_count++;</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>        }</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    }</div>
@@ -246,12 +246,12 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="comment">// ---- Test read_png_file() ---- //</span></div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    {</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        std::vector&lt;unsigned char&gt; texture;</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        uint height = 0, width = 0;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> height = 0, width = 0;</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        std::string filename = <span class="stringliteral">&quot;plugins/visualizer/textures/Almondleaf.png&quot;</span>;  <span class="comment">// Provide a valid PNG test file</span></div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        <a class="code hl_function" href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f" title="Function to create a texture map from a PNG image.">read_png_file</a>(filename.c_str(), texture, height, width);</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        <span class="keywordflow">if</span> (texture.empty() || height == 0 || width == 0) {</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;failed read_png_file() test.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;failed read_png_file() test.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>            error_count++;</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        }</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    }</div>
@@ -263,7 +263,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordflow">if</span> (visualizer.window != <span class="keyword">nullptr</span>) {</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a80e5db9dcc42a46714ef8fa9af1dc16b" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, 800, 600, visualizer.window);</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <span class="keywordflow">if</span> (result != 1) {</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(window) failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>                std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(window) failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                error_count++;</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            }</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        }</div>
@@ -271,11 +271,11 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    <span class="comment">// ---- Test Writing JPEG File (Pixel Data) ---- //</span></div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    {</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        uint width = 100, height = 100;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> width = 100, height = 100;</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        std::vector&lt;helios::RGBcolor&gt; data(width * height, <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>(1.0, 0.0, 0.0));</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a80e5db9dcc42a46714ef8fa9af1dc16b" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, width, height, data);</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordflow">if</span> (result != 1) {</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(data) failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(data) failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            error_count++;</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        }</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    }</div>
@@ -283,15 +283,15 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="comment">// ---- Test PNG File Reading (Error Handling) ---- //</span></div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    {</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        std::vector&lt;unsigned char&gt; texture;</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        uint height = 0, width = 0;</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> height = 0, width = 0;</div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        std::string filename = <span class="stringliteral">&quot;invalid.png&quot;</span>;</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="keywordflow">try</span> {</div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            <a class="code hl_function" href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f" title="Function to create a texture map from a PNG image.">read_png_file</a>(filename.c_str(), texture, height, width);</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: read_png_file should have failed but didn&#39;t.\n&quot;</span>;</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: read_png_file should have failed but didn&#39;t.\n&quot;</span>;</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>            error_count++;</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed read_png_file() error handling test.\n&quot;</span>;</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;Passed read_png_file() error handling test.\n&quot;</span>;</div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>        }</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    }</div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
@@ -305,7 +305,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>            <a class="code hl_function" href="class_visualizer.html#a56f3e6a7db980188dbd24a31a537b4ac" title="forbid the default constructor">Visualizer</a> v3(1280, 720, 8, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed Visualizer constructors test.\n&quot;</span>;</div>
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: Visualizer constructors test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: Visualizer constructors test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>            error_count++;</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>        }</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    }</div>
@@ -317,7 +317,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32" title="Print the current graphics window to a JPEG image file. File will be given a default filename and sav...">printWindow</a>();</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed printWindow() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: printWindow() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: printWindow() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>            error_count++;</div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        }</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    }</div>
@@ -328,7 +328,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a492533fe226fa92d08b010dc9a3f6e93" title="Set the direction of the light source.">setLightDirection</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed setLightDirection() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: setLightDirection() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: setLightDirection() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>            error_count++;</div>
 <div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        }</div>
 <div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    }</div>
@@ -340,7 +340,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>            visualizer.getDomainBoundingBox(xbounds, ybounds, zbounds);</div>
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed getDomainBoundingBox() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: getDomainBoundingBox() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: getDomainBoundingBox() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>            error_count++;</div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>        }</div>
 <div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    }</div>
@@ -351,7 +351,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>            <span class="keywordtype">float</span> radius = visualizer.getDomainBoundingRadius();</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed getDomainBoundingRadius() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: getDomainBoundingRadius() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: getDomainBoundingRadius() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>            error_count++;</div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        }</div>
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    }</div>
@@ -362,7 +362,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            visualizer.updatePerspectiveTransformation(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed updatePerspectiveTransformation() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: updatePerspectiveTransformation() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: updatePerspectiveTransformation() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            error_count++;</div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        }</div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    }</div>
@@ -373,7 +373,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#aac01d7ef7d86b1b50b2fc8704032a557" title="Add a rectangle by giving the coordinates of its center.">addRectangleByCenter</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), RGB::red, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addRectangleByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addRectangleByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addRectangleByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            error_count++;</div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        }</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    }</div>
@@ -384,7 +384,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#aac01d7ef7d86b1b50b2fc8704032a557" title="Add a rectangle by giving the coordinates of its center.">addRectangleByCenter</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1e6, 1e6, 1e6), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1e6, 1e6), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), RGB::red, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;PASSED: addRectangleByCenter() executed successfully with extreme values.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;FAILED: addRectangleByCenter() threw an exception on extreme values.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;FAILED: addRectangleByCenter() threw an exception on extreme values.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>            error_count++;</div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        }</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    }</div>
@@ -395,7 +395,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a47a198b4ceef2beb284dfd08a93814d6" title="Add a triangle by giving the coordinates of its three vertices.">addTriangle</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 1, 0), RGB::blue, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addTriangle() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addTriangle() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addTriangle() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>            error_count++;</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>        }</div>
 <div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    }</div>
@@ -406,7 +406,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#ae42382c106383b3ab48cdb23f6334bd0" title="Add a voxel by giving the coordinates of its center.">addVoxelByCenter</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), RGB::green, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addVoxelByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addVoxelByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addVoxelByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>            error_count++;</div>
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        }</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    }</div>
@@ -417,7 +417,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a29d1c6a6462bab56c6da24ad19511bff" title="Add a sphere by giving the radius and center.">addSphereByCenter</a>(1.0f, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), 10, RGB::blue, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addSphereByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addSphereByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addSphereByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>            error_count++;</div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        }</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    }</div>
@@ -428,7 +428,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a266e9ff3e825dcbd283f9e403688e09d" title="Add a Sky Dome, which is a hemispherical dome colored by a sky texture map.">addSkyDomeByCenter</a>(5.0f, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), 10, <span class="stringliteral">&quot;plugins/visualizer/textures/SkyDome_clouds.jpg&quot;</span>);</div>
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addSkyDomeByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addSkyDomeByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addSkyDomeByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>            error_count++;</div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        }</div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    }</div>
@@ -449,7 +449,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>            visualizer.addColorbarByCenter(<span class="stringliteral">&quot;Colorbar&quot;</span>, safe_size, safe_position, RGB::black, colormap);</div>
 <div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addColorbarByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addColorbarByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addColorbarByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>            error_count++;</div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>        }</div>
 <div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    }</div>
@@ -460,7 +460,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a831a69f2320707924c582e27d29a0ee5" title="Add a coordinate axis with at the origin with unit length.">addCoordinateAxes</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1), <span class="stringliteral">&quot;XYZ&quot;</span>);</div>
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addCoordinateAxes() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addCoordinateAxes() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addCoordinateAxes() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>            error_count++;</div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        }</div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>    }</div>
@@ -471,7 +471,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>            visualizer.addDiskByCenter(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 3, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(sqrtf(2) / 2.f, sqrtf(2) / 2.f), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), 50, RGB::blue, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addDiskByCenter() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addDiskByCenter() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addDiskByCenter() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>            error_count++;</div>
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>        }</div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    }</div>
@@ -485,7 +485,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>            visualizer.<a class="code hl_function" href="class_visualizer.html#a641757758332e85a853a510bd9c5191e" title="Add Lines by giving the coordinates of points along the Lines.">addLine</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 2, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(-1, 3, 0), RGB::red, 1, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Passed addLine() test.\n&quot;</span>;</div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        } <span class="keywordflow">catch</span> (...) {</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;ERROR: addLine() test failed.\n&quot;</span>;</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: addLine() test failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>            error_count++;</div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        }</div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    }</div>
@@ -498,7 +498,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    <span class="keywordflow">if</span> (error_count &gt; 0) {</div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;completed with &quot;</span> &lt;&lt; error_count &lt;&lt; <span class="stringliteral">&quot; errors.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;passed all tests.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        std::cerr &lt;&lt; <span class="stringliteral">&quot;passed all tests.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    }</div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordflow">return</span> error_count;</div>

@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -388,7 +388,7 @@ $(function(){initNavTree('_energy_balance_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>            <span class="keywordflow">return</span> 2.f * std::log((1.f + x) / 2.f)</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>                   + std::log((1.f + x * x) / 2.f)</div>
 <div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>                   - 2.f * std::atan(x)</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                   + 0.5f * M_PI;</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                   + 0.5f * <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>;</div>
 <div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        };</div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keyword">auto</span> psi_unstable_h = [&amp;](<span class="keywordtype">float</span> zeta) {</div>
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            <span class="keywordflow">return</span> 2.f * std::log((1.f + std::sqrt(1.f - 16.f * zeta)) / 2.f);</div>
@@ -734,7 +734,7 @@ $(function(){initNavTree('_energy_balance_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span> </div>
 <div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    <span class="keywordtype">size_t</span> Nprimitives = UUIDs.size();</div>
 <div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span> </div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span> </div>
 <div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>        <span class="comment">//surface temperature (K)</span></div>
 <div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>        <span class="keywordflow">if</span> (!context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;temperature&quot;</span>) ||</div>
@@ -792,7 +792,7 @@ $(function(){initNavTree('_energy_balance_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span> </div>
 <div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>        <span class="comment">//two-sided flag</span></div>
 <div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>        <span class="keywordflow">if</span> ( context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>) == <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>) {</div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>            uint twosided;</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> twosided;</div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>            context-&gt;getPrimitiveData(UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, twosided);</div>
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>            <span class="keywordflow">if</span>( twosided==0 ){</div>
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>                twosided_0++;</div>
@@ -805,7 +805,7 @@ $(function(){initNavTree('_energy_balance_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span> </div>
 <div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>        <span class="comment">//number of evaporating faces</span></div>
 <div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>        <span class="keywordflow">if</span> ( context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;evaporating_faces&quot;</span>) &amp;&amp; context-&gt;getPrimitiveDataType(UUID, <span class="stringliteral">&quot;evaporating_faces&quot;</span>) == <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>) {</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>            uint Ne;</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ne;</div>
 <div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>            context-&gt;getPrimitiveData(UUID, <span class="stringliteral">&quot;evaporating_faces&quot;</span>, Ne);</div>
 <div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>            <span class="keywordflow">if</span>( Ne==1 ){</div>
 <div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>                Ne_1++;</div>

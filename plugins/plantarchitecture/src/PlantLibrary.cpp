@@ -1526,7 +1526,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.internode.pitch = 0;
     phytomer_parameters_maize.internode.phyllotactic_angle.uniformDistribution(170, 190);
     phytomer_parameters_maize.internode.radius_initial = 0.0075;
-    phytomer_parameters_maize.internode.color = make_RGBcolor(0.09, 0.13, 0.06);
+    phytomer_parameters_maize.internode.color = make_RGBcolor(0.126, 0.182, 0.084);
     phytomer_parameters_maize.internode.length_segments = 2;
     phytomer_parameters_maize.internode.radial_subdivisions = 10;
     phytomer_parameters_maize.internode.max_floral_buds_per_petiole = 1;
@@ -1571,7 +1571,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 2;
     shoot_parameters_mainstem.elongation_rate_max = 0.1;
-    shoot_parameters_mainstem.girth_area_factor = 8.f;
+    shoot_parameters_mainstem.girth_area_factor = 6.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-500,0);
     shoot_parameters_mainstem.internode_length_max = 0.22;
     shoot_parameters_mainstem.tortuosity = 1.f;
@@ -1598,11 +1598,11 @@ uint PlantArchitecture::buildMaizePlant(const helios::vec3 &base_position) {
 
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.035f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003, 0.08, 0.01, 0.01, 0, "mainstem");
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.035f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003, 0.08, 0.01, 0.01, 0.2, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 10, 100, false);
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 10, 1000, false);
 
     plant_instances.at(plantID).max_age = 365;
 
@@ -2621,7 +2621,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.internode.pitch = 10;
     phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(80,100);
     phytomer_parameters.internode.radius_initial = 0.001;
-    phytomer_parameters.internode.color = make_RGBcolor(0.38, 0.48, 0.1);
+    phytomer_parameters.internode.color = make_RGBcolor(0.15, 0.2, 0.1);
     phytomer_parameters.internode.length_segments = 1;
 
     phytomer_parameters.petiole.petioles_per_internode = 1;
@@ -2630,7 +2630,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.petiole.length.uniformDistribution(0.15,0.25);
     phytomer_parameters.petiole.taper = 0.5;
     phytomer_parameters.petiole.curvature.uniformDistribution(-300,100);
-    phytomer_parameters.petiole.color = make_RGBcolor(0.24, 0.28, 0.08);
+    phytomer_parameters.petiole.color = make_RGBcolor(0.18, 0.23, 0.1);
     phytomer_parameters.petiole.length_segments = 5;
 
     phytomer_parameters.leaf.leaves_per_petiole = 3;
@@ -2709,9 +2709,9 @@ uint PlantArchitecture::buildStrawberryPlant(const helios::vec3 &base_position) 
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 100, false);
+    setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, false);
 
-    plant_instances.at(plantID).max_age = 365;
+    plant_instances.at(plantID).max_age = 120;
 
     return plantID;
 

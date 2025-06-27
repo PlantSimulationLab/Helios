@@ -154,6 +154,7 @@
   - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
+  - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
 
 */

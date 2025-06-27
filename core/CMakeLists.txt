@@ -25,6 +25,9 @@ target_include_directories(helios
 )
 
 # External libraries
+set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
+set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib"     "${CMAKE_BINARY_DIR}/lib/zlib")
 
@@ -36,6 +39,8 @@ include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a" "${CMAKE_CURRENT_SOURCE
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
 
 target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng
+
+set(CMAKE_MESSAGE_LOG_LEVEL ${SAVED_LOG_LEVEL})
 
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )

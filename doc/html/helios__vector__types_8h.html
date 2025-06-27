@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -164,13 +164,13 @@ $(function(){initNavTree('helios__vector__types_8h.html',''); initResizable(true
   <div class="headertitle"><div class="title">helios_vector_types.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;vector&gt;</code><br />
+<div class="textblock"><code>#include &lt;cassert&gt;</code><br />
 <code>#include &lt;iostream&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
-<code>#include &lt;cassert&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;cmath&gt;</code><br />
 <code>#include &lt;iomanip&gt;</code><br />
 <code>#include &lt;limits&gt;</code><br />
-<code>#include &lt;cmath&gt;</code><br />
 </div>
 <p><a href="helios__vector__types_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -424,12 +424,12 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be blended. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00091">91</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00093">93</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -473,12 +473,12 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting to apply to each color during blending. E.g., weight=0 will produce color0, weight=0.5 will be an average of color0 and color1, weight=1 will produce color1.</td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color0</td><td>First color to be blended. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">color1</td><td>Second color to be blended. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">weight</td><td>Weighting factor (0&lt;weight&lt;1). A weight of 0 returns color0, weight of 1 returns color1. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00082">82</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00084">84</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -511,7 +511,7 @@ Functions</h2></td></tr>
 
 <p>Cross product of two vec3 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00948">948</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00968">968</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -549,7 +549,7 @@ Functions</h2></td></tr>
 
 <p>Make an int3 vector from three ints. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00197">197</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00201">201</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -578,7 +578,7 @@ Functions</h2></td></tr>
 
 <p>Make an int2 vector from an array of ints. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00202">202</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00206">206</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -607,7 +607,7 @@ Functions</h2></td></tr>
 
 <p>Make an int4 vector from an array of ints. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00303">303</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00309">309</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -650,7 +650,7 @@ Functions</h2></td></tr>
 
 <p>Make an int4 vector from three ints. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00298">298</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00304">304</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -690,7 +690,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01979">1979</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l02012">2012</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -736,7 +736,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01989">1989</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l02022">2022</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -774,7 +774,7 @@ Functions</h2></td></tr>
 
 <p>Make a vec3 from three floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00938">938</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00958">958</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -803,7 +803,7 @@ Functions</h2></td></tr>
 
 <p>Make a vec3 from an array of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00943">943</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00963">963</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -846,7 +846,7 @@ Functions</h2></td></tr>
 
 <p>Make a vec4 from three floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01126">1126</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01146">1146</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -875,7 +875,7 @@ Functions</h2></td></tr>
 
 <p>Make a vec4 from an array of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01131">1131</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01151">1151</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -902,7 +902,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00775">775</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00791">791</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -929,7 +929,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00956">956</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00972">972</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -956,7 +956,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01135">1135</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01155">1155</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -989,7 +989,7 @@ Functions</h2></td></tr>
 
 <p>Multiply each element by scalar (scalar is multiplied on left: a*vec2) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00825">825</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00841">841</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1022,7 +1022,7 @@ Functions</h2></td></tr>
 
 <p>Multiply each element by scalar (scalar is multiplied on left: a*vec3) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01008">1008</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01024">1024</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1055,7 +1055,7 @@ Functions</h2></td></tr>
 
 <p>Multiply each element by scalar (scalar is multiplied on left: a*vec4) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01189">1189</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01209">1209</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1088,7 +1088,7 @@ Functions</h2></td></tr>
 
 <p>Add a scalar to each element (scalar is added on left: a+vec2) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00805">805</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00821">821</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1121,7 +1121,7 @@ Functions</h2></td></tr>
 
 <p>Add a scalar to each element (scalar is added on left: a+vec3) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00988">988</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01004">1004</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1154,7 +1154,7 @@ Functions</h2></td></tr>
 
 <p>Add a scalar to each element (scalar is added on left: a+vec4) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01169">1169</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01189">1189</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1187,7 +1187,7 @@ Functions</h2></td></tr>
 
 <p>Subtract a scalar from each element (scalar is subtracted on left: a-vec2) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00817">817</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00833">833</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1220,7 +1220,7 @@ Functions</h2></td></tr>
 
 <p>Subtract a scalar from each element (scalar is subtracted on left: a-vec3) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01000">1000</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01016">1016</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -1253,7 +1253,7 @@ Functions</h2></td></tr>
 
 <p>Subtract a scalar from each element (scalar is subtracted on left: a-vec4) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01181">1181</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l01201">1201</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

@@ -93,16 +93,16 @@
 
  By contrast "full-waveform" instruments are able to record multiple hit point locations along a single laser pulse by analyzing the return timeseries or "waveform". This class of instruments is able to process the timeseries of pulse returns into separate distances. Full-waveform instruments are preferred because they provide more information, particularly in dense canopies where a discrete-return instrument would rarely record the location of the ground. Technically, full-waveform instruments ultimately output discrete hit points, but for the purposes of this documentation we will consider discrete-return data to have a single hit point per laser pulse, and full-waveform data to have an unlimited number of hit points per laser pulse.
 
- \image html WaveformSchematic.jpeg
+ \image html plugins/aeriallidar/doc/images/WaveformSchematic.jpeg
 
  \section AerialSetup Data processing setup
 
- Processing begins by constructing an instance of \ref AerialLiDAR::AerialLiDARcloud and
+ Processing begins by constructing an instance of \ref AerialLiDARcloud and
  adding one or more aerial scans. Scans may be created manually using
- \ref AerialLiDAR::addScan() and \ref AerialLiDAR::addHitPoint(), but are usually imported from an XML
- file with \ref AerialLiDAR::loadXML(). The same XML description can also define the 3-D
+ \ref AerialLiDARcloud::addScan() and \ref AerialLiDARcloud::addHitPoint(), but are usually imported from an XML
+ file with \ref AerialLiDARcloud::loadXML(). The same XML description can also define the 3-D
  grid used for binning hits. After the scans and grid are loaded, call
- \ref AerialLiDAR::calculateHitGridCell() so that each return is associated with the
+ \ref AerialLiDARcloud::calculateHitGridCell() so that each return is associated with the
  appropriate grid cell.
 
  \section AerialScanIO Loading scan data from file
@@ -185,7 +185,7 @@
     </tr>
  </table>
 
- The XML file can be automatically loaded into the point cloud using the \ref loadXML() function, as illustrated below.
+ The XML file can be automatically loaded into the point cloud using the \ref AerialLiDARcloud::loadXML() function, as illustrated below.
   
  ~~~~~~{.cpp}
    #include "Context.h"
@@ -265,12 +265,12 @@
 
  \subsection AerialRasters 2D raster height maps
 
- Run \ref AerialLiDAR::generateHeightModel() to create rasters of ground elevation,
+ Run \ref AerialLiDARcloud::generateHeightModel() to create rasters of ground elevation,
  vegetation height and the maximum observed hit height. The routine fits
  planes to the lowest and highest points within each grid cell using a
  RANSAC algorithm. Heights for a given cell can later be queried using
- \ref AerialLiDAR::getCellGroundHeight(), \ref AerialLiDAR::getCellVegetationHeight() and
- \ref AerialLiDAR::getCellMaximumHitHeight().
+ \ref AerialLiDARcloud::getCellGroundHeight(), \ref AerialLiDARcloud::getCellVegetationHeight() and
+ \ref AerialLiDARcloud::getCellMaximumHitHeight().
 
  ~~~~~~{.cpp}
    AerialLiDARcloud cloud;
@@ -282,9 +282,9 @@
  \subsection AerialGroundCover 2D raster ground cover fraction
 
  After the hit points have been associated with grid cells, call
- \ref AerialLiDAR::calculateCoverFraction() to compute the fraction of ground returns
+ calculateCoverFraction() to compute the fraction of ground returns
  within each (x,y) cell. Values are retrieved via
- \ref AerialLiDAR::getCellCoverFraction().
+ \ref AerialLiDARcloud::getCellCoverFraction().
 
  ~~~~~~{.cpp}
    cloud.calculateCoverFraction();
@@ -294,10 +294,10 @@
  \subsection AerialLeafArea Leaf area
 
  Leaf area index and leaf area density per voxel are obtained with
- \ref AerialLiDAR::calculateLeafAreaGPU(). This function assumes a constant leaf angle
+ \ref AerialLiDARcloud::calculateLeafAreaGPU(). This function assumes a constant leaf angle
  distribution and uses the ray statistics computed for each grid cell.
- Individual voxel totals are accessed with \ref AerialLiDAR::getCellLeafArea() and
- \ref AerialLiDAR::getCellLeafAreaDensity().
+ Individual voxel totals are accessed with \ref AerialLiDARcloud::getCellLeafArea() and
+ \ref AerialLiDARcloud::getCellLeafAreaDensity().
 
  ~~~~~~{.cpp}
    cloud.calculateLeafAreaGPU(0.5f);

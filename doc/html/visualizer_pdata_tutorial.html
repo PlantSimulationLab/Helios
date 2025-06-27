@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -183,7 +183,7 @@ Visualization</h1>
 <div class="line"> std::vector&lt;uint&gt; UUIDs = context.<a class="code hl_function" href="classhelios_1_1_context.html#a116724929091eabd6324047ed66cef85" title="Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no...">loadPLY</a>( <span class="stringliteral">&quot;../../../PLY/StanfordBunny.ply&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), 2, <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black );</div>
 <div class="line"> </div>
 <div class="line"> <span class="comment">// Assign primitive data called &quot;height&quot; which gives the primitive z-coordinate</span></div>
-<div class="line"> <span class="keywordflow">for</span>( uint UUID : UUIDs ){ <span class="comment">//looping over primitive UUIDs</span></div>
+<div class="line"> <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs ){ <span class="comment">//looping over primitive UUIDs</span></div>
 <div class="line">   std::vector&lt;vec3&gt; vertices = context.<a class="code hl_function" href="classhelios_1_1_context.html#ae8542fd1452150d3302675a0a3d991ed" title="Method to return the (x,y,z) coordinates of the vertices of a Primitive.">getPrimitiveVertices</a>(UUID);  <span class="comment">//get a vector containing the (x,y,z) position of each primitive vertex</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> vertex = vertices.at(0);  <span class="comment">//get the first vertex</span></div>
 <div class="line">   <span class="keywordtype">float</span> z = vertex.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;   <span class="comment">//get the vertex z-coordinate</span></div>

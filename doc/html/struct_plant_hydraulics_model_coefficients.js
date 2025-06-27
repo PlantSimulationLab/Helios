@@ -1,0 +1,28 @@
+var struct_plant_hydraulics_model_coefficients =
+[
+    [ "setLeafHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd", null ],
+    [ "setLeafHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#a8de3dc067e00d1cd8eb2f40edc682ee3", null ],
+    [ "setLeafHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#aef9f7101175e1c306a259caa2d8b2e1e", null ],
+    [ "setLeafHydraulicCapacitanceFromLibrary", "struct_plant_hydraulics_model_coefficients.html#ab34641d1be31de6a6d9afdf88b053868", null ],
+    [ "setLeafHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a54e5ac493d7df3aa4ed0edc270ad682f", null ],
+    [ "setLeafHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a1d793463365017646b8de2946e7665d9", null ],
+    [ "setLeafHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#aca560ebd531b6b5d90a7b4244baafceb", null ],
+    [ "setLeafHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#af3c878b881030cacc908d204ed970d62", null ],
+    [ "setLeafHydraulicConductanceTemperatureDependence", "struct_plant_hydraulics_model_coefficients.html#a1e62458aaeaa6e8276a51dc0f0c6c7e4", null ],
+    [ "setRootHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#af29774866221243f00020b57e9b4da30", null ],
+    [ "setRootHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#ac5ea24a8a7162d7412bfb5e9afb9d42f", null ],
+    [ "setRootHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#acc7987374b4dbda9c2d720971faddc48", null ],
+    [ "setRootHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a1486b283e8fc64a24c1f39062a553bc2", null ],
+    [ "setRootHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#aaef7fc462084d133c8c85d03d05ff331", null ],
+    [ "setRootHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#ada1e586010ac45db3495797ad58306a2", null ],
+    [ "setRootHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#ab8d6b8041c18a6c27cb60c180a9b77b2", null ],
+    [ "setRootHydraulicConductanceTemperatureDependence", "struct_plant_hydraulics_model_coefficients.html#a3a3a2efb9b9654f2452a8d208d6375f7", null ],
+    [ "setStemHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#a4dfb16791fd826d4119d6415aa600d83", null ],
+    [ "setStemHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#a0c2f21b8926e18b6bb00d25d8bcc6c39", null ],
+    [ "setStemHydraulicCapacitance", "struct_plant_hydraulics_model_coefficients.html#a78f0c0ea94fe968ff9e76fde4c97aa2f", null ],
+    [ "setStemHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a40ee11aba3a775eb488358742646a3e8", null ],
+    [ "setStemHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a2f7ce3dfb3de6d3c44d46d05d867b5b6", null ],
+    [ "setStemHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#ab5d683e17753fa8ee78de1bf5335f090", null ],
+    [ "setStemHydraulicConductance", "struct_plant_hydraulics_model_coefficients.html#a4960a575ddec350631feb269fc62301d", null ],
+    [ "setStemHydraulicConductanceTemperatureDependence", "struct_plant_hydraulics_model_coefficients.html#a60f4eb7fd5f03acb0f795e6b61c82c5c", null ]
+];

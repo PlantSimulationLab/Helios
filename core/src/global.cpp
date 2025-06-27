@@ -16,7 +16,9 @@
 #include "global.h"
 
 //PNG Libraries (reading and writing PNG images)
+//! PNG debug level.
 #define PNG_DEBUG 3
+//! Macro to skip setjmp check.
 #define PNG_SKIP_SETJMP_CHECK 1
 #include "png.h"
 
@@ -1814,13 +1816,17 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
 }
 
 
+//! Error manager for JPEG library.
 struct jpg_error_mgr {
-    struct jpeg_error_mgr pub; /* "public" fields */
+    jpeg_error_mgr pub; /* "public" fields */
 
     jmp_buf setjmp_buffer; /* for return to caller */
 };
 
-typedef struct jpg_error_mgr *jpg_error_ptr;
+//! Pointer to JPEG error manager.
+typedef jpg_error_mgr *jpg_error_ptr;
+
+//! Error exit function for JPEG library.
 METHODDEF(void) jpg_error_exit(j_common_ptr cinfo) {
     auto myerr = (jpg_error_ptr) cinfo->err;
     (*cinfo->err->output_message)(cinfo);
@@ -1833,9 +1839,9 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
         helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo{};
+    jpeg_decompress_struct cinfo{};
 
-    struct jpg_error_mgr jerr{};
+    jpg_error_mgr jerr{};
     FILE *infile; /* source file */
     JSAMPARRAY buffer; /*output row buffer */
     int row_stride;
@@ -1901,9 +1907,9 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo{};
+    jpeg_decompress_struct cinfo{};
 
-    struct jpg_error_mgr jerr{};
+    jpg_error_mgr jerr{};
     FILE *infile; /* source file */
 
     if ((infile = fopen(filename.c_str(), "rb")) == nullptr) {
@@ -1932,7 +1938,7 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data) {
     struct my_error_mgr {
-        struct jpeg_error_mgr pub; /* "public" fields */
+        jpeg_error_mgr pub; /* "public" fields */
 
         jmp_buf setjmp_buffer; /* for return to caller */
     };

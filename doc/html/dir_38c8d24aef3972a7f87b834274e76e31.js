@@ -8,6 +8,7 @@ var dir_38c8d24aef3972a7f87b834274e76e31 =
     [ "lidar", "dir_9a3b5787d2329f793333f6962c777986.html", "dir_9a3b5787d2329f793333f6962c777986" ],
     [ "photosynthesis", "dir_f93a58e1b1064abf3e9af98b74e2f5d5.html", "dir_f93a58e1b1064abf3e9af98b74e2f5d5" ],
     [ "plantarchitecture", "dir_6d823072f66bbcb32b0d3acc588685b0.html", "dir_6d823072f66bbcb32b0d3acc588685b0" ],
+    [ "planthydraulics", "dir_573e455db1a1be7a7a4e0493806d6db3.html", "dir_573e455db1a1be7a7a4e0493806d6db3" ],
     [ "projectbuilder", "dir_6238f94295213c9c38cd4fb25d633604.html", "dir_6238f94295213c9c38cd4fb25d633604" ],
     [ "radiation", "dir_676c0954ed84853013df50d94356577b.html", "dir_676c0954ed84853013df50d94356577b" ],
     [ "solarposition", "dir_2dbe15cacd8389cc56dad1ecef740014.html", "dir_2dbe15cacd8389cc56dad1ecef740014" ],

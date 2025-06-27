@@ -36,7 +36,11 @@ jobs:
       - name: Bash script
         run: |
           cd utilities
-          ./run_samples.sh --visbuildonly
+          if ! ./run_samples.sh --visbuildonly --log-file linux_GPU_selftests.log; then
+            echo "==== run_samples.sh failed; dumping linux_GPU_selftests.log ===="
+            cat linux_GPU_selftests.log
+            exit 1
+          fi
   
 
   stop-gpu:

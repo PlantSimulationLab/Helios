@@ -10,7 +10,6 @@ set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
 
 # Conditional Plugins
 file(GLOB PLUGIN_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/plugins/*)
-message(STATUS "Plugins: ${PLUGINS}")
 
 if("boundarylayerconductance" IN_LIST PLUGINS)
     add_definitions(-DENABLE_BOUNDARYLAYERCONDUCTANCEMODEL)

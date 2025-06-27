@@ -1,0 +1,1314 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: PlantHydraulicsModelCoefficients Struct Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.37</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('struct_plant_hydraulics_model_coefficients.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#friends">Friends</a>  </div>
+  <div class="headertitle"><div class="title">PlantHydraulicsModelCoefficients Struct Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a54e5ac493d7df3aa4ed0edc270ad682f" id="r_a54e5ac493d7df3aa4ed0edc270ad682f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a54e5ac493d7df3aa4ed0edc270ad682f">setLeafHydraulicConductance</a> (float conductance)</td></tr>
+<tr class="memdesc:a54e5ac493d7df3aa4ed0edc270ad682f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic conductance as a constant value.  <br /></td></tr>
+<tr class="separator:a54e5ac493d7df3aa4ed0edc270ad682f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d793463365017646b8de2946e7665d9" id="r_a1d793463365017646b8de2946e7665d9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d793463365017646b8de2946e7665d9">setLeafHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated)</td></tr>
+<tr class="memdesc:a1d793463365017646b8de2946e7665d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic conductance as a function of leaf water potential.  <br /></td></tr>
+<tr class="separator:a1d793463365017646b8de2946e7665d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca560ebd531b6b5d90a7b4244baafceb" id="r_aca560ebd531b6b5d90a7b4244baafceb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca560ebd531b6b5d90a7b4244baafceb">setLeafHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity)</td></tr>
+<tr class="memdesc:aca560ebd531b6b5d90a7b4244baafceb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic conductance as a function of leaf water potential.  <br /></td></tr>
+<tr class="separator:aca560ebd531b6b5d90a7b4244baafceb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3c878b881030cacc908d204ed970d62" id="r_af3c878b881030cacc908d204ed970d62"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3c878b881030cacc908d204ed970d62">setLeafHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity, bool temperature_dependence)</td></tr>
+<tr class="memdesc:af3c878b881030cacc908d204ed970d62"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic conductance as a function of leaf water potential.  <br /></td></tr>
+<tr class="separator:af3c878b881030cacc908d204ed970d62"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e62458aaeaa6e8276a51dc0f0c6c7e4" id="r_a1e62458aaeaa6e8276a51dc0f0c6c7e4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e62458aaeaa6e8276a51dc0f0c6c7e4">setLeafHydraulicConductanceTemperatureDependence</a> (bool temperature_dependence)</td></tr>
+<tr class="memdesc:a1e62458aaeaa6e8276a51dc0f0c6c7e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle leaf hydraulic conductance's temperature dependence.  <br /></td></tr>
+<tr class="separator:a1e62458aaeaa6e8276a51dc0f0c6c7e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40ee11aba3a775eb488358742646a3e8" id="r_a40ee11aba3a775eb488358742646a3e8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a40ee11aba3a775eb488358742646a3e8">setStemHydraulicConductance</a> (float conductance)</td></tr>
+<tr class="memdesc:a40ee11aba3a775eb488358742646a3e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic conductance as a constant value.  <br /></td></tr>
+<tr class="separator:a40ee11aba3a775eb488358742646a3e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f7ce3dfb3de6d3c44d46d05d867b5b6" id="r_a2f7ce3dfb3de6d3c44d46d05d867b5b6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f7ce3dfb3de6d3c44d46d05d867b5b6">setStemHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated)</td></tr>
+<tr class="memdesc:a2f7ce3dfb3de6d3c44d46d05d867b5b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic conductance as a function of stem water potential.  <br /></td></tr>
+<tr class="separator:a2f7ce3dfb3de6d3c44d46d05d867b5b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5d683e17753fa8ee78de1bf5335f090" id="r_ab5d683e17753fa8ee78de1bf5335f090"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5d683e17753fa8ee78de1bf5335f090">setStemHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity)</td></tr>
+<tr class="memdesc:ab5d683e17753fa8ee78de1bf5335f090"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic conductance as a function of stem water potential.  <br /></td></tr>
+<tr class="separator:ab5d683e17753fa8ee78de1bf5335f090"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4960a575ddec350631feb269fc62301d" id="r_a4960a575ddec350631feb269fc62301d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4960a575ddec350631feb269fc62301d">setStemHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity, bool temperature_dependence)</td></tr>
+<tr class="memdesc:a4960a575ddec350631feb269fc62301d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic conductance as a function of stem water potential.  <br /></td></tr>
+<tr class="separator:a4960a575ddec350631feb269fc62301d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60f4eb7fd5f03acb0f795e6b61c82c5c" id="r_a60f4eb7fd5f03acb0f795e6b61c82c5c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a60f4eb7fd5f03acb0f795e6b61c82c5c">setStemHydraulicConductanceTemperatureDependence</a> (bool temperature_dependence)</td></tr>
+<tr class="memdesc:a60f4eb7fd5f03acb0f795e6b61c82c5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle stem hydraulic conductance's temperature dependence.  <br /></td></tr>
+<tr class="separator:a60f4eb7fd5f03acb0f795e6b61c82c5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1486b283e8fc64a24c1f39062a553bc2" id="r_a1486b283e8fc64a24c1f39062a553bc2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1486b283e8fc64a24c1f39062a553bc2">setRootHydraulicConductance</a> (float conductance)</td></tr>
+<tr class="memdesc:a1486b283e8fc64a24c1f39062a553bc2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic conductance as a constant value.  <br /></td></tr>
+<tr class="separator:a1486b283e8fc64a24c1f39062a553bc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaef7fc462084d133c8c85d03d05ff331" id="r_aaef7fc462084d133c8c85d03d05ff331"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaef7fc462084d133c8c85d03d05ff331">setRootHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated)</td></tr>
+<tr class="memdesc:aaef7fc462084d133c8c85d03d05ff331"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic conductance as a function of root water potential.  <br /></td></tr>
+<tr class="separator:aaef7fc462084d133c8c85d03d05ff331"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada1e586010ac45db3495797ad58306a2" id="r_ada1e586010ac45db3495797ad58306a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada1e586010ac45db3495797ad58306a2">setRootHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity)</td></tr>
+<tr class="memdesc:ada1e586010ac45db3495797ad58306a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic conductance as a function of root water potential.  <br /></td></tr>
+<tr class="separator:ada1e586010ac45db3495797ad58306a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab8d6b8041c18a6c27cb60c180a9b77b2" id="r_ab8d6b8041c18a6c27cb60c180a9b77b2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab8d6b8041c18a6c27cb60c180a9b77b2">setRootHydraulicConductance</a> (float saturated_conductance, float potential_at_half_saturated, float sensitivity, bool temperature_dependence)</td></tr>
+<tr class="memdesc:ab8d6b8041c18a6c27cb60c180a9b77b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic conductance as a function of root water potential.  <br /></td></tr>
+<tr class="separator:ab8d6b8041c18a6c27cb60c180a9b77b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a3a2efb9b9654f2452a8d208d6375f7" id="r_a3a3a2efb9b9654f2452a8d208d6375f7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a3a2efb9b9654f2452a8d208d6375f7">setRootHydraulicConductanceTemperatureDependence</a> (bool temperature_dependence)</td></tr>
+<tr class="memdesc:a3a3a2efb9b9654f2452a8d208d6375f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle root hydraulic conductance's temperature dependence.  <br /></td></tr>
+<tr class="separator:a3a3a2efb9b9654f2452a8d208d6375f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3095770cb843271322b0442cc240d6cd" id="r_a3095770cb843271322b0442cc240d6cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3095770cb843271322b0442cc240d6cd">setLeafHydraulicCapacitance</a> (float capacitance)</td></tr>
+<tr class="memdesc:a3095770cb843271322b0442cc240d6cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic capacitance as a constant value.  <br /></td></tr>
+<tr class="separator:a3095770cb843271322b0442cc240d6cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8de3dc067e00d1cd8eb2f40edc682ee3" id="r_a8de3dc067e00d1cd8eb2f40edc682ee3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8de3dc067e00d1cd8eb2f40edc682ee3">setLeafHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss)</td></tr>
+<tr class="memdesc:a8de3dc067e00d1cd8eb2f40edc682ee3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:a8de3dc067e00d1cd8eb2f40edc682ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef9f7101175e1c306a259caa2d8b2e1e" id="r_aef9f7101175e1c306a259caa2d8b2e1e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef9f7101175e1c306a259caa2d8b2e1e">setLeafHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss, float cell_wall_elasticity_exponent)</td></tr>
+<tr class="memdesc:aef9f7101175e1c306a259caa2d8b2e1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:aef9f7101175e1c306a259caa2d8b2e1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab34641d1be31de6a6d9afdf88b053868" id="r_ab34641d1be31de6a6d9afdf88b053868"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab34641d1be31de6a6d9afdf88b053868">setLeafHydraulicCapacitanceFromLibrary</a> (std::string species)</td></tr>
+<tr class="memdesc:ab34641d1be31de6a6d9afdf88b053868"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters from Helios library.  <br /></td></tr>
+<tr class="separator:ab34641d1be31de6a6d9afdf88b053868"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4dfb16791fd826d4119d6415aa600d83" id="r_a4dfb16791fd826d4119d6415aa600d83"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4dfb16791fd826d4119d6415aa600d83">setStemHydraulicCapacitance</a> (float capacitance)</td></tr>
+<tr class="memdesc:a4dfb16791fd826d4119d6415aa600d83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic capacitance as a constant value.  <br /></td></tr>
+<tr class="separator:a4dfb16791fd826d4119d6415aa600d83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c2f21b8926e18b6bb00d25d8bcc6c39" id="r_a0c2f21b8926e18b6bb00d25d8bcc6c39"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c2f21b8926e18b6bb00d25d8bcc6c39">setStemHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss)</td></tr>
+<tr class="memdesc:a0c2f21b8926e18b6bb00d25d8bcc6c39"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:a0c2f21b8926e18b6bb00d25d8bcc6c39"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78f0c0ea94fe968ff9e76fde4c97aa2f" id="r_a78f0c0ea94fe968ff9e76fde4c97aa2f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a78f0c0ea94fe968ff9e76fde4c97aa2f">setStemHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss, float cell_wall_elasticity_exponent)</td></tr>
+<tr class="memdesc:a78f0c0ea94fe968ff9e76fde4c97aa2f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:a78f0c0ea94fe968ff9e76fde4c97aa2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af29774866221243f00020b57e9b4da30" id="r_af29774866221243f00020b57e9b4da30"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af29774866221243f00020b57e9b4da30">setRootHydraulicCapacitance</a> (float capacitance)</td></tr>
+<tr class="memdesc:af29774866221243f00020b57e9b4da30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic capacitance as a constant value.  <br /></td></tr>
+<tr class="separator:af29774866221243f00020b57e9b4da30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5ea24a8a7162d7412bfb5e9afb9d42f" id="r_ac5ea24a8a7162d7412bfb5e9afb9d42f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac5ea24a8a7162d7412bfb5e9afb9d42f">setRootHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss)</td></tr>
+<tr class="memdesc:ac5ea24a8a7162d7412bfb5e9afb9d42f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:ac5ea24a8a7162d7412bfb5e9afb9d42f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc7987374b4dbda9c2d720971faddc48" id="r_acc7987374b4dbda9c2d720971faddc48"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc7987374b4dbda9c2d720971faddc48">setRootHydraulicCapacitance</a> (float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss, float cell_wall_elasticity_exponent)</td></tr>
+<tr class="memdesc:acc7987374b4dbda9c2d720971faddc48"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set root hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.  <br /></td></tr>
+<tr class="separator:acc7987374b4dbda9c2d720971faddc48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a089c2cae570e627889405b3e884165a3" id="r_a089c2cae570e627889405b3e884165a3"><td class="memItemLeft" align="right" valign="top">class&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a089c2cae570e627889405b3e884165a3">PlantHydraulicsModel</a></td></tr>
+<tr class="separator:a089c2cae570e627889405b3e884165a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock">
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00161">161</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a3095770cb843271322b0442cc240d6cd" name="a3095770cb843271322b0442cc240d6cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3095770cb843271322b0442cc240d6cd">&#9670;&#160;</a></span>setLeafHydraulicCapacitance() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>capacitance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic capacitance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">capacitance</td><td>Value of a constant leaf hydraulic capacitance (mol/m²/MPa). Typical range 0.005-0.5. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00307">307</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a8de3dc067e00d1cd8eb2f40edc682ee3" name="a8de3dc067e00d1cd8eb2f40edc682ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8de3dc067e00d1cd8eb2f40edc682ee3">&#9670;&#160;</a></span>setLeafHydraulicCapacitance() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00316">316</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aef9f7101175e1c306a259caa2d8b2e1e" name="aef9f7101175e1c306a259caa2d8b2e1e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef9f7101175e1c306a259caa2d8b2e1e">&#9670;&#160;</a></span>setLeafHydraulicCapacitance() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>cell_wall_elasticity_exponent</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cell_wall_elasticity_exponent</td><td>Exponent of turgor pressure verse relative water content relationship (unitless) Typical range 1-2. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00326">326</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab34641d1be31de6a6d9afdf88b053868" name="ab34641d1be31de6a6d9afdf88b053868"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab34641d1be31de6a6d9afdf88b053868">&#9670;&#160;</a></span>setLeafHydraulicCapacitanceFromLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicCapacitanceFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>species</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters from Helios library. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>String of species name to select from parameter library </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00334">334</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a54e5ac493d7df3aa4ed0edc270ad682f" name="a54e5ac493d7df3aa4ed0edc270ad682f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54e5ac493d7df3aa4ed0edc270ad682f">&#9670;&#160;</a></span>setLeafHydraulicConductance() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>conductance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic conductance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">conductance</td><td>Value of a constant leaf hydraulic conductance (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00169">169</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a1d793463365017646b8de2946e7665d9" name="a1d793463365017646b8de2946e7665d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d793463365017646b8de2946e7665d9">&#9670;&#160;</a></span>setLeafHydraulicConductance() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic conductance as a function of leaf water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of leaf hydraulic conductance at saturation (leaf water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which conductance is half its saturated value (MPa). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00178">178</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aca560ebd531b6b5d90a7b4244baafceb" name="aca560ebd531b6b5d90a7b4244baafceb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca560ebd531b6b5d90a7b4244baafceb">&#9670;&#160;</a></span>setLeafHydraulicConductance() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic conductance as a function of leaf water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of leaf hydraulic conductance at saturation (leaf water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00188">188</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af3c878b881030cacc908d204ed970d62" name="af3c878b881030cacc908d204ed970d62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3c878b881030cacc908d204ed970d62">&#9670;&#160;</a></span>setLeafHydraulicConductance() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set leaf hydraulic conductance as a function of leaf water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of leaf hydraulic conductance at saturation (leaf water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00199">199</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a1e62458aaeaa6e8276a51dc0f0c6c7e4" name="a1e62458aaeaa6e8276a51dc0f0c6c7e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e62458aaeaa6e8276a51dc0f0c6c7e4">&#9670;&#160;</a></span>setLeafHydraulicConductanceTemperatureDependence()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setLeafHydraulicConductanceTemperatureDependence </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Toggle leaf hydraulic conductance's temperature dependence. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00207">207</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af29774866221243f00020b57e9b4da30" name="af29774866221243f00020b57e9b4da30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af29774866221243f00020b57e9b4da30">&#9670;&#160;</a></span>setRootHydraulicCapacitance() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>capacitance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic capacitance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">capacitance</td><td>Value of a constant leaf hydraulic capacitance (mol/m²/MPa) Typical range 0.005-2. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00397">397</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ac5ea24a8a7162d7412bfb5e9afb9d42f" name="ac5ea24a8a7162d7412bfb5e9afb9d42f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5ea24a8a7162d7412bfb5e9afb9d42f">&#9670;&#160;</a></span>setRootHydraulicCapacitance() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00406">406</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="acc7987374b4dbda9c2d720971faddc48" name="acc7987374b4dbda9c2d720971faddc48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc7987374b4dbda9c2d720971faddc48">&#9670;&#160;</a></span>setRootHydraulicCapacitance() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>cell_wall_elasticity_exponent</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cell_wall_elasticity_exponent</td><td>Exponent of turgor pressure verse relative water content relationship (unitless) Typical range 1-2. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00416">416</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a1486b283e8fc64a24c1f39062a553bc2" name="a1486b283e8fc64a24c1f39062a553bc2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1486b283e8fc64a24c1f39062a553bc2">&#9670;&#160;</a></span>setRootHydraulicConductance() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>conductance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic conductance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">conductance</td><td>Value of root hydraulic conductance (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00261">261</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aaef7fc462084d133c8c85d03d05ff331" name="aaef7fc462084d133c8c85d03d05ff331"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaef7fc462084d133c8c85d03d05ff331">&#9670;&#160;</a></span>setRootHydraulicConductance() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic conductance as a function of root water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of root hydraulic conductance at saturation (root water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00270">270</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ada1e586010ac45db3495797ad58306a2" name="ada1e586010ac45db3495797ad58306a2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada1e586010ac45db3495797ad58306a2">&#9670;&#160;</a></span>setRootHydraulicConductance() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic conductance as a function of root water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of root hydraulic conductance at saturation (root water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00280">280</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab8d6b8041c18a6c27cb60c180a9b77b2" name="ab8d6b8041c18a6c27cb60c180a9b77b2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8d6b8041c18a6c27cb60c180a9b77b2">&#9670;&#160;</a></span>setRootHydraulicConductance() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set root hydraulic conductance as a function of root water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of root hydraulic conductance at saturation (root water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00291">291</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a3a3a2efb9b9654f2452a8d208d6375f7" name="a3a3a2efb9b9654f2452a8d208d6375f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a3a2efb9b9654f2452a8d208d6375f7">&#9670;&#160;</a></span>setRootHydraulicConductanceTemperatureDependence()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setRootHydraulicConductanceTemperatureDependence </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Toggle root hydraulic conductance's temperature dependence. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00299">299</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a4dfb16791fd826d4119d6415aa600d83" name="a4dfb16791fd826d4119d6415aa600d83"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4dfb16791fd826d4119d6415aa600d83">&#9670;&#160;</a></span>setStemHydraulicCapacitance() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>capacitance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic capacitance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">capacitance</td><td>Value of a constant leaf hydraulic capacitance (m3/MPa) Typical Range 0.005-2. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00370">370</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a0c2f21b8926e18b6bb00d25d8bcc6c39" name="a0c2f21b8926e18b6bb00d25d8bcc6c39"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c2f21b8926e18b6bb00d25d8bcc6c39">&#9670;&#160;</a></span>setStemHydraulicCapacitance() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00379">379</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a78f0c0ea94fe968ff9e76fde4c97aa2f" name="a78f0c0ea94fe968ff9e76fde4c97aa2f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78f0c0ea94fe968ff9e76fde4c97aa2f">&#9670;&#160;</a></span>setStemHydraulicCapacitance() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicCapacitance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>osmotic_potential_at_full_turgor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>relative_water_content_at_turgor_loss</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>cell_wall_elasticity_exponent</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic capacitance as a function of water content with pressure-volume curve derived parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">osmotic_potential_at_full_turgor</td><td>Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relative_water_content_at_turgor_loss</td><td>Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cell_wall_elasticity_exponent</td><td>Exponent of turgor pressure verse relative water content relationship (unitless) Typical range 1-2. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00389">389</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a40ee11aba3a775eb488358742646a3e8" name="a40ee11aba3a775eb488358742646a3e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40ee11aba3a775eb488358742646a3e8">&#9670;&#160;</a></span>setStemHydraulicConductance() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>conductance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic conductance as a constant value. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">conductance</td><td>Value of a constant stem hydraulic conductance (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00215">215</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a2f7ce3dfb3de6d3c44d46d05d867b5b6" name="a2f7ce3dfb3de6d3c44d46d05d867b5b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f7ce3dfb3de6d3c44d46d05d867b5b6">&#9670;&#160;</a></span>setStemHydraulicConductance() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic conductance as a function of stem water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of stem hydraulic conductance at saturation (stem water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which conductance is half its saturated value (MPa). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00224">224</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab5d683e17753fa8ee78de1bf5335f090" name="ab5d683e17753fa8ee78de1bf5335f090"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5d683e17753fa8ee78de1bf5335f090">&#9670;&#160;</a></span>setStemHydraulicConductance() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic conductance as a function of stem water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of stem hydraulic conductance at saturation (stem water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00234">234</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a4960a575ddec350631feb269fc62301d" name="a4960a575ddec350631feb269fc62301d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4960a575ddec350631feb269fc62301d">&#9670;&#160;</a></span>setStemHydraulicConductance() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicConductance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturated_conductance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>potential_at_half_saturated</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sensitivity</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set stem hydraulic conductance as a function of stem water potential. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturated_conductance</td><td>Value of stem hydraulic conductance at saturation (stem water potential of zero) (mol/m²/s/MPa). Typical range: 0.001 to 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">potential_at_half_saturated</td><td>Functional parameter controlling the water potential at which hydraulic conductance is half its saturated value (MPa). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sensitivity</td><td>Functional parameter controlling the sensitivity (maximum slope) of hydraulic conductance with respect to water potential. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00245">245</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a60f4eb7fd5f03acb0f795e6b61c82c5c" name="a60f4eb7fd5f03acb0f795e6b61c82c5c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60f4eb7fd5f03acb0f795e6b61c82c5c">&#9670;&#160;</a></span>setStemHydraulicConductanceTemperatureDependence()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PlantHydraulicsModelCoefficients::setStemHydraulicConductanceTemperatureDependence </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>temperature_dependence</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Toggle stem hydraulic conductance's temperature dependence. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_dependence</td><td>Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00253">253</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Friends And Related Symbol Documentation</h2>
+<a id="a089c2cae570e627889405b3e884165a3" name="a089c2cae570e627889405b3e884165a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a089c2cae570e627889405b3e884165a3">&#9670;&#160;</a></span>PlantHydraulicsModel</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">friend class <a class="el" href="class_plant_hydraulics_model.html">PlantHydraulicsModel</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel friend">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8h_source.html#l00430">430</a> of file <a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>plugins/planthydraulics/include/<a class="el" href="_plant_hydraulics_model_8h_source.html">PlantHydraulicsModel.h</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

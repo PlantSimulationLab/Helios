@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -179,7 +179,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>RT_PROGRAM <span class="keywordtype">void</span> closest_hit_direct(){</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    uint objID = objectID[UUID];</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objectID[UUID];</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordflow">if</span>( (periodic_flag.x==1 || periodic_flag.y==1) &amp;&amp; primitive_type[objID] == 5 ){ <span class="comment">//periodic boundary condition</span></div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
@@ -212,9 +212,9 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>RT_PROGRAM <span class="keywordtype">void</span> closest_hit_diffuse() {</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    uint origin_UUID = prd.origin_UUID;</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> origin_UUID = prd.origin_UUID;</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    uint objID = objectID[UUID];</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objectID[UUID];</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keywordflow">if</span> ((periodic_flag.x == 1 || periodic_flag.y == 1) &amp;&amp; primitive_type[objID] == 5) { <span class="comment">//periodic boundary condition</span></div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
@@ -249,7 +249,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        float3 normal;</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        <span class="keywordtype">float</span> m[16];</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        <span class="keywordflow">for</span> (uint i = 0; i &lt; 16; i++) {</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; 16; i++) {</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>            m[i] = transform_matrix[optix::make_uint2(i, objID)];</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        }</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
@@ -372,7 +372,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span> </div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>RT_PROGRAM <span class="keywordtype">void</span> closest_hit_camera() {</div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span> </div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    uint objID = objectID[UUID];</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objectID[UUID];</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span> </div>
 <div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    <span class="keywordflow">if</span> ((periodic_flag.x == 1 || periodic_flag.y == 1) &amp;&amp; primitive_type[objID] == 5) { <span class="comment">//periodic boundary condition</span></div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
@@ -407,7 +407,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        float3 normal;</div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span> </div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>        <span class="keywordtype">float</span> m[16];</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        <span class="keywordflow">for</span> (uint i = 0; i &lt; 16; i++) {</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; 16; i++) {</div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>            m[i] = transform_matrix[optix::make_uint2(i, objID)];</div>
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>        }</div>
 <div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span> </div>
@@ -446,7 +446,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        <span class="keywordtype">bool</span> face = dot(normal, ray.direction) &lt; 0;</div>
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span> </div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        float3 camera_normal = d_rotatePoint( make_float3(0,0,1), -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        float3 camera_normal = d_rotatePoint( make_float3(0,0,1), -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y );</div>
 <div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span> </div>
 <div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        <span class="keywordtype">double</span> strength;</div>
 <div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> b=0; b&lt;Nbands_launch; b++ ) {</div>
@@ -488,7 +488,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>                   <span class="keywordflow">if</span>( specular_reflection_enabled == 2 ){ <span class="comment">//if we are using the scale coefficient</span></div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>                       scale_coefficient = specular_scale[objID];</div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>                   }</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>                   strength_spec += spec * scale_coefficient * pow( <a class="code hl_function" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86" title="Maximum value of a vector of floats.">max</a>(0.f,dot(specular_direction,normal)), exponent)*(exponent+2.f)/(<span class="keywordtype">double</span>(launch_dim.x)*2.f*M_PI); <span class="comment">//launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.</span></div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>                   strength_spec += spec * scale_coefficient * pow( <a class="code hl_function" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86" title="Maximum value of a vector of floats.">max</a>(0.f,dot(specular_direction,normal)), exponent)*(exponent+2.f)/(<span class="keywordtype">double</span>(launch_dim.x)*2.f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>); <span class="comment">//launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.</span></div>
 <div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>               }</div>
 <div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>            }</div>
 <div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span> </div>
@@ -503,9 +503,9 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
 <div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>RT_PROGRAM <span class="keywordtype">void</span> closest_hit_pixel_label() {</div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span> </div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    uint origin_UUID = prd.origin_UUID;</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> origin_UUID = prd.origin_UUID;</div>
 <div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    uint objID = objectID[UUID];</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objectID[UUID];</div>
 <div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">if</span> ((periodic_flag.x == 1 || periodic_flag.y == 1) &amp;&amp; primitive_type[objID] == 5) { <span class="comment">//periodic boundary condition</span></div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
@@ -539,7 +539,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        camera_pixel_label[origin_UUID] = UUID+1;</div>
 <div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span> </div>
 <div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>        <span class="keywordtype">float</span> depth = prd.strength + t_hit;</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        float3 camera_direction3 = d_rotatePoint( make_float3(1,0,0), -0.5*M_PI+camera_direction.x, 0.5f*M_PI-camera_direction.y );</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        float3 camera_direction3 = d_rotatePoint( make_float3(1,0,0), -0.5*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>+camera_direction.x, 0.5f*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>-camera_direction.y );</div>
 <div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>        camera_pixel_depth[origin_UUID] = abs(dot(camera_direction3, ray.direction))*depth;</div>
 <div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span> </div>
 <div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    }</div>
@@ -547,7 +547,7 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span> </div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>RT_PROGRAM <span class="keywordtype">void</span> miss_direct(){</div>
 <div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span> </div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    uint objID = objectID[prd.origin_UUID];</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objectID[prd.origin_UUID];</div>
 <div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span> </div>
 <div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="keywordtype">int</span> b=-1;</div>
 <div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> b_global=0; b_global&lt;Nbands_global; b_global++ ) {</div>
@@ -640,8 +640,8 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>                <span class="keywordtype">float</span> fd = 1.f;</div>
 <div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>                <span class="keywordflow">if</span> ( diffuse_extinction[b] &gt; 0.f) {</div>
 <div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>                    <span class="keywordtype">float</span> psi = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(dot(diffuse_peak_dir[b], ray.direction));</div>
-<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>                    <span class="keywordflow">if</span> (psi &lt; M_PI / 180.f) {</div>
-<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>                        fd = powf(M_PI / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b];   <span class="comment">//Replace &#39;pow&#39; by &#39;powf&#39; in</span></div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>                    <span class="keywordflow">if</span> (psi &lt; <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 180.f) {</div>
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>                        fd = powf(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b];   <span class="comment">//Replace &#39;pow&#39; by &#39;powf&#39; in</span></div>
 <div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>                    } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>                        fd = powf(psi, -diffuse_extinction[b]) * diffuse_dist_norm[b];</div>
 <div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>                    }</div>
@@ -693,8 +693,8 @@ $(function(){initNavTree('ray_hit_8cu_source.html',''); initResizable(true); });
 <div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>            <span class="keywordtype">float</span> fd = 1.f;</div>
 <div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>            <span class="keywordflow">if</span> (diffuse_extinction[b] &gt; 0.f) {</div>
 <div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>                <span class="keywordtype">float</span> psi = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(dot(diffuse_peak_dir[b], ray.direction));</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>                <span class="keywordflow">if</span> (psi &lt; M_PI / 180.f) {</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>                    fd = powf(<span class="keywordtype">float</span>(M_PI) / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b];</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>                <span class="keywordflow">if</span> (psi &lt; <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 180.f) {</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>                    fd = powf(<span class="keywordtype">float</span>(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>) / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b];</div>
 <div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>                } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>                    fd = powf(psi, -diffuse_extinction[b]) * diffuse_dist_norm[b];</div>
 <div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>                }</div>

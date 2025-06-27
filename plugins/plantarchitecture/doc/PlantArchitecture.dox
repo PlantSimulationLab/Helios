@@ -257,7 +257,7 @@ The coordinate system of plant organs is defined with respect to it's parent ele
 
 Nearly all parameters in the architectural model can either be specified as a constant value, or as a random variable following several pre-defined distributions.
 
-Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref RandomParameter_float::val() "val()" method is used to get the value of the parameter.
+Parameters that can be randomized have type of ef RandomParameter_float or ef RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The ef RandomParameter_float::val() "val()" method is used to get the value of the parameter.
 
 ~~~~~~
 // Assign a constant value
@@ -281,16 +281,17 @@ Available distributions for \ref RandomParameter_float are listed below
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
-| Normal | \ref RandomParameter_float::normalDistribution() "normalDistribution()" | mean, standard deviation |
-| Weibull | \ref RandomParameter_float::weibullDistribution() "weibullDistribution()" | shape parameter, scale parameter |
+| Uniform | \ref RandomParameter_float::uniformDistribution() | minimum value, maximum value |
+| Normal | \ref RandomParameter_float::normalDistribution() | mean, standard deviation |
+| Weibull | \ref RandomParameter_float::weibullDistribution() | shape parameter, scale parameter |
 
 and for \ref RandomParameter_int are:
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
-| Discrete Values | \ref RandomParameter_int::discreteValues() "discreteValues()" | vector of discrete int values that will be randomly chosen |
+| Uniform | \ref RandomParameter_int::uniformDistribution( int minval, int maxval ) | minimum value, maximum value |
+| Discrete Values | \ref RandomParameter_int::discreteValues( const std::vector<int> &values ) | vector of discrete int values that will be randomly chosen |
+
 
 \section PlantArchPhytomerParams Defining the Phytomer and its Parameters
 

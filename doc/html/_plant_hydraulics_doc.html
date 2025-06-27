@@ -1,0 +1,457 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: Plant Hydraulics Model Plugin Documentation</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.37</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('_plant_hydraulics_doc.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div><div class="header">
+  <div class="headertitle"><div class="title">Plant Hydraulics Model Plugin Documentation</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="toc"><h3>Table of Contents</h3>
+<ul>
+  <li class="level1">
+    <a href="#PlantHydraulicsConstructor">Class Constructor</a>
+  </li>
+  <li class="level1">
+    <a href="#PH_PrimData">Primitive Data</a>
+    <ul>
+      <li class="level2">
+        <a href="#PH_OutputData">Default Output Primitive Data</a>
+      </li>
+      <li class="level2">
+        <a href="#PH_OptionalOutputData">Optional Output Primitive Data</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PHissues">Known Issues</a>
+  </li>
+  <li class="level1">
+    <a href="#PH_Intro">Introduction</a>
+  </li>
+  <li class="level1">
+    <a href="#PH_Equations">Governing Equations</a>
+  </li>
+  <li class="level1">
+    <a href="#PH_Params">Parameters</a>
+  </li>
+  <li class="level1">
+    <a href="#PH_Example">Examples</a>
+  </li>
+</ul>
+</div>
+<div class="textblock"><table class="doxtable">
+<tr>
+<th>Dependencies</th><td>None </td></tr>
+<tr>
+<th>CMakeLists.txt</th><td>set( PLUGINS "planthydraulics" ) </td></tr>
+<tr>
+<th>Header File</th><td>include "PlantHydraulicsModel.h" </td></tr>
+<tr>
+<th>Class</th><td><a class="el" href="class_plant_hydraulics_model.html">PlantHydraulicsModel</a> </td></tr>
+</table>
+<h1><a class="anchor" id="PlantHydraulicsConstructor"></a>
+Class Constructor</h1>
+<table class="doxtable">
+<tr>
+<th>Constructors </th></tr>
+<tr>
+<td><a class="el" href="class_plant_hydraulics_model.html">PlantHydraulicsModel( helios::Context* )</a> </td></tr>
+</table>
+<h1><a class="anchor" id="PH_PrimData"></a>
+Primitive Data</h1>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Primitive Data Label   </th><th class="markdownTableHeadNone">Symbol   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Data Type   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Available Plugins   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">temperature   </td><td class="markdownTableBodyNone">\(T_s\)   </td><td class="markdownTableBodyNone">Kelvin   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Primitive surface temperature   </td><td class="markdownTableBodyNone">Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plugin   </td><td class="markdownTableBodyNone">300 K    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">latent_flux   </td><td class="markdownTableBodyNone">\(E\)   </td><td class="markdownTableBodyNone">W/m²   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Latent heat flux (transpiration)   </td><td class="markdownTableBodyNone">Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plugin   </td><td class="markdownTableBodyNone">0   </td></tr>
+</table>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Object Data Label   </th><th class="markdownTableHeadNone">Symbol   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Data Type   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Available Plugins   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">plantID   </td><td class="markdownTableBodyNone">N/A   </td><td class="markdownTableBodyNone">N/A   </td><td class="markdownTableBodyNone"> <font color="green"><tt>int</tt></font>   </td><td class="markdownTableBodyNone">Unique plant identification number   </td><td class="markdownTableBodyNone">Can be generated by <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> plugin   </td><td class="markdownTableBodyNone">N/A   </td></tr>
+</table>
+<h2><a class="anchor" id="PH_OutputData"></a>
+Default Output Primitive Data</h2>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Primitive Data Label   </th><th class="markdownTableHeadNone">Symbol   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Data Type   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">water_potential   </td><td class="markdownTableBodyNone">\(\psi\)   </td><td class="markdownTableBodyNone">MPa   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Water potential    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">relative_water_content   </td><td class="markdownTableBodyNone">\(w\)   </td><td class="markdownTableBodyNone">unitless   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Relative water content    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">turgor_pressure   </td><td class="markdownTableBodyNone">\(p\)   </td><td class="markdownTableBodyNone">MPa   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Cellular turgor pressure    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">osmotic_potential   </td><td class="markdownTableBodyNone">\(\pi\)   </td><td class="markdownTableBodyNone">MPa   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Cellular osmotic potential   </td></tr>
+</table>
+<h2><a class="anchor" id="PH_OptionalOutputData"></a>
+Optional Output Primitive Data</h2>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Primitive Data Label   </th><th class="markdownTableHeadNone">Symbol   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Data Type   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">hydraulic_conductance   </td><td class="markdownTableBodyNone">\(K\)   </td><td class="markdownTableBodyNone">mol m \(^{-2}\) s \(^{-1}\) MPa \(^{-1}\)   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Hydraulic conductance    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">hydraulic_capacitance   </td><td class="markdownTableBodyNone">\(C\)   </td><td class="markdownTableBodyNone">mol m \(^{-2}\) MPa \(^{-1}\)   </td><td class="markdownTableBodyNone"> <font color="green"><tt>float</tt></font>   </td><td class="markdownTableBodyNone">Hydraulic capacitance   </td></tr>
+</table>
+<h1><a class="anchor" id="PHissues"></a>
+Known Issues</h1>
+<p>Currently, steady-state mode is functional and non-steady-state mode is under construction.</p>
+<h1><a class="anchor" id="PH_Intro"></a>
+Introduction</h1>
+<p>The Plant Hydraulics plugin models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances within and between leaves, stems, roots, and soil. The plugin operates on a group of leaf primitives and treats stems and roots each as single compartments associated with those leaf primitives, with soil water potential as environmental input. Leaf water potential, turgor pressure, and osmotic potential are then computed uniquely for each leaf primitive according to it's transpiration, temperature primitive data and hydraulic model parameters. Leaves are grouped using parent object data with the label "plantID" that can be set here or generated by other plugins, such as the Plant Architecture plugin.</p>
+<h1><a class="anchor" id="PH_Equations"></a>
+Governing Equations</h1>
+<p>Plant transpiration, \(E_{plant}\) (W m \(^{-2}\)), is first obtained through aggregating \(n\) individual leaf transpiration fluxes, weighted by leaf area \(a\) (m \(^2\)) as   </p><p class="formulaDsp">
+\[E_{plant} = \frac{1}{a_{plant}}\sum_{i=1}^n E_i a_i.
+\]
+</p>
+<p> Then, stem and root water potentials, \(\psi_{stem}\) and \(\psi_{root}\) (MPa), are solved for given \(E_{plant}\) and soil water potential, \(\psi_{soil}\), using   </p><p class="formulaDsp">
+\[C(\psi_{root})\frac{d\psi_{root}}{dt} = K_{root}(\psi_{root}-\psi_{soil}) - K_{stem}(\psi_{stem}-\psi_{root})
+\]
+</p>
+   <p class="formulaDsp">
+\[C(\psi_{stem})\frac{d\psi_{stem}}{dt} = K_{stem}(\psi_{stem}-\psi_{root}) - E_{plant},
+\]
+</p>
+<p> where \(C(\psi)\) and \(K(\psi)\) are hydraulic capacitance and conductance, respectively, that depend on the current water status. When a timespan is specified, a backward Euler scheme is implemented to implicitly solve the equations with \(C(\psi)\) and \(K(\psi)\) at the next timestep. When a timespan is not specified, steady-state water potential is solved for with \(\frac{d\psi}{dt}=0\) as</p>
+<p class="formulaDsp">
+\[\psi_{root} = \psi_{soil} - \frac{E_{plant}}{K_{root}}
+\]
+</p>
+   <p class="formulaDsp">
+\[\psi_{stem} = \psi_{root} - \frac{E_{plant}}{K_{stem}}.
+\]
+</p>
+<p>Each compartment (leaf, stem, and root) has a parameterized hydraulic conductance \(K(\psi)\) and capacitance \(C(\psi)\). Conductance is modeled as a symmetric sigmoid of the form   </p><p class="formulaDsp">
+\[K(\psi) = K_{max}\left(1+\left|\frac{\psi}{\psi_{50}}\right|^s\right)^{-1},
+\]
+</p>
+<p> where \(K_{max}\) is the maximal conductance, \(\psi_{50}\) is the water potential giving half of \(K_{max}\), and \(s\) controls the steepness. An optional temperature dependence is also available and adjust conductance as \(K(\psi,T) = K(\psi) \cdot \left(\frac{T}{298.15}\right)^7\).</p>
+<p>The slope of the leaf pressure&ndash;volume relation defines the hydraulic capacitance, \(C(\psi) = \frac{\partial w}{\partial \psi} W_{sat} \). Water potential ( \(\psi\), MPa) as function of relative water content ( \(w\), unitless) is given by the addition of component potentials, turgor pressure ( \(p\), MPa) and osmotic potential ( \(\pi\), MPa),</p>
+<p class="formulaDsp">
+\[\psi(w)=p(w)+\pi(w) = -\pi_o \max\left(0,\frac{w-w_{tlp}}{1-w_{tlp}}\right)^\epsilon
+ - \frac{\pi_o}{w},
+\]
+</p>
+<p>where turgor pressure is parameterized by a saturated turgor pressure equal to saturated osmotic pressure \(-\pi_o\) at \(w=1\), the relative water content at the turgor loss point, \(w_{tlp}\) and an empirical compartmental wall elasticity, \(\epsilon\) (<a href="https://doi.org/10.1104/pp.17.01097">Sack et al. 2018</a>). Osmotic potential is given by the saturated osmotic pressure divided by relative water content, \(\frac{-\pi_o}{w}\).</p>
+<p>Currently osmotic potential at full turgor is given as a single parameter but it can be estimated or updated by the user using a relation parameterized by the moles of osmotica per area, \(n_o\), and the saturated specific water content \(W_{sat}\), which together with \(w\) comprise the osmotic concentration \(c = \frac{n_o \rho_w}{wW_{sat}\mu_w}\) in the van 't Hoff relationship \(\pi = -icRT\) with an \(i=1\) given the molar mass, \(\mu_w\) and density, \(\rho_w\) of water, and a conversion from Pa to MPa, \(\Upsilon\),   </p><p class="formulaDsp">
+\[    \pi_o = \frac{n_o RT}{W_{sat}}\frac{\rho_w \Upsilon}{\mu_w}.
+\]
+</p>
+<h1><a class="anchor" id="PH_Params"></a>
+Parameters</h1>
+<p>Conductance parameters </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(K_{max}\)   </td><td class="markdownTableBodyNone">maximum hydraulic conductance of leaf, stem, or root   </td><td class="markdownTableBodyNone">mol m \(^{-2}\) s \(^{-1}\) MPa \(^{-1}\)   </td><td class="markdownTableBodyNone">0.5    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">\(\psi_{50}\)   </td><td class="markdownTableBodyNone">water potential at which conductance is half of its maximum   </td><td class="markdownTableBodyNone">MPa   </td><td class="markdownTableBodyNone">N/A    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(s\)   </td><td class="markdownTableBodyNone">steepness of conductance change with water potential around \(\psi_{50}\)   </td><td class="markdownTableBodyNone">unitless   </td><td class="markdownTableBodyNone">N/A   </td></tr>
+</table>
+<div class="image">
+<img src="HydraulicConductanceFits.png" alt=""/>
+</div>
+<p> (Data from <a href="https://doi.org/10.1093/treephys/tpv146">Hernandez-Santana et al. 2016</a>).</p>
+<p>Capacitance parameters </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(\pi_o\)   </td><td class="markdownTableBodyNone">osmotic potential at full turgor   </td><td class="markdownTableBodyNone">MPa   </td><td class="markdownTableBodyNone">-2.0    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">\(w_{tlp}\)   </td><td class="markdownTableBodyNone">relative water content at turgor loss point   </td><td class="markdownTableBodyNone">unitless   </td><td class="markdownTableBodyNone">0.8    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(\epsilon\)   </td><td class="markdownTableBodyNone">empirical cell wall elasticity coefficient   </td><td class="markdownTableBodyNone">unitless   </td><td class="markdownTableBodyNone">1.0    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">\(W_{sat}\)   </td><td class="markdownTableBodyNone">specific water content at \(w=1\)   </td><td class="markdownTableBodyNone">mol m \(^{-2}\)   </td><td class="markdownTableBodyNone">1.0   </td></tr>
+</table>
+<p>Constants </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Units   </th><th class="markdownTableHeadNone">Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(R\)   </td><td class="markdownTableBodyNone">gas constant   </td><td class="markdownTableBodyNone">J mol \(^{-1}\) K \(^{-1}\)   </td><td class="markdownTableBodyNone">8.314    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">\(\mu_w\)   </td><td class="markdownTableBodyNone">molar mass of water   </td><td class="markdownTableBodyNone">g mol \(^{-1}\)   </td><td class="markdownTableBodyNone">18.01    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">\(\rho_w\)   </td><td class="markdownTableBodyNone">density of water   </td><td class="markdownTableBodyNone">g m \(^{-3}\)   </td><td class="markdownTableBodyNone">10 \(^{-6}\)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">\(\Upsilon\)   </td><td class="markdownTableBodyNone">Pa to MPa   </td><td class="markdownTableBodyNone">MPa Pa \(^{-1}\)   </td><td class="markdownTableBodyNone">10 \(^{-6}\)   </td></tr>
+</table>
+<div class="image">
+<img src="PressureVolumeCurveFits.png" alt=""/>
+</div>
+<h1><a class="anchor" id="PH_Example"></a>
+Examples</h1>
+<p>A minimal working example is given below. A parameter library is used for leaf capacitance, and default generic values for all other parameters, as shown in the tables above.</p>
+<p>Note that the examples below use the plant architecture plugin. Be sure to add this plug-in in your project CMakeLists.txt file.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_hydraulics_model_8h.html">PlantHydraulicsModel.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> pa(&amp;context);</div>
+<div class="line">    pa.loadPlantModelFromLibrary(<span class="stringliteral">&quot;pistachio&quot;</span>);</div>
+<div class="line">    pa.optionalOutputObjectData(<span class="stringliteral">&quot;plantID&quot;</span>); <span class="comment">// Important setting to output plantID</span></div>
+<div class="line">    pa.buildPlantInstanceFromLibrary(<a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>(0,0,0),200);</div>
+<div class="line">    std::vector&lt;uint&gt; leaves = pa.getAllLeafUUIDs();</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_hydraulics_model.html" title="PlantHydraulics model class.">PlantHydraulicsModel</a> hydraulics(&amp;context);</div>
+<div class="line">    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> phmc;</div>
+<div class="line"> </div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#ab34641d1be31de6a6d9afdf88b053868" title="Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived para...">setLeafHydraulicCapacitanceFromLibrary</a>(<span class="stringliteral">&quot;pistachio&quot;</span>);</div>
+<div class="line">    hydraulics.setModelCoefficients(phmc);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">int</span> plantID = hydraulics.getPlantID(leaves);</div>
+<div class="line">    <span class="keywordtype">float</span> soil_water_potential = -0.05; <span class="comment">//MPa</span></div>
+<div class="line"> </div>
+<div class="line">    hydraulics.setSoilWaterPotentialOfPlant(plantID,soil_water_potential);</div>
+<div class="line">    hydraulics.run(leaves);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Query the point-wise water potentials throughout the system</span></div>
+<div class="line">    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;leaves.size(); i++ ) {</div>
+<div class="line">        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> leafUUID = leaves.at(i);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_soil = hydraulics.getSoilWaterPotential(leafUUID);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_root = hydraulics.getRootWaterPotential(leafUUID);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_stem = hydraulics.getStemWaterPotential(leafUUID);</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;Leaf UUID: &quot;</span> &lt;&lt; leafUUID</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Soil Water Potential: &quot;</span> &lt;&lt; psi_soil</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Root Water Potential: &quot;</span> &lt;&lt; psi_root</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Stem Water Potential: &quot;</span> &lt;&lt; psi_stem</div>
+<div class="line">                  &lt;&lt; std::endl;</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Parameters for conductances, and capacitances are set using respective data structures and examples of setting leaf, stem, and root compartment hydraulics as either variable or constant is demonstrated below.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_hydraulics_model_8h.html">PlantHydraulicsModel.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> pa(&amp;context);</div>
+<div class="line">    pa.loadPlantModelFromLibrary(<span class="stringliteral">&quot;pistachio&quot;</span>);</div>
+<div class="line">    pa.optionalOutputObjectData(<span class="stringliteral">&quot;plantID&quot;</span>);</div>
+<div class="line">    pa.buildPlantInstanceFromLibrary(<a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>(0,0,0),200);</div>
+<div class="line">    std::vector&lt;uint&gt; leaves = pa.getAllLeafUUIDs();</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_plant_hydraulics_model.html" title="PlantHydraulics model class.">PlantHydraulicsModel</a> hydraulics(&amp;context);</div>
+<div class="line">    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> phmc;</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> Kl_max = 0.05; <span class="comment">// maximum conductance of leaf (MPa)</span></div>
+<div class="line">    <span class="keywordtype">float</span> Ks = 0.5; <span class="comment">// constant conductance of stem (MPa)</span></div>
+<div class="line">    <span class="keywordtype">float</span> Kr = 0.5; <span class="comment">// constant conductance of root (MPa)</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> psi50 = -1.5; <span class="comment">// water potential at which conductance is reduced by half (MPa)</span></div>
+<div class="line">    <span class="keywordtype">float</span> sensitivity = 2.0; <span class="comment">// how steep the reduction in conductance via water potential is (-)</span></div>
+<div class="line"> </div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a54e5ac493d7df3aa4ed0edc270ad682f" title="Set leaf hydraulic conductance as a constant value.">setLeafHydraulicConductance</a>(Kl_max,psi50,sensitivity); <span class="comment">// set conductance as a function of water potential</span></div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a1e62458aaeaa6e8276a51dc0f0c6c7e4" title="Toggle leaf hydraulic conductance&#39;s temperature dependence.">setLeafHydraulicConductanceTemperatureDependence</a>(<span class="keyword">true</span>); <span class="comment">// set conductance as a function of temperature</span></div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a40ee11aba3a775eb488358742646a3e8" title="Set stem hydraulic conductance as a constant value.">setStemHydraulicConductance</a>(Ks); <span class="comment">// set a constant conductance</span></div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a1486b283e8fc64a24c1f39062a553bc2" title="Set root hydraulic conductance as a constant value.">setRootHydraulicConductance</a>(Kr); <span class="comment">// set a constant conductance</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> pi_o = -2.0; <span class="comment">// osmotic potential at full turgor (MPa)</span></div>
+<div class="line">    <span class="keywordtype">float</span> w_tlp = 0.8; <span class="comment">// relative water content (-)</span></div>
+<div class="line">    <span class="keywordtype">float</span> elasticity = 1.0; <span class="comment">// cell wall elasticity exponent (-)</span></div>
+<div class="line">    <span class="keywordtype">float</span> Cs = 0.5; <span class="comment">// constant capacitance (mol/m2/MPa)</span></div>
+<div class="line">    <span class="keywordtype">float</span> Cr = 0.5; <span class="comment">// constant capacitance (mol/m2/MPa)</span></div>
+<div class="line"> </div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(pi_o,w_tlp,elasticity); <span class="comment">// set a variable capacitance (PV curve relationship)</span></div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a4dfb16791fd826d4119d6415aa600d83" title="Set stem hydraulic capacitance as a constant value.">setStemHydraulicCapacitance</a>(Cs); <span class="comment">// set a constant capacitance</span></div>
+<div class="line">    phmc.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#af29774866221243f00020b57e9b4da30" title="Set root hydraulic capacitance as a constant value.">setRootHydraulicCapacitance</a>(Cr); <span class="comment">// set a constant capacitance</span></div>
+<div class="line">    hydraulics.setModelCoefficients(phmc); <span class="comment">// set model coefficients</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Toggle optional primitive data outputs for conductance and capacitance</span></div>
+<div class="line">    hydraulics.outputConductancePrimitiveData(<span class="keyword">true</span>);</div>
+<div class="line">    hydraulics.outputCapacitancePrimitiveData(<span class="keyword">true</span>);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">int</span> plantID = hydraulics.getPlantID(leaves);</div>
+<div class="line">    <span class="keywordtype">float</span> soil_water_potential = -0.05; <span class="comment">// (MPa)</span></div>
+<div class="line"> </div>
+<div class="line">    hydraulics.setSoilWaterPotentialOfPlant(plantID,soil_water_potential);</div>
+<div class="line">    hydraulics.run(leaves);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Query the point-wise water potentials throughout the system</span></div>
+<div class="line">    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> i=0; i&lt;leaves.size(); i++ ) {</div>
+<div class="line">        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> leafUUID = leaves.at(i);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_soil = hydraulics.getSoilWaterPotential(leafUUID);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_root = hydraulics.getRootWaterPotential(leafUUID);</div>
+<div class="line">        <span class="keywordtype">float</span> psi_stem = hydraulics.getStemWaterPotential(leafUUID);</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;Leaf UUID: &quot;</span> &lt;&lt; leafUUID</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Soil Water Potential: &quot;</span> &lt;&lt; psi_soil</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Root Water Potential: &quot;</span> &lt;&lt; psi_root</div>
+<div class="line">                  &lt;&lt; <span class="stringliteral">&quot;, Stem Water Potential: &quot;</span> &lt;&lt; psi_stem</div>
+<div class="line">                  &lt;&lt; std::endl;</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- contents -->
+</div><!-- PageDoc -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

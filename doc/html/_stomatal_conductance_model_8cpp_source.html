@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;v1.3.37</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -226,7 +226,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>  std::vector&lt;float&gt; gs_MOPT(gs_ref.size());</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  std::vector&lt;float&gt; gs_BMF(gs_ref.size());</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  uint UUID0 = context_selftest.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID0 = context_selftest.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>  BWBcoefficients BWBcoeffs;</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>  BBLcoefficients BBLcoeffs;</div>
@@ -240,7 +240,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>  <span class="keywordtype">float</span> RMSE_MOPT = 0.f;</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>  <span class="keywordtype">float</span> RMSE_BMF = 0.f;</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <span class="keywordflow">for</span>( uint i=0; i&lt;gs_ref.size(); i++ ) {</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;gs_ref.size(); i++ ) {</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>, Q_ref.at(i)/4.57f );</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    context_selftest.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID0, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, An_ref.at(i) );</div>
@@ -299,7 +299,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span> </div>
 <div class="foldopen" id="foldopen00147" data-start="{" data-end="}">
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#ae0ce3cb199ab635b5563ec2added7ae8">  147</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_b_w_bcoefficients.html" title="Coefficients for original Ball, Woodrow, Berry (1987) stomatal conductance model.">BWBcoefficients</a> &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    BWBmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>  }</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>  model = <span class="stringliteral">&quot;BWB&quot;</span>;</div>
@@ -316,7 +316,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
 <div class="foldopen" id="foldopen00160" data-start="{" data-end="}">
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a48b91aeb301f53d13656d0a6f1d16fe7">  160</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_b_b_lcoefficients.html" title="Coefficients for Ball, Berry, Leuning (Leuning 1990, 1995) stomatal conductance model.">BBLcoefficients</a> &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    BBLmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>  }</div>
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>  model = <span class="stringliteral">&quot;BBL&quot;</span>;</div>
@@ -333,7 +333,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
 <div class="foldopen" id="foldopen00173" data-start="{" data-end="}">
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a17211c4b6d87e120f182de8cc3cc7aa7">  173</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_m_o_p_tcoefficients.html" title="Coefficients for optimality-based Medlyn et al. (2011) stomatal conductance model.">MOPTcoefficients</a> &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>  <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>  <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    MOPTmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  }</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>  model = <span class="stringliteral">&quot;MOPT&quot;</span>;</div>
@@ -350,7 +350,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
 <div class="foldopen" id="foldopen00186" data-start="{" data-end="}">
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a1b6ffb0b1beef707d77b273b9cc7f9c9">  186</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_b_m_fcoefficients.html" title="Coefficients for simplified Buckley, Mott, &amp; Farquhar stomatal conductance model.">BMFcoefficients</a> &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        BMFmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    }</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    model = <span class="stringliteral">&quot;BMF&quot;</span>;</div>
@@ -370,7 +370,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#abca589232617a8543feff66ca10d5d79">  200</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#a67b1af836d98f934a9e4ba1390523413" title="Set the model coefficient values using one of the available species in the library.">StomatalConductanceModel::setBMFCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    <a class="code hl_struct" href="struct_b_m_fcoefficients.html" title="Coefficients for simplified Buckley, Mott, &amp; Farquhar stomatal conductance model.">BMFcoefficients</a> coeffs;</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    coeffs = <a class="code hl_function" href="class_stomatal_conductance_model.html#ada09940a1cc67dbfc0192f6e0a50c967" title="Get the model coefficient values using one of the available species in the library.">getBMFCoefficientsFromLibrary</a>(species);</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        BMFmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    }</div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    model = <span class="stringliteral">&quot;BMF&quot;</span>;</div>
@@ -494,7 +494,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
 <div class="foldopen" id="foldopen00320" data-start="{" data-end="}">
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a29e691b7d3fa4348b8a5ef859483ed91">  320</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_b_bcoefficients.html" title="Coefficients for simplified Bailey stomatal conductance model.">BBcoefficients</a> &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        BBmodel_coefficients[UUID] = coeffs;</div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    }</div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    model = <span class="stringliteral">&quot;BB&quot;</span>;</div>
@@ -510,7 +510,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span> </div>
 <div class="foldopen" id="foldopen00332" data-start="{" data-end="}">
 <div class="line"><a id="l00332" name="l00332"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a317e6d8d262ddffb5e66839ee987a067">  332</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#a045fd837e2328617901dfd4e15f1da29" title="Set time constants for dynamic stomatal opening and closing for all primitives.">StomatalConductanceModel::setDynamicTimeConstants</a>( <span class="keywordtype">float</span> tau_open, <span class="keywordtype">float</span> tau_close, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs ){</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        dynamic_time_constants[UUID] = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(tau_open,tau_close);</div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    }</div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>}</div>
@@ -544,7 +544,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordtype">bool</span> warn_tau_unspecified = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="keywordtype">bool</span> warn_old_gs_unspecified = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordflow">for</span>( uint UUID : UUIDs){</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : UUIDs){</div>
 <div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>        <span class="keywordflow">if</span>( !context-&gt;doesPrimitiveExist(UUID) ){</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>            <span class="keywordflow">if</span>( message_flag ) {</div>
@@ -1039,7 +1039,7 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span> </div>
 <div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>    <span class="keywordtype">size_t</span> Nprimitives = UUIDs.size();</div>
 <div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span> </div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    <span class="keywordflow">for</span> (uint UUID: UUIDs) {</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
 <div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span> </div>
 <div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>        <span class="keywordflow">if</span> (!context-&gt;doesPrimitiveDataExist(UUID, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) ||</div>
 <div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>            context-&gt;getPrimitiveDataType(UUID, <span class="stringliteral">&quot;radiation_flux_PAR&quot;</span>) != <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>) {</div>

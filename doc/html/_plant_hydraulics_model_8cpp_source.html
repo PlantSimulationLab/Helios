@@ -1,0 +1,865 @@
+<!-- HTML header for doxygen 1.12.0-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios: plugins/planthydraulics/src/PlantHydraulicsModel.cpp Source File</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+<script type="text/javascript" src="doxygen-awesome-paragraph_link.js"></script>
+<script type="text/javascript" src="doxygen-awesome-tabs.js"></script>
+<script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+<script type="text/javascript">
+  DoxygenAwesomeDarkModeToggle.init()
+  DoxygenAwesomeParagraphLink.init()
+  DoxygenAwesomeTabs.init()
+  DoxygenAwesomeInteractiveToc.init()
+</script>
+<script>
+    try {
+        // Remove the stored “last visited page” so the tree always starts fresh
+        Cookie.eraseSetting('navpath');
+        localStorage.removeItem('navpath');
+        // Older Doxygen versions might use this key:
+        localStorage.removeItem('nav-sync-path');
+        // Force panel synchronization on by default
+        localStorage.setItem('navsync', 'true');
+        // (fallback for some older builds)
+        localStorage.setItem('nav-sync', 'true');
+    } catch(e) {
+        /* storage unavailable? ignore */
+    }
+</script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+<link href="custom.css" rel="stylesheet" type="text/css"/>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-93BB4673PE"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-93BB4673PE');
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3F0Y5Z6543"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3F0Y5Z6543');
+</script>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="5">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
+  <td id="projectalign">
+   <div id="projectname">
+       <span id="projectnumber">&#160;v1.3.37</span>
+   </div>
+  </td>
+     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generated by Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('_plant_hydraulics_model_8cpp_source.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">PlantHydraulicsModel.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="_plant_hydraulics_model_8cpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &quot;<a class="code" href="_plant_hydraulics_model_8h.html">PlantHydraulicsModel.h</a>&quot;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &quot;unordered_set&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">using namespace </span>std;</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">using namespace </span>helios;</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>std::vector&lt;float&gt; linspace(<span class="keywordtype">double</span> begin, <span class="keywordtype">double</span> end, <span class="keywordtype">int</span> n) {</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    std::vector&lt;float&gt; result;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keywordflow">if</span> (n &lt;= 0)</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">if</span> (n == 1) {</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        result.emplace_back(begin);</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>        <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    }</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keywordtype">double</span> step = (end - begin) / (n - 1);</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; n; i++) {</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        result.emplace_back(begin + i * step);</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    }</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>}</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="keywordtype">float</span> invertPVCurve(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> leaf_water_potential) {</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="comment">// simple inverted map of relative water content w to water potential psi</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    std::vector&lt;float&gt; wis = linspace(0.02, 1.0, 50);</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    std::vector&lt;vec2&gt; points(wis.size());</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> wi = 0; wi &lt; 50; wi++) {</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        points.at(wi).y = wis.at(wi);</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        points.at(wi).x = <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(coeffs, wis.at(wi));</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    }</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">float</span> leaf_relative_water_content = <a class="code hl_function" href="global_8h.html#a4d45cb06725a89f41266c8c89974c73e" title="Function to perform linear interpolation based on a vector of discrete (x,y) values.">interp1</a>(points, leaf_water_potential);</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordflow">return</span> leaf_relative_water_content;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>}</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="foldopen" id="foldopen00052" data-start="{" data-end="}">
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#a5a976d4ed98dddb65eeffb2be7055ead">   52</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5a976d4ed98dddb65eeffb2be7055ead" title="Compute osmotic potential as a function of water content, osmotic content, temperature using paramete...">computeOsmoticPotential</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content) {</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keywordtype">float</span> pi_o = coeffs.osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordtype">float</span> w = relative_water_content; <span class="comment">// -</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">float</span> pi = pi_o / w;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordflow">return</span> pi;</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>}</div>
+</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="foldopen" id="foldopen00059" data-start="{" data-end="}">
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d">   59</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#afef148150eea27bf7aeef67af21ff59d" title="Compute turgor pressure as a function of water content using parameterized pressure-volume relationsh...">computeTurgorPressure</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content) {</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="keywordtype">float</span> pi_o = coeffs.osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordtype">float</span> w_tlp = coeffs.relative_water_content_at_turgor_loss; <span class="comment">// -</span></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">float</span> epsilon = coeffs.cell_wall_elasticity_exponent; <span class="comment">// -</span></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordtype">float</span> w = relative_water_content; <span class="comment">// -</span></div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keywordtype">float</span> P = -pi_o * powf(<a class="code hl_function" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86" title="Maximum value of a vector of floats.">max</a>(0.f, (w - w_tlp) / (1.f - w_tlp)), epsilon);</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="keywordflow">return</span> P;</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>}</div>
+</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
+<div class="foldopen" id="foldopen00068" data-start="{" data-end="}">
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb">   68</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content) {</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keywordtype">float</span> pi_o = coeffs.osmotic_potential_at_full_turgor; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keywordtype">float</span> w_tlp = coeffs.relative_water_content_at_turgor_loss; <span class="comment">// -</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="keywordtype">float</span> epsilon = coeffs.cell_wall_elasticity_exponent; <span class="comment">// -</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">float</span> w = relative_water_content; <span class="comment">// -</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordtype">float</span> P = -pi_o * powf(<a class="code hl_function" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86" title="Maximum value of a vector of floats.">max</a>(0.f, (w - w_tlp) / (1.f - w_tlp)), epsilon);</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keywordtype">float</span> pi = pi_o / w;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">float</span> psi = P + pi;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordflow">return</span> psi;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>}</div>
+</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span> </div>
+<div class="foldopen" id="foldopen00079" data-start="{" data-end="}">
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#ab2a44454bdc50362d329bf773b583c40">   79</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(<span class="keywordtype">float</span> turgor_presure, <span class="keywordtype">float</span> osmotic_potential) {</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga522f5d4232ccb2c899ff620eafc744b5" title="Minimum value of a vector of floats.">min</a>(turgor_presure + osmotic_potential, 0.f);</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>}</div>
+</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
+<div class="foldopen" id="foldopen00083" data-start="{" data-end="}">
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a">   83</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_conductance.html">HydraulicConductance</a> &amp;coeffs, <span class="keywordtype">float</span> water_potential, <span class="keywordtype">float</span> temperature) {</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keywordtype">float</span> psi = water_potential; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordtype">float</span> T = temperature; <span class="comment">// K</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordtype">float</span> Ksat = coeffs.saturated_conductance; <span class="comment">// mol/m2/s/MPa</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keywordtype">float</span> a = coeffs.potential_at_half_saturated; <span class="comment">// MPa</span></div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordtype">float</span> b = coeffs.sensitivity; <span class="comment">// -</span></div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordtype">float</span> K;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <span class="keywordflow">if</span> (a == 0.f || b == 0.f) {</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        K = Ksat;</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        K = Ksat / (1.f + pow(abs(psi / a), b));</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    }</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordflow">if</span> (coeffs.temperature_dependence) {</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        K *= powf(T / 298.15f, 7.f);</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    }</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordflow">return</span> K;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>}</div>
+</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="foldopen" id="foldopen00102" data-start="{" data-end="}">
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno"><a class="line" href="_plant_hydraulics_model_8h.html#ac3012dbe1ee1c245b1a3fbba5eeee97a">  102</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> relative_water_content) {</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordtype">float</span> C = coeffs.fixed_constant_capacitance;</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordtype">float</span> Wsat = coeffs.saturated_specific_water_content;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="keywordflow">if</span> (C &gt; 0.f) {</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        <span class="keywordflow">return</span> C; <span class="comment">// mol/m2/MPa</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    }</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <span class="keywordtype">float</span> w = relative_water_content; <span class="comment">// -</span></div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    <span class="keywordtype">float</span> h = 0.001;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keywordtype">float</span> f0 = <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(coeffs, w - h);</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <span class="keywordtype">float</span> f1 = <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(coeffs, w);</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="keywordtype">float</span> f2 = <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(coeffs, w + h);</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keywordtype">float</span> dpsidw = (f0 - 2.f * f1 + f2) / (h * h);</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    C = Wsat / dpsidw; <span class="comment">// mol/m2/MPa</span></div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordflow">return</span> C;</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>}</div>
+</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span><span class="keywordtype">float</span> <a class="code hl_function" href="_plant_hydraulics_model_8cpp.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs) {</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keywordtype">float</span> C = coeffs.fixed_constant_capacitance; <span class="comment">// mol/m2/MPa</span></div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">if</span> (C &gt; 0.f) {</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">return</span> C;</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;PlantHydraulicsModel::computeCapacitance Data fixed_constant_capacitance in HydraulicCapacitance not set for overloaded function computeCapacitance(). Set data value or provide relative_water_content and temperature to &quot;</span></div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>                         <span class="stringliteral">&quot;computeCapacitance().&quot;</span>);</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    <span class="keywordflow">return</span> 0; <span class="comment">// never reaches here, but avoids compiler warning</span></div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>}</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span> </div>
+<div class="foldopen" id="foldopen00130" data-start="{" data-end="}">
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#acab25f541a25a9aa1a663eaeb7fb6e60">  130</a></span><a class="code hl_function" href="class_plant_hydraulics_model.html#acab25f541a25a9aa1a663eaeb7fb6e60" title="Constructor.">PlantHydraulicsModel::PlantHydraulicsModel</a>(<a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *a_context) {</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    context = a_context;</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>}</div>
+</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
+<div class="foldopen" id="foldopen00134" data-start="{" data-end="}">
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ad5a921cd4d362da05cda21e056284179">  134</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5a921cd4d362da05cda21e056284179" title="Set the PlantHydraulics model coefficients for all primitives.">PlantHydraulicsModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients) {</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    modelcoeffs = modelcoefficients;</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    modelcoeffs_map.clear();</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>}</div>
+</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span> </div>
+<div class="foldopen" id="foldopen00139" data-start="{" data-end="}">
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a00373c1a4adebd6f54b6afb7ae85fcab">  139</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5a921cd4d362da05cda21e056284179" title="Set the PlantHydraulics model coefficients for all primitives.">PlantHydraulicsModel::setModelCoefficients</a>(<span class="keyword">const</span> <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> &amp;modelcoefficients, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>        modelcoeffs_map[UUID] = modelcoefficients;</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>    }</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>}</div>
+</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
+<div class="foldopen" id="foldopen00145" data-start="{" data-end="}">
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a6e5fe159e96b23a77c68f917fdddf5cf">  145</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">PlantHydraulicsModel::setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species) {</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> coeffs;</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    coeffs = <a class="code hl_function" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3" title="Get the PlantHydraulics model coefficients for a species from the library of species coefficients.">getModelCoefficientsFromLibrary</a>(species);</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    modelcoeffs = coeffs;</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    modelcoeffs_map.clear();</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>}</div>
+</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
+<div class="foldopen" id="foldopen00152" data-start="{" data-end="}">
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755">  152</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">PlantHydraulicsModel::setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> coeffs;</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    coeffs = <a class="code hl_function" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3" title="Get the PlantHydraulics model coefficients for a species from the library of species coefficients.">getModelCoefficientsFromLibrary</a>(species);</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    modelcoeffs_map[UUID] = coeffs;</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>}</div>
+</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
+<div class="foldopen" id="foldopen00158" data-start="{" data-end="}">
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a03f9952185b34338e05cf5fb8a68d67f">  158</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a77a9792c8ebe9e95aff2531c33b81755" title="Set the PlantHydraulics model coefficients for a primitive based on its UUID and the name of the spec...">PlantHydraulicsModel::setModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> coeffs;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    coeffs = <a class="code hl_function" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3" title="Get the PlantHydraulics model coefficients for a species from the library of species coefficients.">getModelCoefficientsFromLibrary</a>(species);</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        modelcoeffs_map[UUID] = coeffs;</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    }</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>}</div>
+</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span> </div>
+<div class="foldopen" id="foldopen00167" data-start="{" data-end="}">
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3">  167</a></span><a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> <a class="code hl_function" href="class_plant_hydraulics_model.html#aa887808bd121fe1274412c8ce8a36ee3" title="Get the PlantHydraulics model coefficients for a species from the library of species coefficients.">PlantHydraulicsModel::getModelCoefficientsFromLibrary</a>(<span class="keyword">const</span> std::string &amp;species) {</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> coeffs;</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordtype">bool</span> defaultSpecies = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keyword">const</span> std::string &amp;s = species;</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Walnut&quot;</span> || s == <span class="stringliteral">&quot;walnut&quot;</span>) {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        coeffs.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(-1.6386, 0.7683, 2.f);</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;PistachioFemale&quot;</span> || s == <span class="stringliteral">&quot;pistachiofemale&quot;</span> || s == <span class="stringliteral">&quot;pistachio_female&quot;</span> || s == <span class="stringliteral">&quot;Pistachio_Female&quot;</span> || s == <span class="stringliteral">&quot;Pistachio_female&quot;</span> || s == <span class="stringliteral">&quot;pistachio&quot;</span> || s == <span class="stringliteral">&quot;Pistachio&quot;</span>) {</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        coeffs.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(-3.096, 0.7652, 2.f);</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Elderberry&quot;</span> || s == <span class="stringliteral">&quot;elderberry&quot;</span> || s == <span class="stringliteral">&quot;blue_elderberry&quot;</span>) {</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        coeffs.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(-2.011, 0.8135, 2.f);</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (s == <span class="stringliteral">&quot;Western_Redbud&quot;</span> || s == <span class="stringliteral">&quot;western_redbud&quot;</span> || s == <span class="stringliteral">&quot;Redbud&quot;</span> || s == <span class="stringliteral">&quot;redbud&quot;</span>) {</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        coeffs.<a class="code hl_function" href="struct_plant_hydraulics_model_coefficients.html#a3095770cb843271322b0442cc240d6cd" title="Set leaf hydraulic capacitance as a constant value.">setLeafHydraulicCapacitance</a>(-2.1963, 0.8872, 1.5);</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantHydraulicsModel::getModelCoefficientsFromLibrary): unknown species &quot;</span> &lt;&lt; s &lt;&lt; <span class="stringliteral">&quot;. Returning default (Walnut).&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        defaultSpecies = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    }</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="keywordflow">if</span> (!defaultSpecies) {</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Returning Hydraulic Model Coefficients for &quot;</span> &lt;&lt; s &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    }</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="keywordflow">return</span> coeffs;</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>}</div>
+</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
+<div class="foldopen" id="foldopen00190" data-start="{" data-end="}">
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ad5706b7814682d1e4f7f774e43107b1a">  190</a></span><a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> <a class="code hl_function" href="class_plant_hydraulics_model.html#ad5706b7814682d1e4f7f774e43107b1a" title="Get the PlantHydraulics model coefficients for a primitive based on its UUID.">PlantHydraulicsModel::getModelCoefficients</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> modelCoefficients = modelcoeffs_map[UUID];</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordflow">return</span> modelCoefficients;</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>}</div>
+</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
+<div class="foldopen" id="foldopen00195" data-start="{" data-end="}">
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76">  195</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">PlantHydraulicsModel::getOrInitializePrimitiveData</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keyword">const</span> std::string &amp;primitive_data_label, <span class="keywordtype">float</span> default_value, <span class="keywordtype">bool</span> message_flag) {</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="keywordtype">float</span> primitive_data;</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <span class="keywordflow">if</span> (context-&gt;doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        context-&gt;getPrimitiveData(UUID, primitive_data_label.c_str(), primitive_data);</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        primitive_data = default_value;</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        std::string message = <span class="stringliteral">&quot;PlantHydraulicsModel::run: Primitive data &quot;</span> + primitive_data_label + <span class="stringliteral">&quot; not found, using default value %f\n&quot;</span>;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        <span class="keywordflow">if</span> (message_flag)</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            printf(message.c_str(), primitive_data);</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    }</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordflow">return</span> primitive_data;</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>}</div>
+</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span> </div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span><span class="keywordtype">int</span> PlantHydraulicsModel::adjustTimestep(<span class="keywordtype">float</span> time_step, <span class="keywordtype">float</span> min_time_step, <span class="keywordtype">float</span> max_time_step, <span class="keywordtype">float</span> gradient, <span class="keywordtype">float</span> gradient_upper_bound) {</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="comment">// Adpative Timestepper</span></div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    <span class="keywordflow">if</span> (gradient &gt; gradient_upper_bound) {</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        time_step *= gradient_upper_bound / gradient; <span class="comment">// Reduce timestep if gradient too large</span></div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (gradient &lt; gradient_upper_bound * 0.1) {</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        time_step *= 1.1; <span class="comment">// Increase timestep if gradient is small</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    }</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span> </div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    time_step = std::max(min_time_step, std::min(time_step, max_time_step));</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keywordflow">return</span> int(time_step);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>}</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span> </div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span><span class="keywordtype">void</span> PlantHydraulicsModel::updateRootAndStemWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep) {</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keywordtype">float</span> canopy_transpiration, K_root, K_stem, K_leaf, C_root, C_stem, leaf_water_potential, leaf_transpiration, leaf_temperature, J11, J12, J21, J22, F1, F2, det, delta_psi, delta_psi_root, delta_psi_stem;</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="keywordtype">int</span> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs);</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    <span class="keywordflow">if</span> (soilWaterPotentialsByPlantID.find(plantID) == soilWaterPotentialsByPlantID.end()) {</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        soilWaterPotentialsByPlantID[plantID] = -0.001;</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    }</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordflow">if</span> (stemWaterPotentialsByPlantID.find(plantID) == stemWaterPotentialsByPlantID.end()) {</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        stemWaterPotentialsByPlantID[plantID] = -0.001;</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    }</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span> </div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    <span class="keywordflow">if</span> (rootWaterPotentialsByPlantID.find(plantID) == rootWaterPotentialsByPlantID.end()) {</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        rootWaterPotentialsByPlantID[plantID] = -0.001;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    }</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span> </div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="keywordtype">float</span> soil_water_potential = soilWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="keywordtype">float</span> stem_water_potential = stemWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="keywordtype">float</span> root_water_potential = rootWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="keywordtype">bool</span> steadystate = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    <span class="keywordflow">if</span> (timespan != 0) {</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        steadystate = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    }</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="keywordtype">float</span> stem_temperature = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.front(), <span class="stringliteral">&quot;air_temperature&quot;</span>, 298.15f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    <span class="keywordtype">float</span> root_temperature = stem_temperature - 5.f;</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    context-&gt;calculatePrimitiveDataAreaWeightedSum(UUIDs, <span class="stringliteral">&quot;latent_flux&quot;</span>, canopy_transpiration); <span class="comment">// Wm2 -&gt; W</span></div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    canopy_transpiration /= 44000.f; <span class="comment">// W/m2 -&gt; mol/m2/s</span></div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span> </div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="comment">// Steady State Solution is assumed if time step is not specified/equal to 0.f</span></div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="keywordflow">if</span> (steadystate) {</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        K_root = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(modelcoeffs.RootHydraulicConductance, root_water_potential, root_temperature);</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        K_stem = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(modelcoeffs.StemHydraulicConductance, stem_water_potential, stem_temperature);</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        root_water_potential = soil_water_potential - canopy_transpiration / K_root;</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        stem_water_potential = root_water_potential - canopy_transpiration / K_stem;</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span> </div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        rootWaterPotentialsByPlantID.at(plantID) = root_water_potential;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        stemWaterPotentialsByPlantID.at(plantID) = stem_water_potential;</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        <span class="comment">// Non-steady-state solution</span></div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        <span class="keywordtype">float</span> dt = float(timestep);</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>        <span class="keywordtype">float</span> dt_min = 10;</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>        <span class="keywordtype">float</span> dt_max = 500.0;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>        <span class="keywordtype">float</span> delta_psi_max = 0.01;</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>        <span class="keywordtype">int</span> max_iter = 100;</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>        <span class="keywordtype">float</span> tol = 1e-5;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> t = 0; t &lt; int(timespan); t += timestep) {</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>            <span class="comment">// Forward Euler</span></div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>            <span class="comment">//  Fin = K_root * (soil_water_potential - root_water_potential);</span></div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>            <span class="comment">//  Fout = K_stem * (root_water_potential - stem_water_potential);</span></div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>            <span class="comment">//  delta_psi_root = dt / C_root * (Fin - Fout);</span></div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>            <span class="comment">//  root_water_potential += delta_psi_root;</span></div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>            <span class="comment">//</span></div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>            <span class="comment">//  Fin = K_stem * (root_water_potential - stem_water_potential);</span></div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>            <span class="comment">//  Fout = canopy_transpiration;</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>            <span class="comment">//  delta_psi_stem = dt / C_stem * (Fin - Fout);</span></div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>            <span class="comment">//  stem_water_potential += delta_psi_stem;</span></div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>            <span class="comment">// Backward Euler</span></div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>            <span class="keywordtype">float</span> root_water_potential_new = root_water_potential;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>            <span class="keywordtype">float</span> stem_water_potential_new = stem_water_potential;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> iter = 0; iter &lt; max_iter; ++iter) {</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>                K_root = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(modelcoeffs.RootHydraulicConductance, root_water_potential, root_temperature);</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>                C_root = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(modelcoeffs.RootHydraulicCapacitance);</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>                K_stem = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(modelcoeffs.StemHydraulicConductance, stem_water_potential, stem_temperature);</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>                C_stem = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(modelcoeffs.StemHydraulicCapacitance);</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>                <span class="comment">// F  : C psi/dt = Fin - Fout = Kpsi/dx - Kpsi/dx</span></div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>                <span class="comment">// F1 : C_root dpsi_root/dt = K_root(psi_soil-psi_root) - K_stem(psi_root-psi_stem)</span></div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>                <span class="comment">// F2:  C_stem dpsi_stem/dt = K_stem(psi_root-psi_stem) - E</span></div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span> </div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>                <span class="comment">// Residuals (F)</span></div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>                F1 = C_root / dt * (root_water_potential_new - root_water_potential) - K_root * (soil_water_potential - root_water_potential_new) + K_stem * (root_water_potential_new - stem_water_potential_new);</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>                F2 = C_stem / dt * (stem_water_potential_new - stem_water_potential) - K_stem * (root_water_potential_new - stem_water_potential_new) + canopy_transpiration;</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>                <span class="comment">// Jacobian (partial F / partial psi)</span></div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>                J11 = C_root / dt + K_root + K_stem;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>                J12 = -K_stem;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>                J21 = -K_stem;</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>                J22 = C_stem / dt + K_stem;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span> </div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>                <span class="comment">// delta psi = inv(J) * -F</span></div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>                <span class="comment">// inv(J) = 1/det(J) * [J22 -J12; -J21 J11]</span></div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>                <span class="comment">// delta psi = 1/det(J) * [J22 -J12; -J21 J11] * [-F1 -F2]</span></div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>                det = J11 * J22 - J12 * J21;</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                delta_psi_root = (-F1 * J22 + -F2 * -J12) / det;</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                delta_psi_stem = (-F1 * -J21 + -F2 * J11) / det;</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span> </div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>                root_water_potential_new += delta_psi_root;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>                stem_water_potential_new += delta_psi_stem;</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>                <span class="keywordflow">if</span> (fabs(delta_psi_root) &lt; tol &amp;&amp; fabs(delta_psi_stem) &lt; tol) {</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>                    <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>                }</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>            }</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>            delta_psi = <a class="code hl_function" href="group__functions.html#ga828d302d1bb6e0aee3e2bf5efd670f86" title="Maximum value of a vector of floats.">max</a>(root_water_potential_new - root_water_potential, stem_water_potential_new - stem_water_potential);</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span> </div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>            root_water_potential = root_water_potential_new;</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>            stem_water_potential = stem_water_potential_new;</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span> </div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>            <span class="comment">// Adpative Timestepper: Reduce timestep if change is large, increase timestep if change is small</span></div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>            timestep = adjustTimestep(dt, dt_min, dt_max, delta_psi, delta_psi_max);</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        }</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span> </div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>        rootWaterPotentialsByPlantID.at(plantID) = root_water_potential;</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>        stemWaterPotentialsByPlantID.at(plantID) = stem_water_potential;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    }</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>}</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span> </div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span><span class="keywordtype">void</span> PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep) {</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    <span class="keywordtype">float</span> K_leaf, leaf_water_potential, leaf_transpiration, leaf_relative_water_content, leaf_temperature, leaf_osmotic_content, leaf_area, C_leaf, leaf_water_potential_old, dt, Fin, Fout, stem_water_potential, leaf_turgor_pressure,</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>            leaf_osmotic_potential, delta_psi, root_water_potential;</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <span class="keywordtype">float</span> default_leaf_osmotic_content = 0.2; <span class="comment">// mol/m2</span></div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <span class="keywordtype">bool</span> steadystate = (timespan == 0);</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <span class="keywordtype">float</span> dt_min = 10;</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordtype">float</span> dt_max = 500.0;</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <span class="keywordtype">float</span> delta_psi_max = 0.01;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordtype">float</span> lambdaw = 44000.f;</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span> </div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="keywordflow">if</span> (steadystate) {</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; UUIDs.size(); i++) {</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>            PlantHydraulicsModelCoefficients coeffs;</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>            <span class="keywordflow">if</span> (modelcoeffs_map.empty() || modelcoeffs_map.find(i) == modelcoeffs_map.end()) {</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>                coeffs = modelcoeffs;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>                coeffs = modelcoeffs_map.at(i);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>            }</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span> </div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>            stem_water_potential = stemWaterPotentialsByPlantID.at(<a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs.at(i)));</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            leaf_water_potential = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;water_potential&quot;</span>, -0.001, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>            leaf_transpiration = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;latent_flux&quot;</span>, 0.f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>            leaf_temperature = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;temperature&quot;</span>, 300.f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            leaf_transpiration /= lambdaw; <span class="comment">// W/m2 -&gt; mol/m2/s</span></div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>            K_leaf = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(coeffs.LeafHydraulicConductance, leaf_water_potential, leaf_temperature);</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>            leaf_water_potential = stem_water_potential - leaf_transpiration / K_leaf;</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span> </div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>            leaf_relative_water_content = invertPVCurve(coeffs.LeafHydraulicCapacitance, leaf_water_potential);</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>            leaf_relative_water_content = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">helios::clamp</a>(leaf_relative_water_content, 0.02f, 1.f);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>            leaf_turgor_pressure = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d" title="Compute turgor pressure as a function of water content using parameterized pressure-volume relationsh...">computeTurgorPressure</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>            leaf_osmotic_potential = leaf_water_potential - leaf_turgor_pressure;</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span> </div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;water_potential&quot;</span>, leaf_water_potential);</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;turgor_pressure&quot;</span>, leaf_turgor_pressure);</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;osmotic_potential&quot;</span>, leaf_osmotic_potential);</div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;relative_water_content&quot;</span>, leaf_relative_water_content);</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>        }</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        <span class="comment">// Non-steady-state</span></div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i = 0; i &lt; UUIDs.size(); i++) {</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>            PlantHydraulicsModelCoefficients coeffs;</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>            <span class="keywordflow">if</span> (modelcoeffs_map.empty() || modelcoeffs_map.find(i) == modelcoeffs_map.end()) {</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>                coeffs = modelcoeffs;</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>                coeffs = modelcoeffs_map.at(i);</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>            }</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span> </div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>            leaf_transpiration = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;latent_flux&quot;</span>, 0.f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>            leaf_temperature = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;temperature&quot;</span>, 300.f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>            leaf_osmotic_content = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;osmotic_content&quot;</span>, default_leaf_osmotic_content, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            leaf_relative_water_content = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;relative_water_content&quot;</span>, 1.0f, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>            leaf_water_potential = <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(UUIDs.at(i), <span class="stringliteral">&quot;water_potential&quot;</span>, -0.001, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>            stem_water_potential = stemWaterPotentialsByPlantID.at(<a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs.at(i)));</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span> </div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>            leaf_transpiration /= 44000.f; <span class="comment">// W/m2 to mol/m2/s</span></div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>            dt = float(timestep);</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> t = 0; t &lt; int(timespan); t += timestep) {</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>                leaf_water_potential_old = leaf_water_potential;</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>                K_leaf = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ae314863c5fcd443005db46021a80d10a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeConductance</a>(coeffs.LeafHydraulicConductance, leaf_water_potential, leaf_temperature); <span class="comment">// mol/m2/s/MPa</span></div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>                C_leaf = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#ac3012dbe1ee1c245b1a3fbba5eeee97a" title="Compute hydraulic conductance as a function of water potential using parameterized pressure-volume re...">computeCapacitance</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content); <span class="comment">// mol/m2/MPa</span></div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>                Fin = K_leaf * (stem_water_potential - leaf_water_potential); <span class="comment">// mol/m2/s</span></div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>                Fout = leaf_transpiration; <span class="comment">// mol/m2/s</span></div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>                leaf_relative_water_content += dt * (Fin - Fout);</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>                <span class="comment">// printf(&quot;leaf_water_potential: %f, C_leaf: %f, Fin: %f, Fout: %f\n&quot;,leaf_water_potential,C_leaf,Fin,Fout);</span></div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>                <span class="comment">//  leaf_relative_water_content += (Fin - Fout) * dt / (coeffs.LeafHydraulicCapacitance.saturated_specific_water_content);</span></div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>                leaf_relative_water_content = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">helios::clamp</a>(leaf_relative_water_content, 0.02f, 1.f);</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>                leaf_turgor_pressure = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d" title="Compute turgor pressure as a function of water content using parameterized pressure-volume relationsh...">computeTurgorPressure</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>                leaf_osmotic_potential = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5a976d4ed98dddb65eeffb2be7055ead" title="Compute osmotic potential as a function of water content, osmotic content, temperature using paramete...">computeOsmoticPotential</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>                leaf_water_potential = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(leaf_turgor_pressure, leaf_osmotic_potential);</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>                <span class="comment">// printf(&quot;pi: %f + P: %f = %f\n&quot;,leaf_osmotic_potential,leaf_turgor_pressure,leaf_water_potential);</span></div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>                delta_psi = abs(leaf_water_potential - leaf_water_potential_old);</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span> </div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>                timestep = adjustTimestep(dt, dt_min, dt_max, delta_psi, delta_psi_max);</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>            }</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>            leaf_relative_water_content = invertPVCurve(coeffs.LeafHydraulicCapacitance, leaf_water_potential);</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>            leaf_turgor_pressure = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d" title="Compute turgor pressure as a function of water content using parameterized pressure-volume relationsh...">computeTurgorPressure</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>            leaf_osmotic_potential = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5a976d4ed98dddb65eeffb2be7055ead" title="Compute osmotic potential as a function of water content, osmotic content, temperature using paramete...">computeOsmoticPotential</a>(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>            leaf_water_potential = <a class="code hl_function" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb" title="Compute water potential as a function of water content using parameterized pressure-volume relationsh...">computeWaterPotential</a>(leaf_turgor_pressure, leaf_osmotic_potential);</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span> </div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span> </div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;turgor_pressure&quot;</span>, leaf_turgor_pressure);</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;osmotic_potential&quot;</span>, leaf_osmotic_potential);</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;relative_water_content&quot;</span>, leaf_relative_water_content);</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>            context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;water_potential&quot;</span>, leaf_water_potential);</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>            <span class="keywordflow">if</span> (OutputConductance) {</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;hydraulic_conductance&quot;</span>, K_leaf);</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>            }</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>            <span class="keywordflow">if</span> (OutputCapacitance) {</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>                context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;hydraulic_capacitance&quot;</span>, C_leaf);</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>            }</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>        }</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    }</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>}</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span> </div>
+<div class="foldopen" id="foldopen00429" data-start="{" data-end="}">
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ab4023e3bb07bcbf6d01487430a5e4cba">  429</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab4023e3bb07bcbf6d01487430a5e4cba" title="Toggle the writing out of optional primitive data - hydraulic conductance.">PlantHydraulicsModel::outputConductancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle) {</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    OutputConductance = toggle;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>}</div>
+</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span> </div>
+<div class="foldopen" id="foldopen00433" data-start="{" data-end="}">
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a5d479e3d31becec145ad67324753d493">  433</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a5d479e3d31becec145ad67324753d493" title="Toggle the writing out of optional primitive data - hydraulic capacitance.">PlantHydraulicsModel::outputCapacitancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle) {</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    OutputCapacitance = toggle;</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>}</div>
+</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span> </div>
+<div class="foldopen" id="foldopen00437" data-start="{" data-end="}">
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24">  437</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">PlantHydraulicsModel::groupPrimitivesIntoPlantObject</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    <span class="keywordflow">if</span> (!UUIDs.empty()) {</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>        <span class="keywordtype">int</span> plantID = context-&gt;addPolymeshObject(UUIDs);</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>        context-&gt;setObjectData(plantID, <span class="stringliteral">&quot;plantID&quot;</span>, plantID);</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    }</div>
+<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>}</div>
+</div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span> </div>
+<div class="foldopen" id="foldopen00444" data-start="{" data-end="}">
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27">  444</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">PlantHydraulicsModel::getPlantID</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>    <span class="keywordtype">int</span> plantID;</div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    context-&gt;getObjectData(context-&gt;getPrimitiveParentObjectID(UUID), <span class="stringliteral">&quot;plantID&quot;</span>, plantID);</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>    <span class="keywordflow">return</span> plantID;</div>
+<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>}</div>
+</div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span> </div>
+<div class="foldopen" id="foldopen00450" data-start="{" data-end="}">
+<div class="line"><a id="l00450" name="l00450"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#acb7073a94feecf11aa33ff080c70dd7f">  450</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">PlantHydraulicsModel::getPlantID</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>    <span class="keywordflow">if</span> (UUIDs.empty()) {</div>
+<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;(PlantHydraulicsModel::getPlantID): UUIDs is empty. Returning -1. &quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>        <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>    }</div>
+<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>    <span class="keywordtype">int</span> plantIDfront;</div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span>    <span class="keywordtype">int</span> plantIDback;</div>
+<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>    <span class="keywordtype">int</span> plantID;</div>
+<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>    context-&gt;getObjectData(context-&gt;getPrimitiveParentObjectID(UUIDs.front()), <span class="stringliteral">&quot;plantID&quot;</span>, plantIDfront);</div>
+<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>    context-&gt;getObjectData(context-&gt;getPrimitiveParentObjectID(UUIDs.back()), <span class="stringliteral">&quot;plantID&quot;</span>, plantIDback);</div>
+<div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span>    <span class="keywordflow">if</span> (plantIDfront == plantIDback) {</div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>        plantID = plantIDfront;</div>
+<div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span>        <span class="keywordflow">return</span> plantID;</div>
+<div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>    }</div>
+<div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span> </div>
+<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>    std::stringstream ss;</div>
+<div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>    ss &lt;&lt; <span class="stringliteral">&quot;(PlantHydraulicsModel::getPlantID): UUIDs do not share the same plantID. First primitive plantID: &quot;</span> &lt;&lt; plantIDfront &lt;&lt; <span class="stringliteral">&quot;, last primitive plantID: &quot;</span> &lt;&lt; plantIDback &lt;&lt; <span class="stringliteral">&quot;.&quot;</span>;</div>
+<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(ss.str());</div>
+<div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>    <span class="keywordflow">return</span> 0; <span class="comment">// This should never be reached, but avoids compiler warning</span></div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>}</div>
+</div>
+<div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span> </div>
+<div class="foldopen" id="foldopen00471" data-start="{" data-end="}">
+<div class="line"><a id="l00471" name="l00471"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a9a822bfb2681f1a55400b880eef057b4">  471</a></span>std::vector&lt;int&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#a9a822bfb2681f1a55400b880eef057b4" title="Query the unique plantIDs of leaf primitives.">PlantHydraulicsModel::getUniquePlantIDs</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>    std::vector&lt;int&gt; plantIDs;</div>
+<div class="line"><a id="l00473" name="l00473"></a><span class="lineno">  473</span>    <span class="keywordtype">int</span> plantID;</div>
+<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>    std::vector&lt;uint&gt; plantObjectIDs;</div>
+<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span>    plantObjectIDs = context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs);</div>
+<div class="line"><a id="l00476" name="l00476"></a><span class="lineno">  476</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> plantObjID: plantObjectIDs) {</div>
+<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span>        context-&gt;getObjectData(plantObjID, <span class="stringliteral">&quot;plantID&quot;</span>, plantID);</div>
+<div class="line"><a id="l00478" name="l00478"></a><span class="lineno">  478</span>        <span class="keywordflow">if</span> (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {</div>
+<div class="line"><a id="l00479" name="l00479"></a><span class="lineno">  479</span>            plantIDs.emplace_back(plantID);</div>
+<div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>        }</div>
+<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>    }</div>
+<div class="line"><a id="l00482" name="l00482"></a><span class="lineno">  482</span> </div>
+<div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span>    <span class="keywordflow">return</span> plantIDs;</div>
+<div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span>}</div>
+</div>
+<div class="line"><a id="l00485" name="l00485"></a><span class="lineno">  485</span> </div>
+<div class="foldopen" id="foldopen00486" data-start="{" data-end="}">
+<div class="line"><a id="l00486" name="l00486"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721">  486</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getStemWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUID);</div>
+<div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>    <span class="keywordflow">return</span> stemWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span>}</div>
+</div>
+<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span> </div>
+<div class="foldopen" id="foldopen00491" data-start="{" data-end="}">
+<div class="line"><a id="l00491" name="l00491"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ab050550784e9b3b12c5d9d3ff7822e63">  491</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getStemWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs);</div>
+<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>    <span class="keywordflow">return</span> stemWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>}</div>
+</div>
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span> </div>
+<div class="foldopen" id="foldopen00496" data-start="{" data-end="}">
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a00d965751037afaafa09dac580fd53b3">  496</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a00d965751037afaafa09dac580fd53b3" title="Get the stem water potential of a plant given its plantID.">PlantHydraulicsModel::getStemWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID) {</div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>    <span class="keywordflow">return</span> stemWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>}</div>
+</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span> </div>
+<div class="foldopen" id="foldopen00500" data-start="{" data-end="}">
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09">  500</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getRootWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUID);</div>
+<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>    <span class="keywordflow">return</span> rootWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>}</div>
+</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span> </div>
+<div class="foldopen" id="foldopen00505" data-start="{" data-end="}">
+<div class="line"><a id="l00505" name="l00505"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#aa979fc21cbbd052108ec0818889c0666">  505</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getRootWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs);</div>
+<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>    <span class="keywordflow">return</span> rootWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>}</div>
+</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span> </div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span> </div>
+<div class="foldopen" id="foldopen00511" data-start="{" data-end="}">
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ab8bbc1fb73d1222b58a3824506fc208a">  511</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab8bbc1fb73d1222b58a3824506fc208a" title="Get the root water potential of a plant given its plantID.">PlantHydraulicsModel::getRootWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID) {</div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    <span class="keywordflow">return</span> rootWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>}</div>
+</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span> </div>
+<div class="foldopen" id="foldopen00515" data-start="{" data-end="}">
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a">  515</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getSoilWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID) {</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUID);</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordflow">return</span> soilWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>}</div>
+</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span> </div>
+<div class="foldopen" id="foldopen00520" data-start="{" data-end="}">
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a0b3acf5aa180b715470aa870e0b6aecd">  520</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">PlantHydraulicsModel::getSoilWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(UUIDs);</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <span class="keywordflow">return</span> soilWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>}</div>
+</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span> </div>
+<div class="foldopen" id="foldopen00525" data-start="{" data-end="}">
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a886c7e7b4a02992036410994a14f4c21">  525</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a886c7e7b4a02992036410994a14f4c21" title="Get the soil water potential of a plant given its plantID.">PlantHydraulicsModel::getSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID) {</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>    <span class="keywordflow">return</span> soilWaterPotentialsByPlantID.at(plantID);</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>}</div>
+</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span> </div>
+<div class="foldopen" id="foldopen00529" data-start="{" data-end="}">
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a18332626b5f94563a12c2a76f9cebac3">  529</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a18332626b5f94563a12c2a76f9cebac3" title="Set the soil water potential of a plant given its plantID.">PlantHydraulicsModel::setSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID, <span class="keywordtype">float</span> soil_water_potential) {</div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    soilWaterPotentialsByPlantID[plantID] = soil_water_potential;</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>}</div>
+</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span> </div>
+<div class="foldopen" id="foldopen00533" data-start="{" data-end="}">
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30">  533</a></span>std::vector&lt;uint&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">PlantHydraulicsModel::getPrimitivesWithoutPlantID</a>(std::vector&lt;uint&gt; UUIDs) {</div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>    <span class="keyword">auto</span> objectIDs = context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs);</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>    std::vector&lt;uint&gt; allPrimitivesWithPlantID;</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> objectID: objectIDs) {</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>        <span class="keywordflow">if</span> (context-&gt;doesObjectDataExist(objectID, <span class="stringliteral">&quot;plantID&quot;</span>)) {</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>            <span class="keyword">auto</span> newleaves = context-&gt;getObjectPrimitiveUUIDs(objectID);</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>            allPrimitivesWithPlantID.insert(allPrimitivesWithPlantID.end(), newleaves.begin(), newleaves.end());</div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>        }</div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>    }</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span> </div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>    std::unordered_set&lt;uint&gt; seen;</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>    seen.reserve(allPrimitivesWithPlantID.size());</div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> UUID: allPrimitivesWithPlantID) {</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        seen.insert(UUID);</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>    }</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span> </div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    std::vector&lt;uint&gt; PrimitivesWithoutPlantID;</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>    PrimitivesWithoutPlantID.reserve(UUIDs.size());</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> UUID: UUIDs) {</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>        <span class="keywordflow">if</span> (seen.find(UUID) == seen.end()) {</div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>            PrimitivesWithoutPlantID.emplace_back(UUID);</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>        }</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    }</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="keywordflow">return</span> PrimitivesWithoutPlantID;</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>}</div>
+</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span> </div>
+<div class="foldopen" id="foldopen00559" data-start="{" data-end="}">
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a">  559</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">PlantHydraulicsModel::run</a>(<span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep) {</div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    <span class="keyword">auto</span> UUIDs = context-&gt;getAllUUIDs();</div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span> </div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(<a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">getPrimitivesWithoutPlantID</a>(UUIDs));</div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span> </div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    std::vector&lt;uint&gt; plantObjectIDs = context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs);</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantObjectID: plantObjectIDs) {</div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>        <span class="keywordtype">int</span> plantID;</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>        context-&gt;getObjectData(plantObjectID, <span class="stringliteral">&quot;plantID&quot;</span>, plantID);</div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        <span class="keywordflow">if</span> (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>            plantIDs.emplace_back(plantID);</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>        }</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    }</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span> </div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> plantID: plantIDs) {</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        std::vector&lt;uint&gt; leavesOfPlant = context-&gt;getObjectPrimitiveUUIDs(context-&gt;filterObjectsByData(context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs), std::string(<span class="stringliteral">&quot;plantID&quot;</span>), plantID, <span class="stringliteral">&quot;==&quot;</span>));</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>        updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>        updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    }</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span> </div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    plantIDs.clear();</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>}</div>
+</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span> </div>
+<div class="foldopen" id="foldopen00582" data-start="{" data-end="}">
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a506353d1ff124bff3d620e4157eff06a">  582</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">PlantHydraulicsModel::run</a>(<span class="keyword">const</span> <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep) {</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    std::vector&lt;uint&gt; leavesOfPlant = {UUID};</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(leavesOfPlant);</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    plantIDs = context-&gt;getUniquePrimitiveParentObjectIDs({UUID});</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span> </div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span> </div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>    updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span> </div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    plantIDs.clear();</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>}</div>
+</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span> </div>
+<div class="foldopen" id="foldopen00594" data-start="{" data-end="}">
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno"><a class="line" href="class_plant_hydraulics_model.html#a30593be441d04e1b5c30a8ad77363407">  594</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">PlantHydraulicsModel::run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep) {</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keywordflow">if</span> (UUIDs.empty()) {</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;(PlantHydraulicsModel::run): UUIDs is empty. Exiting. &quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    }</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(<a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">getPrimitivesWithoutPlantID</a>(UUIDs));</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span> </div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    std::vector&lt;uint&gt; plantObjectIDs = context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs);</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantObjectID: plantObjectIDs) {</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>        <span class="keywordtype">int</span> plantID;</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>        context-&gt;getObjectData(plantObjectID, <span class="stringliteral">&quot;plantID&quot;</span>, plantID);</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>        <span class="keywordflow">if</span> (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>            plantIDs.emplace_back(plantID);</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>        }</div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    }</div>
+<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span> </div>
+<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> plantID: plantIDs) {</div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>        std::vector&lt;uint&gt; leavesOfPlant = context-&gt;getObjectPrimitiveUUIDs(context-&gt;filterObjectsByData(context-&gt;getUniquePrimitiveParentObjectIDs(UUIDs), std::string(<span class="stringliteral">&quot;plantID&quot;</span>), plantID, <span class="stringliteral">&quot;==&quot;</span>));</div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>        updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>        updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);</div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    }</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span> </div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    plantIDs.clear();</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>}</div>
+</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span> </div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>std::vector&lt;std::vector&lt;std::vector&lt;float&gt;&gt;&gt; PlantHydraulicsModel::meshgrid(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;x, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;y) {</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    std::vector&lt;std::vector&lt;float&gt;&gt; xGrid;</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>    std::vector&lt;std::vector&lt;float&gt;&gt; yGrid;</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    <span class="keywordtype">size_t</span> nx = x.size();</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    <span class="keywordtype">size_t</span> ny = y.size();</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span> </div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    xGrid.resize(ny, std::vector&lt;float&gt;(nx));</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    yGrid.resize(ny, std::vector&lt;float&gt;(nx));</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span> </div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ny; ++i) {</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> j = 0; j &lt; nx; ++j) {</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>            xGrid[i][j] = x[j];</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>            yGrid[i][j] = y[i];</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>        }</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    }</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    <span class="keywordflow">return</span> {xGrid, yGrid};</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>}</div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_38c8d24aef3972a7f87b834274e76e31.html">plugins</a></li><li class="navelem"><a class="el" href="dir_573e455db1a1be7a7a4e0493806d6db3.html">planthydraulics</a></li><li class="navelem"><a class="el" href="dir_420829b43a5aaf008e84bfa2dc9548e3.html">src</a></li><li class="navelem"><a class="el" href="_plant_hydraulics_model_8cpp.html">PlantHydraulicsModel.cpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>
