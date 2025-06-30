@@ -15,6 +15,9 @@
 
 #include "RadiationModel.h"
 
+#undef max
+#undef min
+
 #include <string>
 
 using namespace helios;
