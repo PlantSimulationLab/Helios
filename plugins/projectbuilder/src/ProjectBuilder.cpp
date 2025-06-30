@@ -2206,13 +2206,12 @@ void ProjectBuilder::visualize(){
                     }
                     if (switch_visualization){
                         if (visualization_type != "RGB") {
+                            visualizer->clearColor();
                             if ( visualization_types_primitive.find(visualization_type) != visualization_types_primitive.end() ){
                                 visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                             } else{
                                 visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
                             }
-                            visualizer->clearColor();
-
                         }else{
                             visualizer->clearColor();
                         }
@@ -2790,13 +2789,15 @@ void ProjectBuilder::visualize(){
                             ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                             ImGui::SameLine();
                             ImGui::Text("Object Orientation");
+                            if (objects_dict[current_obj].is_dirty && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
+                                updateObject(current_obj);
+                            }
                         }
                         if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position ||
                             objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
                             objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale ||
                             objects_dict[current_obj].color != objects_dict[current_obj].prev_color){
-                            // objects_dict[current_obj].is_dirty = true;
-                            updateObject(current_obj);
+                            objects_dict[current_obj].is_dirty = true;
                         }
                     }
                     ImGui::EndTabItem();
@@ -4925,7 +4926,8 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id){
 #ifdef ENABLE_HELIOS_VISUALIZER
     if (ImGui::Button("Update Object")){
         updateObject(curr_obj_name);
-        refreshVisualization();
+        // refreshVisualization();
+        is_dirty = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete Object")){
