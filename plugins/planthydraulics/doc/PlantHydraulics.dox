@@ -183,10 +183,13 @@ int main() {
         float psi_soil = hydraulics.getSoilWaterPotential(leafUUID);
         float psi_root = hydraulics.getRootWaterPotential(leafUUID);
         float psi_stem = hydraulics.getStemWaterPotential(leafUUID);
+        float psi_leaf;
+        context.getPrimitiveData(leafUUID,"water_potential",psi_leaf);
         std::cout << "Leaf UUID: " << leafUUID
                   << ", Soil Water Potential: " << psi_soil
                   << ", Root Water Potential: " << psi_root
                   << ", Stem Water Potential: " << psi_stem
+                  << ", Leaf Water Potential: " << psi_leaf
                   << std::endl;
     }
 }
@@ -252,12 +255,55 @@ int main() {
         float psi_soil = hydraulics.getSoilWaterPotential(leafUUID);
         float psi_root = hydraulics.getRootWaterPotential(leafUUID);
         float psi_stem = hydraulics.getStemWaterPotential(leafUUID);
+        float psi_leaf;
+        context.getPrimitiveData(leafUUID,"water_potential",psi_leaf);
         std::cout << "Leaf UUID: " << leafUUID
                   << ", Soil Water Potential: " << psi_soil
                   << ", Root Water Potential: " << psi_root
                   << ", Stem Water Potential: " << psi_stem
+                  << ", Leaf Water Potential: " << psi_leaf
                   << std::endl;
     }
 }
 \endcode
+
+Any vector of leaf primitives can grouped into a plant that share a plantID, soil, root, and stem water potentials, without
+the use of the Plant Architecture or other plug-in. The function to do so is \ref PlantHydraulicsModel::groupPrimitivesIntoPlantObject( const std::vector<uint> &UUIDs )
+as demonstrated below.
+
+\code{.cpp}
+#include "PlantHydraulicsModel.h"
+using namespace helios;
+
+int main() {
+    Context context;
+
+    // Add leaf 'Patch' primitives
+    vec3 center = make_vec3(0,0,1);
+    vec2 size = make_vec2(1,1);
+    uint leaf1 = context.addPatch( center, size );
+    uint leaf2 = context.addPatch( center, size );
+
+    std::vector<uint> leaves = {leaf1,leaf2};
+
+    PlantHydraulicsModel hydraulics(&context);
+
+    // Assign an arbitrary vector of leaf primitives a plantID grouping
+    hydraulics.groupPrimitivesIntoPlantObject(leaves);
+
+    ...
+
+    int plantID = hydraulics.getPlantID(leaves);
+    float soil_water_potential = -0.05; // (MPa)
+
+    hydraulics.setSoilWaterPotentialOfPlant(plantID,soil_water_potential);
+    hydraulics.run(leaves);
+
+    ...
+}
+\endcode
+
+If the model is run on a vector of leaves that have not been grouped by the Plant Architecture plugin or with the
+groupPrimitivesIntoPlantObject function, the entire vector of leaves will be assumed to belong to one plant by default.
+
 */
