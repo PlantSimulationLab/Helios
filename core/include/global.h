@@ -57,6 +57,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <thread>
 #include <iomanip>
 #include <filesystem>
+#include <type_traits>
 
 #ifdef USE_OPENMP
 #include <omp.h>

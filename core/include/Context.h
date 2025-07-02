@@ -612,8 +612,240 @@ namespace helios {
 
         bool ishidden = false;
 
-        friend class Context;
+    friend class Context;
     };
+
+    //---- Template Implementations for Primitive ----//
+
+    template <typename T>
+    void Primitive::setPrimitiveData(const char *label, const T &data) {
+        static_assert(
+            std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> ||
+            std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> ||
+            std::is_same_v<T, vec4> || std::is_same_v<T, int2> || std::is_same_v<T, int3> ||
+            std::is_same_v<T, int4> || std::is_same_v<T, std::string>,
+            "Invalid primitive data type");
+
+        if constexpr (std::is_same_v<T, int>) {
+            primitive_data_int[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_INT;
+        } else if constexpr (std::is_same_v<T, uint>) {
+            primitive_data_uint[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_UINT;
+        } else if constexpr (std::is_same_v<T, float>) {
+            primitive_data_float[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_FLOAT;
+        } else if constexpr (std::is_same_v<T, double>) {
+            primitive_data_double[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_DOUBLE;
+        } else if constexpr (std::is_same_v<T, vec2>) {
+            primitive_data_vec2[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_VEC2;
+        } else if constexpr (std::is_same_v<T, vec3>) {
+            primitive_data_vec3[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_VEC3;
+        } else if constexpr (std::is_same_v<T, vec4>) {
+            primitive_data_vec4[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_VEC4;
+        } else if constexpr (std::is_same_v<T, int2>) {
+            primitive_data_int2[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_INT2;
+        } else if constexpr (std::is_same_v<T, int3>) {
+            primitive_data_int3[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_INT3;
+        } else if constexpr (std::is_same_v<T, int4>) {
+            primitive_data_int4[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_INT4;
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            primitive_data_string[label] = {data};
+            primitive_data_types[label] = HELIOS_TYPE_STRING;
+        }
+        dirty_flag = true;
+    }
+
+    template <typename T>
+    void Primitive::getPrimitiveData(const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+        if (!doesPrimitiveDataExist(label)) {
+            helios_runtime_error("ERROR (Primitive::getPrimitiveData): Primitive data " +
+                                 std::string(label) + " does not exist for primitive " +
+                                 std::to_string(UUID));
+        }
+#endif
+
+        HeliosDataType type = primitive_data_types.at(label);
+
+        if constexpr (std::is_same_v<T, int>) {
+            if (type == HELIOS_TYPE_INT) {
+                data = primitive_data_int.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int.");
+            }
+        } else if constexpr (std::is_same_v<T, uint>) {
+            if (type == HELIOS_TYPE_UINT) {
+                data = primitive_data_uint.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint.");
+            }
+        } else if constexpr (std::is_same_v<T, float>) {
+            if (type == HELIOS_TYPE_FLOAT) {
+                data = primitive_data_float.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float.");
+            }
+        } else if constexpr (std::is_same_v<T, double>) {
+            if (type == HELIOS_TYPE_DOUBLE) {
+                data = primitive_data_double.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double.");
+            }
+        } else if constexpr (std::is_same_v<T, vec2>) {
+            if (type == HELIOS_TYPE_VEC2) {
+                data = primitive_data_vec2.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2.");
+            }
+        } else if constexpr (std::is_same_v<T, vec3>) {
+            if (type == HELIOS_TYPE_VEC3) {
+                data = primitive_data_vec3.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3.");
+            }
+        } else if constexpr (std::is_same_v<T, vec4>) {
+            if (type == HELIOS_TYPE_VEC4) {
+                data = primitive_data_vec4.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4.");
+            }
+        } else if constexpr (std::is_same_v<T, int2>) {
+            if (type == HELIOS_TYPE_INT2) {
+                data = primitive_data_int2.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2.");
+            }
+        } else if constexpr (std::is_same_v<T, int3>) {
+            if (type == HELIOS_TYPE_INT3) {
+                data = primitive_data_int3.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3.");
+            }
+        } else if constexpr (std::is_same_v<T, int4>) {
+            if (type == HELIOS_TYPE_INT4) {
+                data = primitive_data_int4.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4.");
+            }
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            if (type == HELIOS_TYPE_STRING) {
+                data = primitive_data_string.at(label).front();
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string.");
+            }
+        }
+    }
+
+    template <typename T>
+    void Primitive::getPrimitiveData(const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+        if (!doesPrimitiveDataExist(label)) {
+            helios_runtime_error("ERROR (Primitive::getPrimitiveData): Primitive data " +
+                                 std::string(label) + " does not exist for primitive " +
+                                 std::to_string(UUID));
+        }
+#endif
+
+        HeliosDataType type = primitive_data_types.at(label);
+
+        if constexpr (std::is_same_v<T, int>) {
+            if (type == HELIOS_TYPE_INT) {
+                data = primitive_data_int.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int.");
+            }
+        } else if constexpr (std::is_same_v<T, uint>) {
+            if (type == HELIOS_TYPE_UINT) {
+                data = primitive_data_uint.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint.");
+            }
+        } else if constexpr (std::is_same_v<T, float>) {
+            if (type == HELIOS_TYPE_FLOAT) {
+                data = primitive_data_float.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float.");
+            }
+        } else if constexpr (std::is_same_v<T, double>) {
+            if (type == HELIOS_TYPE_DOUBLE) {
+                data = primitive_data_double.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double.");
+            }
+        } else if constexpr (std::is_same_v<T, vec2>) {
+            if (type == HELIOS_TYPE_VEC2) {
+                data = primitive_data_vec2.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2.");
+            }
+        } else if constexpr (std::is_same_v<T, vec3>) {
+            if (type == HELIOS_TYPE_VEC3) {
+                data = primitive_data_vec3.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3.");
+            }
+        } else if constexpr (std::is_same_v<T, vec4>) {
+            if (type == HELIOS_TYPE_VEC4) {
+                data = primitive_data_vec4.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4.");
+            }
+        } else if constexpr (std::is_same_v<T, int2>) {
+            if (type == HELIOS_TYPE_INT2) {
+                data = primitive_data_int2.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2.");
+            }
+        } else if constexpr (std::is_same_v<T, int3>) {
+            if (type == HELIOS_TYPE_INT3) {
+                data = primitive_data_int3.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3.");
+            }
+        } else if constexpr (std::is_same_v<T, int4>) {
+            if (type == HELIOS_TYPE_INT4) {
+                data = primitive_data_int4.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4.");
+            }
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            if (type == HELIOS_TYPE_STRING) {
+                data = primitive_data_string.at(label);
+            } else {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " +
+                                     std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string.");
+            }
+        }
+    }
 
     //! Tile compound object class
     class Tile final : public CompoundObject {
@@ -1147,82 +1379,14 @@ namespace helios {
 
         //-------- Primitive Data Methods ---------- //
 
-        //! Add data value (int) associated with a primitive element
+        //! Add data value associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(const char *label, int data);
-
-        //! Add data value (uint) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, uint data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, float data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, double data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const std::string &data);
+        template <typename T>
+        void setPrimitiveData(const char *label, const T &data);
 
         //! Add (array) data associated with a primitive element
         /**
@@ -1234,159 +1398,23 @@ namespace helios {
          */
         void setPrimitiveData(const char *label, HeliosDataType type, uint size, void *data);
 
-        //! Get data associated with a primitive element (integer scalar)
+        //! Get data associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[out] data Primitive data structure
          */
-        void getPrimitiveData(const char *label, int &data) const;
+        template <typename T>
+        void getPrimitiveData(const char *label, T &data) const;
 
-        //! Get data associated with a primitive element (vector of integers)
+        //! Get vector data associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[out] data Primitive data structure
          */
-        void getPrimitiveData(const char *label, std::vector<int> &data) const;
-
-        //! Get data associated with a primitive element (unsigned integer scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, uint &data) const;
-
-        //! Get data associated with a primitive element (vector of unsigned integers)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<uint> &data) const;
-
-        //! Get data associated with a primitive element (float scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, float &data) const;
-
-        //! Get data associated with a primitive element (vector of floats)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<float> &data) const;
-
-        //! Get data associated with a primitive element (double scalar)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, double &data) const;
-
-        //! Get data associated with a primitive element (vector of doubles)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<double> &data) const;
-
-        //! Get data associated with a primitive element (vec2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec2 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec2> &data) const;
-
-        //! Get data associated with a primitive element (vec3 scalar)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec3 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec3> &data) const;
-
-        //! Get data associated with a primitive element (vec4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec4 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec4> &data) const;
-
-        //! Get data associated with a primitive element (int2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int2 &data) const;
-
-        //! Get data associated with a primitive element (vector of int2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int2> &data) const;
-
-        //! Get data associated with a primitive element (int3 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int3 &data) const;
-
-        //! Get data associated with a primitive element (vector of int3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int3> &data) const;
-
-        //! Get data associated with a primitive element (int4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int4 &data) const;
-
-        //! Get data associated with a primitive element (vector of int4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int4> &data) const;
-
-        //! Get data associated with a primitive element (string scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::string &data) const;
-
-        //! Get data associated with a primitive element (vector of strings)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<std::string> &data) const;
+        template <typename T>
+        void getPrimitiveData(const char *label, std::vector<T> &data) const;
 
         //! Get the Helios data type of primitive data
         /**
@@ -2707,22 +2735,26 @@ namespace helios {
 
         //-------- Primitive Data Methods ---------- //
 
-        //! Add data value (int) associated with a primitive element
+        //! Add data value associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(uint UUID, const char *label, int data);
+        template <typename T>
+        void setPrimitiveData(uint UUID, const char *label, const T &data);
 
-        //! Add data value (int) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
+        //! Add data value associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
         /**
+         * \tparam T Primitive data type
          * \note the size of UUIDs and data must match
          * \param[in] UUIDs Unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
          */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<int> &data);
+        template <typename T>
+        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<T> &data);
 
         //! Add data value (uint) associated with a primitive element
         /**
@@ -2904,93 +2936,26 @@ namespace helios {
          */
         void setPrimitiveData(uint UUID, const char *label, HeliosDataType type, uint size, void *data);
 
-        //! Add data value (int) associated with a primitive element
+        //! Add scalar data to multiple primitive elements
         /**
+         * \tparam T Primitive data type
          * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const int &data);
+        template <typename T>
+        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data);
 
-        //! Add data value (uint) associated with a primitive element
+        //! Add vector data to multiple primitive elements
         /**
+         * \tparam T Primitive data type
+         * \note the size of UUIDs and data must match
          * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
+         * \param[in] data Primitive data value (vector)
          */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::string &data);
+        template <typename T>
+        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<T> &data);
 
         //! Add data value (int) associated with a primitive element
         /**
@@ -6854,6 +6819,63 @@ namespace helios {
          */
         [[nodiscard]] std::vector<uint> filterObjectsByData(const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value) const;
     };
+
+    //---- Template Implementations for Context primitive data ----//
+
+    template <typename T>
+    void Context::setPrimitiveData(uint UUID, const char *label, const T &data) {
+#ifdef HELIOS_DEBUG
+        if (primitives.find(UUID) == primitives.end()) {
+            helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+#endif
+        primitives.at(UUID)->setPrimitiveData(label, data);
+    }
+
+    template <typename T>
+    void Context::setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<T> &data) {
+#ifdef HELIOS_DEBUG
+        if (UUIDs.size() != data.size()) {
+            helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+        }
+#endif
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+        for (size_t i = 0; i < UUIDs.size(); ++i) {
+            primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
+        }
+    }
+
+    template <typename T>
+    void Context::setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data) {
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+        for (uint id : UUIDs) {
+            primitives.at(id)->setPrimitiveData(label, data);
+        }
+    }
+
+    template <typename T>
+    void Context::getPrimitiveData(uint UUID, const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+        if (primitives.find(UUID) == primitives.end()) {
+            helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+#endif
+        primitives.at(UUID)->getPrimitiveData(label, data);
+    }
+
+    template <typename T>
+    void Context::getPrimitiveData(uint UUID, const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+        if (primitives.find(UUID) == primitives.end()) {
+            helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+#endif
+        primitives.at(UUID)->getPrimitiveData(label, data);
+    }
 
 
 } // namespace helios
