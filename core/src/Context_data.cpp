@@ -3581,60 +3581,259 @@ std::vector<std::string> Context::listObjectData(uint ObjID) const{
   return getObjectPointer_private(ObjID)->listObjectData();
 }
 
-void CompoundObject::setObjectData(const char* label, int data){
-  object_data_int[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_INT;
+namespace {
+template<typename>
+struct is_std_vector : std::false_type {};
+
+template<typename T, typename A>
+struct is_std_vector<std::vector<T, A>> : std::true_type {};
+
+template<typename T>
+struct ObjectDataTraits;
+
+#define HELIOS_OBJECT_TRAITS(TYPE, ENUM, MAP, NAME)                              \
+    template<>                                                                  \
+    struct ObjectDataTraits<TYPE> {                                             \
+        static constexpr HeliosDataType type = ENUM;                            \
+        static constexpr const char *name = NAME;                               \
+        static constexpr bool is_vector = false;                                \
+        static std::map<std::string, std::vector<TYPE>> &map(CompoundObject &o){\
+            return o.MAP;                                                       \
+        }                                                                       \
+        static const std::map<std::string, std::vector<TYPE>> &map(             \
+            const CompoundObject &o){                                           \
+            return o.MAP;                                                       \
+        }                                                                       \
+    };
+
+HELIOS_OBJECT_TRAITS(int, HELIOS_TYPE_INT, object_data_int, "int");
+HELIOS_OBJECT_TRAITS(uint, HELIOS_TYPE_UINT, object_data_uint, "uint");
+HELIOS_OBJECT_TRAITS(float, HELIOS_TYPE_FLOAT, object_data_float, "float");
+HELIOS_OBJECT_TRAITS(double, HELIOS_TYPE_DOUBLE, object_data_double, "double");
+HELIOS_OBJECT_TRAITS(vec2, HELIOS_TYPE_VEC2, object_data_vec2, "vec2");
+HELIOS_OBJECT_TRAITS(vec3, HELIOS_TYPE_VEC3, object_data_vec3, "vec3");
+HELIOS_OBJECT_TRAITS(vec4, HELIOS_TYPE_VEC4, object_data_vec4, "vec4");
+HELIOS_OBJECT_TRAITS(int2, HELIOS_TYPE_INT2, object_data_int2, "int2");
+HELIOS_OBJECT_TRAITS(int3, HELIOS_TYPE_INT3, object_data_int3, "int3");
+HELIOS_OBJECT_TRAITS(int4, HELIOS_TYPE_INT4, object_data_int4, "int4");
+HELIOS_OBJECT_TRAITS(std::string, HELIOS_TYPE_STRING, object_data_string,
+                     "string");
+
+template<typename T>
+struct ObjectDataTraits<std::vector<T>> : ObjectDataTraits<T> {
+    static constexpr bool is_vector = true;
+};
+
+template<typename T>
+void setObjectDataImpl(CompoundObject &obj, const char *label, const T &data){
+    auto &mp = ObjectDataTraits<T>::map(obj);
+    if constexpr (ObjectDataTraits<T>::is_vector) {
+        mp[label] = data;
+    } else {
+        mp[label] = {data};
+    }
+    obj.object_data_types[label] = ObjectDataTraits<T>::type;
 }
 
-void CompoundObject::setObjectData(const char* label, uint data){
-  object_data_uint[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_UINT;
+template<typename T>
+void getObjectDataImpl(const CompoundObject &obj, const char *label, T &data){
+#ifdef HELIOS_DEBUG
+    if (!obj.doesObjectDataExist(label)) {
+        helios_runtime_error(
+            "ERROR (CompoundObject::getObjectData): Object data " +
+            std::string(label) + " does not exist for object " +
+            std::to_string(obj.OID));
+    }
+#endif
+
+    if (obj.object_data_types.at(label) == ObjectDataTraits<T>::type) {
+        const auto &mp = ObjectDataTraits<T>::map(obj);
+        if constexpr (ObjectDataTraits<T>::is_vector) {
+            data = mp.at(label);
+        } else {
+            data = mp.at(label).front();
+        }
+    } else {
+        helios_runtime_error(
+            "ERROR (CompoundObject::getObjectData): Attempted to get data for " +
+            std::string(ObjectDataTraits<T>::name) +
+            ", but data '" + std::string(label) + "' for object " +
+            std::to_string(obj.OID) + " does not have type " +
+            std::string(ObjectDataTraits<T>::name) + ".");
+    }
 }
 
-void CompoundObject::setObjectData(const char* label, float data){
-  object_data_float[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_FLOAT;
+#undef HELIOS_OBJECT_TRAITS
+} // namespace
+
+void CompoundObject::setObjectData(const char *label, int data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData(const char* label, double data){
-  object_data_double[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_DOUBLE;
+void CompoundObject::setObjectData(const char *label, uint data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::vec2& data ){
-  object_data_vec2[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_VEC2;
+void CompoundObject::setObjectData(const char *label, float data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::vec3& data ){
-  object_data_vec3[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_VEC3;
+void CompoundObject::setObjectData(const char *label, double data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::vec4& data ){
-  object_data_vec4[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_VEC4;
+void CompoundObject::setObjectData(const char *label, const helios::vec2 &data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::int2& data ){
-  object_data_int2[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_INT2;
+void CompoundObject::setObjectData(const char *label, const helios::vec3 &data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::int3& data ){
-  object_data_int3[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_INT3;
+void CompoundObject::setObjectData(const char *label, const helios::vec4 &data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const helios::int4& data ){
-  object_data_int4[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_INT4;
+void CompoundObject::setObjectData(const char *label, const helios::int2 &data) {
+    setObjectDataImpl(*this, label, data);
 }
 
-void CompoundObject::setObjectData( const char* label, const std::string& data ){
-  object_data_string[label] = {data};
-  object_data_types[label] = HELIOS_TYPE_STRING;
+void CompoundObject::setObjectData(const char *label, const helios::int3 &data) {
+    setObjectDataImpl(*this, label, data);
 }
+
+void CompoundObject::setObjectData(const char *label, const helios::int4 &data) {
+    setObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::setObjectData(const char *label, const std::string &data) {
+    setObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, int &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<int> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, uint &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<uint> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, float &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<float> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, double &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<double> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, vec2 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<vec2> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, vec3 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<vec3> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, vec4 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<vec4> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, int2 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<int2> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, int3 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<int3> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, int4 &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<int4> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::string &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+void CompoundObject::getObjectData(const char *label, std::vector<std::string> &data) const {
+    getObjectDataImpl(*this, label, data);
+}
+
+// explicit template instantiations for object data helpers
+template void setObjectDataImpl<int>(CompoundObject &, const char *, const int &);
+template void setObjectDataImpl<uint>(CompoundObject &, const char *, const uint &);
+template void setObjectDataImpl<float>(CompoundObject &, const char *, const float &);
+template void setObjectDataImpl<double>(CompoundObject &, const char *, const double &);
+template void setObjectDataImpl<vec2>(CompoundObject &, const char *, const vec2 &);
+template void setObjectDataImpl<vec3>(CompoundObject &, const char *, const vec3 &);
+template void setObjectDataImpl<vec4>(CompoundObject &, const char *, const vec4 &);
+template void setObjectDataImpl<int2>(CompoundObject &, const char *, const int2 &);
+template void setObjectDataImpl<int3>(CompoundObject &, const char *, const int3 &);
+template void setObjectDataImpl<int4>(CompoundObject &, const char *, const int4 &);
+template void setObjectDataImpl<std::string>(CompoundObject &, const char *, const std::string &);
+
+template void getObjectDataImpl<int>(const CompoundObject &, const char *, int &);
+template void getObjectDataImpl<std::vector<int>>(const CompoundObject &, const char *, std::vector<int> &);
+template void getObjectDataImpl<uint>(const CompoundObject &, const char *, uint &);
+template void getObjectDataImpl<std::vector<uint>>(const CompoundObject &, const char *, std::vector<uint> &);
+template void getObjectDataImpl<float>(const CompoundObject &, const char *, float &);
+template void getObjectDataImpl<std::vector<float>>(const CompoundObject &, const char *, std::vector<float> &);
+template void getObjectDataImpl<double>(const CompoundObject &, const char *, double &);
+template void getObjectDataImpl<std::vector<double>>(const CompoundObject &, const char *, std::vector<double> &);
+template void getObjectDataImpl<vec2>(const CompoundObject &, const char *, vec2 &);
+template void getObjectDataImpl<std::vector<vec2>>(const CompoundObject &, const char *, std::vector<vec2> &);
+template void getObjectDataImpl<vec3>(const CompoundObject &, const char *, vec3 &);
+template void getObjectDataImpl<std::vector<vec3>>(const CompoundObject &, const char *, std::vector<vec3> &);
+template void getObjectDataImpl<vec4>(const CompoundObject &, const char *, vec4 &);
+template void getObjectDataImpl<std::vector<vec4>>(const CompoundObject &, const char *, std::vector<vec4> &);
+template void getObjectDataImpl<int2>(const CompoundObject &, const char *, int2 &);
+template void getObjectDataImpl<std::vector<int2>>(const CompoundObject &, const char *, std::vector<int2> &);
+template void getObjectDataImpl<int3>(const CompoundObject &, const char *, int3 &);
+template void getObjectDataImpl<std::vector<int3>>(const CompoundObject &, const char *, std::vector<int3> &);
+template void getObjectDataImpl<int4>(const CompoundObject &, const char *, int4 &);
+template void getObjectDataImpl<std::vector<int4>>(const CompoundObject &, const char *, std::vector<int4> &);
+template void getObjectDataImpl<std::string>(const CompoundObject &, const char *, std::string &);
+template void getObjectDataImpl<std::vector<std::string>>(const CompoundObject &, const char *, std::vector<std::string> &);
+
 
 void CompoundObject::setObjectData( const char* label, HeliosDataType a_type, uint size, void* data ){
 
@@ -3743,357 +3942,9 @@ void CompoundObject::setObjectData( const char* label, HeliosDataType a_type, ui
 
 }
 
-void CompoundObject::getObjectData( const char* label, int& data ) const{
 
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
 
-  if( object_data_types.at(label)==HELIOS_TYPE_INT ){
-    data = object_data_int.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
-  }
 
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<int>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT ){
-    data = object_data_int.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, uint& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
-    data = object_data_uint.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<uint>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_UINT ){
-    data = object_data_uint.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type uint.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, float& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
-    data = object_data_float.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<float>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_FLOAT ){
-    data = object_data_float.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type float.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, double& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
-    data = object_data_double.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<double>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_DOUBLE ){
-    data = object_data_double.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type double.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, vec2& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
-    data = object_data_vec2.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<vec2>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC2 ){
-    data = object_data_vec2.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec2.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, vec3& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
-    data = object_data_vec3.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<vec3>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC3 ){
-    data = object_data_vec3.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec3.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, vec4& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
-    data = object_data_vec4.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<vec4>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_VEC4 ){
-    data = object_data_vec4.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type vec4.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, int2& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
-    data = object_data_int2.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<int2>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT2 ){
-    data = object_data_int2.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int2.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, int3& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
-    data = object_data_int3.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<int3>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID) );
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT3 ){
-    data = object_data_int3.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int3.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, int4& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
-    data = object_data_int4.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<int4>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_INT4 ){
-    data = object_data_int4.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type int4.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::string& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
-    data = object_data_string.at(label).front();
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
-  }
-
-}
-
-void CompoundObject::getObjectData( const char* label, std::vector<std::string>& data ) const{
-
-#ifdef HELIOS_DEBUG
-  if( !doesObjectDataExist( label ) ){
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
-  }
-#endif
-
-  if( object_data_types.at(label)==HELIOS_TYPE_STRING ){
-    data = object_data_string.at(label);
-  }else{
-    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data '" + std::string(label) + "' for object " + std::to_string(OID) + " does not have type string.");
-  }
-
-}
 
 HeliosDataType CompoundObject::getObjectDataType( const char* label ) const{
 
