@@ -436,14 +436,43 @@ void PlantHydraulicsModel::outputCapacitancePrimitiveData(bool toggle) {
 
 void PlantHydraulicsModel::groupPrimitivesIntoPlantObject(const std::vector<uint> &UUIDs) {
     if (!UUIDs.empty()) {
+        bool found = false;
+        for(auto UUID:UUIDs) {
+            uint parentID = context->getPrimitiveParentObjectID(UUID);
+            if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
+                std::stringstream ss;
+                ss << "(PlantHydraulicsModel::groupPrimitivesIntoPlantObject): UUID " << UUID
+                   << " already has parent object data 'plantID'; cannot re-group into new plant object.";
+                helios_runtime_error(ss.str());
+            }
+        }
+
         int plantID = context->addPolymeshObject(UUIDs);
-        context->setObjectData(plantID, "plantID", plantID);
+        context->setPrimitiveData(UUIDs, "plantID", plantID);
     }
 }
 
 int PlantHydraulicsModel::getPlantID(uint UUID) {
     int plantID;
-    context->getObjectData(context->getPrimitiveParentObjectID(UUID), "plantID", plantID);
+    bool found = false;
+    uint parentID = context->getPrimitiveParentObjectID(UUID);
+
+    if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
+        context->getObjectData(parentID, "plantID", plantID);
+        found = true;
+    }
+    else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+        context->getPrimitiveData(UUID, "plantID", plantID);
+        found = true;
+    }
+
+    if (!found) {
+        std::stringstream ss;
+        ss << "(PlantHydraulicsModel::getPlantID): UUID " << UUID
+           << " has no parent object data or primitive data 'plantID'.";
+        helios_runtime_error(ss.str());
+    }
+
     return plantID;
 }
 
@@ -455,8 +484,8 @@ int PlantHydraulicsModel::getPlantID(const std::vector<uint> &UUIDs) {
     int plantIDfront;
     int plantIDback;
     int plantID;
-    context->getObjectData(context->getPrimitiveParentObjectID(UUIDs.front()), "plantID", plantIDfront);
-    context->getObjectData(context->getPrimitiveParentObjectID(UUIDs.back()), "plantID", plantIDback);
+    plantIDfront = getPlantID(UUIDs.front());
+    plantIDback = getPlantID(UUIDs.back());
     if (plantIDfront == plantIDback) {
         plantID = plantIDfront;
         return plantID;
@@ -468,13 +497,67 @@ int PlantHydraulicsModel::getPlantID(const std::vector<uint> &UUIDs) {
     return 0; // This should never be reached, but avoids compiler warning
 }
 
+std::vector<uint> PlantHydraulicsModel::getPrimitivesByPlantID(const int plantID) {
+    std::vector<uint> leafUUIDs;
+
+    // From object data
+    auto allUUIDs = context->getAllUUIDs();
+    auto objectIDs = context->getUniquePrimitiveParentObjectIDs(allUUIDs);
+
+    for (uint objID : objectIDs) {
+        if (objID != 0u && context->doesObjectDataExist(objID, "plantID")) {
+            int objPlantID;
+            context->getObjectData(objID, "plantID", objPlantID);
+            if (objPlantID == plantID) {
+                auto objectUUIDs = context->getObjectPrimitiveUUIDs(objID);
+                leafUUIDs.insert(leafUUIDs.end(), objectUUIDs.begin(), objectUUIDs.end());
+            }
+        }
+    }
+
+    // From primitive data
+    for (uint UUID : allUUIDs) {
+        if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+            int primPlantID;
+            context->getPrimitiveData(UUID, "plantID", primPlantID);
+            if (primPlantID == plantID) {
+                leafUUIDs.push_back(UUID);
+            }
+        }
+    }
+
+    // Deduplicate UUIDs
+    std::sort(leafUUIDs.begin(), leafUUIDs.end());
+    auto it = std::unique(leafUUIDs.begin(), leafUUIDs.end());
+    leafUUIDs.erase(it, leafUUIDs.end());
+
+    return leafUUIDs;
+}
+
 std::vector<int> PlantHydraulicsModel::getUniquePlantIDs(const std::vector<uint> &UUIDs) {
     std::vector<int> plantIDs;
     int plantID;
-    std::vector<uint> plantObjectIDs;
-    plantObjectIDs = context->getUniquePrimitiveParentObjectIDs(UUIDs);
-    for (auto plantObjID: plantObjectIDs) {
-        context->getObjectData(plantObjID, "plantID", plantID);
+
+    for (auto UUID : UUIDs) {
+        bool found = false;
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+
+        if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
+            context->getObjectData(parentID, "plantID", plantID);
+            found = true;
+        }
+        else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+            context->getPrimitiveData(UUID, "plantID", plantID);
+            found = true;
+        }
+
+        if (!found) {
+            std::stringstream ss;
+            ss << "(PlantHydraulicsModel::getUniquePlantIDs): UUID " << UUID
+               << " has no parent object data or primitive data 'plantID'.";
+            helios_runtime_error(ss.str());
+        }
+
         if (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {
             plantIDs.emplace_back(plantID);
         }
@@ -531,28 +614,24 @@ void PlantHydraulicsModel::setSoilWaterPotentialOfPlant(uint plantID, float soil
 }
 
 std::vector<uint> PlantHydraulicsModel::getPrimitivesWithoutPlantID(std::vector<uint> UUIDs) {
-    auto objectIDs = context->getUniquePrimitiveParentObjectIDs(UUIDs);
-    std::vector<uint> allPrimitivesWithPlantID;
-    for (auto objectID: objectIDs) {
-        if (context->doesObjectDataExist(objectID, "plantID")) {
-            auto newleaves = context->getObjectPrimitiveUUIDs(objectID);
-            allPrimitivesWithPlantID.insert(allPrimitivesWithPlantID.end(), newleaves.begin(), newleaves.end());
-        }
-    }
-
-    std::unordered_set<uint> seen;
-    seen.reserve(allPrimitivesWithPlantID.size());
-    for (auto UUID: allPrimitivesWithPlantID) {
-        seen.insert(UUID);
-    }
-
     std::vector<uint> PrimitivesWithoutPlantID;
-    PrimitivesWithoutPlantID.reserve(UUIDs.size());
+
     for (auto UUID: UUIDs) {
-        if (seen.find(UUID) == seen.end()) {
+        bool found = false;
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+
+        if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
+            found = true;
+        }
+        else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+            found = true;
+        }
+
+        if (!found) {
             PrimitivesWithoutPlantID.emplace_back(UUID);
         }
     }
+
     return PrimitivesWithoutPlantID;
 }
 
@@ -561,17 +640,10 @@ void PlantHydraulicsModel::run(int timespan, int timestep) {
 
     groupPrimitivesIntoPlantObject(getPrimitivesWithoutPlantID(UUIDs));
 
-    std::vector<uint> plantObjectIDs = context->getUniquePrimitiveParentObjectIDs(UUIDs);
-    for (uint plantObjectID: plantObjectIDs) {
-        int plantID;
-        context->getObjectData(plantObjectID, "plantID", plantID);
-        if (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {
-            plantIDs.emplace_back(plantID);
-        }
-    }
+    plantIDs = getUniquePlantIDs(UUIDs);
 
     for (int plantID: plantIDs) {
-        std::vector<uint> leavesOfPlant = context->getObjectPrimitiveUUIDs(context->filterObjectsByData(context->getUniquePrimitiveParentObjectIDs(UUIDs), std::string("plantID"), plantID, "=="));
+        std::vector<uint> leavesOfPlant = getPrimitivesByPlantID(plantID);
         updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
         updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
     }
@@ -582,7 +654,7 @@ void PlantHydraulicsModel::run(int timespan, int timestep) {
 void PlantHydraulicsModel::run(const uint UUID, int timespan, int timestep) {
     std::vector<uint> leavesOfPlant = {UUID};
     groupPrimitivesIntoPlantObject(leavesOfPlant);
-    plantIDs = context->getUniquePrimitiveParentObjectIDs({UUID});
+    plantIDs = getUniquePlantIDs({UUID});
 
 
     updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
@@ -598,17 +670,10 @@ void PlantHydraulicsModel::run(const std::vector<uint> &UUIDs, int timespan, int
     }
     groupPrimitivesIntoPlantObject(getPrimitivesWithoutPlantID(UUIDs));
 
-    std::vector<uint> plantObjectIDs = context->getUniquePrimitiveParentObjectIDs(UUIDs);
-    for (uint plantObjectID: plantObjectIDs) {
-        int plantID;
-        context->getObjectData(plantObjectID, "plantID", plantID);
-        if (std::find(plantIDs.begin(), plantIDs.end(), plantID) == plantIDs.end()) {
-            plantIDs.emplace_back(plantID);
-        }
-    }
+    plantIDs = getUniquePlantIDs(UUIDs);
 
     for (int plantID: plantIDs) {
-        std::vector<uint> leavesOfPlant = context->getObjectPrimitiveUUIDs(context->filterObjectsByData(context->getUniquePrimitiveParentObjectIDs(UUIDs), std::string("plantID"), plantID, "=="));
+        std::vector<uint> leavesOfPlant = getPrimitivesByPlantID(plantID);
         updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
         updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
     }
