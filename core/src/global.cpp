@@ -1816,21 +1816,11 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
 }
 
 
-//! Error manager for JPEG library.
-struct jpg_error_mgr {
-    jpeg_error_mgr pub; /* "public" fields */
-
-    jmp_buf setjmp_buffer; /* for return to caller */
-};
-
-//! Pointer to JPEG error manager.
-typedef jpg_error_mgr *jpg_error_ptr;
-
 //! Error exit function for JPEG library.
 METHODDEF(void) jpg_error_exit(j_common_ptr cinfo) {
-    auto myerr = (jpg_error_ptr) cinfo->err;
-    (*cinfo->err->output_message)(cinfo);
-    longjmp(myerr->setjmp_buffer, 1);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    throw std::runtime_error(buffer);
 }
 
 void helios::readJPEG(const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data) {
@@ -1841,64 +1831,58 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
 
     jpeg_decompress_struct cinfo{};
 
-    jpg_error_mgr jerr{};
-    FILE *infile; /* source file */
-    JSAMPARRAY buffer; /*output row buffer */
+    jpeg_error_mgr jerr{};
+    JSAMPARRAY buffer;
     int row_stride;
 
-    if ((infile = fopen(filename.c_str(), "rb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename.c_str(), "rb"), fclose);
+    if (!infile) {
         helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = jpg_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        return;
-    }
+    cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
 
-    jpeg_create_decompress(&cinfo);
+    try {
+        jpeg_create_decompress(&cinfo);
+        jpeg_stdio_src(&cinfo, infile.get());
+        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_start_decompress(&cinfo);
 
-    jpeg_stdio_src(&cinfo, infile);
+        row_stride = cinfo.output_width * cinfo.output_components;
+        buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-    (void) jpeg_read_header(&cinfo, TRUE);
+        width = cinfo.output_width;
+        height = cinfo.output_height;
 
-    (void) jpeg_start_decompress(&cinfo);
-
-    row_stride = cinfo.output_width * cinfo.output_components;
-    buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-    width = cinfo.output_width;
-    height = cinfo.output_height;
-
-    if (cinfo.output_components != 3) {
-        helios_runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components.");
-    } else if (width == 0 || height == 0) {
-        helios_runtime_error("ERROR (Context::readJPEG): Image file is empty.");
-    }
-
-    pixel_data.resize(width * height);
-
-    JSAMPLE *ba;
-    int row = 0;
-    while (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        ba = buffer[0];
-
-        for (int col = 0; col < row_stride; col += 3) {
-            pixel_data.at(row * width + col / 3.f) = make_RGBcolor(ba[row] / 255.f, ba[row + 1] / 255.f, ba[row + 2] / 255.f);
+        if (cinfo.output_components != 3) {
+            helios_runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components.");
+        } else if (width == 0 || height == 0) {
+            helios_runtime_error("ERROR (Context::readJPEG): Image file is empty.");
         }
 
-        row++;
+        pixel_data.resize(width * height);
+
+        JSAMPLE *ba;
+        int row = 0;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+            ba = buffer[0];
+
+            for (int col = 0; col < row_stride; col += 3) {
+                pixel_data.at(row * width + col / 3.f) = make_RGBcolor(ba[row] / 255.f, ba[row + 1] / 255.f, ba[row + 2] / 255.f);
+            }
+
+            row++;
+        }
+
+        (void) jpeg_finish_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
     }
-
-    (void) jpeg_finish_decompress(&cinfo);
-
-    jpeg_destroy_decompress(&cinfo);
-
-    fclose(infile);
 }
 
 helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
@@ -1909,39 +1893,30 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
 
     jpeg_decompress_struct cinfo{};
 
-    jpg_error_mgr jerr{};
-    FILE *infile; /* source file */
-
-    if ((infile = fopen(filename.c_str(), "rb")) == nullptr) {
+    jpeg_error_mgr jerr{};
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename.c_str(), "rb"), fclose);
+    if (!infile) {
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = jpg_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
+    cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
+
+    try {
+        jpeg_create_decompress(&cinfo);
+        jpeg_stdio_src(&cinfo, infile.get());
+        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_start_decompress(&cinfo);
         jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        return {0, 0};
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
     }
-
-    jpeg_create_decompress(&cinfo);
-
-    jpeg_stdio_src(&cinfo, infile);
-
-    (void) jpeg_read_header(&cinfo, TRUE);
-    (void) jpeg_start_decompress(&cinfo);
-
-    jpeg_destroy_decompress(&cinfo);
 
     return make_int2(cinfo.output_width, cinfo.output_height);
 }
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data) {
-    struct my_error_mgr {
-        jpeg_error_mgr pub; /* "public" fields */
-
-        jmp_buf setjmp_buffer; /* for return to caller */
-    };
 
     std::string filename = a_filename;
     auto file_extension = getFileExtension(filename);
@@ -1967,21 +1942,19 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     struct jpeg_compress_struct cinfo{};
 
     struct jpeg_error_mgr jerr{};
-
     cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
 
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    JSAMPROW row_pointer;
     int row_stride;
 
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
-
-    if ((outfile = fopen(filename.c_str(), "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename.c_str(), "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it.");
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
     cinfo.image_height = height;
@@ -1994,18 +1967,20 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_start_compress(&cinfo, TRUE);
 
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+    try {
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
+
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
     }
-
-    jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
-    jpeg_destroy_compress(&cinfo);
 }
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {

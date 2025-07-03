@@ -42,21 +42,14 @@ using namespace helios;
 
 struct my_error_mgr {
     struct jpeg_error_mgr pub; /* "public" fields */
-
-    jmp_buf setjmp_buffer; /* for return to caller */
 };
 
-typedef struct my_error_mgr *my_error_ptr;
+using my_error_ptr = struct my_error_mgr *;
+
 METHODDEF(void) my_error_exit(j_common_ptr cinfo) {
-    /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    auto myerr = (my_error_ptr) cinfo->err;
-
-    /* Always display the message. */
-    /* We could postpone this until after returning, if we chose. */
-    (*cinfo->err->output_message)(cinfo);
-
-    /* Return control to the setjmp point */
-    longjmp(myerr->setjmp_buffer, 1);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    throw std::runtime_error(buffer);
 }
 
 int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
@@ -65,62 +58,54 @@ int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, ui
         helios_runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo;
-
-    struct my_error_mgr jerr;
-    FILE *infile; /* source file */
-    JSAMPARRAY buffer; /*output row buffer */
+    struct jpeg_decompress_struct cinfo{};
+    struct my_error_mgr jerr{};
+    JSAMPARRAY buffer;
     uint row_stride;
 
-    if ((infile = fopen(filename, "rb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename, "rb"), fclose);
+    if (!infile) {
         fprintf(stderr, "can't open %s\n", filename);
         return 0;
     }
 
     cinfo.err = jpeg_std_error(&jerr.pub);
     jerr.pub.error_exit = my_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        helios_runtime_error("ERROR (read_JPEG_file): Error reading JPEG file " + std::string(filename));
-    }
 
-    jpeg_create_decompress(&cinfo);
+    try {
+        jpeg_create_decompress(&cinfo);
+        jpeg_stdio_src(&cinfo, infile.get());
+        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_start_decompress(&cinfo);
 
-    jpeg_stdio_src(&cinfo, infile);
+        row_stride = cinfo.output_width * cinfo.output_components;
+        buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-    (void) jpeg_read_header(&cinfo, TRUE);
+        width = cinfo.output_width;
+        height = cinfo.output_height;
 
-    (void) jpeg_start_decompress(&cinfo);
+        assert(cinfo.output_components==3);
 
-    row_stride = cinfo.output_width * cinfo.output_components;
-    buffer = (*cinfo.mem->alloc_sarray)
-            ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+        JSAMPLE *ba;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
-    width = cinfo.output_width;
-    height = cinfo.output_height;
+            ba = buffer[0];
 
-    assert(cinfo.output_components==3);
-
-    JSAMPLE *ba;
-    while (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        ba = buffer[0];
-
-        for (int i = 0; i < row_stride; i = i + 3) {
-            texture.push_back(ba[i]);
-            texture.push_back(ba[i + 1]);
-            texture.push_back(ba[i + 2]);
-            texture.push_back(255.f); //alpha channel -- opaque
+            for (int i = 0; i < row_stride; i += 3) {
+                texture.push_back(ba[i]);
+                texture.push_back(ba[i + 1]);
+                texture.push_back(ba[i + 2]);
+                texture.push_back(255.f); //alpha channel -- opaque
+            }
         }
+
+        (void) jpeg_finish_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
     }
-
-    (void) jpeg_finish_decompress(&cinfo);
-
-    jpeg_destroy_decompress(&cinfo);
-
-    fclose(infile);
 
     return 0;
 }
@@ -143,46 +128,46 @@ int write_JPEG_file(const char *filename, uint width, uint height, void *window,
     glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     glFinish();
 
-    struct jpeg_compress_struct cinfo;
-
-    struct jpeg_error_mgr jerr;
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    struct jpeg_compress_struct cinfo{};
+    struct jpeg_error_mgr jerr{};
+    JSAMPROW row_pointer;
     int row_stride;
 
     cinfo.err = jpeg_std_error(&jerr);
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
+    jerr.error_exit = my_error_exit;
 
-    if ((outfile = fopen(filename, "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
-    cinfo.image_height = height;
-    cinfo.input_components = 3; /* # of color components per pixel */
-    cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
+    try {
+        cinfo.image_height = height;
+        cinfo.input_components = 3; /* # of color components per pixel */
+        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
 
-    jpeg_set_defaults(&cinfo);
+        jpeg_set_defaults(&cinfo);
+        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+        jpeg_start_compress(&cinfo, TRUE);
 
-    jpeg_start_compress(&cinfo, TRUE);
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
     }
-
-    jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
-    jpeg_destroy_compress(&cinfo);
 
     return 1;
 }
@@ -206,46 +191,47 @@ int write_JPEG_file(const char *filename, uint width, uint height, const std::ve
         ii += 3;
     }
 
-    struct jpeg_compress_struct cinfo;
+    struct jpeg_compress_struct cinfo{};
 
-    struct jpeg_error_mgr jerr;
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    struct jpeg_error_mgr jerr{};
+    JSAMPROW row_pointer;
     int row_stride;
 
     cinfo.err = jpeg_std_error(&jerr);
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
+    jerr.error_exit = my_error_exit;
 
-    if ((outfile = fopen(filename, "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
-    cinfo.image_height = height;
-    cinfo.input_components = 3; /* # of color components per pixel */
-    cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
+    try {
+        cinfo.image_height = height;
+        cinfo.input_components = 3; /* # of color components per pixel */
+        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
 
-    jpeg_set_defaults(&cinfo);
+        jpeg_set_defaults(&cinfo);
+        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+        jpeg_start_compress(&cinfo, TRUE);
 
-    jpeg_start_compress(&cinfo, TRUE);
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
     }
-
-    jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
-    jpeg_destroy_compress(&cinfo);
 
     return 1;
 }
