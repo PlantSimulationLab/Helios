@@ -1128,6 +1128,9 @@ private:
     //! x- and y- dimensions of colorbar in normalized window coordinates
     helios::vec2 colorbar_size;
 
+    //! UUIDs associated with the current colorbar geometry
+    std::vector<size_t> colorbar_IDs;
+
     //! Buffer objects to hold per-vertex data
     std::vector<GLuint> face_index_buffer, vertex_buffer, uv_buffer;
     //! Buffer objects to hold per-primitive data. We will use textures to hold this data.

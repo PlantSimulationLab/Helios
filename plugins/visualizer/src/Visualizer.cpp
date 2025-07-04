@@ -449,6 +449,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colorbar_position = make_vec3(0.65, 0.1, 0.1);
     colorbar_size = make_vec2(0.15, 0.1);
+    colorbar_IDs.clear();
 
     point_width = 1;
 
@@ -2010,6 +2011,10 @@ void Visualizer::enableColorbar() {
 }
 
 void Visualizer::disableColorbar() {
+    if (!colorbar_IDs.empty()) {
+        geometry_handler.deleteGeometry(colorbar_IDs);
+        colorbar_IDs.clear();
+    }
     colorbar_flag = 1;
 }
 
@@ -2743,7 +2748,11 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
     //Update
     if (colorbar_flag == 2) {
-        addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
+        if (!colorbar_IDs.empty()) {
+            geometry_handler.deleteGeometry(colorbar_IDs);
+            colorbar_IDs.clear();
+        }
+        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
     }
 
 
@@ -3291,7 +3300,11 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     //Update
     if (colorbar_flag == 2) {
-        addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
+        if (!colorbar_IDs.empty()) {
+            geometry_handler.deleteGeometry(colorbar_IDs);
+            colorbar_IDs.clear();
+        }
+        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
     }
 
     //Watermark
@@ -4141,6 +4154,17 @@ uint Visualizer::getDepthTexture() const {
 
 void Visualizer::clearColor() {
     colorPrimitivesByData = "";
+    colorPrimitivesByObjectData = "";
+    if (!colorPrimitives_UUIDs.empty()) {
+        colorPrimitives_UUIDs.clear();
+    }
+    if (!colorPrimitives_objIDs.empty()) {
+        colorPrimitives_objIDs.clear();
+    }
+    disableColorbar();
+    colorbar_min = 0;
+    colorbar_max = 0;
+    colorbar_flag = 0;
 }
 
 std::string errorString(GLenum err) {
