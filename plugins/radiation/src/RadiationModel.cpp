@@ -15,8 +15,10 @@
 
 #include "RadiationModel.h"
 
-#undef max
-#undef min
+#ifdef _WIN32
+    #undef max
+    #undef min
+#endif
 
 #include <string>
 
