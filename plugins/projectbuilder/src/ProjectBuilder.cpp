@@ -15,7 +15,14 @@
 #endif
 #endif
 
+#ifdef _WIN32
+    #undef max
+    #undef min
+#endif
+
 #include "ProjectBuilder.h"
+
+
 
 #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
 const bool enable_blconductance = true;
@@ -767,6 +774,11 @@ void ProjectBuilder::record() {
                     // Write Images
                     for (std::string band_group_name: band_group_names) {
                         bandGroup curr_band_group = band_group_lookup[band_group_name];
+                        if (std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "red") != curr_band_group.bands.end() &&
+                            std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "green") != curr_band_group.bands.end() &&
+                            std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "blue") != curr_band_group.bands.end()) {
+                            radiation->applyImageProcessingPipeline(rig_camera_label, "red", "green", "blue", true);
+                        }
                         std::vector<std::string> band_group_vec;
                         if (!curr_band_group.grayscale) {
                             band_group_vec = curr_band_group.bands;
@@ -2188,13 +2200,20 @@ void ProjectBuilder::visualize() {
                 std::set<std::string> vis_types;
                 std::set_union(visualization_types_primitive.begin(), visualization_types_primitive.end(), visualization_types_object.begin(), visualization_types_object.end(), std::inserter(vis_types, vis_types.begin()));
                 for (auto &type: vis_types) {
+                    if (visualization_types_primitive.find(type) != visualization_types_primitive.end()) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 165, 0, 255)); // Red text
+                    } else {
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 128, 128, 255)); // Red text
+                    }
                     if (ImGui::MenuItem(type.c_str()) && visualization_type != type) {
                         visualization_type = type;
                         switch_visualization = true;
                     }
+                    ImGui::PopStyleColor();
                 }
                 if (switch_visualization) {
                     if (visualization_type != "RGB") {
+                        // visualizer->clearColor();
                         if (visualization_types_primitive.find(visualization_type) != visualization_types_primitive.end()) {
                             visualizer->colorContextPrimitivesByData(visualization_type.c_str());
                         } else {
