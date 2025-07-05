@@ -363,14 +363,14 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
 
     // ####### SET UUID GLOBAL DATA ####### //
 
-    context_ptr->setGlobalData( "ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data() );
-    context_ptr->setGlobalData( "leaf_UUIDs", HELIOS_TYPE_UINT, leaf_UUIDs.size(), leaf_UUIDs.data() );
-    context_ptr->setGlobalData( "petiolule_UUIDs", HELIOS_TYPE_UINT, petiolule_UUIDs.size(), petiolule_UUIDs.data() );
-    context_ptr->setGlobalData( "petiole_UUIDs", HELIOS_TYPE_UINT, petiole_UUIDs.size(), petiole_UUIDs.data() );
-    context_ptr->setGlobalData( "internode_UUIDs", HELIOS_TYPE_UINT, internode_UUIDs.size(), internode_UUIDs.data() );
-    context_ptr->setGlobalData( "peduncle_UUIDs", HELIOS_TYPE_UINT, peduncle_UUIDs.size(), peduncle_UUIDs.data() );
-    context_ptr->setGlobalData( "petal_UUIDs", HELIOS_TYPE_UINT, petal_UUIDs.size(), petal_UUIDs.data() );
-    context_ptr->setGlobalData( "sepal_UUIDs", HELIOS_TYPE_UINT, sepal_UUIDs.size(), sepal_UUIDs.data() );
-    context_ptr->setGlobalData( "fruit_UUIDs", HELIOS_TYPE_UINT, fruit_UUIDs.size(), fruit_UUIDs.data() );
+    context_ptr->setGlobalData( "ground_UUIDs", ground_UUIDs );
+    context_ptr->setGlobalData( "leaf_UUIDs", leaf_UUIDs );
+    context_ptr->setGlobalData( "petiolule_UUIDs", petiolule_UUIDs );
+    context_ptr->setGlobalData( "petiole_UUIDs", petiole_UUIDs );
+    context_ptr->setGlobalData( "internode_UUIDs", internode_UUIDs );
+    context_ptr->setGlobalData( "peduncle_UUIDs", peduncle_UUIDs );
+    context_ptr->setGlobalData( "petal_UUIDs", petal_UUIDs );
+    context_ptr->setGlobalData( "sepal_UUIDs", sepal_UUIDs );
+    context_ptr->setGlobalData( "fruit_UUIDs", fruit_UUIDs );
 
 }

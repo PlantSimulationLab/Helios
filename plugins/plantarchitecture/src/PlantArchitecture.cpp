@@ -909,10 +909,16 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         petiole_radii.at(p).resize(Ndiv_petiole_length + 1);
 
         petiole_length.at(p) = leaf_scale_factor_fraction * phytomer_parameters.petiole.length.val();
+        if (petiole_length.at(p) <= 0.f) {
+            petiole_length.at(p) = 1e-5f;
+        }
         dr_petiole.at(p) = petiole_length.at(p) / float(phytomer_parameters.petiole.length_segments);
         dr_petiole_max.at(p) = phytomer_parameters.petiole.length.val() / float(phytomer_parameters.petiole.length_segments);
 
         petiole_radii.at(p).at(0) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val();
+        if (petiole_radii.at(p).at(0) <= 0.f) {
+            petiole_radii.at(p).at(0) = 1e-5f;
+        }
     }
     phytomer_parameters.petiole.length.resample();
     if (build_context_geometry_petiole) {

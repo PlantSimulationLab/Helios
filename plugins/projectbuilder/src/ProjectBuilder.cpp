@@ -2200,8 +2200,6 @@ void ProjectBuilder::visualize() {
                         } else {
                             visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
                         }
-                        visualizer->clearColor();
-
                     } else {
                         visualizer->clearColor();
                     }
@@ -2786,12 +2784,15 @@ void ProjectBuilder::visualize() {
                         ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Object Orientation");
-                    }
                     if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position || objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
                         objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale || objects_dict[current_obj].color != objects_dict[current_obj].prev_color) {
-                        // objects_dict[current_obj].is_dirty = true;
+                            objects_dict[current_obj].is_dirty = true;
+
+                        }
+                        if (objects_dict[current_obj].is_dirty && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
                         updateObject(current_obj);
                     }
+                }
                 }
                 ImGui::EndTabItem();
             }
@@ -6000,7 +6001,7 @@ void ProjectBuilder::updateGround() {
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->cleanDeletedUUIDs(ground_UUIDs);
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
@@ -6106,7 +6107,7 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
     context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
 }
@@ -6141,7 +6142,7 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
     context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
 }

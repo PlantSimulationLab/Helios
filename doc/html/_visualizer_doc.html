@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -579,7 +579,7 @@ Coloring by pseudocolor map</h3>
 <tr>
 <td><a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> </td><td>N/A  </td></tr>
 </table>
-<p>The colormap to be used is set using the following command setColormap( Ctable colormap_name ), where &lsquo;colormap_name&rsquo; is one of the enumerations in the table above. For example, to set the &lsquo;hot&rsquo; colormap one would use:</p>
+<p>The colormap to be used is set using the following command <a class="el" href="class_visualizer.html#a992f636c4c406bbfc3f29add1fa3a278">setColormap( Ctable colormap_name )</a>, where &lsquo;colormap_name&rsquo; is one of the enumerations in the table above. For example, to set the &lsquo;hot&rsquo; colormap one would use:</p>
 <div class="fragment"><div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026" title="&quot;Hot&quot; colormap">Visualizer::COLORMAP_HOT</a> );</div>
 </div><!-- fragment --><p>To set a custom color table, the same command is used with the <a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> argument, plus additional arguments that define the custom color table. These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the &lsquo;hot&rsquo; color table is defined:</p>
 <table class="doxtable">

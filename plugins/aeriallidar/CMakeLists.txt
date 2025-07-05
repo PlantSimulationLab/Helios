@@ -29,9 +29,7 @@ else()
      set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -O3" )
 endif()
 
-if( NOT WIN32 )
-     set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11" )
-endif()
+set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++${CMAKE_CXX_STANDARD}" )
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 

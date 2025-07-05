@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -509,7 +509,7 @@ Calculating leaf area for each grid cell</h2>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARresonstruction"></a>
 Plant reconstruction</h2>
 <p>A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.</p>
-<p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
+<p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#a503c74fc549e5c3b25a5f5bf2d6a8955">LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const</a> function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
 <p>The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*)</a> function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.</p>
 <p>There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is <a class="el" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c">LiDARcloud::addLeafReconstructionToContext()</a>.</p>
 <p>Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.</p>
@@ -633,7 +633,7 @@ Visualizing results</h1>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">LiDARcloud::addHitsToVisualizer</a></td><td>Add all hits in the point cloud to the visualizer. </td></tr>
 <tr>
-<td>LiDARcloud::addGridToVisualizer(Visualizer*)</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
+<td>ef LiDARcloud::addGridToVisualizer(Visualizer*) const</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a11d8d20197aa909080d70954c97395e6">LiDARcloud::addTrianglesToVisualizer</a></td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value. </td></tr>
 <tr>

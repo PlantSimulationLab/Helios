@@ -102,7 +102,7 @@ int Context::selfTest(){
 
     std::vector<float> cpdata{5.2f,2.5f,3.1f};
 
-    context_test.setPrimitiveData( UUID, "somedata", HELIOS_TYPE_FLOAT, cpdata.size(), &cpdata[0] );
+    context_test.setPrimitiveData( UUID, "somedata", cpdata );
 
     uint UUID_cpy = context_test.copyPrimitive(UUID);
 
@@ -404,7 +404,7 @@ int Context::selfTest(){
     //------- Primitive Data --------//
 
     float data = 5;
-    context_test.setPrimitiveData( UUID,"some_data",HELIOS_TYPE_FLOAT,1,&data);
+    context_test.setPrimitiveData( UUID,"some_data",data);
 
     if( !context_test.doesPrimitiveDataExist( UUID,"some_data") ){
         error_count ++;
@@ -419,7 +419,7 @@ int Context::selfTest(){
         std::cout << data_return << std::endl;
     }
 
-    context_test.setPrimitiveData(UUID,"some_data",HELIOS_TYPE_FLOAT,1,&data);
+    context_test.setPrimitiveData(UUID,"some_data",data);
     context_test.getPrimitiveData(UUID,"some_data",data_return);
     if( data_return!=data ){
         error_count ++;
@@ -429,7 +429,7 @@ int Context::selfTest(){
 
     std::vector<float> data_v{0,1,2,3,4};
 
-    context_test.setPrimitiveData( UUID,"some_data",HELIOS_TYPE_FLOAT,5,&data_v[0] );
+    context_test.setPrimitiveData( UUID,"some_data",data_v);
 
     std::vector<float> data_return_v;
     context_test.getPrimitiveData( UUID,"some_data", data_return_v);
@@ -567,7 +567,7 @@ int Context::selfTest(){
     //------- Global Data --------//
 
     float gdata = 5;
-    context_test.setGlobalData("some_data",HELIOS_TYPE_FLOAT,1,&gdata);
+    context_test.setGlobalData("some_data",gdata);
 
     if( !context_test.doesGlobalDataExist("some_data") ){
         error_count ++;
@@ -583,7 +583,7 @@ int Context::selfTest(){
 
     std::vector<float> gdata_v{0,1,2,3,4};
 
-    context_test.setGlobalData("some_data",HELIOS_TYPE_FLOAT,5,&gdata_v[0] );
+    context_test.setGlobalData("some_data",gdata_v);
 
     std::vector<float> gdata_return_v;
     context_test.getGlobalData("some_data", gdata_return_v);
@@ -631,7 +631,7 @@ int Context::selfTest(){
 
     std::vector<float> objdata_v{0,1,2,3,4};
 
-    context_test.setObjectData(IDtile, "some_data",HELIOS_TYPE_FLOAT,5,&objdata_v[0] );
+    context_test.setObjectData(IDtile, "some_data", objdata_v );
 
     std::vector<float> objdata_return_v;
     context_test.getObjectData(IDtile,"some_data", objdata_return_v);
@@ -938,7 +938,7 @@ int Context::selfTest(){
 
     std::vector<double> gdatad_io{9.432, 2939.9292 };
 
-    context_io.setGlobalData( "gdatad", HELIOS_TYPE_DOUBLE, gdatad_io.size(), &gdatad_io[0] );
+    context_io.setGlobalData( "gdatad", gdatad_io);
 
     //timeseries
 

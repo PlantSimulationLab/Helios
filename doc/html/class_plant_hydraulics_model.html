@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -198,6 +198,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab1c1fb1768c21adc54fabbe51c7c7a76" id="r_ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1c1fb1768c21adc54fabbe51c7c7a76">getOrInitializePrimitiveData</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID, const std::string &amp;primitive_data_label, float default_value, bool message_flag)</td></tr>
 <tr class="memdesc:ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check for existing primitive data, and set default value if it does not exist.  <br /></td></tr>
 <tr class="separator:ab1c1fb1768c21adc54fabbe51c7c7a76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0e73e421fab7643a453d7a62e22419f" id="r_ab0e73e421fab7643a453d7a62e22419f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0e73e421fab7643a453d7a62e22419f">getPrimitivesByPlantID</a> (int plantID)</td></tr>
+<tr class="memdesc:ab0e73e421fab7643a453d7a62e22419f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query the leaf primitives of a plantID.  <br /></td></tr>
+<tr class="separator:ab0e73e421fab7643a453d7a62e22419f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9a822bfb2681f1a55400b880eef057b4" id="r_a9a822bfb2681f1a55400b880eef057b4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9a822bfb2681f1a55400b880eef057b4">getUniquePlantIDs</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
 <tr class="memdesc:a9a822bfb2681f1a55400b880eef057b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query the unique plantIDs of leaf primitives.  <br /></td></tr>
 <tr class="separator:a9a822bfb2681f1a55400b880eef057b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -423,7 +426,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>int plantID The primitives shared plantID, if exists </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00450">450</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00479">479</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -451,7 +454,35 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>int plantID The primitive's plantID </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00444">444</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00455">455</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab0e73e421fab7643a453d7a62e22419f" name="ab0e73e421fab7643a453d7a62e22419f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0e73e421fab7643a453d7a62e22419f">&#9670;&#160;</a></span>getPrimitivesByPlantID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; PlantHydraulicsModel::getPrimitivesByPlantID </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>plantID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Query the leaf primitives of a plantID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">plantID</td><td>plantID that is either object data or primitive data </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>std::vector&lt;int&gt; leafUUIDs List of leaf primitives belonging to that plantID </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -479,7 +510,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>std::vector&lt;uint&gt; ungroupedPrimitives The UUIDs of primitives without plantID parent object data </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00533">533</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00616">616</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -507,7 +538,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float root_water_potential The shared root water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00505">505</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00588">588</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -535,7 +566,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float root_water_potential The root water potential of the plant of a leaf primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00583">583</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -563,7 +594,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float root_water_potential The shared root water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00511">511</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00594">594</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -591,7 +622,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The shared soil water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00520">520</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00603">603</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -619,7 +650,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The soil water potential of the plant of a leaf primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00515">515</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00598">598</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -647,7 +678,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float soil_water_potential The shared soil water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00525">525</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00608">608</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -675,7 +706,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The shared stem water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00491">491</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00574">574</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -703,7 +734,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The stem water potential of the plant of a leaf primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00486">486</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00569">569</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -731,7 +762,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>float stem_water_potential The shared stem water potential of a plant </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00496">496</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00579">579</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -759,7 +790,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>std::vector&lt;int&gt; plantIDs List of unique plantIDs found in the input leaf primitive data </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00471">471</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00537">537</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -883,7 +914,7 @@ UUIDs with the same primitive data "plantID" will be assumed to be a collection 
 <dd>
 All plantIDs within given UUIDs will have the model separately run on them </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00594">594</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00665">665</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -918,7 +949,7 @@ All plantIDs within given UUIDs will have the model separately run on them </dd>
 <dd>
 All UUIDs in context with primitive data "plantID" will be assumed to be a collection of a single plant's leaves, with one shared stem, root, and soil water potential </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00559">559</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00637">637</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -959,7 +990,7 @@ All UUIDs in context with primitive data "plantID" will be assumed to be a colle
 <dd>
 UUID is assumed to be a single leaf, with one stem, root, and soil water potential </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00582">582</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00653">653</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1174,7 +1205,7 @@ UUID is assumed to be a single leaf, with one stem, root, and soil water potenti
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00529">529</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_hydraulics_model_8cpp_source.html#l00612">612</a> of file <a class="el" href="_plant_hydraulics_model_8cpp_source.html">PlantHydraulicsModel.cpp</a>.</p>
 
 </div>
 </div>

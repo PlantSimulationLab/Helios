@@ -2363,3 +2363,42 @@ Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 
 ## Radiation
 - Refined `RadiationModel::applyImageProcessingPipeline()`. It now performs a standard set of processing steps, and has an option to apply HDR toning.
+
+# [1.3.38] 2025-07-05
+
+- Added `.gitattributes` file and modified build options for Windows to deal with potential file encoding issues on Windows.
+- Edit to `utilities/run_samples.sh` to hopefully fix issues with log file outputting within GitHub Actions workflows.
+- Moved `AGENTD.md` back to the base directory because it was not being applied globally when in `doc`.
+
+## Context
+- Added a check to `Context::addPolymeshObject()` to ensure that the UUIDs don't already belong to another object.
+- Refactored `Primitive::setPrimitiveData()`, `Primitive::getPrimitiveData()`, `Context::setPrimitiveData()`, and `Context::getPrimitiveData()` to use templates to avoid a lot of redundant code.
+- Refactored `Context::setGlobalData()` and `Context::getGlobalData()` to use templates to avoid a lot of redundant code.
+- Re-wrote how templates are handled for `helios::resize_vector()`, `helios::flatten()` and `helios::powi()` to be more robust and explicitly correct.
+- Removed overloaded version of `Context::setPrimitiveData( uint UUID, const char* label, HeliosDataType type, uint size, void* data )`, as it is not needed. The vector-based version of `Context::setPrimitiveData()` should be used instead.
+- Re-wrote libjpeg error handling to me more robust.
+
+## Project Builder
+- Some updates to object geometry updating.
+
+## Plant Architecture
+- Added check for very small petiole length or radius so that it can be set by the user to be exactly 0.
+- Fixed asset copy commands in CMakeLists.txt that could cause an error on some Windows systems.
+
+## Visualizer
+- Re-wrote libjpeg error handling to me more robust.
+- Fixed texture and shader copy commands in CMakeLists.txt that could cause an error on some Windows systems.
+- Fixed an error in `Visualizer::displayImage()` where the arguments to `read_JPEG_file()` and `read_png_file()` were swapped.
+- Fixed issues with `Visualizer::clearColor()` where the visualizer was not properly reverting to RGB coloring.
+- Fixed where the colorbar range was not being automatically updated when switching between different primitive/object data visualizations.
+- Fixed an error where tiled textures were showing ghost lines at the seams between adjacent tiles.
+- Fixed 'haloing' around texture-masked primitives.
+- Implemented a (temporary) fix to make sure that colors are updated if the user successively calls `Visualizer::colorContextPrimitivesByData()`, `Visualizer::colorContextObjectsByData()`, or `Visualizer::clearColor()`. A more efficient long-term fix is still needed.
+
+## Plant Hydraulics
+- `plantID` can now be set as primitive or object data.
+- Added an example to the documentation of manually grouping leaves into a plant ID
+- Added self-test to check `plantID` assignment.
+
+## Radiation, Energy Balance, LiDAR, Aerial LiDAR
+- CMake now uses consistent c++ standard for CUDA code based on the standard used for regular c++ code. It also now explicitly sets the c++ standard for Windows CUDA code.

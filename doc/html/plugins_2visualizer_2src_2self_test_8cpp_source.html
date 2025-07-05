@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -261,7 +261,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    {</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        visualizer.openWindow();</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordflow">if</span> (visualizer.window != <span class="keyword">nullptr</span>) {</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a80e5db9dcc42a46714ef8fa9af1dc16b" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, 800, 600, visualizer.window);</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a84fd755e2a00dced4e9ad598f04bea8e" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, 800, 600, visualizer.window);</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <span class="keywordflow">if</span> (result != 1) {</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>                std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(window) failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                error_count++;</div>
@@ -273,7 +273,7 @@ $(function(){initNavTree('plugins_2visualizer_2src_2self_test_8cpp_source.html',
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    {</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> width = 100, height = 100;</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        std::vector&lt;helios::RGBcolor&gt; data(width * height, <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">helios::RGBcolor</a>(1.0, 0.0, 0.0));</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a80e5db9dcc42a46714ef8fa9af1dc16b" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, width, height, data);</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        <span class="keywordtype">int</span> result = <a class="code hl_function" href="_visualizer_8h.html#a84fd755e2a00dced4e9ad598f04bea8e" title="Write current graphics window to a JPEG image file.">write_JPEG_file</a>(<span class="stringliteral">&quot;plugins/visualizer/textures/dirt.jpg&quot;</span>, width, height, data);</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordflow">if</span> (result != 1) {</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;ERROR: write_JPEG_file(data) failed.\n&quot;</span>;</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            error_count++;</div>

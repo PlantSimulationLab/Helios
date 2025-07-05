@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -394,6 +394,8 @@ C++ Standard Library Include Files</h2>
 <td>&lt;iomanip&gt; </td></tr>
 <tr>
 <td>&lt;filesystem&gt; </td></tr>
+<tr>
+<td>&lt;type_traits&gt; </td></tr>
 </table>
 <h1><a class="anchor" id="ContextSect"></a>
 Context</h1>
@@ -1236,7 +1238,7 @@ Primitive Data</h2>
 <h3><a class="anchor" id="SetPrimData"></a>
 Setting Primitive Data Values</h3>
 <p>Primitive data values can be scalar or a one-dimensional array of values.</p>
-<p>Primitive data is set for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">setPrimitiveData()</a> function. Example use of this function for scalar data is given below.</p>
+<p>Primitive data is set for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e">setPrimitiveData()</a> function. Example use of this function for scalar data is given below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -1247,9 +1249,9 @@ Setting Primitive Data Values</h3>
 <div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size, RGB::red );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
+</div><!-- fragment --><p>There are multiple ways of setting vector primitive data. One method uses STL vectors to pass the data to the <a class="el" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e">setPrimitiveData()</a>, and another is accomplished using a pointer to a standard C vector. Both of these equivalent methods are illustrated below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -1265,17 +1267,17 @@ Setting Primitive Data Values</h3>
 <div class="line">   std::vector&lt;float&gt; A;</div>
 <div class="line">   A.push_back(2.3);</div>
 <div class="line">   A.push_back(9.2);</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataA&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,A.size(),&amp;A[0]);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataA&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,A.size(),&amp;A[0]);</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> B[2];</div>
 <div class="line">   B[0] = 2.3;</div>
 <div class="line">   B[1] = 9.2;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataB&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,2,&amp;B[0]);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;somedataB&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,2,&amp;B[0]);</div>
 <div class="line">     </div>
 <div class="line">}</div>
 </div><!-- fragment --><h3><a class="anchor" id="GetPrimData"></a>
 Getting Primitive Data Values</h3>
-<p>If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e">getPrimitiveData</a> function:</p>
+<p>If primitive data is a scalar value, it can be retrieved for a given primitive via the Context using the <a class="el" href="classhelios_1_1_context.html#acafae8c5565a136422f455f6f556e6c5">getPrimitiveData</a> function:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line">   </div>
@@ -1289,10 +1291,10 @@ Getting Primitive Data Values</h3>
 <div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,eps);</div>
 <div class="line">   </div>
 <div class="line">   <span class="keywordtype">float</span> emissivity;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,emissivity);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#acafae8c5565a136422f455f6f556e6c5" title="Get data value associated with a primitive element.">getPrimitiveData</a>(UUID,<span class="stringliteral">&quot;emissivity&quot;</span>,emissivity);</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>In the above example, the value of 'emissivity' is 0.9.</p>
@@ -1328,7 +1330,7 @@ Primitive Data Query Functions</h3>
 <div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> eps = 0.9;</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>, eps);</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>, eps);</div>
 <div class="line"> </div>
 <div class="line">   <span class="keywordflow">if</span>( context.<a class="code hl_function" href="classhelios_1_1_context.html#a780d83edd66f25cd38b5059359b48a7b" title="Check if primitive data &#39;label&#39; exists.">doesPrimitiveDataExist</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>) ){</div>
 <div class="line">      <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> type = context.<a class="code hl_function" href="classhelios_1_1_context.html#a9c894ecd12e0d893c53ffcfa9e90c0b6" title="Get the Helios data type of primitive data.">getPrimitiveDataType</a>(UUID, <span class="stringliteral">&quot;emissivity&quot;</span>);</div>

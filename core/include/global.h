@@ -57,6 +57,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <thread>
 #include <iomanip>
 #include <filesystem>
+#include <type_traits>
 
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -441,9 +442,19 @@ namespace helios {
      * \param[in] value Value to be clamped
      * \param[in] min Lower bound
      * \param[in] max Upper bound
-     * \ingroup functions */
+     * \ingroup functions
+     */
     template<typename anytype>
-    [[nodiscard]] anytype clamp(anytype value, anytype min, anytype max);
+    [[nodiscard]] anytype clamp(anytype value, anytype min, anytype max){
+        static_assert(std::is_same_v<anytype, int> || std::is_same_v<anytype, uint> || std::is_same_v<anytype, float> || std::is_same_v<anytype, double> || std::is_same_v<anytype, char> || std::is_same_v<anytype, unsigned char>,
+                          "helios::clamp() was called with an unsupported type.");
+        if (value < min) {
+            value = min;
+        } else if (value > max) {
+            value = max;
+        }
+        return value;
+    }
 
     //! Sum of a vector of floats
     /**
@@ -523,7 +534,10 @@ namespace helios {
      * \ingroup functions
     */
     template<typename anytype>
-    void resize_vector(std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny);
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
+    resize_vector(std::vector<std::vector<anytype>>& vec, size_t Nx, size_t Ny) {
+        vec.assign(Ny, std::vector<anytype>(Nx));
+    }
 
     //! Resize 3D C++ vector
     /**
@@ -534,7 +548,10 @@ namespace helios {
      * \ingroup functions
     */
     template<typename anytype>
-    void resize_vector(std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz);
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
+    resize_vector(std::vector<std::vector<std::vector<anytype> > > &vec, size_t Nx, size_t Ny, size_t Nz){
+        vec.assign(Nz, std::vector<std::vector<anytype>>(Ny, std::vector<anytype>(Nx)));
+    }
 
     //! Resize 4D C++ vector
     /**
@@ -546,7 +563,10 @@ namespace helios {
      * \ingroup functions
     */
     template<typename anytype>
-    void resize_vector(std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, uint Nx, uint Ny, uint Nz, uint Nw);
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
+    resize_vector(std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, size_t Nx, size_t Ny, size_t Nz, size_t Nw){
+        vec.assign(Nw, std::vector<std::vector<std::vector<anytype>>>(Nz, std::vector<std::vector<anytype>>(Ny, std::vector<anytype>(Nx))));
+    }
 
     //! Blend two RGB colors together
     /**
@@ -657,7 +677,22 @@ namespace helios {
      * \param[in] exp Exponent to which the base is raised (must be a non-negative integer)
      */
     template<typename T>
-    T powi(T base, std::size_t exp);
+    T powi(T base, std::size_t exp){
+        static_assert(std::is_same_v<T, uint> || std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, char> || std::is_same_v<T, size_t>,
+                          "helios::powi() was called with an unsupported type.");
+        T result = static_cast<T>(1);
+        while (exp > 0) {
+            // If the low bit is set, multiply result by current base
+            if (exp & 1) {
+                result *= base;
+            }
+            // Square the base for the next bit
+            base *= base;
+            // Shift off the processed bit
+            exp >>= 1;
+        }
+        return result;
+    }
 
     //!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2)
     /**
@@ -805,7 +840,13 @@ namespace helios {
     * @tparam T Type of elements in the vector
     */
     template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<T>>& vec);
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<T>>& vec){
+        std::vector<T> result;
+        for (const auto &row: vec) {
+            result.insert(result.end(), row.begin(), row.end());
+        }
+        return result;
+    }
 
     //! Template function to flatten a 3D vector into a 1D vector
     /**
@@ -813,7 +854,15 @@ namespace helios {
     * @tparam T Type of elements in the vector
     */
     template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<T>>>& vec);
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<T>>>& vec){
+        std::vector<T> result;
+        for (const auto &matrix: vec) {
+            for (const auto &row: matrix) {
+                result.insert(result.end(), row.begin(), row.end());
+            }
+        }
+        return result;
+    }
 
     //! Template function to flatten a 4D vector into a 1D vector
     /**
@@ -821,8 +870,17 @@ namespace helios {
     * @tparam T Type of elements in the vector
     */
     template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<std::vector<T>>>>& vec);
-
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<std::vector<T>>>>& vec){
+        std::vector<T> result;
+        for (const auto &tensor: vec) {
+            for (const auto &matrix: tensor) {
+                for (const auto &row: matrix) {
+                    result.insert(result.end(), row.begin(), row.end());
+                }
+            }
+        }
+        return result;
+    }
 
     //! Function to perform cubic Hermite spline interpolation
     /**

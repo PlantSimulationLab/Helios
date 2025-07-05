@@ -77,6 +77,8 @@ else()
 	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 endif()
 
+set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++${CMAKE_CXX_STANDARD}" )
+
 set( CUDA_SOURCES
 		src/primitiveIntersection.cu
 		src/rayGeneration.cu

@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -214,7 +214,7 @@ $(function(){initNavTree('radiation_basics_tutorial.html',''); initResizable(tru
 <div class="line">  radiation.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>, 50.f);   <span class="comment">//set diffuse (ambient) solar radiation flux of 50 W/m^2</span></div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// We only want the ground to absorb radiation from the top. If we left the default &quot;twosided_flag=1&quot;, our ground would absorb diffuse radiation from below</span></div>
-<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0));</div>
+<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUIDs_ground, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(0));</div>
 <div class="line"> </div>
 <div class="line">  radiation.enforcePeriodicBoundary(<span class="stringliteral">&quot;xy&quot;</span>);  <span class="comment">//Use periodic lateral boundaries so we have repeating trees</span></div>
 <div class="line"> </div>

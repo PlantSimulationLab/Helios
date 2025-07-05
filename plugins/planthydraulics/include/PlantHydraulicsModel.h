@@ -502,6 +502,13 @@ public:
      * */
     float getOrInitializePrimitiveData(uint UUID, const std::string &primitive_data_label, float default_value, bool message_flag);
 
+    //! Query the leaf primitives of a plantID
+    /**
+     * \param[in] plantID plantID that is either object data or primitive data
+     * \return std::vector<int> leafUUIDs List of leaf primitives belonging to that plantID
+     * */
+    std::vector<uint> getPrimitivesByPlantID(int plantID);
+
     //! Query the unique plantIDs of leaf primitives
     /**
      * \param[in] UUIDs List of leaf primitives who have plantID primitive data
@@ -660,7 +667,7 @@ private:
     std::map<uint, float> stemWaterPotentialsByPlantID;
     std::map<uint, float> rootWaterPotentialsByPlantID;
     std::map<uint, float> soilWaterPotentialsByPlantID;
-    std::vector<uint> plantIDs;
+    std::vector<int> plantIDs;
     bool message_flag = false;
 
     bool OutputConductance = false;

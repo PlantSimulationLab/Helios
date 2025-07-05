@@ -79,8 +79,27 @@ file( COPY fonts DESTINATION ${CMAKE_BINARY_DIR}/plugins/visualizer/ )
 file(GLOB_RECURSE SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"  "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 file(GLOB_RECURSE TEXTURE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*")
 
-add_custom_target(copy_shaders ALL COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/plugins/visualizer/shaders" COMMAND ${CMAKE_COMMAND} -E copy_if_different  ${SHADER_FILES}  "${CMAKE_BINARY_DIR}/plugins/visualizer/shaders/"  DEPENDS ${SHADER_FILES} )
-add_custom_target(copy_textures ALL COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/plugins/visualizer/textures" COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEXTURE_FILES} "${CMAKE_BINARY_DIR}/plugins/visualizer/textures/" DEPENDS ${TEXTURE_FILES})
+add_custom_command(
+		OUTPUT "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/plugins/visualizer/shaders"
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+		"${CMAKE_BINARY_DIR}/plugins/visualizer/shaders"
+		COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp"
+		DEPENDS ${SHADER_FILES}
+)
+add_custom_target(copy_shaders ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp")
+
+add_custom_command(
+		OUTPUT "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/plugins/visualizer/textures"
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${CMAKE_CURRENT_SOURCE_DIR}/textures"
+		"${CMAKE_BINARY_DIR}/plugins/visualizer/textures"
+		COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp"
+		DEPENDS ${TEXTURE_FILES}
+)
+add_custom_target(copy_textures ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp")
 
 add_dependencies(visualizer copy_shaders copy_textures)
 

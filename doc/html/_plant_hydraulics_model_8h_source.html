@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -535,93 +535,96 @@ $(function(){initNavTree('_plant_hydraulics_model_8h_source.html',''); initResiz
 <div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76" title="Check for existing primitive data, and set default value if it does not exist.">getOrInitializePrimitiveData</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keyword">const</span> std::string &amp;primitive_data_label, <span class="keywordtype">float</span> default_value, <span class="keywordtype">bool</span> message_flag);</div>
 <div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span></div>
 <div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span></div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    std::vector&lt;int&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#a9a822bfb2681f1a55400b880eef057b4" title="Query the unique plantIDs of leaf primitives.">getUniquePlantIDs</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#ab0e73e421fab7643a453d7a62e22419f" title="Query the leaf primitives of a plantID.">getPrimitivesByPlantID</a>(<span class="keywordtype">int</span> plantID);</div>
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span></div>
 <div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span></div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    std::vector&lt;int&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#a9a822bfb2681f1a55400b880eef057b4" title="Query the unique plantIDs of leaf primitives.">getUniquePlantIDs</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
 <div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span></div>
 <div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span></div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span></div>
 <div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span></div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab4023e3bb07bcbf6d01487430a5e4cba" title="Toggle the writing out of optional primitive data - hydraulic conductance.">outputConductancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span></div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span></div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a5d479e3d31becec145ad67324753d493" title="Toggle the writing out of optional primitive data - hydraulic capacitance.">outputCapacitancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span></div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span></div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span></div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span></div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a00d965751037afaafa09dac580fd53b3" title="Get the stem water potential of a plant given its plantID.">getStemWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>    <span class="keywordtype">int</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27" title="Get the plantID primitive data of a leaf primitive.">getPlantID</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span></div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span></div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab4023e3bb07bcbf6d01487430a5e4cba" title="Toggle the writing out of optional primitive data - hydraulic conductance.">outputConductancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span></div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span></div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a5d479e3d31becec145ad67324753d493" title="Toggle the writing out of optional primitive data - hydraulic capacitance.">outputCapacitancePrimitiveData</a>(<span class="keywordtype">bool</span> toggle);</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span></div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span></div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a9dbad0931560f408812c49097afd2b24" title="Group leaf primitives into a plant that share stem, root, and soil hydraulics.">groupPrimitivesIntoPlantObject</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
 <div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span></div>
 <div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span></div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span> </div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span></div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span></div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a00d965751037afaafa09dac580fd53b3" title="Get the stem water potential of a plant given its plantID.">getStemWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span></div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span></div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span> </div>
 <div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span></div>
 <div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span></div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab8bbc1fb73d1222b58a3824506fc208a" title="Get the root water potential of a plant given its plantID.">getRootWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#afbb09a215f6a807b1cd274ea992d8721" title="Get the stem water potential of a leaf primitive given its UUID.">getStemWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
 <div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span></div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span></div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span> </div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span></div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span></div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ab8bbc1fb73d1222b58a3824506fc208a" title="Get the root water potential of a plant given its plantID.">getRootWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span></div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span></div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span> </div>
 <div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span></div>
 <div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span></div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a886c7e7b4a02992036410994a14f4c21" title="Get the soil water potential of a plant given its plantID.">getSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09" title="Get the root water potential of a leaf primitive given its UUID.">getRootWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
 <div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span></div>
 <div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span></div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span> </div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span></div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span></div>
-<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a886c7e7b4a02992036410994a14f4c21" title="Get the soil water potential of a plant given its plantID.">getSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID);</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span></div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span></div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID);</div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span> </div>
 <div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span></div>
 <div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span></div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a18332626b5f94563a12c2a76f9cebac3" title="Set the soil water potential of a plant given its plantID.">setSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID, <span class="keywordtype">float</span> soil_water_potential);</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <span class="keywordtype">float</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a307d9ccc5af00f60d0c4e9e58877081a" title="Get the soil water potential of a leaf primitive given its UUID.">getSoilWaterPotential</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs);</div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span></div>
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span></div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">getPrimitivesWithoutPlantID</a>(std::vector&lt;uint&gt; UUIDs);</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#a18332626b5f94563a12c2a76f9cebac3" title="Set the soil water potential of a plant given its plantID.">setSoilWaterPotentialOfPlant</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID, <span class="keywordtype">float</span> soil_water_potential);</div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span></div>
 <div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span></div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    std::vector&lt;uint&gt; <a class="code hl_function" href="class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30" title="Get the primitives without plantID parent object data.">getPrimitivesWithoutPlantID</a>(std::vector&lt;uint&gt; UUIDs);</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span></div>
 <div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span></div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span></div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span></div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span></div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span> </div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span> </div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context;</div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> modelcoeffs;</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    std::map&lt;uint, PlantHydraulicsModelCoefficients&gt; modelcoeffs_map;</div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>    std::map&lt;uint, float&gt; stemWaterPotentialsByPlantID;</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>    std::map&lt;uint, float&gt; rootWaterPotentialsByPlantID;</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>    std::map&lt;uint, float&gt; soilWaterPotentialsByPlantID;</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    std::vector&lt;uint&gt; plantIDs;</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    <span class="keywordtype">bool</span> message_flag = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span> </div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    <span class="keywordtype">bool</span> OutputConductance = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <span class="keywordtype">bool</span> OutputCapacitance = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span> </div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    <span class="keywordtype">void</span> updateRootAndStemWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span> </div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="keywordtype">void</span> updateLeafWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span></div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span></div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span></div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span></div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_hydraulics_model.html#ade095e1eb07599fbb183ca85256bcb5a" title="Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with ...">run</a>(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan = 0, <span class="keywordtype">int</span> timestep = 100);</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span> </div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span> </div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context;</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    <a class="code hl_struct" href="struct_plant_hydraulics_model_coefficients.html">PlantHydraulicsModelCoefficients</a> modelcoeffs;</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    std::map&lt;uint, PlantHydraulicsModelCoefficients&gt; modelcoeffs_map;</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    std::map&lt;uint, float&gt; stemWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    std::map&lt;uint, float&gt; rootWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    std::map&lt;uint, float&gt; soilWaterPotentialsByPlantID;</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>    std::vector&lt;int&gt; plantIDs;</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="keywordtype">bool</span> message_flag = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span> </div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordtype">int</span> adjustTimestep(<span class="keywordtype">float</span> time_step, <span class="keywordtype">float</span> min_time_step, <span class="keywordtype">float</span> max_time_step, <span class="keywordtype">float</span> gradient, <span class="keywordtype">float</span> gradient_upper_bound);</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span> </div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    std::vector&lt;std::vector&lt;std::vector&lt;float&gt;&gt;&gt; meshgrid(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;x, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;y);</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>};</div>
-</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordtype">bool</span> OutputConductance = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>    <span class="keywordtype">bool</span> OutputCapacitance = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span> </div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    <span class="keywordtype">void</span> updateRootAndStemWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
 <div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span> </div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    <span class="keywordtype">void</span> updateLeafWaterPotentialsOfPlant(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs, <span class="keywordtype">int</span> timespan, <span class="keywordtype">int</span> timestep);</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span> </div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    <span class="keywordtype">int</span> adjustTimestep(<span class="keywordtype">float</span> time_step, <span class="keywordtype">float</span> min_time_step, <span class="keywordtype">float</span> max_time_step, <span class="keywordtype">float</span> gradient, <span class="keywordtype">float</span> gradient_upper_bound);</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span> </div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>    std::vector&lt;std::vector&lt;std::vector&lt;float&gt;&gt;&gt; meshgrid(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;x, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;y);</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>};</div>
+</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span> </div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

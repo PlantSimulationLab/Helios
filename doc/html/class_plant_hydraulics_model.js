@@ -6,6 +6,7 @@ var class_plant_hydraulics_model =
     [ "getOrInitializePrimitiveData", "class_plant_hydraulics_model.html#ab1c1fb1768c21adc54fabbe51c7c7a76", null ],
     [ "getPlantID", "class_plant_hydraulics_model.html#acb7073a94feecf11aa33ff080c70dd7f", null ],
     [ "getPlantID", "class_plant_hydraulics_model.html#a29a7c6d6e8ad7083e9b961860ff29b27", null ],
+    [ "getPrimitivesByPlantID", "class_plant_hydraulics_model.html#ab0e73e421fab7643a453d7a62e22419f", null ],
     [ "getPrimitivesWithoutPlantID", "class_plant_hydraulics_model.html#aa453a7854225bba47f363280d40f3e30", null ],
     [ "getRootWaterPotential", "class_plant_hydraulics_model.html#aa979fc21cbbd052108ec0818889c0666", null ],
     [ "getRootWaterPotential", "class_plant_hydraulics_model.html#a8ec9309646baef05fd5b564ea185fa09", null ],

@@ -637,7 +637,7 @@ void RadiationModel::setDiffuseSpectrum(const std::vector<std::string> &band_lab
 
 void RadiationModel::setDiffuseSpectrum(const std::string &band_label, const std::string &spectrum_label) {
 
-    setDiffuseSpectrum({band_label}, spectrum_label);
+    setDiffuseSpectrum(std::vector<std::string>(band_label), spectrum_label);
 }
 
 float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
@@ -654,7 +654,8 @@ float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
             wavebounds = make_vec2(spectrum.front().x, spectrum.back().x);
         }
         return integrateSpectrum(spectrum, wavebounds.x, wavebounds.y);
-    } else if (radiation_bands.at(band_label).diffuseFlux < 0.f) {
+    }
+    if (radiation_bands.at(band_label).diffuseFlux < 0.f) {
         return 0;
     }
 
@@ -5898,8 +5899,8 @@ void RadiationCamera::resizeImage(const std::vector<float> &src, std::vector<flo
             int iy = static_cast<int>(floor(py));
             float fx = px - ix;
             float fy = py - iy;
-            ix = std::max(0, std::min(ix, src_w - 2));
-            iy = std::max(0, std::min(iy, src_h - 2));
+            ix = (std::max)(0, (std::min)(ix, src_w - 2));
+            iy = (std::max)(0, (std::min)(iy, src_h - 2));
             const float c00 = src[iy*src_w + ix];       const float c10 = src[iy*src_w + (ix+1)];
             const float c01 = src[(iy+1)*src_w + ix];   const float c11 = src[(iy+1)*src_w + (ix+1)];
             float r0 = c00 * (1.f - fx) + c10 * fx;

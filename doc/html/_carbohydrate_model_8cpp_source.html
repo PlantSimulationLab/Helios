@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -308,7 +308,7 @@ $(function(){initNavTree('_carbohydrate_model_8cpp_source.html',''); initResizab
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>                <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>                    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;leaf_objID: <a class="code hl_function" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335" title="Template function to flatten a 2D vector into a 1D vector.">flatten</a>(phytomer-&gt;leaf_objIDs)) {</div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>                        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a7d0b3a6ca36b02702b06208a735a3b03" title="Get primitive UUIDs associated with compound object (single object ID input)">getObjectPrimitiveUUIDs</a>(leaf_objID)) {</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>                            context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;cumulative_net_photosynthesis&quot;</span>, 0.f);</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>                            context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUID, <span class="stringliteral">&quot;cumulative_net_photosynthesis&quot;</span>, 0.f);</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>                        }</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>                    }</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>                }</div>
