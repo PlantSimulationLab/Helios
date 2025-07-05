@@ -28,6 +28,7 @@ class PlantArchitecture;
 struct Shoot;
 struct Phytomer;
 
+//! Random architecture model parameter value of type float.
 struct RandomParameter_float {
 public:
 
@@ -144,6 +145,7 @@ private:
     std::minstd_rand0 *generator;
 };
 
+//! Random architecture model parameter value of type int.
 struct RandomParameter_int {
 public:
 

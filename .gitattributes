@@ -1,0 +1,11 @@
+# Text files: always LF line-endings, UTF-8 working tree
+*.cpp  text eol=lf working-tree-encoding=UTF-8
+*.h    text eol=lf working-tree-encoding=UTF-8
+*.cu   text eol=lf working-tree-encoding=UTF-8
+*.cuh  text eol=lf working-tree-encoding=UTF-8
+
+# Everything else – let Git decide or treat as binary
+* text=auto
+*.png binary
+*.jpg binary
+*.jpeg binary

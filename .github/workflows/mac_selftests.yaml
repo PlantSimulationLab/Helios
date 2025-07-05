@@ -28,8 +28,8 @@ jobs:
       - name: Bash script
         run: |
           cd utilities
-          if ! ./run_samples.sh --nogpu --visbuildonly --log-file macos_selftests.log; then
+          if ! ./run_samples.sh --nogpu --visbuildonly --log-file ../macos_selftests.log; then
             echo "==== run_samples.sh failed; dumping macos_selftests.log ===="
-            cat macos_selftests.log
+            cat ../macos_selftests.log
             exit 1
           fi

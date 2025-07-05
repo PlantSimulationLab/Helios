@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -209,16 +209,16 @@ $(function(){initNavTree('_initialize_energy_balance_8cpp_source.html',''); init
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    std::vector&lt;uint&gt; ground_UUIDs;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordflow">try</span>{</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="comment">//        assert( context_ptr-&gt;doesGlobalDataExist( &quot;ground_UUIDs&quot; ) );</span></div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a972fa4a45b2775f6047d41b88dc69d03" title="Get global data value (scalar integer)">getGlobalData</a>( <span class="stringliteral">&quot;ground_UUIDs&quot;</span>, ground_UUIDs );</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#aa451539328dde00034cf29ac9d108101" title="Get global data value (scalar or vector)">getGlobalData</a>( <span class="stringliteral">&quot;ground_UUIDs&quot;</span>, ground_UUIDs );</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        boundarylayerconductancemodel-&gt;<a class="code hl_function" href="class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df" title="Set the boundary-layer conductance model to be used for all primitives in the Context.">setBoundaryLayerModel</a>( ground_UUIDs, <span class="stringliteral">&quot;Ground&quot;</span> );</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    }<span class="keywordflow">catch</span>(...){</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;WARNING: No ground UUIDs found&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    }</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordflow">if</span>( energybalance_block_count==0 ){</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">false</span> );</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">false</span> );</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    }<span class="keywordflow">else</span>{</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#adcb103dbb72265da24d44512646782f5" title="Add global data value (int)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">true</span> );</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>( <span class="stringliteral">&quot;energybalance_enabled&quot;</span>, <span class="keyword">true</span> );</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    }</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>

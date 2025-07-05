@@ -149,8 +149,7 @@ int XMLparser::parse_data_vec3(const pugi::xml_node &node_data, std::vector<vec3
         while (data_stream >> tmp_s[0]) {
             data_stream >> tmp_s[1];
             data_stream >> tmp_s[2];
-            if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) ||
-                !parse_float(tmp_s[2], tmp.z)) {
+            if (!parse_float(tmp_s[0], tmp.x) || !parse_float(tmp_s[1], tmp.y) || !parse_float(tmp_s[2], tmp.z)) {
                 return 2;
             } else {
                 data.push_back(tmp);
@@ -480,7 +479,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_INT, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -495,7 +494,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_UINT, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -510,7 +509,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_FLOAT, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -525,7 +524,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_DOUBLE, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -540,7 +539,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_VEC2, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -555,7 +554,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_VEC3, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -570,7 +569,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_VEC4, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -585,7 +584,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_INT2, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -600,7 +599,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_INT3, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -615,7 +614,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_INT4, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 
@@ -630,7 +629,7 @@ void Context::loadPData(pugi::xml_node p, uint UUID) {
         if (datav.size() == 1) {
             setPrimitiveData(UUID, label, datav.front());
         } else if (datav.size() > 1) {
-            setPrimitiveData(UUID, label, HELIOS_TYPE_STRING, datav.size(), &datav[0]);
+            setPrimitiveData(UUID, label, datav);
         }
     }
 }
@@ -649,7 +648,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_INT, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -664,7 +663,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_UINT, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -679,7 +678,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_FLOAT, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -694,7 +693,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_DOUBLE, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -709,7 +708,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_VEC2, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -724,7 +723,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_VEC3, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -739,7 +738,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_VEC4, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -754,7 +753,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_INT2, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -769,7 +768,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_INT3, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -784,7 +783,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_INT4, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 
@@ -799,7 +798,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
         if (datav.size() == 1) {
             setObjectData(ID, label, datav.front());
         } else if (datav.size() > 1) {
-            setObjectData(ID, label, HELIOS_TYPE_STRING, datav.size(), &datav[0]);
+            setObjectData(ID, label, datav);
         }
     }
 }
@@ -817,8 +816,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -831,7 +830,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -844,8 +843,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -858,7 +857,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_UINT, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -871,8 +870,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -885,7 +884,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_FLOAT, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -898,8 +897,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -912,7 +911,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_DOUBLE, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -925,8 +924,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -939,7 +938,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC2, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -952,8 +951,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -966,7 +965,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC3, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -979,8 +978,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -993,7 +992,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_VEC4, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -1006,8 +1005,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -1020,7 +1019,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT2, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -1033,8 +1032,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -1047,7 +1046,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT3, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -1060,8 +1059,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -1074,7 +1073,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_INT4, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -1087,8 +1086,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label <<
-                        "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
+                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
                 break;
             }
 
@@ -1101,7 +1100,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
                 if (datav.size() == 1) {
                     setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, HELIOS_TYPE_STRING, datav.size(), &datav[0]);
+                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
                 }
             }
             u++;
@@ -1128,14 +1127,13 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
-    //load file
+    // load file
     pugi::xml_parse_result load_result = xmldoc.load_file(filename);
 
-    //error checking
+    // error checking
     if (!load_result) {
-        helios_runtime_error(
-            "failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " +
-            std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n");
+        helios_runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() +
+                             "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
@@ -1147,8 +1145,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         helios_runtime_error("ERROR (Context::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.");
     }
 
-    //if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
-    std::map<uint, std::vector<uint> > object_prim_UUIDs;
+    // if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
+    std::map<uint, std::vector<uint>> object_prim_UUIDs;
 
     //-------------- TIME/DATE ---------------//
 
@@ -1241,26 +1239,26 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         const char *color_str = color_node.child_value();
         if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); //assume default color of black
+            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
         } else {
             color = string2RGBcolor(color_str);
         }
 
         // * Add the Patch * //
-        if (strcmp(texture_file.c_str(), "none") == 0) { //no texture file was given
+        if (strcmp(texture_file.c_str(), "none") == 0) { // no texture file was given
             ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), color);
-        } else { //has a texture file
+        } else { // has a texture file
             std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { //solid fraction was given in the XML, and is not equal to 1.0
+            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
                 texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; //load dummy solid texture to avoid re-calculating the solid fraction
+                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
             }
-            if (uv.empty()) { //custom (u,v) coordinates were not given
+            if (uv.empty()) { // custom (u,v) coordinates were not given
                 ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str());
             } else {
                 ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str(), 0.5 * (uv.at(2) + uv.at(0)), uv.at(2) - uv.at(0));
             }
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { //replace dummy texture and set the solid fraction
+            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // replace dummy texture and set the solid fraction
                 getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
                 addTexture(texture_file_copy.c_str());
                 getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
@@ -1279,11 +1277,11 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // * Primitive Data * //
 
         loadPData(p, ID);
-    } //end patches
+    } // end patches
 
     //-------------- TRIANGLES ---------------//
 
-    //looping over any triangles specified in XML file
+    // looping over any triangles specified in XML file
     for (pugi::xml_node tri = helios.child("triangle"); tri; tri = tri.next_sibling("triangle")) {
         // * Triangle Object ID * //
         uint objID = 0;
@@ -1322,7 +1320,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         const char *color_str = color_node.child_value();
         if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); //assume default color of black
+            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
         } else {
             color = string2RGBcolor(color_str);
         }
@@ -1338,9 +1336,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color);
         } else {
             std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { //solid fraction was given in the XML, and is not equal to 1.0
+            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
                 texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; //load dummy solid texture to avoid re-calculating the solid fraction
+                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
             }
             ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
             if (solid_fraction < 1.f && solid_fraction >= 0.f) {
@@ -1393,7 +1391,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         const char *color_str = color_node.child_value();
         if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); //assume default color of black
+            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
         } else {
             color = string2RGBcolor(color_str);
         }
@@ -1463,7 +1461,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Tile <subdivisions> node contains invalid data. ");
         }
 
-        //Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
+        // Create a dummy patch in order to get the center, size, and rotation based on transformation matrix
         Patch patch(make_RGBAcolor(0, 0, 0, 0), 0, 0);
         patch.setTransformationMatrix(transform);
         //    SphericalCoord rotation = cart2sphere(patch.getNormal());
@@ -1494,7 +1492,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID), transform);
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && !object_prim_UUIDs.empty() && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1514,7 +1512,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end tiles
+    } // end tiles
 
     //-------------- SPHERES ---------------//
     for (pugi::xml_node p = helios.child("sphere"); p; p = p.next_sibling("sphere")) {
@@ -1524,7 +1522,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1561,7 +1559,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Sphere <subdivisions> node contains invalid data. ");
         }
 
-        //Create a dummy sphere in order to get the center and radius based on transformation matrix
+        // Create a dummy sphere in order to get the center and radius based on transformation matrix
         std::vector<uint> empty;
         Sphere sphere(0, empty, 3, "", this);
         sphere.setTransformationMatrix(transform);
@@ -1577,7 +1575,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addSphereObject(subdiv, sphere.getCenter(), sphere.getRadius(), texture_file.c_str());
         }
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1599,7 +1597,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end spheres
+    } // end spheres
 
     //-------------- TUBES ---------------//
     for (pugi::xml_node p = helios.child("tube"); p; p = p.next_sibling("tube")) {
@@ -1609,7 +1607,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1680,7 +1678,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1702,7 +1700,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end tubes
+    } // end tubes
 
     //-------------- BOXES ---------------//
     for (pugi::xml_node p = helios.child("box"); p; p = p.next_sibling("box")) {
@@ -1712,7 +1710,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1749,7 +1747,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Box <subdivisions> node contains invalid data. ");
         }
 
-        //Create a dummy box in order to get the center and size based on transformation matrix
+        // Create a dummy box in order to get the center and size based on transformation matrix
         std::vector<uint> empty;
         Box box(0, empty, make_int3(1, 1, 1), "", this);
         box.setTransformationMatrix(transform);
@@ -1765,7 +1763,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addBoxObject(box.getCenter(), box.getSize(), subdiv, texture_file.c_str());
         }
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1787,7 +1785,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end boxes
+    } // end boxes
 
     //-------------- DISKS ---------------//
     for (pugi::xml_node p = helios.child("disk"); p; p = p.next_sibling("disk")) {
@@ -1797,7 +1795,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1834,7 +1832,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ");
         }
 
-        //Create a dummy disk in order to get the center and size based on transformation matrix
+        // Create a dummy disk in order to get the center and size based on transformation matrix
         std::vector<uint> empty;
         Disk disk(0, empty, make_int2(1, 1), "", this);
         disk.setTransformationMatrix(transform);
@@ -1850,7 +1848,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addDiskObject(subdiv, disk.getCenter(), disk.getSize(), nullrotation, texture_file.c_str());
         }
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1872,7 +1870,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end disks
+    } // end disks
 
     //-------------- CONES ---------------//
     for (pugi::xml_node p = helios.child("cone"); p; p = p.next_sibling("cone")) {
@@ -1882,7 +1880,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1942,7 +1940,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         getObjectPointer(ID)->setTransformationMatrix(transform);
 
-        //if primitives exist that were assigned to this object, delete all primitives that were just created
+        // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
             getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
@@ -1964,7 +1962,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = getObjectPrimitiveUUIDs(ID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end cones
+    } // end cones
 
     //-------------- POLYMESH ---------------//
     for (pugi::xml_node p = helios.child("polymesh"); p; p = p.next_sibling("polymesh")) {
@@ -1974,7 +1972,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'polymesh' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { //if this object ID is already in use, assign a new one
+        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
             objID = currentObjectID;
             currentObjectID++;
         }
@@ -1993,7 +1991,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         std::vector<uint> childUUIDs = object_prim_UUIDs.at(objID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
-    } //end polymesh
+    } // end polymesh
 
     //-------------- GLOBAL DATA ---------------//
 
@@ -2008,7 +2006,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_INT, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2023,7 +2021,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_UINT, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2038,7 +2036,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_FLOAT, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2053,7 +2051,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_DOUBLE, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2068,7 +2066,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_VEC2, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2083,7 +2081,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_VEC3, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2098,7 +2096,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_VEC4, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2113,7 +2111,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_INT2, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2128,7 +2126,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_INT3, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2143,7 +2141,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_INT4, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2158,7 +2156,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (datav.size() == 1) {
             setGlobalData(label, datav.front());
         } else if (datav.size() > 1) {
-            setGlobalData(label, HELIOS_TYPE_STRING, datav.size(), &datav[0]);
+            setGlobalData(label, datav);
         }
     }
 
@@ -2246,7 +2244,7 @@ std::vector<std::string> Context::getLoadedXMLFiles() {
 }
 
 bool Context::scanXMLForTag(const std::string &filename, const std::string &tag, const std::string &label) {
-    std::string fn = filename;
+    const std::string &fn = filename;
     std::string ext = getFileExtension(filename);
     if (ext != ".xml" && ext != ".XML") {
         helios_runtime_error("failed.\n File " + fn + " is not XML format.");
@@ -2255,13 +2253,13 @@ bool Context::scanXMLForTag(const std::string &filename, const std::string &tag,
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
-    //load file
+    // load file
     pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
 
-    //error checking
+    // error checking
     if (!load_result) {
-        helios_runtime_error("failed.\n XML [" + filename + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() + "\nError offset: " +
-                             std::to_string(load_result.offset) + " (error at [..." + (filename.c_str() + load_result.offset) + "]\n");
+        helios_runtime_error("failed.\n XML [" + filename + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() +
+                             "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename.c_str() + load_result.offset) + "]\n");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
@@ -2283,17 +2281,13 @@ bool Context::scanXMLForTag(const std::string &filename, const std::string &tag,
 
 void Context::writeDataToXMLstream(const char *data_group, const std::vector<std::string> &data_labels, void *ptr, std::ofstream &outfile) const {
     for (const auto &label: data_labels) {
-        size_t dsize;
-        HeliosDataType dtype;
+        HeliosDataType dtype = HELIOS_TYPE_INT;
 
         if (strcmp(data_group, "primitive") == 0) {
-            dsize = ((Primitive *) ptr)->getPrimitiveDataSize(label.c_str());
             dtype = ((Primitive *) ptr)->getPrimitiveDataType(label.c_str());
         } else if (strcmp(data_group, "object") == 0) {
-            dsize = ((CompoundObject *) ptr)->getObjectDataSize(label.c_str());
             dtype = ((CompoundObject *) ptr)->getObjectDataType(label.c_str());
         } else if (strcmp(data_group, "global") == 0) {
-            dsize = getGlobalDataSize(label.c_str());
             dtype = getGlobalDataType(label.c_str());
         } else {
             helios_runtime_error("ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global.");
@@ -2412,8 +2406,7 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w
-                        << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
                 if (j != data.size() - 1) {
                     outfile << " " << std::flush;
                 }
@@ -2464,8 +2457,7 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w
-                        << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
                 if (j != data.size() - 1) {
                     outfile << " " << std::flush;
                 }
@@ -2579,11 +2571,11 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
         std::vector<std::string> pdata = prim->listPrimitiveData();
 
-        //if this primitive is a member of a compound object that is "complete", don't write it to XML
+        // if this primitive is a member of a compound object that is "complete", don't write it to XML
         //\todo This was included to make the XML files more efficient and avoid writing all object primitives to file. However, it doesn't work in some cases because it makes it hard to figure out the primitive transformations.
-        //    if( parent_objID>0 && areObjectPrimitivesComplete(parent_objID) ){
-        //      continue;
-        //    }
+        //     if( parent_objID>0 && areObjectPrimitivesComplete(parent_objID) ){
+        //       continue;
+        //     }
 
         if (prim->getType() == PRIMITIVE_TYPE_PATCH) {
             outfile << "   <patch>" << std::endl;
@@ -2608,7 +2600,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             writeDataToXMLstream("primitive", pdata, prim, outfile);
         }
 
-        //Patches
+        // Patches
         if (prim->getType() == PRIMITIVE_TYPE_PATCH) {
             Patch *patch = getPatchPointer_private(p);
             float transform[16];
@@ -2635,7 +2627,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
             outfile << "   </patch>" << std::endl;
 
-            //Triangles
+            // Triangles
         } else if (prim->getType() == PRIMITIVE_TYPE_TRIANGLE) {
             float transform[16];
             prim->getTransformationMatrix(transform);
@@ -2662,7 +2654,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
             outfile << "   </triangle>" << std::endl;
 
-            //Voxels
+            // Voxels
         } else if (prim->getType() == PRIMITIVE_TYPE_VOXEL) {
             float transform[16];
             prim->getTransformationMatrix(transform);
@@ -2719,10 +2711,10 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         std::vector<uint> primitiveUUIDs = obj->getPrimitiveUUIDs();
         for (uint UUID: primitiveUUIDs) {
             std::vector<std::string> labels = getPrimitivePointer_private(UUID)->listPrimitiveData();
-            for (int i = 0; i < labels.size(); i++) {
-                if (find(pdata_labels.begin(), pdata_labels.end(), labels.at(i)) == pdata_labels.end()) {
-                    pdata_labels.push_back(labels.at(i));
-                    pdata_types.push_back(getPrimitiveDataType(UUID, labels.at(i).c_str()));
+            for (const auto &label: labels) {
+                if (find(pdata_labels.begin(), pdata_labels.end(), label) == pdata_labels.end()) {
+                    pdata_labels.push_back(label);
+                    pdata_types.push_back(getPrimitiveDataType(UUID, label.c_str()));
                 }
             }
         }
@@ -2734,8 +2726,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<float> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i) << std::flush;
+                        for (float i: data) {
+                            outfile << i << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2748,8 +2740,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<double> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i) << std::flush;
+                        for (double i: data) {
+                            outfile << i << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2762,8 +2754,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<uint> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i) << std::flush;
+                        for (unsigned int i: data) {
+                            outfile << i << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2776,8 +2768,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<int> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i) << std::flush;
+                        for (int i: data) {
+                            outfile << i << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2790,8 +2782,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<int2> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2804,8 +2796,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<int3> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << " " << i.z << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2818,8 +2810,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<int4> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << " " << data.at(i).w << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2832,8 +2824,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<vec2> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2846,8 +2838,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<vec3> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << " " << i.z << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2860,8 +2852,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<vec4> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i).x << " " << data.at(i).y << " " << data.at(i).z << " " << data.at(i).w << std::flush;
+                        for (auto &i: data) {
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2874,8 +2866,8 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         std::vector<std::string> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (size_t i = 0; i < data.size(); i++) {
-                            outfile << data.at(i) << std::flush;
+                        for (const auto &i: data) {
+                            outfile << i << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -2884,7 +2876,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
         }
 
-        //Tiles
+        // Tiles
         if (obj->getObjectType() == OBJECT_TYPE_TILE) {
             Tile *tile = getTileObjectPointer(o);
 
@@ -2902,7 +2894,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             outfile << "   </tile>" << std::endl;
 
-            //Spheres
+            // Spheres
         } else if (obj->getObjectType() == OBJECT_TYPE_SPHERE) {
             Sphere *sphere = getSphereObjectPointer(o);
 
@@ -2920,7 +2912,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             outfile << "   </sphere>" << std::endl;
 
-            //Tubes
+            // Tubes
         } else if (obj->getObjectType() == OBJECT_TYPE_TUBE) {
             Tube *tube = getTubeObjectPointer(o);
 
@@ -2941,13 +2933,13 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             assert(nodes.size() == radius.size());
             outfile << "\t<nodes> " << std::endl;
-            for (int i = 0; i < nodes.size(); i++) {
-                outfile << "\t\t" << nodes.at(i).x << " " << nodes.at(i).y << " " << nodes.at(i).z << std::endl;
+            for (auto &node: nodes) {
+                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << std::endl;
             }
             outfile << "\t</nodes> " << std::endl;
             outfile << "\t<radius> " << std::endl;
-            for (int i = 0; i < radius.size(); i++) {
-                outfile << "\t\t" << radius.at(i) << std::endl;
+            for (float radiu: radius) {
+                outfile << "\t\t" << radiu << std::endl;
             }
             outfile << "\t</radius> " << std::endl;
 
@@ -2955,15 +2947,15 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                 std::vector<RGBcolor> colors = tube->getNodeColors();
 
                 outfile << "\t<color> " << std::endl;
-                for (int i = 0; i < colors.size(); i++) {
-                    outfile << "\t\t" << colors.at(i).r << " " << colors.at(i).g << " " << colors.at(i).b << std::endl;
+                for (auto &color: colors) {
+                    outfile << "\t\t" << color.r << " " << color.g << " " << color.b << std::endl;
                 }
                 outfile << "\t</color> " << std::endl;
             }
 
             outfile << "   </tube>" << std::endl;
 
-            //Boxes
+            // Boxes
         } else if (obj->getObjectType() == OBJECT_TYPE_BOX) {
             Box *box = getBoxObjectPointer(o);
 
@@ -2981,7 +2973,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             outfile << "   </box>" << std::endl;
 
-            //Disks
+            // Disks
         } else if (obj->getObjectType() == OBJECT_TYPE_DISK) {
             Disk *disk = getDiskObjectPointer(o);
 
@@ -2999,7 +2991,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             outfile << "   </disk>" << std::endl;
 
-            //Cones
+            // Cones
         } else if (obj->getObjectType() == OBJECT_TYPE_CONE) {
             Cone *cone = getConeObjectPointer(o);
 
@@ -3020,19 +3012,19 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             assert(nodes.size() == radius.size());
             outfile << "\t<nodes> " << std::endl;
-            for (int i = 0; i < nodes.size(); i++) {
-                outfile << "\t\t" << nodes.at(i).x << " " << nodes.at(i).y << " " << nodes.at(i).z << std::endl;
+            for (auto &node: nodes) {
+                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << std::endl;
             }
             outfile << "\t</nodes> " << std::endl;
             outfile << "\t<radius> " << std::endl;
-            for (int i = 0; i < radius.size(); i++) {
-                outfile << "\t\t" << radius.at(i) << std::endl;
+            for (float radiu: radius) {
+                outfile << "\t\t" << radiu << std::endl;
             }
             outfile << "\t</radius> " << std::endl;
 
             outfile << "   </cone>" << std::endl;
 
-            //Polymesh
+            // Polymesh
         } else if (obj->getObjectType() == OBJECT_TYPE_POLYMESH) {
             outfile << "   </polymesh>" << std::endl;
         }
@@ -3155,7 +3147,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         std::vector<float> data = iter.second;
         std::vector<double> dateval = timeseries_datevalue.at(label);
 
-        assert(data.size()==dateval.size());
+        assert(data.size() == dateval.size());
 
         outfile << "   <timeseries label=\"" << label << "\">" << std::endl;
 
@@ -3224,7 +3216,7 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     uint vertexCount = 0, faceCount = 0;
 
     std::vector<vec3> vertices;
-    std::vector<std::vector<int> > faces;
+    std::vector<std::vector<int>> faces;
     std::vector<RGBcolor> colors;
     std::vector<std::string> properties;
 
@@ -3239,13 +3231,13 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
     //--- read header info -----//
 
-    //first line should always be 'ply'
+    // first line should always be 'ply'
     inputPly >> line;
     if ("ply" != line) {
         helios_runtime_error("ERROR (Context::loadPLY): " + std::string(filename) + " is not a PLY file.");
     }
 
-    //read format
+    // read format
     inputPly >> line;
     if ("format" != line) {
         helios_runtime_error("ERROR (Context::loadPLY): could not determine data format of " + std::string(filename));
@@ -3278,10 +3270,10 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
                 }
             }
         } else if ("property" == line) {
-            inputPly >> line; //type
+            inputPly >> line; // type
 
             if ("list" != line) {
-                inputPly >> prop; //value
+                inputPly >> prop; // value
                 properties.push_back(prop);
             }
         }
@@ -3372,7 +3364,7 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
         }
     }
 
-    //determine bounding box
+    // determine bounding box
 
     vec3 boxmin = make_vec3(10000, 10000, 10000);
     vec3 boxmax = make_vec3(-10000, -10000, -10000);
@@ -3399,7 +3391,7 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
         }
     }
 
-    //center PLY object at `origin' and scale to have height `height'
+    // center PLY object at `origin' and scale to have height `height'
     float scl = 1.f;
     if (height > 0.f) {
         scl = height / (boxmax.z - boxmin.z);
@@ -3434,7 +3426,7 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
             }
         }
 
-        //Add triangles to context
+        // Add triangles to context
 
         for (uint t = 2; t < v; t++) {
             RGBcolor color;
@@ -3474,7 +3466,7 @@ void Context::writePLY(const char *filename) const {
 }
 
 void Context::writePLY(const char *filename, const std::vector<uint> &UUIDs) const {
-    //Validate file name / extension
+    // Validate file name / extension
     std::string fname{filename ? filename : ""};
 
     const auto dotPos = fname.find_last_of('.');
@@ -3487,7 +3479,7 @@ void Context::writePLY(const char *filename, const std::vector<uint> &UUIDs) con
         helios_runtime_error("ERROR (Context::writePLY) Invalid file extension for " + fname + ". Expected a file ending in '.ply'.");
     }
 
-    //Try to open the output file
+    // Try to open the output file
     std::ofstream PLYfile;
     PLYfile.open(fname, std::ios::out | std::ios::trunc);
 
@@ -3576,7 +3568,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
     std::vector<vec3> vertices;
     std::vector<std::string> objects;
     std::vector<vec2> texture_uv;
-    std::map<std::string, std::vector<std::vector<int> > > face_inds, texture_inds;
+    std::map<std::string, std::vector<std::vector<int>>> face_inds, texture_inds;
 
     std::map<std::string, OBJmaterial> materials;
 
@@ -3589,11 +3581,11 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         helios_runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename));
     }
 
-    //determine the base file path for 'filename'
+    // determine the base file path for 'filename'
     std::string fstring = filename;
     std::string filebase = getFilePath(fstring);
 
-    //determine bounding box
+    // determine bounding box
     float boxmin = 100000;
     float boxmax = -100000;
 
@@ -3624,7 +3616,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             // ------- VERTICES --------- //
         } else if (line == "v") {
             getline(inputOBJ, line);
-            //parse vertices into points
+            // parse vertices into points
             vec3 verts(string2vec3(line.c_str()));
             vertices.emplace_back(verts);
             objects.emplace_back(current_object);
@@ -3640,7 +3632,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         } else if (line == "vt") {
             getline(inputOBJ, line);
             line = trim_whitespace(line);
-            //parse coordinates into uv
+            // parse coordinates into uv
             vec2 uv(string2vec2(line.c_str()));
             texture_uv.emplace_back(uv);
 
@@ -3652,7 +3644,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             // ------- FACES --------- //
         } else if (line == "f") {
             getline(inputOBJ, line);
-            //parse face vertices
+            // parse face vertices
             std::istringstream stream(line);
             std::string tmp, digitf, digitu;
             std::vector<int> f, u;
@@ -3736,7 +3728,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         bool textureColorIsOverridden = false;
 
         if (materials.find(materialname) != materials.end()) {
-            OBJmaterial mat = materials.at(materialname);
+            const OBJmaterial &mat = materials.at(materialname);
 
             texture = mat.texture;
             color = mat.color;
@@ -3764,7 +3756,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                 v2 = rotatePoint(v2, rotation);
 
                 uint ID;
-                if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { //has texture
+                if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { // has texture
 
                     if (t < texture_inds.at(materialname).at(i).size()) {
                         int iuv0 = texture_inds.at(materialname).at(i).at(0) - 1;
@@ -3782,7 +3774,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                     ID = addTriangle(origin + v0 * scl.x, origin + v1 * scl.y, origin + v2 * scl.z, color);
                 }
 
-                std::string object = objects.at(face_inds.at(materialname).at(i).at(0) - 1);
+                const std::string &object = objects.at(face_inds.at(materialname).at(i).at(0) - 1);
 
                 if (object != "none" && doesPrimitiveExist(ID)) {
                     setPrimitiveData(ID, "object_label", object);
@@ -3805,10 +3797,10 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
 
     std::string file = material_file;
 
-    //first look for mtl file using path given in obj file
+    // first look for mtl file using path given in obj file
     inputMTL.open(file.c_str());
     if (!inputMTL.is_open()) {
-        //if that doesn't work, try looking in the same directory where obj file is located
+        // if that doesn't work, try looking in the same directory where obj file is located
         file = filebase + file;
         file.erase(remove(file.begin(), file.end(), ' '), file.end());
         for (size_t i = file.size(); i-- > 0;) {
@@ -3834,10 +3826,10 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     inputMTL >> line;
 
     while (inputMTL.good()) {
-        if (strcmp("#", line.c_str()) == 0) { //comments
+        if (strcmp("#", line.c_str()) == 0) { // comments
             getline(inputMTL, line);
             inputMTL >> line;
-        } else if (line == "newmtl") { //material library
+        } else if (line == "newmtl") { // material library
             getline(inputMTL, line);
             std::string material_name = trim_whitespace(line);
             OBJmaterial mat(RGB::red, "", 0);
@@ -3865,10 +3857,10 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                             std::string texturefile = tmp;
                             std::ifstream tfile;
 
-                            //first look for texture file using path given in mtl file
+                            // first look for texture file using path given in mtl file
                             tfile.open(texturefile.c_str());
                             if (!tfile.is_open()) {
-                                //if that doesn't work, try looking in the same directory where obj file is located
+                                // if that doesn't work, try looking in the same directory where obj file is located
                                 tfile.close();
                                 texturefile = filebase + texturefile;
                                 tfile.open(texturefile.c_str());
@@ -3939,7 +3931,6 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     auto file_stem = getFileStem(filename);
     auto file_path = getFilePath(filename);
 
-    std::string fn = filename;
     if (file_extension != ".obj" && file_extension != ".OBJ") { // append obj to file name
         objfilename.append(".obj");
         mtlfilename.append(".mtl");
@@ -3968,17 +3959,17 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     std::vector<vec3> verts;
     std::vector<vec3> normals;
     std::vector<vec2> uv;
-    std::map<uint, std::vector<int3> > faces;
-    std::map<uint, std::vector<int> > normal_inds;
-    std::map<uint, std::vector<int3> > uv_inds;
-    size_t vertex_count = 1; //OBJ files start indices at 1
+    std::map<uint, std::vector<int3>> faces;
+    std::map<uint, std::vector<int>> normal_inds;
+    std::map<uint, std::vector<int3>> uv_inds;
+    size_t vertex_count = 1; // OBJ files start indices at 1
     size_t normal_count = 0;
     size_t uv_count = 1;
-    std::map<uint, std::vector<uint> > UUIDs_write;
+    std::map<uint, std::vector<uint>> UUIDs_write;
     // maintain object groupings
-    std::map<std::string, std::map<uint, std::vector<int3> > > object_faces;
-    std::map<std::string, std::map<uint, std::vector<int> > > object_normal_inds;
-    std::map<std::string, std::map<uint, std::vector<int3> > > object_uv_inds;
+    std::map<std::string, std::map<uint, std::vector<int3>>> object_faces;
+    std::map<std::string, std::map<uint, std::vector<int>>> object_normal_inds;
+    std::map<std::string, std::map<uint, std::vector<int3>>> object_uv_inds;
     std::vector<std::string> object_order;
     bool object_groups_found = false;
 
@@ -4097,13 +4088,13 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                 uv_inds[material_ID].push_back(tuv2);
                 object_uv_inds[obj_label][material_ID].push_back(tuv1);
                 object_uv_inds[obj_label][material_ID].push_back(tuv2);
-                if (uv_v.empty()) { //default (u,v)
+                if (uv_v.empty()) { // default (u,v)
                     uv.push_back(make_vec2(0, 1));
                     uv.push_back(make_vec2(1, 1));
                     uv.push_back(make_vec2(1, 0));
                     uv.push_back(make_vec2(0, 0));
                     uv_count += 4;
-                } else { //custom (u,v)
+                } else { // custom (u,v)
                     for (int i = 0; i < 4; i++) {
                         uv.push_back(uv_v.at(i));
                         uv_count++;
@@ -4127,14 +4118,14 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         assert(uv_inds.at(i).size() == faces.at(i).size());
     }
 
-    //copy material textures to new directory and edit old file paths
+    // copy material textures to new directory and edit old file paths
     std::string texture_dir = std::string(file_path);
-    for (int mat = 0; mat < materials.size(); mat++) {
-        std::string texture = materials.at(mat).texture;
+    for (auto &material: materials) {
+        std::string texture = material.texture;
         if (!texture.empty() && std::filesystem::exists(texture)) {
             auto file = std::filesystem::path(texture).filename();
             std::filesystem::copy_file(texture, texture_dir + file.string(), std::filesystem::copy_options::overwrite_existing);
-            materials.at(mat).texture = file.string();
+            material.texture = file.string();
         }
     }
 
@@ -4175,33 +4166,22 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                     continue;
                 objfstream << "usemtl material" << mat << std::endl;
                 for (size_t f = 0; f < fit->second.size(); ++f) {
-                    if (uv.size() == 0) {
+                    if (uv.empty()) {
                         if (write_normals) {
-                            objfstream << "f "
-                                    << fit->second.at(f).x << "//" << object_normal_inds[obj_label][mat].at(f) << " "
-                                    << fit->second.at(f).y << "//" << object_normal_inds[obj_label][mat].at(f) << " "
-                                    << fit->second.at(f).z << "//" << object_normal_inds[obj_label][mat].at(f)
-                                    << std::endl;
+                            objfstream << "f " << fit->second.at(f).x << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "//"
+                                       << object_normal_inds[obj_label][mat].at(f) << std::endl;
                         } else {
-                            objfstream << "f " << fit->second.at(f).x << " "
-                                    << fit->second.at(f).y << " " << fit->second.at(f).z << std::endl;
+                            objfstream << "f " << fit->second.at(f).x << " " << fit->second.at(f).y << " " << fit->second.at(f).z << std::endl;
                         }
                     } else if (object_uv_inds[obj_label][mat].at(f).x < 0) {
-                        objfstream << "f " << fit->second.at(f).x << "/1 " << fit->second.at(f).y
-                                << "/1 " << fit->second.at(f).z << "/1" << std::endl;
+                        objfstream << "f " << fit->second.at(f).x << "/1 " << fit->second.at(f).y << "/1 " << fit->second.at(f).z << "/1" << std::endl;
                     } else {
                         if (write_normals) {
-                            objfstream << "f "
-                                    << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << "/" << object_normal_inds[obj_label][mat].at(f) << " "
-                                    << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y << "/" << object_normal_inds[obj_label][mat].at(f) << " "
-                                    << fit->second.at(f).z << "/" << object_uv_inds[obj_label][mat].at(f).z << "/" << object_normal_inds[obj_label][mat].at(f)
-                                    << std::endl;
+                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y
+                                       << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "/" << object_uv_inds[obj_label][mat].at(f).z << "/" << object_normal_inds[obj_label][mat].at(f) << std::endl;
                         } else {
-                            objfstream << "f "
-                                    << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << " "
-                                    << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y << " "
-                                    << fit->second.at(f).z << "/" << object_uv_inds[obj_label][mat].at(f).z
-                                    << std::endl;
+                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y << " " << fit->second.at(f).z << "/"
+                                       << object_uv_inds[obj_label][mat].at(f).z << std::endl;
                         }
                     }
                 }
@@ -4209,39 +4189,26 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         }
     } else {
         for (int mat = 0; mat < materials.size(); mat++) {
-            assert(materials.at(mat).materialID==mat);
+            assert(materials.at(mat).materialID == mat);
 
             objfstream << "usemtl material" << mat << std::endl;
 
             for (int f = 0; f < faces.at(mat).size(); f++) {
-                if (uv.size() == 0) {
+                if (uv.empty()) {
                     if (write_normals) {
-                        objfstream << "f "
-                                << faces.at(mat).at(f).x << "//" << normal_inds.at(mat).at(f) << " "
-                                << faces.at(mat).at(f).y << "//" << normal_inds.at(mat).at(f) << " "
-                                << faces.at(mat).at(f).z << "//" << normal_inds.at(mat).at(f)
-                                << std::endl;
+                        objfstream << "f " << faces.at(mat).at(f).x << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).z << "//" << normal_inds.at(mat).at(f)
+                                   << std::endl;
                     } else {
-                        objfstream << "f " << faces.at(mat).at(f).x << " "
-                                << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z
-                                << std::endl;
+                        objfstream << "f " << faces.at(mat).at(f).x << " " << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z << std::endl;
                     }
                 } else if (uv_inds.at(mat).at(f).x < 0) {
-                    objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y
-                            << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
+                    objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
                 } else {
                     if (write_normals) {
-                        objfstream << "f "
-                                << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << "/" << normal_inds.at(mat).at(f) << " "
-                                << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << "/" << normal_inds.at(mat).at(f) << " "
-                                << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << "/" << normal_inds.at(mat).at(f)
-                                << std::endl;
+                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << "/" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << "/" << normal_inds.at(mat).at(f) << " "
+                                   << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << "/" << normal_inds.at(mat).at(f) << std::endl;
                     } else {
-                        objfstream << "f "
-                                << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << " "
-                                << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << " "
-                                << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z
-                                << std::endl;
+                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << " " << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << std::endl;
                     }
                 }
             }
@@ -4282,7 +4249,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         bool datatypewarning = false;
 
 
-        for (std::string label: primitive_dat_fields) {
+        for (const std::string &label: primitive_dat_fields) {
             std::string datfilename = file_path + file_stem + "_" + std::string(label) + ".dat";
             std::ofstream datout(datfilename);
 
@@ -4368,11 +4335,11 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     std::cout << "done." << std::endl;
 }
 
-void Context::writePrimitiveData(std::string filename, const std::vector<std::string> &column_format, bool print_header) const {
+void Context::writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header) const {
     writePrimitiveData(filename, column_format, getAllUUIDs(), print_header);
 }
 
-void Context::writePrimitiveData(std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header) const {
+void Context::writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header) const {
     std::ofstream file(filename);
 
     if (print_header) {
@@ -4446,9 +4413,9 @@ void Context::writePrimitiveData(std::string filename, const std::vector<std::st
 }
 
 void Context::loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines) {
-    std::ifstream datafile(data_file); //open the file
+    std::ifstream datafile(data_file); // open the file
 
-    if (!datafile.is_open()) { //check that file exists
+    if (!datafile.is_open()) { // check that file exists
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Weather data file '" + data_file + "' does not exist.");
     }
 
@@ -4458,7 +4425,6 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     int hourcol = -1;
     int minutecol = -1;
     int secondcol = -1;
-    int timestrcol = -1;
     std::map<std::string, int> datacols;
 
     size_t Ncolumns = 0;
@@ -4472,17 +4438,13 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     // pre-defined labels for CIMIS weather data files
     if (col_labels.size() == 1 && (col_labels.front() == "CIMIS" || col_labels.front() == "cimis")) {
         column_labels = {
-            "", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "",
-            "net_radiation", "", "vapor_pressure", "", "air_temperature", "",
-            "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction",
-            "", "soil_temperature", ""
-        };
+                "", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "", "net_radiation", "", "vapor_pressure", "", "air_temperature", "", "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction", "", "soil_temperature", ""};
         headerlines = 1;
         delimiter = ",";
         date_string_format = "MMDDYYYY";
     }
 
-    //If user specified column labels as an argument, parse them
+    // If user specified column labels as an argument, parse them
     if (!column_labels.empty()) {
         int col = 0;
         for (auto &label: column_labels) {
@@ -4514,8 +4476,10 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         // If column labels were not provided, read the first line of the text file and parse it for labels
     } else {
         if (headerlines == 0) {
-            std::cout << "WARNING (Context::loadTabularTimeseriesData): ""headerlines"" argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information." <<
-                    std::endl;
+            std::cout << "WARNING (Context::loadTabularTimeseriesData): "
+                         "headerlines"
+                         " argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information."
+                      << std::endl;
             headerlines++;
         }
 
@@ -4530,7 +4494,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
             Ncolumns = line_parsed.size();
 
             for (int col = 0; col < Ncolumns; col++) {
-                std::string label = line_parsed.at(col);
+                const std::string &label = line_parsed.at(col);
 
                 if (label == "year" || label == "Year") {
                     yearcol = col;
@@ -4564,36 +4528,44 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     }
 
     if (datestrcol < 0 && (yearcol < 0 || DOYcol < 0)) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled ""date"", or by two columns labeled ""year"" and ""DOY"".");
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled "
+                             "date"
+                             ", or by two columns labeled "
+                             "year"
+                             " and "
+                             "DOY"
+                             ".");
     } else if (hourcol < 0) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled ""hour"".");
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled "
+                             "hour"
+                             ".");
     } else if (datacols.empty()) {
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): No columns were found containing data variables (e.g., temperature, humidity, wind speed).");
     }
 
     std::string line;
 
-    //skip header lines
-    //note: if we read labels from the first header line above, we don't need to skip another line
+    // skip header lines
+    // note: if we read labels from the first header line above, we don't need to skip another line
     for (int i = 0; i < headerlines; i++) {
         std::getline(datafile, line);
     }
 
-    while (std::getline(datafile, line)) { //loop through file to read data
+    while (std::getline(datafile, line)) { // loop through file to read data
         row++;
 
         if (trim_whitespace(line).empty() && row > 1) {
             break;
         }
 
-        //separate the line by delimiter
+        // separate the line by delimiter
         std::vector<std::string> line_separated = separate_string_by_delimiter(line, delimiter);
 
         if (line_separated.size() != Ncolumns) {
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " columns, but was expecting " + std::to_string(Ncolumns));
         }
 
-        //compile date
+        // compile date
         Date date;
         if (yearcol >= 0 && DOYcol >= 0) {
             int DOY;
@@ -4608,31 +4580,40 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
             }
             date = make_Date(DOY, year);
         } else if (datestrcol >= 0) {
-            //parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
-            std::string datestr = line_separated.at(datestrcol);
+            // parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
+            const std::string &datestr = line_separated.at(datestrcol);
 
-            //try parsing date string based on '-' delimiter
+            // try parsing date string based on '-' delimiter
             std::vector<std::string> thisdatestr = separate_string_by_delimiter(datestr, "-");
 
             if (thisdatestr.size() != 3) {
-                //try parsing date string based on '/' delimiter
+                // try parsing date string based on '/' delimiter
                 thisdatestr = separate_string_by_delimiter(datestr, "/");
             }
 
             if (thisdatestr.size() != 3) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/"".");
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                     ". It should be in the format YYYY-MM-DD, delimited by either "
+                                     "-"
+                                     " or "
+                                     "/"
+                                     ".");
             }
 
-            //convert parsed date strings into a vector of integers
+            // convert parsed date strings into a vector of integers
             std::vector<int> thisdate(3);
             for (int i = 0; i < 3; i++) {
                 if (!parse_int(thisdatestr.at(i), thisdate.at(i))) {
-                    helios_runtime_error(
-                        "ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/"".");
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                         ". It should be in the format YYYY-MM-DD, delimited by either "
+                                         "-"
+                                         " or "
+                                         "/"
+                                         ".");
                 }
             }
 
-            //figure out ordering of values
+            // figure out ordering of values
             int year;
             int month;
             int day;
@@ -4653,21 +4634,33 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                 month = thisdate.at(0);
                 day = thisdate.at(1);
             } else {
-                helios_runtime_error(
-                    "ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format + ". Must be one of ""YYYYMMDD"", ""YYYYDDMM"", ""DDMMYYYY"", or ""MMDDYYYY"
-                    ".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).");
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format +
+                                     ". Must be one of "
+                                     "YYYYMMDD"
+                                     ", "
+                                     "YYYYDDMM"
+                                     ", "
+                                     "DDMMYYYY"
+                                     ", or "
+                                     "MMDDYYYY"
+                                     ".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).");
             }
 
             if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file + ". It should be in the format YYYY-MM-DD, delimited by either ""-"" or ""/"".");
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                     ". It should be in the format YYYY-MM-DD, delimited by either "
+                                     "-"
+                                     " or "
+                                     "/"
+                                     ".");
             }
 
             date = make_Date(day, month, year);
         } else {
-            assert(1); //shouldn't be here
+            assert(1); // shouldn't be here
         }
 
-        //compile time
+        // compile time
         Time time;
         int hour = 0;
         int minute = 0;
@@ -4699,14 +4692,17 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         }
         time = make_Time(hour, minute, second);
 
-        //compile data values
+        // compile data values
         for (auto &dat: datacols) {
             std::string label = dat.first;
             int col = dat.second;
 
             float dataval;
             if (!parse_float(line_separated.at(col), dataval)) {
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as ""float"" on line " << row << ", column " << col + 1 << " of file " << data_file << ". Skipping this value..." << std::endl;
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as "
+                             "float"
+                             " on line "
+                          << row << ", column " << col + 1 << " of file " << data_file << ". Skipping this value..." << std::endl;
                 continue;
             }
 

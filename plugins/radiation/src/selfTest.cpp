@@ -63,7 +63,7 @@ int RadiationModel::selfTest(){
     context_1.setPrimitiveData(1,"temperature",0.f);
 
     shortwave_rho = 0.3f;
-    context_1.setPrimitiveData(0,"reflectivity_SW",HELIOS_TYPE_FLOAT,1,&shortwave_rho);
+    context_1.setPrimitiveData(0,"reflectivity_SW",shortwave_rho);
 
     RadiationModel radiationmodel_1(&context_1);
     radiationmodel_1.disableMessages();
@@ -1676,10 +1676,10 @@ int RadiationModel::selfTest(){
         sourceintensity.at(i).x = float(301+i);
         sourceintensity.at(i).y=1;
     }
-    context_17.setGlobalData("leaf_reflectivity",HELIOS_TYPE_VEC2,leafspectrarho.size(),&leafspectrarho[0]);
-    context_17.setGlobalData("leaf_transmissivity",HELIOS_TYPE_VEC2,leafspectratau.size(),&leafspectratau[0]);
-    context_17.setGlobalData("camera_response",HELIOS_TYPE_VEC2,sourceintensity.size(),&sourceintensity[0]);  // camera response is 1
-    context_17.setGlobalData("source_intensity",HELIOS_TYPE_VEC2,sourceintensity.size(),&sourceintensity[0]); // source intensity is 1
+    context_17.setGlobalData("leaf_reflectivity",leafspectrarho);
+    context_17.setGlobalData("leaf_transmissivity",leafspectratau);
+    context_17.setGlobalData("camera_response",sourceintensity);  // camera response is 1
+    context_17.setGlobalData("source_intensity",sourceintensity); // source intensity is 1
 
     // Add sensors to receive radiation
     vec3 camera_lookat= make_vec3(0,0,heightscene);

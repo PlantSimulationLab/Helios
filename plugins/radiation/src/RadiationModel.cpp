@@ -637,7 +637,7 @@ void RadiationModel::setDiffuseSpectrum(const std::vector<std::string> &band_lab
 
 void RadiationModel::setDiffuseSpectrum(const std::string &band_label, const std::string &spectrum_label) {
 
-    setDiffuseSpectrum({band_label}, spectrum_label);
+    setDiffuseSpectrum(std::vector<std::string>{band_label}, spectrum_label);
 }
 
 float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
@@ -654,7 +654,8 @@ float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
             wavebounds = make_vec2(spectrum.front().x, spectrum.back().x);
         }
         return integrateSpectrum(spectrum, wavebounds.x, wavebounds.y);
-    } else if (radiation_bands.at(band_label).diffuseFlux < 0.f) {
+    }
+    if (radiation_bands.at(band_label).diffuseFlux < 0.f) {
         return 0;
     }
 
@@ -948,13 +949,13 @@ float RadiationModel::integrateSourceSpectrum(uint source_ID, float wavelength1,
 
 void RadiationModel::scaleSpectrum(const std::string &existing_global_data_label, const std::string &new_global_data_label, float scale_factor) const {
 
-    std::vector<vec2> spectrum = loadSpectralData(existing_global_data_label);
+    std::vector<helios::vec2> spectrum = loadSpectralData(existing_global_data_label);
 
-    for (vec2 &s: spectrum) {
+    for (helios::vec2 &s: spectrum) {
         s.y *= scale_factor;
     }
 
-    context->setGlobalData(new_global_data_label.c_str(), HELIOS_TYPE_VEC2, spectrum.size(), &spectrum.at(0));
+    context->setGlobalData(new_global_data_label.c_str(), spectrum);
 }
 
 void RadiationModel::scaleSpectrum(const std::string &global_data_label, float scale_factor) const {
@@ -965,7 +966,7 @@ void RadiationModel::scaleSpectrum(const std::string &global_data_label, float s
         s.y *= scale_factor;
     }
 
-    context->setGlobalData(global_data_label.c_str(), HELIOS_TYPE_VEC2, spectrum.size(), &spectrum.at(0));
+    context->setGlobalData(global_data_label.c_str(), spectrum);
 }
 
 void RadiationModel::scaleSpectrumRandomly(const std::string &existing_global_data_label, const std::string &new_global_data_label, float minimum_scale_factor, float maximum_scale_factor) const {
@@ -1045,7 +1046,7 @@ void RadiationModel::blendSpectra(const std::string &new_spectrum_label, const s
         }
     }
 
-    context->setGlobalData(new_spectrum_label.c_str(), HELIOS_TYPE_VEC2, new_spectrum.size(), &new_spectrum.front());
+    context->setGlobalData(new_spectrum_label.c_str(), new_spectrum);
 }
 
 void RadiationModel::blendSpectraRandomly(const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels) const {
@@ -1418,7 +1419,7 @@ void RadiationModel::writeNormCameraImage(const std::string &camera, const std::
         for (float &val: cameradata) {
             val = val / maxval;
         }
-        context->setGlobalData(global_data_label.c_str(), HELIOS_TYPE_FLOAT, cameradata.size(), &cameradata[0]);
+        context->setGlobalData(global_data_label.c_str(), cameradata);
     }
 
     RadiationModel::writeCameraImage(camera, bands, imagefile_base, image_path, frame);
@@ -2817,7 +2818,7 @@ void RadiationModel::updateRadiativeProperties() {
             //                    context->getPrimitiveData(UUID, prop.c_str(), rho.at(u).at(b));
             //                } else {
             //                    rho.at(u).at(b) = kappa_default;
-            //                    context->setPrimitiveData(UUID, prop.c_str(), helios::HELIOS_TYPE_FLOAT, 1, &kappa_default);
+            //                    context->setPrimitiveData(UUID, prop.c_str(), kappa_default);
             //                }
             //
             //                if (rho.at(u).at(b) < 0) {
@@ -2844,7 +2845,7 @@ void RadiationModel::updateRadiativeProperties() {
             //                    context->getPrimitiveData(UUID, prop.c_str(), tau[u]);
             //                } else {
             //                    tau.at(u).at(b) = sigmas_default;
-            //                    context->setPrimitiveData(UUID, prop.c_str(), helios::HELIOS_TYPE_FLOAT, 1, &sigmas_default);
+            //                    context->setPrimitiveData(UUID, prop.c_str(), sigmas_default);
             //                }
             //
             //                if (tau.at(u).at(b) < 0) {
@@ -3717,7 +3718,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     camera.second.pixel_data.at(band_labels.at(b)).at(p) = radiation_camera.at(p * Nbands_launch + b);
                 }
 
-                context->setGlobalData(data_label.c_str(), HELIOS_TYPE_FLOAT, camera.second.resolution.x * camera.second.resolution.y, &camera.second.pixel_data.at(band_labels.at(b))[0]);
+                context->setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));
             }
 
             //--- Pixel Labeling Trace ---//
@@ -3745,11 +3746,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
             std::string data_label = "camera_" + camera_label + "_pixel_UUID";
 
-            context->setGlobalData(data_label.c_str(), HELIOS_TYPE_UINT, camera.second.resolution.x * camera.second.resolution.y, &camera.second.pixel_label_UUID[0]);
+            context->setGlobalData(data_label.c_str(), camera.second.pixel_label_UUID);
 
             data_label = "camera_" + camera_label + "_pixel_depth";
 
-            context->setGlobalData(data_label.c_str(), HELIOS_TYPE_FLOAT, camera.second.resolution.x * camera.second.resolution.y, &camera.second.pixel_depth[0]);
+            context->setGlobalData(data_label.c_str(), camera.second.pixel_depth);
 
             cam++;
         }
@@ -4939,7 +4940,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
             icalsource.at(1).x += 1;
             std::string sourcelable = "Cal_source_" + sourcelabel_raw;
             sourcelabels.push_back(sourcelable);
-            context->setGlobalData(sourcelable.c_str(), HELIOS_TYPE_VEC2, 2, &icalsource[0]);
+            context->setGlobalData(sourcelable.c_str(), icalsource);
         }
 
         std::vector<vec2> icalcamera(2);
@@ -4948,14 +4949,14 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
         icalcamera.at(0).x = wavelengths.at(iw);
         icalcamera.at(1).x = wavelengths.at(iw) + 1;
         std::string camlable = "Cal_cameraresponse";
-        context->setGlobalData(camlable.c_str(), HELIOS_TYPE_VEC2, 2, &icalcamera[0]);
+        context->setGlobalData(camlable.c_str(), icalcamera);
 
         for (auto objectpair: cameracalibration->processedspectra.at("object")) {
             std::vector<vec2> spectrum_obj;
             spectrum_obj.push_back(objectpair.second.at(iw));
             spectrum_obj.push_back(objectpair.second.at(iw));
             spectrum_obj.at(1).x += 1;
-            context->setGlobalData(objectpair.first.c_str(), HELIOS_TYPE_VEC2, 2, &spectrum_obj[0]);
+            context->setGlobalData(objectpair.first.c_str(), spectrum_obj);
         }
 
         RadiationModel::addRadiationBand(wavelengthlabel, std::stof(wavelengthlabel), std::stof(wavelengthlabel) + 1);
@@ -5656,7 +5657,7 @@ void RadiationModel::setPadValue(const std::string &cameralabel, const std::vect
                 cameradata.at(i) = padvalues.at(b);
             }
         }
-        context->setGlobalData(image_value_label.c_str(), HELIOS_TYPE_FLOAT, cameradata.size(), &cameradata[0]);
+        context->setGlobalData(image_value_label.c_str(), cameradata);
     }
 }
 
@@ -5898,8 +5899,8 @@ void RadiationCamera::resizeImage(const std::vector<float> &src, std::vector<flo
             int iy = static_cast<int>(floor(py));
             float fx = px - ix;
             float fy = py - iy;
-            ix = std::max(0, std::min(ix, src_w - 2));
-            iy = std::max(0, std::min(iy, src_h - 2));
+            ix = (std::max)(0, (std::min)(ix, src_w - 2));
+            iy = (std::max)(0, (std::min)(iy, src_h - 2));
             const float c00 = src[iy*src_w + ix];       const float c10 = src[iy*src_w + (ix+1)];
             const float c01 = src[(iy+1)*src_w + ix];   const float c11 = src[(iy+1)*src_w + (ix+1)];
             float r0 = c00 * (1.f - fx) + c10 * fx;

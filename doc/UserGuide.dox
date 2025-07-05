@@ -444,6 +444,7 @@
    <tr><td>\<thread\></td></tr>
    <tr><td>\<iomanip\></td></tr>
    <tr><td>\<filesystem\></td></tr>
+   <tr><td>\<type_traits\></td></tr>
    </table>
  
  <!-- **************** CONTEXT ***************** -->

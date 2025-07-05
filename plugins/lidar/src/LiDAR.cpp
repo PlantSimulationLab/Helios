@@ -910,9 +910,9 @@ std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext( helios::C
             UUIDs.push_back( context->addTriangle( v0, v1, v2, color ) );
 
             uint zone = reconstructed_triangles.at(g).at(t).gridcell;
-            context->setPrimitiveData( UUIDs.back(), "gridCell", HELIOS_TYPE_UINT, 1, &zone );
+            context->setPrimitiveData( UUIDs.back(), "gridCell", zone );
 
-            context->setPrimitiveData( UUIDs.back(), "leafGroup", HELIOS_TYPE_UINT, 1, &leafGroup );
+            context->setPrimitiveData( UUIDs.back(), "leafGroup", leafGroup );
 
         }
 

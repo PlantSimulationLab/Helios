@@ -66,7 +66,7 @@ std::vector<uint> CameraCalibration::addCheckerboard(const helios::int2 &boardsi
         whitespectra.at(i).x=301+i;
         whitespectra.at(i).y=1;
     }
-    context->setGlobalData("white",HELIOS_TYPE_VEC2,whitespectra.size(),&whitespectra[0]);
+    context->setGlobalData("white",whitespectra);
     context->rotatePrimitive(UUIDs,rotationrad.x, make_vec3(1,0,0));
     context->rotatePrimitive(UUIDs,rotationrad.y, make_vec3(0,1,0));
     context->rotatePrimitive(UUIDs,rotationrad.z, make_vec3(0,0,1));
@@ -144,8 +144,8 @@ std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centreloc
 //    context->setPrimitiveData(UUID, "reflectivity_spectrum_raw", labelname+"_raw");
 //    context->setPrimitiveData(UUID, "transmissivity_spectrum", "");
 //    context->setPrimitiveData(UUID, "twosided_flag", uint(0) );
-//    context->setGlobalData(labelname.c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
-//    context->setGlobalData((labelname+"_raw").c_str(),HELIOS_TYPE_VEC2,spectraldata.size(),&spectraldata[0]);
+//    context->setGlobalData(labelname.c_str(),spectraldata);
+//    context->setGlobalData((labelname+"_raw").c_str(),spectraldata);
 //}
 
 std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
@@ -387,8 +387,7 @@ std::vector<float> CameraCalibration::updateCameraResponseSpectra(const std::vec
         }
         calibratedcameraspectra[camerareponselabels.at(iband)].back().y = expandedcameraspectra.at(iband).back() * camerarescales.at(iband);
         std::string calibratedlabel = label+ "_" + camerareponselabels.at(iband);
-        context->setGlobalData(calibratedlabel.c_str(),HELIOS_TYPE_VEC2,calibratedcameraspectra.at(camerareponselabels.at(iband)).size(),
-                               &calibratedcameraspectra.at(camerareponselabels.at(iband))[0]);
+        context->setGlobalData(calibratedlabel.c_str(),calibratedcameraspectra.at(camerareponselabels.at(iband)));
     }
 
     // Calculate the final loss
@@ -407,7 +406,7 @@ void CameraCalibration::writeCalibratedCameraResponses(const std::vector<std::st
         for (int ispec = 0; ispec < cameraresponsespectrum.size(); ispec ++){
             cameraresponsespectrum.at(ispec).y= cameraresponsespectrum.at(ispec).y * scale;
         }
-        context->setGlobalData(calibratedlabel.c_str(),HELIOS_TYPE_VEC2,cameraresponsespectrum.size(),&cameraresponsespectrum[0]);
+        context->setGlobalData(calibratedlabel.c_str(),cameraresponsespectrum);
         CameraCalibration::writeSpectralXMLfile(calibratedlabel + ".xml", "", calibratedlabel, &cameraresponsespectrum);
     }
 }
@@ -461,7 +460,7 @@ void CameraCalibration::distortImage(const std::string& cameralabel, const std::
                 }
             }
         }
-        context->setGlobalData(global_data_label.c_str(), HELIOS_TYPE_FLOAT, distorted_cameradata.size(), &distorted_cameradata[0]);
+        context->setGlobalData(global_data_label.c_str(), distorted_cameradata);
     }
 
 }
@@ -605,7 +604,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
             std::vector<vec2> cal_spectrum;
             for (auto ispectralvalue:target_spectrum){
                 if(ispectralvalue.x>wavelengthrange.y){
-                    context->setGlobalData(spectrumpair.first.c_str(), HELIOS_TYPE_VEC2, cal_spectrum.size(), &cal_spectrum[0]);
+                    context->setGlobalData(spectrumpair.first.c_str(), cal_spectrum);
                     break;
                 }
                 if(ispectralvalue.x>=wavelengthrange.x){
@@ -621,7 +620,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string>& source
     std::vector<float> wavelengths;
     for (auto ispectralvalue:target_spectrum){
         if(ispectralvalue.x>wavelengthrange.y || ispectralvalue.x == target_spectrum.back().x){
-            context->setGlobalData("wavelengths", HELIOS_TYPE_FLOAT, wavelengths.size(), &wavelengths[0]);
+            context->setGlobalData("wavelengths", wavelengths);
             break;
         }
         if(ispectralvalue.x>=wavelengthrange.x){

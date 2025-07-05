@@ -3,6 +3,7 @@
 out vec4 color;
 
 in vec2 texcoord;
+in vec2 uv_scale;
 
 uniform sampler2DArray textureSampler;
 
@@ -84,26 +85,27 @@ void main(){
         }
     }
 
-    vec3 texcoord3 = vec3(texcoord,float(textureID));
+    vec2 wrapped = fract(texcoord) * uv_scale;
+    vec3 texcoord3 = vec3(wrapped, float(textureID));
 
     if( textureFlag==0 ){//Color by interpolating the colors at vertices
         color = fragmentColor;
         color.rgb = color.rgb*1.5;
     }else if( textureFlag==1 ){//Color by texture map
         color = texture(textureSampler, texcoord3);
-        if(color.a<0.01 ){
+        if(color.a<0.5 ){
             discard;
         }
     }else if( textureFlag==2 ){//Color by interpolating the colors at vertices, and set the transparency according to the red channel of the texture map given by textureSampler
         color = fragmentColor*1.5;
         color.a = texture(textureSampler, texcoord3).a;
-        if( color.a<0.01 ){
+        if( color.a<0.5 ){
             discard;
         }
     }else if( textureFlag==3 ){//Color by interpolating the colors at vertices, and set the transparency according to the red channel of the texture map given by textureSampler
-        color = fragmentColor;
-        color.a = clamp(texture(textureSampler, texcoord3).r,0,1);
-        if( color.a<0.01 ){
+        float alpha = clamp(texture(textureSampler, texcoord3).r, 0, 1);
+        color = vec4(fragmentColor.rgb * alpha, alpha);
+        if( alpha < 0.01 ){
             discard;
         }
     }

@@ -13,22 +13,22 @@
 
 */
 
-//OpenGL Includes
+// OpenGL Includes
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-//Freetype Libraries (rendering fonts)
+// Freetype Libraries (rendering fonts)
 extern "C" {
 #include <ft2build.h>
 #include FT_FREETYPE_H
 }
 
-//JPEG Libraries (reading and writing JPEG images)
+// JPEG Libraries (reading and writing JPEG images)
 #include <cstdio> //<-- note libjpeg requires this header be included before its headers.
 #include <jpeglib.h>
-//#include <setjmp.h>
+// #include <setjmp.h>
 
-//PNG Libraries (reading and writing PNG images)
+// PNG Libraries (reading and writing PNG images)
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -41,22 +41,15 @@ extern "C" {
 using namespace helios;
 
 struct my_error_mgr {
-    struct jpeg_error_mgr pub; /* "public" fields */
-
-    jmp_buf setjmp_buffer; /* for return to caller */
+    jpeg_error_mgr pub; /* "public" fields */
 };
 
-typedef struct my_error_mgr *my_error_ptr;
+using my_error_ptr = my_error_mgr *;
+
 METHODDEF(void) my_error_exit(j_common_ptr cinfo) {
-    /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    auto myerr = (my_error_ptr) cinfo->err;
-
-    /* Always display the message. */
-    /* We could postpone this until after returning, if we chose. */
-    (*cinfo->err->output_message)(cinfo);
-
-    /* Return control to the setjmp point */
-    longjmp(myerr->setjmp_buffer, 1);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    throw std::runtime_error(buffer);
 }
 
 int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
@@ -65,72 +58,66 @@ int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, ui
         helios_runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.");
     }
 
-    struct jpeg_decompress_struct cinfo;
-
-    struct my_error_mgr jerr;
-    FILE *infile; /* source file */
-    JSAMPARRAY buffer; /*output row buffer */
+    jpeg_decompress_struct cinfo{};
+    my_error_mgr jerr{};
+    JSAMPARRAY buffer;
     uint row_stride;
 
-    if ((infile = fopen(filename, "rb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename, "rb"), fclose);
+    if (!infile) {
         fprintf(stderr, "can't open %s\n", filename);
         return 0;
     }
 
     cinfo.err = jpeg_std_error(&jerr.pub);
     jerr.pub.error_exit = my_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        helios_runtime_error("ERROR (read_JPEG_file): Error reading JPEG file " + std::string(filename));
-    }
 
-    jpeg_create_decompress(&cinfo);
+    try {
+        jpeg_create_decompress(&cinfo);
+        jpeg_stdio_src(&cinfo, infile.get());
+        (void) jpeg_read_header(&cinfo, TRUE);
 
-    jpeg_stdio_src(&cinfo, infile);
+        (void) jpeg_start_decompress(&cinfo);
 
-    (void) jpeg_read_header(&cinfo, TRUE);
+        row_stride = cinfo.output_width * cinfo.output_components;
+        buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-    (void) jpeg_start_decompress(&cinfo);
+        width = cinfo.output_width;
+        height = cinfo.output_height;
 
-    row_stride = cinfo.output_width * cinfo.output_components;
-    buffer = (*cinfo.mem->alloc_sarray)
-            ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+        assert(cinfo.output_components == 3);
+        texture.reserve(width * height * 4);
 
-    width = cinfo.output_width;
-    height = cinfo.output_height;
+        JSAMPLE *ba;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
-    assert(cinfo.output_components==3);
+            ba = buffer[0];
 
-    JSAMPLE *ba;
-    while (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        ba = buffer[0];
-
-        for (int i = 0; i < row_stride; i = i + 3) {
-            texture.push_back(ba[i]);
-            texture.push_back(ba[i + 1]);
-            texture.push_back(ba[i + 2]);
-            texture.push_back(255.f); //alpha channel -- opaque
+            for (int i = 0; i < row_stride; i += 3) {
+                texture.push_back(ba[i]);
+                texture.push_back(ba[i + 1]);
+                texture.push_back(ba[i + 2]);
+                texture.push_back(255.f); // alpha channel -- opaque
+            }
         }
+
+        (void) jpeg_finish_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
     }
-
-    (void) jpeg_finish_decompress(&cinfo);
-
-    jpeg_destroy_decompress(&cinfo);
-
-    fclose(infile);
 
     return 0;
 }
 
-int write_JPEG_file(const char *filename, uint width, uint height, void *window, bool print_messages) {
+int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages) {
     if (print_messages) {
         std::cout << "writing JPEG image: " << filename << std::endl;
     }
 
-    const uint bsize = 3 * width * height;
+    const size_t bsize = 3 * width * height;
     std::vector<GLubyte> screen_shot_trans;
     screen_shot_trans.resize(bsize);
 
@@ -140,55 +127,56 @@ int write_JPEG_file(const char *filename, uint width, uint height, void *window,
     constexpr GLenum read_buf = GL_BACK;
 #endif
     glReadBuffer(read_buf);
-    glReadPixels(0, 0, GLsizei(width), GLsizei(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+    glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     glFinish();
 
-    struct jpeg_compress_struct cinfo;
-
-    struct jpeg_error_mgr jerr;
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    jpeg_compress_struct cinfo{};
+    jpeg_error_mgr jerr{};
+    JSAMPROW row_pointer;
     int row_stride;
 
     cinfo.err = jpeg_std_error(&jerr);
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
+    jerr.error_exit = my_error_exit;
 
-    if ((outfile = fopen(filename, "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
-    cinfo.image_height = height;
-    cinfo.input_components = 3; /* # of color components per pixel */
-    cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
+    try {
+        cinfo.image_height = height;
+        cinfo.input_components = 3; /* # of color components per pixel */
+        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
 
-    jpeg_set_defaults(&cinfo);
+        jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
 
-    jpeg_start_compress(&cinfo, TRUE);
+        jpeg_start_compress(&cinfo, TRUE);
 
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
+
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
     }
-
-    jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
-    jpeg_destroy_compress(&cinfo);
 
     return 1;
 }
 
 int write_JPEG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBcolor> &data, bool print_messages) {
-    assert(data.size()==width*height);
+    assert(data.size() == width * height);
 
     if (print_messages) {
         std::cout << "writing JPEG image: " << filename << std::endl;
@@ -206,46 +194,48 @@ int write_JPEG_file(const char *filename, uint width, uint height, const std::ve
         ii += 3;
     }
 
-    struct jpeg_compress_struct cinfo;
+    jpeg_compress_struct cinfo{};
 
-    struct jpeg_error_mgr jerr;
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    jpeg_error_mgr jerr{};
+    JSAMPROW row_pointer;
     int row_stride;
 
     cinfo.err = jpeg_std_error(&jerr);
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
+    jerr.error_exit = my_error_exit;
 
-    if ((outfile = fopen(filename, "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
-    cinfo.image_height = height;
-    cinfo.input_components = 3; /* # of color components per pixel */
-    cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
+    try {
+        cinfo.image_height = height;
+        cinfo.input_components = 3; /* # of color components per pixel */
+        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
 
-    jpeg_set_defaults(&cinfo);
+        jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
 
-    jpeg_start_compress(&cinfo, TRUE);
+        jpeg_start_compress(&cinfo, TRUE);
 
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
+
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
     }
-
-    jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
-    jpeg_destroy_compress(&cinfo);
 
     return 1;
 }
@@ -268,11 +258,7 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     if (!fp) {
         helios_runtime_error("ERROR (read_png_file): File " + std::string(filename) + " could not be opened for reading");
     }
-    size_t sz = fread(header, 1, 8, fp);
-    // if (png_sig_cmp(header, 0, 8)){
-    //   std::cerr << "ERROR (read_png_file): File " << filename << " is not recognized as a PNG file." << std::endl;
-    //   exit(EXIT_FAILURE);
-    // }
+    fread(header, 1, 8, fp);
 
     /* initialize stuff */
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -316,8 +302,7 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     if (!has_alpha) {
         png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
     }
-    if (color_type == PNG_COLOR_TYPE_GRAY ||
-        color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
         png_set_gray_to_rgb(png_ptr);
     }
 
@@ -328,9 +313,9 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
         helios_runtime_error("ERROR (read_png_file): read_image failed.");
     }
 
-    auto *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
+    auto *row_pointers = static_cast<png_bytep *>(malloc(sizeof(png_bytep) * height));
     for (y = 0; y < height; y++)
-        row_pointers[y] = (png_byte *) malloc(png_get_rowbytes(png_ptr, info_ptr));
+        row_pointers[y] = static_cast<png_byte *>(malloc(png_get_rowbytes(png_ptr, info_ptr)));
 
     png_read_image(png_ptr, row_pointers);
 
@@ -398,7 +383,7 @@ void Visualizer::openWindow() {
 
     if (window_width < Wdisplay || window_height < Hdisplay) {
         printf("WARNING (Visualizer): requested size of window is larger than the screen area.\n");
-        //printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
+        // printf("Changing width from %d to %d and height from %d to %d\n",Wdisplay,window_width,Hdisplay,window_height);
         Wdisplay = uint(window_width);
         Hdisplay = uint(window_height);
     }
@@ -413,7 +398,7 @@ void Visualizer::openWindow() {
         helios_runtime_error("ERROR (Visualizer): Failed to initialize GLEW.");
     }
 
-    //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
     glGetError();
 }
 
@@ -449,10 +434,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colorbar_position = make_vec3(0.65, 0.1, 0.1);
     colorbar_size = make_vec2(0.15, 0.1);
+    colorbar_IDs.clear();
 
     point_width = 1;
 
-    //Initialize OpenGL context and open graphic window
+    // Initialize OpenGL context and open graphic window
 
     // Initialise GLFW
     if (!glfwInit()) {
@@ -464,7 +450,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
 #endif
     glfwWindowHint(GLFW_VISIBLE, 0);
 
@@ -480,7 +466,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
     }
 
-    //NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
     glGetError();
 
     assert(checkerrors());
@@ -489,7 +475,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     glEnable(GL_DEPTH_TEST); // Enable depth test
     glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
-    //glEnable(GL_DEPTH_CLAMP);
+    // glEnable(GL_DEPTH_CLAMP);
 
     if (aliasing_samples <= 0) {
         glDisable(GL_MULTISAMPLE);
@@ -502,14 +488,14 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         glEnable(GL_POLYGON_SMOOTH);
     }
 
-    //glEnable(GL_TEXTURE0);
-    // glEnable(GL_TEXTURE_2D_ARRAY);
-    // glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // glEnable(GL_TEXTURE0);
+    //  glEnable(GL_TEXTURE_2D_ARRAY);
+    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     assert(checkerrors());
 
-    //glEnable(GL_TEXTURE1);
+    // glEnable(GL_TEXTURE1);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     glDisable(GL_CULL_FACE);
@@ -568,15 +554,15 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     // Initialize frame buffer
 
-    //The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
     glGenFramebuffers(1, &framebufferID);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
 
-    //Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+    // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &depthTexture);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0,GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -629,66 +615,44 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     backgroundColor = make_RGBcolor(0.8, 0.8, 0.8);
 
-    //colormaps
+    // colormaps
 
-    //HOT
-    std::vector<RGBcolor> ctable_c{
-        {0.f, 0.f, 0.f},
-        {0.5f, 0.f, 0.5f},
-        {1.f, 0.f, 0.f},
-        {1.f, 0.5f, 0.f},
-        {1.f, 1.f, 0.f}
-    };
+    // HOT
+    std::vector<RGBcolor> ctable_c{{0.f, 0.f, 0.f}, {0.5f, 0.f, 0.5f}, {1.f, 0.f, 0.f}, {1.f, 0.5f, 0.f}, {1.f, 1.f, 0.f}};
 
     std::vector<float> clocs_c{0.f, 0.25f, 0.5f, 0.75f, 1.f};
 
     colormap_hot.set(ctable_c, clocs_c, 100, 0, 1);
 
-    //COOL
+    // COOL
     ctable_c = {RGB::cyan, RGB::magenta};
 
     clocs_c = {0.f, 1.f};
 
     colormap_cool.set(ctable_c, clocs_c, 100, 0, 1);
 
-    //LAVA
-    ctable_c = {
-        {0.f, 0.05f, 0.05f},
-        {0.f, 0.6f, 0.6f},
-        {1.f, 1.f, 1.f},
-        {1.f, 0.f, 0.f},
-        {0.5f, 0.f, 0.f}
-    };
+    // LAVA
+    ctable_c = {{0.f, 0.05f, 0.05f}, {0.f, 0.6f, 0.6f}, {1.f, 1.f, 1.f}, {1.f, 0.f, 0.f}, {0.5f, 0.f, 0.f}};
 
     clocs_c = {0.f, 0.4f, 0.5f, 0.6f, 1.f};
 
     colormap_lava.set(ctable_c, clocs_c, 100, 0, 1);
 
-    //RAINBOW
-    ctable_c = {
-        RGB::navy,
-        RGB::cyan,
-        RGB::yellow,
-        make_RGBcolor(0.75f, 0.f, 0.f)
-    };
+    // RAINBOW
+    ctable_c = {RGB::navy, RGB::cyan, RGB::yellow, make_RGBcolor(0.75f, 0.f, 0.f)};
 
     clocs_c = {0, 0.3f, 0.7f, 1.f};
 
     colormap_rainbow.set(ctable_c, clocs_c, 100, 0, 1);
 
-    //PARULA
-    ctable_c = {
-        RGB::navy,
-        make_RGBcolor(0, 0.6, 0.6),
-        RGB::goldenrod,
-        RGB::yellow
-    };
+    // PARULA
+    ctable_c = {RGB::navy, make_RGBcolor(0, 0.6, 0.6), RGB::goldenrod, RGB::yellow};
 
     clocs_c = {0, 0.4f, 0.7f, 1.f};
 
     colormap_parula.set(ctable_c, clocs_c, 100, 0, 1);
 
-    //GRAY
+    // GRAY
     ctable_c = {RGB::black, RGB::white};
 
     clocs_c = {0.f, 1.f};
@@ -848,7 +812,7 @@ void Visualizer::setBackgroundColor(const helios::RGBcolor &color) {
 
 void Visualizer::printWindow() {
     char outfile[100];
-    if (context != nullptr) { //context has been given to visualizer via buildContextGeometry()
+    if (context != nullptr) { // context has been given to visualizer via buildContextGeometry()
         Date date = context->getDate();
         Time time = context->getTime();
         std::snprintf(outfile, 100, "%02d-%02d-%4d_%02d-%02d-%02d_frame%d.jpg", date.day, date.month, date.year, time.hour, time.minute, time.second, frame_counter);
@@ -864,15 +828,15 @@ void Visualizer::printWindow(const char *outfile) const {
     std::string outfile_str = outfile;
 
     std::string ext = getFileExtension(outfile_str);
-    if ( ext.empty() ) {
+    if (ext.empty()) {
         outfile_str += ".jpeg";
     }
 
-    if ( !validateOutputPath(outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"}) ) {
+    if (!validateOutputPath(outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"})) {
         helios_runtime_error("ERROR (Visualizer::printWindow): Output path is not valid or does not have a valid image extension (.jpeg, .jpg).");
     }
 
-    write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, window, message_flag);
+    write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
 }
 
 void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint width_pixels, uint height_pixels) {
@@ -883,13 +847,13 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
         helios_runtime_error("ERROR (Visualizer::displayImage): Pixel data size does not match the given width and height. Argument 'pixel_data' must have length of 4*width_pixels*height_pixels.");
     }
 
-    //Clear out any existing geometry
+    // Clear out any existing geometry
     geometry_handler.clearAllGeometry();
 
-    //Register the data as a texture
+    // Register the data as a texture
     uint textureID = registerTextureImage(pixel_data, helios::make_uint2(width_pixels, height_pixels));
 
-    //Figure out size to render
+    // Figure out size to render
     vec2 image_size;
     float data_aspect = float(width_pixels) / float(height_pixels);
     float window_aspect = float(Wdisplay) / float(Hdisplay);
@@ -902,12 +866,8 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
     }
 
     constexpr vec3 center(0.5, 0.5, 0);
-    const std::vector vertices{
-        center + make_vec3(-0.5f * image_size.x, -0.5f * image_size.y, 0.f),
-        center + make_vec3(+0.5f * image_size.x, -0.5f * image_size.y, 0.f),
-        center + make_vec3(+0.5f * image_size.x, +0.5f * image_size.y, 0.f),
-        center + make_vec3(-0.5f * image_size.x, +0.5f * image_size.y, 0.f)
-    };
+    const std::vector vertices{center + make_vec3(-0.5f * image_size.x, -0.5f * image_size.y, 0.f), center + make_vec3(+0.5f * image_size.x, -0.5f * image_size.y, 0.f), center + make_vec3(+0.5f * image_size.x, +0.5f * image_size.y, 0.f),
+                               center + make_vec3(-0.5f * image_size.x, +0.5f * image_size.y, 0.f)};
     const std::vector<vec2> uvs{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
     size_t UUID = geometry_handler.sampleUUID();
@@ -927,9 +887,9 @@ void Visualizer::displayImage(const std::string &file_name) {
     uint image_width, image_height;
 
     if (file_name.substr(file_name.find_last_of('.') + 1) == "png") {
-        read_png_file(file_name.c_str(), image_data, image_width, image_height);
-    } else { //JPEG
-        read_JPEG_file(file_name.c_str(), image_data, image_width, image_height);
+        read_png_file(file_name.c_str(), image_data, image_height, image_width);
+    } else { // JPEG
+        read_JPEG_file(file_name.c_str(), image_data, image_height, image_width);
     }
 
     displayImage(image_data, image_width, image_height);
@@ -948,7 +908,7 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
     glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
     glFinish();
 
-    //assert( checkerrors() );
+    // assert( checkerrors() );
 
     for (int i = 0; i < 3 * Wframebuffer * Hframebuffer; i++) {
         buffer[i] = (unsigned int) buff[i];
@@ -983,7 +943,7 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
     updateDepthBuffer();
     // updatePerspectiveTransformation( false );
 
-    //un-project depth values to give physical depth
+    // un-project depth values to give physical depth
 
     // build a viewport vector for unProject
     // const glm::vec4 viewport(0, 0, width_pixels, height_pixels);
@@ -1012,7 +972,7 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
     //     depth_pixels[i] = depth*255.f;
     // }
 
-    //normalize data and invert the color space so white=closest, black = furthest
+    // normalize data and invert the color space so white=closest, black = furthest
     float depth_min = (std::numeric_limits<float>::max)();
     float depth_max = (std::numeric_limits<float>::min)();
     for (auto depth: depth_buffer_data) {
@@ -1213,9 +1173,9 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const RGBAcolor &color, CoordinateSystem coordFlag) {
-    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (auto vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1239,19 +1199,14 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const char *texture_file, CoordinateSystem coordFlag) {
-    const std::vector<vec2> uvs{
-        {0, 0},
-        {1, 0},
-        {1, 1},
-        {0, 1}
-    };
+    const std::vector<vec2> uvs{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     return addRectangleByVertices(vertices, texture_file, uvs, coordFlag);
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const char *texture_file, const std::vector<vec2> &uvs, CoordinateSystem coordFlag) {
-    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (auto vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1277,19 +1232,14 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const RGBcolor &color, const char *texture_file, CoordinateSystem coordFlag) {
-    const std::vector<vec2> uvs{
-        {0, 0},
-        {1, 0},
-        {1, 1},
-        {0, 1}
-    };
+    const std::vector<vec2> uvs{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     return addRectangleByVertices(vertices, color, texture_file, uvs, coordFlag);
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const helios::RGBcolor &color, const char *texture_file, const std::vector<vec2> &uvs, CoordinateSystem coordFlag) {
-    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (auto vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1319,9 +1269,9 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
 }
 
 size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, const RGBAcolor &color, const Glyph *glyph, CoordinateSystem coordFlag) {
-    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == COORDINATES_WINDOW_NORMALIZED) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (auto vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1341,14 +1291,9 @@ size_t Visualizer::addRectangleByVertices(const std::vector<vec3> &vertices, con
 
     uint textureID = registerTextureGlyph(glyph);
 
-    const std::vector<vec2> uvs{
-        {0, 0},
-        {1, 0},
-        {1, 1},
-        {0, 1}
-    };
+    const std::vector<vec2> uvs{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
-    //Disable shadows for glyphs
+    // Disable shadows for glyphs
     CoordinateSystem coordFlag2 = coordFlag;
     if (coordFlag == COORDINATES_CARTESIAN) {
         coordFlag2 = scast<CoordinateSystem>(2);
@@ -1366,9 +1311,9 @@ size_t Visualizer::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const v
 size_t Visualizer::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBAcolor &color, CoordinateSystem coordFlag) {
     const std::vector<vec3> vertices{vertex0, vertex1, vertex2};
 
-    if (coordFlag == 0) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == 0) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (const auto &vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1395,9 +1340,9 @@ size_t Visualizer::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const v
     const std::vector<vec3> vertices{vertex0, vertex1, vertex2};
     const std::vector<vec2> uvs{uv0, uv1, uv2};
 
-    if (coordFlag == 0) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == 0) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (auto &vertex: vertices) {
             if (vertex.x < 0.f || vertex.x > 1.f) {
                 if (message_flag) {
@@ -1426,9 +1371,9 @@ size_t Visualizer::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const v
     const std::vector<vec3> vertices{vertex0, vertex1, vertex2};
     const std::vector<vec2> uvs{uv0, uv1, uv2};
 
-    if (coordFlag == 0) { //No vertex transformation (i.e., identity matrix)
+    if (coordFlag == 0) { // No vertex transformation (i.e., identity matrix)
 
-        //Check that coordinates are inside drawable area
+        // Check that coordinates are inside drawable area
         for (const auto &tri_vertex: vertices) {
             if (tri_vertex.x < 0.f || tri_vertex.x > 1.f) {
                 if (message_flag) {
@@ -1458,7 +1403,7 @@ std::vector<size_t> Visualizer::addVoxelByCenter(const vec3 &center, const vec3 
 }
 
 std::vector<size_t> Visualizer::addVoxelByCenter(const vec3 &center, const vec3 &size, const SphericalCoord &rotation, const RGBAcolor &color, CoordinateSystem coordFlag) {
-    float eps = 1e-4; //Avoid z-fighting
+    float eps = 1e-4; // Avoid z-fighting
 
     float az = rotation.azimuth;
 
@@ -1530,7 +1475,7 @@ std::vector<size_t> Visualizer::addSphereByCenter(float radius, const vec3 &cent
     std::vector<size_t> UUIDs;
     UUIDs.reserve(2 * Ndivisions + 2 * (Ndivisions - 2) * (Ndivisions - 1));
 
-    //bottom cap
+    // bottom cap
     for (int j = 0; j < Ndivisions; j++) {
         float phi = scast<float>(j) * dphi;
         float phi_plus = scast<float>(j + 1) * dphi;
@@ -1542,7 +1487,7 @@ std::vector<size_t> Visualizer::addSphereByCenter(float radius, const vec3 &cent
         UUIDs.push_back(addTriangle(v0, v1, v2, color, coordinate_system));
     }
 
-    //top cap
+    // top cap
     for (int j = 0; j < Ndivisions; j++) {
         float phi = scast<float>(j) * dphi;
         float phi_plus = scast<float>(j + 1) * dphi;
@@ -1554,7 +1499,7 @@ std::vector<size_t> Visualizer::addSphereByCenter(float radius, const vec3 &cent
         UUIDs.push_back(addTriangle(v2, v1, v0, color, coordinate_system));
     }
 
-    //middle
+    // middle
     for (int j = 0; j < Ndivisions; j++) {
         float phi = scast<float>(j) * dphi;
         float phi_plus = scast<float>(j + 1) * dphi;
@@ -1590,8 +1535,8 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
 
     vec3 cart;
 
-    //top cap
-    for (int j = 0; j < scast<int>(Ndivisions-1); j++) {
+    // top cap
+    for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
         vec3 v0 = center + radius * cart;
         cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
@@ -1617,8 +1562,8 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
         UUIDs.push_back(addTriangle(v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)));
     }
 
-    //middle
-    for (int j = 0; j < scast<int>(Ndivisions-1); j++) {
+    // middle
+    for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
         for (int i = 0; i < scast<int>(Ndivisions - 1); i++) {
             cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j) * dphi));
             vec3 v0 = center + radius * cart;
@@ -1657,94 +1602,136 @@ std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &cen
 }
 
 std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const vec3 &center, const SphericalCoord &rotation, const RGBcolor &fontcolor, uint fontsize, const char *fontname, CoordinateSystem coordinate_system) {
-    FT_Library ft; //FreeType objects
+    FT_Library ft; // FreeType objects
     FT_Face face;
 
-    //initialize the freetype library
+    // initialize the freetype library
     if (FT_Init_FreeType(&ft) != 0) {
         helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not init freetype library");
     }
 
-    std::vector<std::vector<unsigned char> > maskData; //This will hold the letter mask data
+    std::vector<std::vector<unsigned char>> maskData; // This will hold the letter mask data
 
-    //Load the font
+    // Load the font
     std::string font;
     // std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
     font = "plugins/visualizer/fonts/" + (std::string) fontname + ".ttf";
     auto error = FT_New_Face(ft, font.c_str(), 0, &face);
     if (error != 0) {
         switch (error) {
-            case FT_Err_Ok: ; // do nothing
-            case FT_Err_Cannot_Open_Resource: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot open resource.");
-            case FT_Err_Unknown_File_Format: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unknown file format.");
-            case FT_Err_Invalid_File_Format: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid file format.");
-            case FT_Err_Invalid_Version: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid FreeType version.");
-            case FT_Err_Lower_Module_Version: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Lower module version.");
-            case FT_Err_Invalid_Argument: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid argument.");
-            case FT_Err_Unimplemented_Feature: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unimplemented feature.");
-            case FT_Err_Invalid_Table: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid table.");
-            case FT_Err_Invalid_Offset: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid offset.");
-            case FT_Err_Array_Too_Large: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Array too large.");
-            case FT_Err_Missing_Module: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Missing module.");
-            case FT_Err_Out_Of_Memory: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Out of memory.");
-            case FT_Err_Invalid_Face_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid face handle.");
-            case FT_Err_Invalid_Size_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid size handle.");
-            case FT_Err_Invalid_Slot_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid slot handle.");
-            case FT_Err_Invalid_CharMap_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid charmap handle.");
-            case FT_Err_Invalid_Glyph_Index: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid glyph index.");
-            case FT_Err_Invalid_Character_Code: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid character code.");
-            case FT_Err_Invalid_Glyph_Format: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid glyph format.");
-            case FT_Err_Cannot_Render_Glyph: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot render glyph.");
-            case FT_Err_Invalid_Outline: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid outline.");
-            case FT_Err_Invalid_Composite: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid composite glyph.");
-            case FT_Err_Too_Many_Hints: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too many hints.");
-            case FT_Err_Invalid_Pixel_Size: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid pixel size.");
-            case FT_Err_Invalid_Library_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid library handle.");
-            case FT_Err_Invalid_Stream_Handle: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid stream handle.");
-            case FT_Err_Invalid_Frame_Operation: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid frame operation.");
-            case FT_Err_Nested_Frame_Access: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Nested frame access.");
-            case FT_Err_Invalid_Frame_Read: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid frame read.");
-            case FT_Err_Raster_Uninitialized: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster uninitialized.");
-            case FT_Err_Raster_Corrupted: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster corrupted.");
-            case FT_Err_Raster_Overflow: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster overflow.");
-            case FT_Err_Raster_Negative_Height: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster negative height.");
-            case FT_Err_Too_Many_Caches: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too many caches.");
-            case FT_Err_Invalid_Opcode: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid opcode.");
-            case FT_Err_Too_Few_Arguments: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too few arguments.");
-            case FT_Err_Stack_Overflow: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Stack overflow.");
-            case FT_Err_Stack_Underflow: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Stack underflow.");
-            case FT_Err_Ignore: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Ignore.");
-            case FT_Err_No_Unicode_Glyph_Name: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): No Unicode glyph name.");
-            case FT_Err_Missing_Property: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Missing property.");
-            default: helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unknown FreeType error.");
+            case FT_Err_Ok:; // do nothing
+            case FT_Err_Cannot_Open_Resource:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot open resource.");
+            case FT_Err_Unknown_File_Format:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unknown file format.");
+            case FT_Err_Invalid_File_Format:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid file format.");
+            case FT_Err_Invalid_Version:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid FreeType version.");
+            case FT_Err_Lower_Module_Version:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Lower module version.");
+            case FT_Err_Invalid_Argument:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid argument.");
+            case FT_Err_Unimplemented_Feature:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unimplemented feature.");
+            case FT_Err_Invalid_Table:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid table.");
+            case FT_Err_Invalid_Offset:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid offset.");
+            case FT_Err_Array_Too_Large:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Array too large.");
+            case FT_Err_Missing_Module:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Missing module.");
+            case FT_Err_Out_Of_Memory:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Out of memory.");
+            case FT_Err_Invalid_Face_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid face handle.");
+            case FT_Err_Invalid_Size_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid size handle.");
+            case FT_Err_Invalid_Slot_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid slot handle.");
+            case FT_Err_Invalid_CharMap_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid charmap handle.");
+            case FT_Err_Invalid_Glyph_Index:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid glyph index.");
+            case FT_Err_Invalid_Character_Code:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid character code.");
+            case FT_Err_Invalid_Glyph_Format:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid glyph format.");
+            case FT_Err_Cannot_Render_Glyph:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Cannot render glyph.");
+            case FT_Err_Invalid_Outline:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid outline.");
+            case FT_Err_Invalid_Composite:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid composite glyph.");
+            case FT_Err_Too_Many_Hints:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too many hints.");
+            case FT_Err_Invalid_Pixel_Size:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid pixel size.");
+            case FT_Err_Invalid_Library_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid library handle.");
+            case FT_Err_Invalid_Stream_Handle:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid stream handle.");
+            case FT_Err_Invalid_Frame_Operation:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid frame operation.");
+            case FT_Err_Nested_Frame_Access:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Nested frame access.");
+            case FT_Err_Invalid_Frame_Read:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid frame read.");
+            case FT_Err_Raster_Uninitialized:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster uninitialized.");
+            case FT_Err_Raster_Corrupted:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster corrupted.");
+            case FT_Err_Raster_Overflow:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster overflow.");
+            case FT_Err_Raster_Negative_Height:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Raster negative height.");
+            case FT_Err_Too_Many_Caches:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too many caches.");
+            case FT_Err_Invalid_Opcode:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Invalid opcode.");
+            case FT_Err_Too_Few_Arguments:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Too few arguments.");
+            case FT_Err_Stack_Overflow:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Stack overflow.");
+            case FT_Err_Stack_Underflow:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Stack underflow.");
+            case FT_Err_Ignore:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Ignore.");
+            case FT_Err_No_Unicode_Glyph_Name:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): No Unicode glyph name.");
+            case FT_Err_Missing_Property:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Missing property.");
+            default:
+                helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Unknown FreeType error.");
         }
     }
     if (error != 0) {
         helios_runtime_error("ERROR (Visualizer::addTextboxByCenter): Could not open font '" + std::string(fontname) + "'");
     }
 
-    //Load the font size
+    // Load the font size
     FT_Set_Pixel_Sizes(face, 0, fontsize);
 
-    //x- and y- size of a pixel in [0,1] normalized coordinates
+    // x- and y- size of a pixel in [0,1] normalized coordinates
     float sx = 1.f / float(Wdisplay);
     float sy = 1.f / float(Hdisplay);
 
-    FT_GlyphSlot gg = face->glyph; //FreeType glyph for font `fontname' and size `fontsize'
+    FT_GlyphSlot gg = face->glyph; // FreeType glyph for font `fontname' and size `fontsize'
 
-    //first, find out how wide the text is going to be
-    //This is because we need to know the width beforehand if we want to center the text
+    // first, find out how wide the text is going to be
+    // This is because we need to know the width beforehand if we want to center the text
     float wtext = 0;
     float htext = 0;
     const char *textt = textstring;
-    for (const char *p = textt; *p; p++) { //looping over each letter in `textstring'
-        if (FT_Load_Char(face, *p, FT_LOAD_RENDER)) //load the letter
+    for (const char *p = textt; *p; p++) { // looping over each letter in `textstring'
+        if (FT_Load_Char(face, *p, FT_LOAD_RENDER)) // load the letter
             continue;
         float scale = 1;
-        if (strncmp(p, "_", 1) == 0) { //subscript
+        if (strncmp(p, "_", 1) == 0) { // subscript
             scale = 0.5;
             continue;
-        } else if (strncmp(p, "^", 1) == 0) { //superscript
+        } else if (strncmp(p, "^", 1) == 0) { // superscript
             scale = 0.5;
             continue;
         }
@@ -1752,7 +1739,7 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
         htext = std::max(gg->bitmap.rows * sy, htext);
     }
 
-    //location of the center of our textbox
+    // location of the center of our textbox
     float xt = center.x - 0.5f * wtext;
     float yt = center.y - 0.5f * htext;
 
@@ -1771,31 +1758,31 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
         }
     }
 
-    FT_GlyphSlot g = face->glyph; //Another FreeType glyph for font `fontname' and size `fontsize'
+    FT_GlyphSlot g = face->glyph; // Another FreeType glyph for font `fontname' and size `fontsize'
 
     std::vector<size_t> UUIDs;
     UUIDs.reserve(std::strlen(textstring));
 
     const char *text = textstring;
 
-    float offset = 0; //baseline offset for subscript/superscript
-    float scale = 1; //scaling factor for subscript/superscript
-    for (const char *p = text; *p; p++) { //looping over each letter in `textstring'
+    float offset = 0; // baseline offset for subscript/superscript
+    float scale = 1; // scaling factor for subscript/superscript
+    for (const char *p = text; *p; p++) { // looping over each letter in `textstring'
 
-        if (FT_Load_Char(face, *p, FT_LOAD_RENDER)) //load the letter
+        if (FT_Load_Char(face, *p, FT_LOAD_RENDER)) // load the letter
             continue;
 
-        if (strncmp(p, "_", 1) == 0) { //subscript
+        if (strncmp(p, "_", 1) == 0) { // subscript
             offset = -0.3f * sy;
             scale = 0.5f;
             continue;
-        } else if (strncmp(p, "^", 1) == 0) { //superscript
+        } else if (strncmp(p, "^", 1) == 0) { // superscript
             offset = 0.3f * sy;
             scale = 0.5f;
             continue;
         }
 
-        //Copy the letter's mask into 2D `maskData' structure
+        // Copy the letter's mask into 2D `maskData' structure
         uint2 tsize(g->bitmap.width, g->bitmap.rows);
         maskData.resize(tsize.y);
         for (int j = 0; j < tsize.y; j++) {
@@ -1805,21 +1792,21 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
             }
         }
 
-        //size of this letter (i.e., the size of the rectangle we're going to make
+        // size of this letter (i.e., the size of the rectangle we're going to make
         vec2 lettersize = make_vec2(g->bitmap.width * scale * sx, g->bitmap.rows * scale * sy);
 
-        //position of this letter (i.e., the center of the rectangle we're going to make
+        // position of this letter (i.e., the center of the rectangle we're going to make
         vec3 letterposition = make_vec3(xt + g->bitmap_left * sx + 0.5 * lettersize.x, yt + g->bitmap_top * (sy + offset) - 0.5 * lettersize.y, center.z);
 
-        //advance the x- and y- letter position
+        // advance the x- and y- letter position
         xt += (g->advance.x >> 6) * sx * scale;
         yt += (g->advance.y >> 6) * sy * scale;
 
-        //reset the offset and scale
+        // reset the offset and scale
         offset = 0;
         scale = 1;
 
-        if (lettersize.x == 0 || lettersize.y == 0) { //if the size of the letter is 0, don't add a rectangle
+        if (lettersize.x == 0 || lettersize.y == 0) { // if the size of the letter is 0, don't add a rectangle
             continue;
         }
 
@@ -1890,11 +1877,11 @@ std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const hel
             x = center.x - 0.5f * size.x + (value - cmin) / (cmax - cmin) * size.x;
         }
 
-        if (std::fabs(floor(value) - value) < 1e-4) { //value is an integer
+        if (std::fabs(floor(value) - value) < 1e-4) { // value is an integer
             std::snprintf(precision, 10, "%%d");
             std::snprintf(textstr, 10, precision, int(floor(value)));
         } else if (value != 0.f) {
-            //value needs decimal formatting
+            // value needs decimal formatting
             int d1 = floor(log10(std::fabs(value)));
             int d2 = -d1 + 1;
             if (d2 < 1) {
@@ -1918,7 +1905,7 @@ std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const hel
         }
     }
 
-    //title
+    // title
     std::vector<size_t> UUIDs_text = addTextboxByCenter(title, make_vec3(center.x, center.y + 0.4f * size.y, center.z), make_SphericalCoord(0, 0), font_color, colorbar_fontsize, "CantoraOne-Regular", COORDINATES_WINDOW_NORMALIZED);
     UUIDs.insert(UUIDs.end(), UUIDs_text.begin(), UUIDs_text.end());
 
@@ -2010,6 +1997,10 @@ void Visualizer::enableColorbar() {
 }
 
 void Visualizer::disableColorbar() {
+    if (!colorbar_IDs.empty()) {
+        geometry_handler.deleteGeometry(colorbar_IDs);
+        colorbar_IDs.clear();
+    }
     colorbar_flag = 1;
 }
 
@@ -2037,19 +2028,19 @@ void Visualizer::setColorbarRange(float cmin, float cmax) {
 }
 
 void Visualizer::setColorbarTicks(const std::vector<float> &ticks) {
-    //check that vector is not empty
+    // check that vector is not empty
     if (ticks.empty()) {
         helios_runtime_error("ERROR (Visualizer::setColorbarTicks): Colorbar ticks vector is empty.");
     }
 
-    //Check that ticks are monotonically increasing
+    // Check that ticks are monotonically increasing
     for (int i = 1; i < ticks.size(); i++) {
         if (ticks.at(i) <= ticks.at(i - 1)) {
             helios_runtime_error("ERROR (Visualizer::setColorbarTicks): Colorbar ticks must be monotonically increasing.");
         }
     }
 
-    //Check that ticks are within the range of colorbar values
+    // Check that ticks are within the range of colorbar values
     for (int i = ticks.size() - 1; i >= 0; i--) {
         if (ticks.at(i) < colorbar_min) {
             colorbar_min = ticks.at(i);
@@ -2129,27 +2120,31 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
 
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;
-
 }
 
 void Visualizer::buildContextGeometry_private() {
 
-    //If building all context geometry, get all dirty UUIDs from the Context
-    if ( build_all_context_geometry ) {
+    // If building all context geometry, get all dirty UUIDs from the Context
+    if (build_all_context_geometry) {
         bool include_deleted_UUIDs = true;
-        if ( contextUUIDs_build.empty() ) {
+        if (contextUUIDs_build.empty()) {
             include_deleted_UUIDs = false;
         }
-        contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
+        if ( primitiveColorsNeedUpdate ) {
+            //\todo This is a temporary fix to ensure that the colors are update if the visualization mode changes. This is inefficient because it would be better to just update the colors since the geometry has not changed.
+            contextUUIDs_build = context->getAllUUIDs();
+        }else {
+            contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
+        }
     }
 
-    //Populate contextUUIDs_needupdate based on dirty primitives in the Context
+    // Populate contextUUIDs_needupdate based on dirty primitives in the Context
     std::vector<uint> contextUUIDs_needupdate;
     contextUUIDs_needupdate.reserve(contextUUIDs_build.size());
 
-    for (uint UUID : contextUUIDs_build) {
+    for (uint UUID: contextUUIDs_build) {
 
-        //Check if primitives in contextUUIDs_build have since been deleted from the Context. If so, remove them from contextUUIDs_build and from the geometry handler
+        // Check if primitives in contextUUIDs_build have since been deleted from the Context. If so, remove them from contextUUIDs_build and from the geometry handler
         if (!context->doesPrimitiveExist(UUID)) {
             auto it = std::find(contextUUIDs_build.begin(), contextUUIDs_build.end(), UUID);
             if (it != contextUUIDs_build.end()) {
@@ -2157,30 +2152,29 @@ void Visualizer::buildContextGeometry_private() {
                 *it = contextUUIDs_build.back();
                 contextUUIDs_build.pop_back();
                 // delete from the geometry handler
-                if ( geometry_handler.doesGeometryExist(UUID) ) {
+                if (geometry_handler.doesGeometryExist(UUID)) {
                     geometry_handler.deleteGeometry(UUID);
                 }
             }
         }
-        //check if the primitive is dirty, if so, add it to contextUUIDs_needupdate
-        else{
+        // check if the primitive is dirty, if so, add it to contextUUIDs_needupdate
+        else {
             contextUUIDs_needupdate.push_back(UUID);
         }
-
     }
 
-    if ( contextUUIDs_needupdate.empty() ) {
+    if (contextUUIDs_needupdate.empty()) {
         return;
     }
 
     if (!colorPrimitivesByData.empty()) {
-        if (colorPrimitives_UUIDs.empty()) { //load all primitives
+        if (colorPrimitives_UUIDs.empty()) { // load all primitives
             for (uint UUID: contextUUIDs_build) {
                 if (context->doesPrimitiveExist(UUID)) {
                     colorPrimitives_UUIDs[UUID] = UUID;
                 }
             }
-        } else { //double check that primitives exist
+        } else { // double check that primitives exist
             for (uint UUID: contextUUIDs_build) {
                 if (!context->doesPrimitiveExist(UUID)) {
                     auto it = colorPrimitives_UUIDs.find(UUID);
@@ -2189,7 +2183,7 @@ void Visualizer::buildContextGeometry_private() {
             }
         }
     } else if (!colorPrimitivesByObjectData.empty()) {
-        if (colorPrimitives_objIDs.empty()) { //load all primitives
+        if (colorPrimitives_objIDs.empty()) { // load all primitives
             std::vector<uint> ObjIDs = context->getAllObjectIDs();
             for (uint objID: ObjIDs) {
                 if (context->doesObjectExist(objID)) {
@@ -2201,7 +2195,7 @@ void Visualizer::buildContextGeometry_private() {
                     }
                 }
             }
-        } else { //load primitives specified by user
+        } else { // load primitives specified by user
             for (const auto &objID: colorPrimitives_objIDs) {
                 if (context->doesObjectExist(objID.first)) {
                     std::vector<uint> UUIDs = context->getObjectPointer(objID.first)->getPrimitiveUUIDs();
@@ -2236,11 +2230,11 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
-    //figure out colorbar range
-    // \todo Figure out how to avoid doing this when not necessary
+    // figure out colorbar range
+    //  \todo Figure out how to avoid doing this when not necessary
 
     colormap_current.setRange(colorbar_min, colorbar_max);
-    if ( ( !colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty() ) && colorbar_min == 0 && colorbar_max == 0) { //range was not set by user, use full range of values
+    if ((!colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty()) && colorbar_min == 0 && colorbar_max == 0) { // range was not set by user, use full range of values
 
         colorbar_min = (std::numeric_limits<float>::max)();
         colorbar_max = (std::numeric_limits<float>::lowest)();
@@ -2300,16 +2294,18 @@ void Visualizer::buildContextGeometry_private() {
                 }
             }
 
-            if (std::isnan(colorValue) || std::isinf(colorValue)) { //check for NaN or infinity
+            if (std::isnan(colorValue) || std::isinf(colorValue)) { // check for NaN or infinity
                 colorValue = 0;
             }
 
             if (colorValue != -9999) {
                 if (colorValue < colorbar_min) {
-                    colorbar_min = colorValue;;
+                    colorbar_min = colorValue;
+                    ;
                 }
                 if (colorValue > colorbar_max) {
-                    colorbar_max = colorValue;;
+                    colorbar_max = colorValue;
+                    ;
                 }
             }
         }
@@ -2325,14 +2321,14 @@ void Visualizer::buildContextGeometry_private() {
 
     //------- Simulation Geometry -------//
 
-    //add primitives
+    // add primitives
 
     size_t patch_count = context->getPatchCount();
     geometry_handler.allocateBufferSize(patch_count, GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
     size_t triangle_count = context->getTriangleCount();
     geometry_handler.allocateBufferSize(triangle_count, GeometryHandler::GEOMETRY_TYPE_TRIANGLE);
 
-    for (unsigned int UUID: contextUUIDs_needupdate ) {
+    for (unsigned int UUID: contextUUIDs_needupdate) {
 
         if (!context->doesPrimitiveExist(UUID)) {
             std::cerr << "WARNING (Visualizer::buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
@@ -2371,7 +2367,7 @@ void Visualizer::buildContextGeometry_private() {
                     colorValue = 0;
                 }
 
-                if (std::isnan(colorValue) || std::isinf(colorValue)) { //check for NaN or infinity
+                if (std::isnan(colorValue) || std::isinf(colorValue)) { // check for NaN or infinity
                     colorValue = 0;
                 }
 
@@ -2405,7 +2401,7 @@ void Visualizer::buildContextGeometry_private() {
                     colorValue = 0;
                 }
 
-                if (std::isnan(colorValue) || std::isinf(colorValue)) { //check for NaN or infinity
+                if (std::isnan(colorValue) || std::isinf(colorValue)) { // check for NaN or infinity
                     colorValue = 0;
                 }
 
@@ -2466,10 +2462,10 @@ void Visualizer::buildContextGeometry_private() {
         else if (ptype == helios::PRIMITIVE_TYPE_VOXEL) {
             std::vector<vec3> v_vertices = context->getPrimitiveVertices(UUID);
 
-            //bottom
+            // bottom
             const std::vector<vec3> bottom_vertices{v_vertices.at(0), v_vertices.at(1), v_vertices.at(2), v_vertices.at(3)};
 
-            //top
+            // top
             const std::vector<vec3> top_vertices{v_vertices.at(4), v_vertices.at(5), v_vertices.at(6), v_vertices.at(7)};
 
             //-x
@@ -2484,7 +2480,7 @@ void Visualizer::buildContextGeometry_private() {
             //+y
             const std::vector<vec3> py_vertices{v_vertices.at(2), v_vertices.at(3), v_vertices.at(7), v_vertices.at(6)};
 
-            //Voxel does not have an associated texture or we are ignoring texture
+            // Voxel does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
                 geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
                 geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
@@ -2493,11 +2489,11 @@ void Visualizer::buildContextGeometry_private() {
                 geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, my_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
                 geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, py_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
             }
-            //Voxel has a texture
+            // Voxel has a texture
             else {
                 const std::vector<helios::vec2> voxel_uvs = {{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}};
 
-                //coloring primitive based on texture
+                // coloring primitive based on texture
                 if ((colorPrimitives_UUIDs.find(UUID) == colorPrimitives_UUIDs.end() || colorPrimitives_UUIDs.empty()) && context->isPrimitiveTextureColorOverridden(UUID)) {
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
@@ -2506,7 +2502,7 @@ void Visualizer::buildContextGeometry_private() {
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, my_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, py_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
                 }
-                //coloring primitive based on primitive data
+                // coloring primitive based on primitive data
                 else {
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
@@ -2518,7 +2514,6 @@ void Visualizer::buildContextGeometry_private() {
             }
         }
     }
-
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name) {
@@ -2530,6 +2525,7 @@ void Visualizer::colorContextPrimitivesByData(const char *data_name) {
     if (!colorPrimitives_objIDs.empty()) {
         colorPrimitives_objIDs.clear();
     }
+    primitiveColorsNeedUpdate = true;
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector<uint> &UUIDs) {
@@ -2541,6 +2537,7 @@ void Visualizer::colorContextPrimitivesByData(const char *data_name, const std::
     if (!colorPrimitives_objIDs.empty()) {
         colorPrimitives_objIDs.clear();
     }
+    primitiveColorsNeedUpdate = true;
 }
 
 void Visualizer::colorContextPrimitivesByObjectData(const char *data_name) {
@@ -2552,6 +2549,7 @@ void Visualizer::colorContextPrimitivesByObjectData(const char *data_name) {
     if (!colorPrimitives_objIDs.empty()) {
         colorPrimitives_objIDs.clear();
     }
+    primitiveColorsNeedUpdate = true;
 }
 
 void Visualizer::colorContextPrimitivesByObjectData(const char *data_name, const std::vector<uint> &ObjIDs) {
@@ -2563,6 +2561,7 @@ void Visualizer::colorContextPrimitivesByObjectData(const char *data_name, const
     if (!colorPrimitives_UUIDs.empty()) {
         colorPrimitives_UUIDs.clear();
     }
+    primitiveColorsNeedUpdate = true;
 }
 
 void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint> &UUIDs) {
@@ -2652,13 +2651,8 @@ glm::mat4 Visualizer::computeShadowDepthMVP() const {
     // Get the eight corners of the camera frustum in world space (NDC cube corners → clip → view → world)
 
     // NDC cube
-    static const std::array<glm::vec4, 8> ndcCorners =
-    {
-        glm::vec4(-1, -1, -1, 1), glm::vec4(+1, -1, -1, 1),
-        glm::vec4(+1, +1, -1, 1), glm::vec4(-1, +1, -1, 1),
-        glm::vec4(-1, -1, +1, 1), glm::vec4(+1, -1, +1, 1),
-        glm::vec4(+1, +1, +1, 1), glm::vec4(-1, +1, +1, 1)
-    };
+    static const std::array<glm::vec4, 8> ndcCorners = {glm::vec4(-1, -1, -1, 1), glm::vec4(+1, -1, -1, 1), glm::vec4(+1, +1, -1, 1), glm::vec4(-1, +1, -1, 1),
+                                                        glm::vec4(-1, -1, +1, 1), glm::vec4(+1, -1, +1, 1), glm::vec4(+1, +1, +1, 1), glm::vec4(-1, +1, +1, 1)};
 
     glm::mat4 invCam = glm::inverse(this->perspectiveTransformationMatrix);
 
@@ -2677,7 +2671,8 @@ glm::mat4 Visualizer::computeShadowDepthMVP() const {
     // frustum corner is in front of it.  We place it on the negative light
     // direction, centered on the frustum’s centroid.
     glm::vec3 centroid(0);
-    for (auto &c: frustumWs) centroid += c;
+    for (auto &c: frustumWs)
+        centroid += c;
     centroid /= 8.0f;
 
     glm::vec3 lightPos = centroid - lightDir * 100.0f; // 100 is arbitrary,
@@ -2705,12 +2700,7 @@ glm::mat4 Visualizer::computeShadowDepthMVP() const {
     glm::mat4 lightProj = glm::ortho(minL.x, maxL.x, minL.y, maxL.y, zNear, zFar);
 
     // Transform into [0,1] texture space (bias matrix)
-    const glm::mat4 bias(
-        0.5f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.5f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.5f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f
-    );
+    const glm::mat4 bias(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f);
 
     return bias * lightProj * lightView;
 }
@@ -2722,12 +2712,12 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     }
 
 
-    //Update the Context geometry
+    // Update the Context geometry
     buildContextGeometry_private();
 
-    //Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
-        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
+    // Set the view to fit window
+    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
             vec3 radius;
@@ -2741,13 +2731,17 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         }
     }
 
-    //Update
+    // Update
     if (colorbar_flag == 2) {
-        addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
+        if (!colorbar_IDs.empty()) {
+            geometry_handler.deleteGeometry(colorbar_IDs);
+            colorbar_IDs.clear();
+        }
+        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
     }
 
 
-    //Watermark
+    // Watermark
     if (isWatermarkVisible) {
         float hratio = float(Wdisplay) / float(Hdisplay);
         float width = 0.2389f / 0.8f / hratio;
@@ -2792,7 +2786,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
             depthMVP = computeShadowDepthMVP();
             depthShader.setTransformationMatrix(depthMVP);
 
-            //bind depth texture
+            // bind depth texture
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, depthTexture);
             glActiveTexture(GL_TEXTURE0);
@@ -2893,7 +2887,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
         depthMVP = computeShadowDepthMVP();
         depthShader.setTransformationMatrix(depthMVP);
 
-        //bind depth texture
+        // bind depth texture
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
         glActiveTexture(GL_TEXTURE0);
@@ -3022,23 +3016,21 @@ void Visualizer::transferBufferData() {
 
     // Set up textures
 
-    //if ( !texture_manager.empty() ) {
+    // if ( !texture_manager.empty() ) {
     glGenTextures(1, &texArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
     // Allocate L layers of size W×H, 1 mip level
-    glTexStorage3D(
-        GL_TEXTURE_2D_ARRAY,
-        /*levels=*/1,
-        GL_RGBA8, // 8 bit RGBA per texel
-        /*width=*/maximum_texture_size.x,
-        /*height=*/maximum_texture_size.y,
-        /*layers=*/std::max(1, (int) texture_manager.size())
-    );
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY,
+                   /*levels=*/1,
+                   GL_RGBA8, // 8 bit RGBA per texel
+                   /*width=*/maximum_texture_size.x,
+                   /*height=*/maximum_texture_size.y,
+                   /*layers=*/std::max(1, (int) texture_manager.size()));
 
     // Set filtering & wrap
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -3050,22 +3042,23 @@ void Visualizer::transferBufferData() {
     for (const auto &[textureID, texture]: texture_manager) {
         GLenum externalFormat = 0;
         switch (texture.num_channels) {
-            case 1: externalFormat = GL_RED;
+            case 1:
+                externalFormat = GL_RED;
                 break;
-            case 3: externalFormat = GL_RGB;
+            case 3:
+                externalFormat = GL_RGB;
                 break;
-            case 4: externalFormat = GL_RGBA;
+            case 4:
+                externalFormat = GL_RGBA;
                 break;
             default:
                 throw std::runtime_error("unsupported channel count");
         }
-        glTexSubImage3D(
-            GL_TEXTURE_2D_ARRAY,
-            /*level=*/0,
-            /*xoffset=*/0, /*yoffset=*/0, /*zoffset=*/textureID,
-            /*width=*/texture.texture_resolution.x,/*height=*/texture.texture_resolution.y,/*depth=*/1,
-            externalFormat, GL_UNSIGNED_BYTE,
-            texture.texture_data.data() // pointer to pixel data
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                        /*level=*/0,
+                        /*xoffset=*/0, /*yoffset=*/0, /*zoffset=*/textureID,
+                        /*width=*/texture.texture_resolution.x, /*height=*/texture.texture_resolution.y, /*depth=*/1, externalFormat, GL_UNSIGNED_BYTE,
+                        texture.texture_data.data() // pointer to pixel data
         );
 
         uv_rescale.at(textureID * 2 + 0) = float(texture.texture_resolution.x) / float(maximum_texture_size.x);
@@ -3270,12 +3263,12 @@ void Visualizer::plotUpdate(bool hide_window) {
         glfwShowWindow(scast<GLFWwindow *>(window));
     }
 
-    //Update the Context geometry
+    // Update the Context geometry
     buildContextGeometry_private();
 
-    //Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { //default center
-        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { //default eye position
+    // Set the view to fit window
+    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+        if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
             vec3 radius;
@@ -3289,12 +3282,16 @@ void Visualizer::plotUpdate(bool hide_window) {
         }
     }
 
-    //Update
+    // Update
     if (colorbar_flag == 2) {
-        addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
+        if (!colorbar_IDs.empty()) {
+            geometry_handler.deleteGeometry(colorbar_IDs);
+            colorbar_IDs.clear();
+        }
+        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
     }
 
-    //Watermark
+    // Watermark
     if (isWatermarkVisible) {
         float hratio = float(Wdisplay) / float(Hdisplay);
         float width = 0.2389f / 0.8f / hratio;
@@ -3329,7 +3326,7 @@ void Visualizer::plotUpdate(bool hide_window) {
         depthMVP = computeShadowDepthMVP();
         depthShader.setTransformationMatrix(depthMVP);
 
-        //bind depth texture
+        // bind depth texture
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
         glActiveTexture(GL_TEXTURE0);
@@ -3391,8 +3388,8 @@ void Visualizer::plotUpdate(bool hide_window) {
 }
 
 void Visualizer::updateDepthBuffer() {
-    //Update the Context geometry (if needed)
-    if ( true ) {
+    // Update the Context geometry (if needed)
+    if (true) {
         buildContextGeometry_private();
     }
 
@@ -3402,10 +3399,10 @@ void Visualizer::updateDepthBuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
     glViewport(0, 0, Wframebuffer, Hframebuffer);
 
-    //bind depth texture
+    // bind depth texture
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT32F, Wframebuffer, Hframebuffer, 0,GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, Wframebuffer, Hframebuffer, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glActiveTexture(GL_TEXTURE0);
 
     // Clear the screen
@@ -3446,7 +3443,7 @@ void Visualizer::plotDepthMap() {
 
     updateDepthBuffer();
 
-    //normalize data, flip in y direction, and invert the color space so white=closest, black = furthest
+    // normalize data, flip in y direction, and invert the color space so white=closest, black = furthest
     float depth_min = (std::numeric_limits<float>::max)();
     float depth_max = (std::numeric_limits<float>::min)();
     for (auto depth: depth_buffer_data) {
@@ -3463,7 +3460,7 @@ void Visualizer::plotDepthMap() {
         value = clamp(value, scast<unsigned char>(0), scast<unsigned char>(255));
         size_t row = i / Wframebuffer;
         size_t col = i % Wframebuffer;
-        size_t flipped_i = (Hframebuffer - 1 - row) * Wframebuffer + col; //flipping
+        size_t flipped_i = (Hframebuffer - 1 - row) * Wframebuffer + col; // flipping
         depth_uchar.at(flipped_i * 4) = 255 - value; // R
         depth_uchar.at(flipped_i * 4 + 1) = 255 - value; // G
         depth_uchar.at(flipped_i * 4 + 2) = 255 - value; // B
@@ -3480,7 +3477,7 @@ void Visualizer::plotDepthMap() {
 Visualizer::Texture::Texture(const std::string &texture_file, uint textureID, const helios::uint2 &maximum_texture_size, bool loadalphaonly) : texture_file(texture_file), glyph(), textureID(textureID) {
 #ifdef HELIOS_DEBUG
     if (loadalphaonly) {
-        assert(validateTextureFile( texture_file, true ));
+        assert(validateTextureFile(texture_file, true));
     } else {
         assert(validateTextureFile(texture_file));
     }
@@ -3498,13 +3495,13 @@ Visualizer::Texture::Texture(const std::string &texture_file, uint textureID, co
 
     if (texture_file.substr(texture_file.find_last_of('.') + 1) == "png") {
         read_png_file(texture_file.c_str(), image_data, texture_resolution.y, texture_resolution.x);
-    } else { //JPEG
+    } else { // JPEG
         read_JPEG_file(texture_file.c_str(), image_data, texture_resolution.y, texture_resolution.x);
     }
 
     texture_data = std::move(image_data);
 
-    //If the texture image is too large, resize it
+    // If the texture image is too large, resize it
     if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
@@ -3526,7 +3523,7 @@ Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helio
         }
     }
 
-    //If the texture image is too large, resize it
+    // If the texture image is too large, resize it
     if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
@@ -3537,14 +3534,14 @@ Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helio
 
 Visualizer::Texture::Texture(const std::vector<unsigned char> &pixel_data, uint textureID, const helios::uint2 &image_resolution, const helios::uint2 &maximum_texture_size) : textureID(textureID) {
 #ifdef HELIOS_DEBUG
-    assert( pixel_data.size() == 4u*image_resolution.x*image_resolution.y );
+    assert(pixel_data.size() == 4u * image_resolution.x * image_resolution.y);
 #endif
 
     texture_data = pixel_data;
     texture_resolution = image_resolution;
     num_channels = 4;
 
-    //If the texture image is too large, resize it
+    // If the texture image is too large, resize it
     if (texture_resolution.x > maximum_texture_size.x || texture_resolution.y > maximum_texture_size.y) {
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
@@ -3586,8 +3583,7 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
                 float bottom = p01 * (1.f - dx) + p11 * dx;
                 float value = top * (1.f - dy) + bottom * dy;
 
-                new_data[(y * new_width + x) * num_channels + c] =
-                        scast<unsigned char>(clamp(std::round(value + 0.5f), 0.f, 255.f));
+                new_data[(y * new_width + x) * num_channels + c] = scast<unsigned char>(clamp(std::round(value + 0.5f), 0.f, 255.f));
             }
         }
     }
@@ -3599,7 +3595,7 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
 
 uint Visualizer::registerTextureImage(const std::string &texture_file) {
 #ifdef HELIOS_DEBUG
-    //assert( validateTextureFile(texture_file) );
+    // assert( validateTextureFile(texture_file) );
 #endif
 
     for (const auto &[textureID, texture]: texture_manager) {
@@ -3618,7 +3614,7 @@ uint Visualizer::registerTextureImage(const std::string &texture_file) {
 
 uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_data, const helios::uint2 &image_resolution) {
 #ifdef HELIOS_DEBUG
-    assert( !texture_data.empty() && texture_data.size() == 4*image_resolution.x*image_resolution.y );
+    assert(!texture_data.empty() && texture_data.size() == 4 * image_resolution.x * image_resolution.y);
 #endif
 
     const uint textureID = texture_manager.size();
@@ -3630,7 +3626,7 @@ uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_
 
 uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file) {
 #ifdef HELIOS_DEBUG
-    assert( validateTextureFile(texture_file) );
+    assert(validateTextureFile(texture_file));
 #endif
 
     for (const auto &[textureID, texture]: texture_manager) {
@@ -3786,7 +3782,7 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
 
     assert(checkerrors());
 
-    //set up vertex buffers
+    // set up vertex buffers
 
     int i = 0;
     for (const auto &geometry_type: GeometryHandler::all_geometry_types) {
@@ -3794,17 +3790,17 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
 
         // 1st attribute buffer : vertex positions
         glBindBuffer(GL_ARRAY_BUFFER, visualizer_ptr->vertex_buffer.at(i));
-        glEnableVertexAttribArray(0); //vertices
+        glEnableVertexAttribArray(0); // vertices
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
         // 2nd attribute buffer : vertex uv
         glBindBuffer(GL_ARRAY_BUFFER, visualizer_ptr->uv_buffer.at(i));
-        glEnableVertexAttribArray(1); //uv
+        glEnableVertexAttribArray(1); // uv
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
         // 3rd attribute buffer : face index
         glBindBuffer(GL_ARRAY_BUFFER, visualizer_ptr->face_index_buffer.at(i));
-        glEnableVertexAttribArray(2); //face index
+        glEnableVertexAttribArray(2); // face index
         glVertexAttribIPointer(2, 1, GL_INT, 0, nullptr);
 
         i++;
@@ -3820,40 +3816,40 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
 
     // ~~~~~~~~~~~ Primary Shader Uniforms ~~~~~~~~~~//
 
-    //Transformation Matrix
+    // Transformation Matrix
     transformMatrixUniform = glGetUniformLocation(shaderID, "MVP");
 
-    //Depth Bias Matrix (for shadows)
+    // Depth Bias Matrix (for shadows)
     depthBiasUniform = glGetUniformLocation(shaderID, "DepthBiasMVP");
 
-    //Texture Sampler
+    // Texture Sampler
     textureUniform = glGetUniformLocation(shaderID, "textureSampler");
 
-    //Shadow Map Sampler
+    // Shadow Map Sampler
     shadowmapUniform = glGetUniformLocation(shaderID, "shadowMap");
     glUniform1i(shadowmapUniform, 1);
 
-    //Unit vector in the direction of the light (sun)
+    // Unit vector in the direction of the light (sun)
     lightDirectionUniform = glGetUniformLocation(shaderID, "lightDirection");
-    glUniform3f(lightDirectionUniform, 0, 0, 1); //Default is directly above
+    glUniform3f(lightDirectionUniform, 0, 0, 1); // Default is directly above
 
-    //Lighting model used for shading primitives
+    // Lighting model used for shading primitives
     lightingModelUniform = glGetUniformLocation(shaderID, "lightingModel");
-    glUniform1i(lightingModelUniform, 0); //Default is none
+    glUniform1i(lightingModelUniform, 0); // Default is none
 
     RboundUniform = glGetUniformLocation(shaderID, "Rbound");
     glUniform1i(RboundUniform, 0);
 
-    //Lighting intensity factor
+    // Lighting intensity factor
     lightIntensityUniform = glGetUniformLocation(shaderID, "lightIntensity");
     glUniform1f(lightIntensityUniform, 1.f);
 
-    //Texture (u,v) rescaling factor
+    // Texture (u,v) rescaling factor
     uvRescaleUniform = glGetUniformLocation(shaderID, "uv_rescale");
 
-    //initialize default texture in case none are added to the scene
-    // glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-    // glTexImage2D(GL_TEXTURE_2D_ARRAY, 0,GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    // initialize default texture in case none are added to the scene
+    //  glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    //  glTexImage2D(GL_TEXTURE_2D_ARRAY, 0,GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     assert(checkerrors());
 }
@@ -3871,8 +3867,8 @@ void Shader::disableTextures() const {
 void Shader::enableTextureMaps() const {
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(textureUniform, 0);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -3886,8 +3882,6 @@ void Shader::enableTextureMaps() const {
 void Shader::enableTextureMasks() const {
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(textureUniform, 0);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -4079,7 +4073,8 @@ void Visualizer::getViewKeystrokes(vec3 &eye, vec3 &center) {
     }
 
     if (glfwGetKey(_window, GLFW_KEY_P) == GLFW_PRESS) {
-        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << camera_eye_location.x << "," << camera_eye_location.y << "," << camera_eye_location.z << ") looking at (" << center.x << "," << center.y << "," << center.z << ")" << std::endl;
+        std::cout << "View is angle: (R,theta,phi)=(" << radius << "," << theta << "," << phi << ") at from position (" << camera_eye_location.x << "," << camera_eye_location.y << "," << camera_eye_location.z << ") looking at (" << center.x << ","
+                  << center.y << "," << center.z << ")" << std::endl;
     }
 
     camera_eye_location = sphere2cart(make_SphericalCoord(radius, theta, phi)) + center;
@@ -4141,6 +4136,18 @@ uint Visualizer::getDepthTexture() const {
 
 void Visualizer::clearColor() {
     colorPrimitivesByData = "";
+    colorPrimitivesByObjectData = "";
+    if (!colorPrimitives_UUIDs.empty()) {
+        colorPrimitives_UUIDs.clear();
+    }
+    if (!colorPrimitives_objIDs.empty()) {
+        colorPrimitives_objIDs.clear();
+    }
+    disableColorbar();
+    colorbar_min = 0;
+    colorbar_max = 0;
+    colorbar_flag = 0;
+    primitiveColorsNeedUpdate = true;
 }
 
 std::string errorString(GLenum err) {

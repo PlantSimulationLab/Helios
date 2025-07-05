@@ -279,29 +279,6 @@ float helios::asin_safe(float x) {
     return asinf(x);
 }
 
-template<typename T>
-T helios::powi(T base, std::size_t exp) {
-    T result = static_cast<T>(1);
-    while (exp > 0) {
-        // If the low bit is set, multiply result by current base
-        if (exp & 1) {
-            result *= base;
-        }
-        // Square the base for the next bit
-        base *= base;
-        // Shift off the processed bit
-        exp >>= 1;
-    }
-    return result;
-}
-
-template float helios::powi(float base, std::size_t exp);
-template double helios::powi(double base, std::size_t exp);
-template int helios::powi(int base, std::size_t exp);
-template uint helios::powi(uint base, std::size_t exp);
-template char helios::powi(char base, std::size_t exp);
-template size_t helios::powi(size_t base, std::size_t exp);
-
 bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2) {
     float ax = q1.x - p1.x; // direction of line a
     float ay = q1.y - p1.y; // ax and ay as above
@@ -1032,26 +1009,6 @@ std::vector<std::string> helios::separate_string_by_delimiter(const std::string 
     return separated_string;
 }
 
-template<typename anytype>
-anytype helios::clamp(anytype value, anytype min, anytype max) {
-    if (value < min) {
-        value = min;
-    } else if (value > max) {
-        value = max;
-    }
-    return value;
-}
-
-template float helios::clamp<float>(float, float, float);
-
-template double helios::clamp<double>(double, double, double);
-
-template int helios::clamp<int>(int, int, int);
-
-template uint helios::clamp<uint>(uint, uint, uint);
-
-template unsigned char helios::clamp<unsigned char>(unsigned char, unsigned char, unsigned char);
-
 float helios::sum(const std::vector<float> &vect) {
     if (vect.empty()) {
         helios_runtime_error("ERROR (sum): Vector is empty.");
@@ -1195,105 +1152,6 @@ float helios::median(std::vector<float> vect) {
     }
     return median;
 }
-
-template<typename anytype>
-void helios::resize_vector(std::vector<std::vector<anytype> > &vec, uint Nx, uint Ny) {
-    vec.resize(Ny);
-    for (int j = 0; j < Ny; j++) {
-        vec.at(j).resize(Nx);
-    }
-}
-
-template void helios::resize_vector<float>(std::vector<std::vector<float> > &, uint, uint);
-
-template void helios::resize_vector<double>(std::vector<std::vector<double> > &, uint, uint);
-
-template void helios::resize_vector<int>(std::vector<std::vector<int> > &, uint, uint);
-
-template void helios::resize_vector<uint>(std::vector<std::vector<uint> > &, uint, uint);
-
-template void helios::resize_vector<std::string>(std::vector<std::vector<std::string> > &, uint, uint);
-
-template void helios::resize_vector<helios::vec2>(std::vector<std::vector<helios::vec2> > &, uint, uint);
-
-template void helios::resize_vector<helios::vec3>(std::vector<std::vector<helios::vec3> > &, uint, uint);
-
-template void helios::resize_vector<helios::vec4>(std::vector<std::vector<helios::vec4> > &, uint, uint);
-
-template void helios::resize_vector<helios::int2>(std::vector<std::vector<helios::int2> > &, uint, uint);
-
-template void helios::resize_vector<helios::int3>(std::vector<std::vector<helios::int3> > &, uint, uint);
-
-template void helios::resize_vector<helios::int4>(std::vector<std::vector<helios::int4> > &, uint, uint);
-
-template<typename anytype>
-void helios::resize_vector(std::vector<std::vector<std::vector<anytype> > > &vec, uint Nx, uint Ny, uint Nz) {
-    vec.resize(Nz);
-    for (int k = 0; k < Nz; k++) {
-        vec.at(k).resize(Ny);
-        for (int j = 0; j < Ny; j++) {
-            vec.at(k).at(j).resize(Nx);
-        }
-    }
-}
-
-template void helios::resize_vector<float>(std::vector<std::vector<std::vector<float> > > &, uint, uint, uint);
-
-template void helios::resize_vector<double>(std::vector<std::vector<std::vector<double> > > &, uint, uint, uint);
-
-template void helios::resize_vector<int>(std::vector<std::vector<std::vector<int> > > &, uint, uint, uint);
-
-template void helios::resize_vector<uint>(std::vector<std::vector<std::vector<uint> > > &, uint, uint, uint);
-
-template void helios::resize_vector<std::string>(std::vector<std::vector<std::vector<std::string> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec2>(std::vector<std::vector<std::vector<helios::vec2> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec3>(std::vector<std::vector<std::vector<helios::vec3> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec4>(std::vector<std::vector<std::vector<helios::vec4> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::int2>(std::vector<std::vector<std::vector<helios::int2> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::int3>(std::vector<std::vector<std::vector<helios::int3> > > &, uint, uint, uint);
-
-template void helios::resize_vector<helios::int4>(std::vector<std::vector<std::vector<helios::int4> > > &, uint, uint, uint);
-
-template<typename anytype>
-void helios::resize_vector(std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, uint Nx, uint Ny, uint Nz, uint Nw) {
-    vec.resize(Nw);
-    for (int w = 0; w < Nw; w++) {
-        vec.at(w).resize(Nz);
-        for (int k = 0; k < Nz; k++) {
-            vec.at(w).at(k).resize(Ny);
-            for (int j = 0; j < Ny; j++) {
-                vec.at(w).at(k).at(j).resize(Nx);
-            }
-        }
-    }
-}
-
-template void helios::resize_vector<float>(std::vector<std::vector<std::vector<std::vector<float> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<double>(std::vector<std::vector<std::vector<std::vector<double> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<int>(std::vector<std::vector<std::vector<std::vector<int> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<uint>(std::vector<std::vector<std::vector<std::vector<uint> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<std::string>(std::vector<std::vector<std::vector<std::vector<std::string> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec2>(std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec3>(std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::vec4>(std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::int2>(std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::int3>(std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &, uint, uint, uint, uint);
-
-template void helios::resize_vector<helios::int4>(std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &, uint, uint, uint, uint);
 
 Date helios::CalendarDay(int Julian_day, int year) {
     // -----------------------------  input checks  ----------------------------
@@ -1816,21 +1674,11 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
 }
 
 
-//! Error manager for JPEG library.
-struct jpg_error_mgr {
-    jpeg_error_mgr pub; /* "public" fields */
-
-    jmp_buf setjmp_buffer; /* for return to caller */
-};
-
-//! Pointer to JPEG error manager.
-typedef jpg_error_mgr *jpg_error_ptr;
-
 //! Error exit function for JPEG library.
 METHODDEF(void) jpg_error_exit(j_common_ptr cinfo) {
-    auto myerr = (jpg_error_ptr) cinfo->err;
-    (*cinfo->err->output_message)(cinfo);
-    longjmp(myerr->setjmp_buffer, 1);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    throw std::runtime_error(buffer);
 }
 
 void helios::readJPEG(const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data) {
@@ -1841,27 +1689,21 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
 
     jpeg_decompress_struct cinfo{};
 
-    jpg_error_mgr jerr{};
-    FILE *infile; /* source file */
-    JSAMPARRAY buffer; /*output row buffer */
+    jpeg_error_mgr jerr{};
+    JSAMPARRAY buffer;
     int row_stride;
 
-    if ((infile = fopen(filename.c_str(), "rb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename.c_str(), "rb"), fclose);
+    if (!infile) {
         helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = jpg_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        return;
-    }
+    cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
 
+    try {
     jpeg_create_decompress(&cinfo);
-
-    jpeg_stdio_src(&cinfo, infile);
-
+        jpeg_stdio_src(&cinfo, infile.get());
     (void) jpeg_read_header(&cinfo, TRUE);
 
     (void) jpeg_start_decompress(&cinfo);
@@ -1888,7 +1730,7 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
         ba = buffer[0];
 
         for (int col = 0; col < row_stride; col += 3) {
-            pixel_data.at(row * width + col / 3.f) = make_RGBcolor(ba[row] / 255.f, ba[row + 1] / 255.f, ba[row + 2] / 255.f);
+            pixel_data.at(row * width + col / 3) = make_RGBcolor(ba[col] / 255.f, ba[col + 1] / 255.f, ba[col + 2] / 255.f);
         }
 
         row++;
@@ -1897,8 +1739,10 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     (void) jpeg_finish_decompress(&cinfo);
 
     jpeg_destroy_decompress(&cinfo);
-
-    fclose(infile);
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
+    }
 }
 
 helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
@@ -1909,39 +1753,31 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
 
     jpeg_decompress_struct cinfo{};
 
-    jpg_error_mgr jerr{};
-    FILE *infile; /* source file */
-
-    if ((infile = fopen(filename.c_str(), "rb")) == nullptr) {
+    jpeg_error_mgr jerr{};
+    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename.c_str(), "rb"), fclose);
+    if (!infile) {
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = jpg_error_exit;
-    if (setjmp(jerr.setjmp_buffer)) {
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
-        return {0, 0};
-    }
+    cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
 
+    try {
     jpeg_create_decompress(&cinfo);
-
-    jpeg_stdio_src(&cinfo, infile);
-
+        jpeg_stdio_src(&cinfo, infile.get());
     (void) jpeg_read_header(&cinfo, TRUE);
     (void) jpeg_start_decompress(&cinfo);
 
     jpeg_destroy_decompress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_decompress(&cinfo);
+        throw;
+    }
 
     return make_int2(cinfo.output_width, cinfo.output_height);
 }
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data) {
-    struct my_error_mgr {
-        jpeg_error_mgr pub; /* "public" fields */
-
-        jmp_buf setjmp_buffer; /* for return to caller */
-    };
 
     std::string filename = a_filename;
     auto file_extension = getFileExtension(filename);
@@ -1969,19 +1805,18 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     struct jpeg_error_mgr jerr{};
 
     cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = jpg_error_exit;
 
-    /* More stuff */
-    FILE *outfile; /* target file */
-    JSAMPROW row_pointer; /* pointer to JSAMPLE row[s] */
+    JSAMPROW row_pointer;
     int row_stride;
 
-    /* Now we can initialize the JPEG compression object. */
-    jpeg_create_compress(&cinfo);
-
-    if ((outfile = fopen(filename.c_str(), "wb")) == nullptr) {
+    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename.c_str(), "wb"), fclose);
+    if (!outfile) {
         helios_runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it.");
     }
-    jpeg_stdio_dest(&cinfo, outfile);
+
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, outfile.get());
 
     cinfo.image_width = width; /* image width and height, in pixels */
     cinfo.image_height = height;
@@ -1994,6 +1829,7 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_start_compress(&cinfo, TRUE);
 
+    try {
     row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
     while (cinfo.next_scanline < cinfo.image_height) {
@@ -2002,10 +1838,11 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     }
 
     jpeg_finish_compress(&cinfo);
-    /* After finish_compress, we can close the output file. */
-    fclose(outfile);
-
     jpeg_destroy_compress(&cinfo);
+    } catch (...) {
+        jpeg_destroy_compress(&cinfo);
+        throw;
+    }
 }
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {
@@ -2033,110 +1870,6 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     // Call RGB version of writeJPEG
     writeJPEG(a_filename, width, height, rgb_data);
 }
-
-// Implementation of template function to flatten a 2D vector into a 1D vector
-template<typename T>
-std::vector<T> helios::flatten(const std::vector<std::vector<T> > &vec) {
-    std::vector<T> result;
-    for (const auto &row: vec) {
-        result.insert(result.end(), row.begin(), row.end());
-    }
-    return result;
-}
-
-template std::vector<int> helios::flatten(const std::vector<std::vector<int> > &vec);
-
-template std::vector<uint> helios::flatten(const std::vector<std::vector<uint> > &vec);
-
-template std::vector<float> helios::flatten(const std::vector<std::vector<float> > &vec);
-
-template std::vector<double> helios::flatten(const std::vector<std::vector<double> > &vec);
-
-template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<helios::vec2> > &vec);
-
-template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<helios::vec3> > &vec);
-
-template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<helios::vec4> > &vec);
-
-template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<helios::int2> > &vec);
-
-template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<helios::int3> > &vec);
-
-template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<helios::int4> > &vec);
-
-template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::string> > &vec);
-
-
-// Implementation of template function to flatten a 3D vector into a 1D vector
-template<typename T>
-std::vector<T> helios::flatten(const std::vector<std::vector<std::vector<T> > > &vec) {
-    std::vector<T> result;
-    for (const auto &matrix: vec) {
-        for (const auto &row: matrix) {
-            result.insert(result.end(), row.begin(), row.end());
-        }
-    }
-    return result;
-}
-
-template std::vector<int> helios::flatten(const std::vector<std::vector<std::vector<int> > > &vec);
-
-template std::vector<uint> helios::flatten(const std::vector<std::vector<std::vector<uint> > > &vec);
-
-template std::vector<float> helios::flatten(const std::vector<std::vector<std::vector<float> > > &vec);
-
-template std::vector<double> helios::flatten(const std::vector<std::vector<std::vector<double> > > &vec);
-
-template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<std::vector<helios::vec2> > > &vec);
-
-template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<std::vector<helios::vec3> > > &vec);
-
-template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<std::vector<helios::vec4> > > &vec);
-
-template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<std::vector<helios::int2> > > &vec);
-
-template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<std::vector<helios::int3> > > &vec);
-
-template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<std::vector<helios::int4> > > &vec);
-
-template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::vector<std::string> > > &vec);
-
-
-// Implementation of template function to flatten a 4D vector into a 1D vector
-template<typename T>
-std::vector<T> helios::flatten(const std::vector<std::vector<std::vector<std::vector<T> > > > &vec) {
-    std::vector<T> result;
-    for (const auto &tensor: vec) {
-        for (const auto &matrix: tensor) {
-            for (const auto &row: matrix) {
-                result.insert(result.end(), row.begin(), row.end());
-            }
-        }
-    }
-    return result;
-}
-
-template std::vector<int> helios::flatten(const std::vector<std::vector<std::vector<std::vector<int> > > > &vec);
-
-template std::vector<uint> helios::flatten(const std::vector<std::vector<std::vector<std::vector<uint> > > > &vec);
-
-template std::vector<float> helios::flatten(const std::vector<std::vector<std::vector<std::vector<float> > > > &vec);
-
-template std::vector<double> helios::flatten(const std::vector<std::vector<std::vector<std::vector<double> > > > &vec);
-
-template std::vector<helios::vec2> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec2> > > > &vec);
-
-template std::vector<helios::vec3> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec3> > > > &vec);
-
-template std::vector<helios::vec4> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::vec4> > > > &vec);
-
-template std::vector<helios::int2> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int2> > > > &vec);
-
-template std::vector<helios::int3> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int3> > > > &vec);
-
-template std::vector<helios::int4> helios::flatten(const std::vector<std::vector<std::vector<std::vector<helios::int4> > > > &vec);
-
-template std::vector<std::string> helios::flatten(const std::vector<std::vector<std::vector<std::vector<std::string> > > > &vec);
 
 helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end) {
     //Perform interpolation between two 3D points using Cubic Hermite Spline

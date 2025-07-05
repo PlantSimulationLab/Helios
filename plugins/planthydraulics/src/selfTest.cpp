@@ -233,7 +233,42 @@ int PlantHydraulicsModel::selfTest() {
         }
     }
 
-    //Test 11: Run first code example in documentation
+    //Test 11: getUniquePlantIDs
+    {
+        try {
+            Context context;
+            std::vector<uint> leaves;
+            vec3 center = vec3(0,0,0);
+            vec2 size = vec2(0.1,0.1);
+            uint leaf1 = context.addPatch(center,size);
+            context.setPrimitiveData(leaf1,"plantID",1);
+            uint leaf2 = context.addPatch(center+vec3(0.1,0.1,0.1),size);
+            context.setPrimitiveData(leaf2,"plantID",2);
+            leaves = {leaf1,leaf2};
+
+            PlantHydraulicsModel hydraulics(&context);
+            std::vector<int> IDs = hydraulics.getUniquePlantIDs(leaves);
+            int check11 = IDs.front();
+            int check12 = IDs.back();
+            int check21 = hydraulics.getPlantID(leaf1);
+            int check22 = hydraulics.getPlantID(leaf2);
+
+            if (check11 != check21 && check12 != check22) {
+                error_count++;
+                std::cerr << "Test 11 (getUniquePlantIDs uint): Failed - Expected plantID" << check11 << ", got " << check21 <<
+                    "and expected "<< check12 << ", got " << check22 << std::endl;
+            } else {
+                std::cout << "Test 11 (getUniquePlantIDs uint): Passed." << std::endl;
+            }
+
+
+        } catch (const std::exception& e) {
+            error_count++;
+            std::cerr <<"Test 11 (getUniquePlantIDs): Failed - " << e.what() << std::endl;
+        }
+    }
+
+    //Test 12: Run first code example in documentation
     {
         try {
             Context context;
@@ -264,18 +299,18 @@ int PlantHydraulicsModel::selfTest() {
                 }
             }
             if ( failed ) {
-                std::cerr << "Test 11 (run doc example 1): Failed." << std::endl;
+                std::cerr << "Test 12 (run doc example 1): Failed." << std::endl;
                 error_count++;
             }else {
-                std::cout << "Test 11 (run doc example 1): Passed." << std::endl;
+                std::cout << "Test 12 (run doc example 1): Passed." << std::endl;
             }
         } catch (const std::exception &e) {
             error_count++;
-            std::cerr << "Test 11 (run doc example 1): Failed - " << e.what() << std::endl;
+            std::cerr << "Test 12 (run doc example 1): Failed - " << e.what() << std::endl;
         }
     }
 
-    //Test 12: Run second code example in documentation
+    //Test 13: Run second code example in documentation
     {
         try {
             Context context;
@@ -304,10 +339,10 @@ int PlantHydraulicsModel::selfTest() {
                 float psi_root = hydraulics.getRootWaterPotential(leafUUID);
                 float psi_stem = hydraulics.getStemWaterPotential(leafUUID);
             }
-            std::cout << "Test 12 (run doc example 2): Passed." << std::endl;
+            std::cout << "Test 13 (run doc example 2): Passed." << std::endl;
         } catch (const std::exception &e) {
             error_count++;
-            std::cerr << "Test 12 (run doc example 2): Failed - " << e.what() << std::endl;
+            std::cerr << "Test 13 (run doc example 2): Failed - " << e.what() << std::endl;
         }
     }
 

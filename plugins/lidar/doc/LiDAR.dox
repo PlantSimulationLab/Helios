@@ -275,7 +275,7 @@
 
  The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
 
- Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more \<grid\>...\</grid\> groups to the XML file.
+ Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more \<grid>...\</grid> groups to the XML file.
 
  ~~~~~~{.xml}
   <grid>
@@ -358,7 +358,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.
 
-  There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
+  There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
 
   The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the \ref LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*) function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.
 
@@ -427,7 +427,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 	</scan>
 	
   </helios>
-  ~~~~~~
+ ~~~~~~
 
   Example code is given below for generating synthetic discrete-return data and writing to an ASCII text file.
 
@@ -474,7 +474,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 	</scan>
 	
   </helios>
-  ~~~~~~
+ ~~~~~~
 
   Running the synthetic data generation function requires the specification of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a discrete-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accurate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
 
@@ -517,7 +517,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
  <table>
  <tr><th>Function</th><th>Description</th></tr>
  <tr><td>\ref LiDARcloud::addHitsToVisualizer</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
- <tr><td>\ref LiDARcloud::addGridToVisualizer(Visualizer*)</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
+ <tr><td>ef LiDARcloud::addGridToVisualizer(Visualizer*) const</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
  </table>

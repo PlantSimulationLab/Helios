@@ -61,6 +61,8 @@ namespace helios {
         HELIOS_TYPE_INT4 = 9,
         //! std::string data type
         HELIOS_TYPE_STRING = 10,
+        //! bool data type
+        HELIOS_TYPE_BOOL = 11,
     };
 
     //! Texture map data structure
@@ -309,236 +311,276 @@ namespace helios {
 
         //-------- Object Data Methods ---------- //
 
-        //! Add data value (int) associated with a object element
+        //! Add data value associated with a compound object
         /**
+         * \tparam T Object data type
          * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
+         * \param[in] data Primitive data value (scalar)
          */
-        void setObjectData(const char *label, int data);
+        template<typename T>
+        void setObjectData(const char *label, const T &data) {
 
-        //! Add data value (uint) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, uint data);
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "CompoundObject::setObjectData() was called with an unsupported type.");
 
-        //! Add data value (float) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, float data);
+            if constexpr (std::is_same_v<T, int>) {
+                object_data_int[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                object_data_uint[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                object_data_float[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                object_data_double[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                object_data_vec2[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                object_data_vec3[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                object_data_vec4[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                object_data_int2[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                object_data_int3[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                object_data_int4[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                object_data_string[label] = {data};
+                object_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
 
-        //! Add data value (double) associated with a object element
+        //! Add data value associated with a compound object
         /**
+         * \tparam T Object data type
          * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
+         * \param[in] data Primitive data value (vector)
          */
-        void setObjectData(const char *label, double data);
+        template<typename T>
+        void setObjectData(const char *label, const std::vector<T> &data) {
 
-        //! Add data value (vec2) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, const helios::vec2 &data);
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "CompoundObject::setObjectData() was called with an unsupported type.");
 
-        //! Add data value (vec3) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, const helios::vec3 &data);
+            if constexpr (std::is_same_v<T, int>) {
+                object_data_int[label] = data;
+                object_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                object_data_uint[label] = data;
+                object_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                object_data_float[label] = data;
+                object_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                object_data_double[label] = data;
+                object_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                object_data_vec2[label] = data;
+                object_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                object_data_vec3[label] = data;
+                object_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                object_data_vec4[label] = data;
+                object_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                object_data_int2[label] = data;
+                object_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                object_data_int3[label] = data;
+                object_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                object_data_int4[label] = data;
+                object_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                object_data_string[label] = data;
+                object_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
 
-        //! Add data value (vec4) associated with a object element
+        //! Get data associated with a compound object
         /**
          * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
+         * \param[out] data Primitive data structure
          */
-        void setObjectData(const char *label, const helios::vec4 &data);
+        template<typename T>
+        void getObjectData(const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+            if (!doesObjectDataExist(label)) {
+                helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for primitive " + std::to_string(OID));
+            }
+#endif
 
-        //! Add data value (int2) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, const helios::int2 &data);
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> ||
+                                  std::is_same_v<T, int2> || std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>,
+                          "CompoundObject::getObjectData() was called with an unsupported type.");
 
-        //! Add data value (int3) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, const helios::int3 &data);
+            HeliosDataType type = object_data_types.at(label);
 
-        //! Add data value (int4) associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const char *label, const helios::int4 &data);
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = object_data_int.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = object_data_uint.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = object_data_float.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = object_data_double.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = object_data_vec2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = object_data_vec3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = object_data_vec4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = object_data_int2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = object_data_int3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = object_data_int4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = object_data_string.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type string.");
+                }
+            }
+        }
 
-        //! Add data value (string) associated with a object element
+        //! Get vector data associated with a compound object
         /**
+         * \tparam T Object data type
          * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
+         * \param[out] data Primitive data structure
          */
-        void setObjectData(const char *label, const std::string &data);
+        template<typename T>
+        void getObjectData(const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+            if (!doesObjectDataExist(label)) {
+                helios_runtime_error("ERROR (CompoundObject::getObjectData): Object data " + std::string(label) + " does not exist for object " + std::to_string(OID));
+            }
+#endif
 
-        //! Add (array) data associated with a object element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] type Helios data type of object data (see \ref HeliosDataType)
-         * \param[in] size Number of data elements
-         * \param[in] data Pointer to object data
-         * \note While this method still works for scalar data, it is typically preferable to use the scalar versions of this method.
-         */
-        void setObjectData(const char *label, HeliosDataType type, uint size, void *data);
+            HeliosDataType type = object_data_types.at(label);
 
-        //! Get data associated with a object element (integer scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, int &data) const;
-
-        //! Get data associated with a object element (vector of integers)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<int> &data) const;
-
-        //! Get data associated with a object element (unsigned integer scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, uint &data) const;
-
-        //! Get data associated with a object element (vector of unsigned integers)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<uint> &data) const;
-
-        //! Get data associated with a object element (float scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, float &data) const;
-
-        //! Get data associated with a object element (vector of floats)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<float> &data) const;
-
-        //! Get data associated with a object element (double scalar)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, double &data) const;
-
-        //! Get data associated with a object element (vector of doubles)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<double> &data) const;
-
-        //! Get data associated with a object element (vec2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, vec2 &data) const;
-
-        //! Get data associated with a object element (vector of vec2's)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<vec2> &data) const;
-
-        //! Get data associated with a object element (vec3 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, vec3 &data) const;
-
-        //! Get data associated with a object element (vector of vec3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<vec3> &data) const;
-        //! Get data associated with a object element (vec4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, vec4 &data) const;
-        //! Get data associated with a object element (vector of vec4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<vec4> &data) const;
-        //! Get data associated with a object element (int2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, int2 &data) const;
-        //! Get data associated with a object element (vector of int2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<int2> &data) const;
-        //! Get data associated with a object element (int3 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, int3 &data) const;
-        //! Get data associated with a object element (vector of int3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<int3> &data) const;
-        //! Get data associated with a object element (int4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, int4 &data) const;
-        //! Get data associated with a object element (vector of int4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<int4> &data) const;
-        //! Get data associated with a object element (string scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::string &data) const;
-        //! Get data associated with a object element (vector of strings)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure
-         */
-        void getObjectData(const char *label, std::vector<std::string> &data) const;
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = object_data_int.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = object_data_uint.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type uint, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = object_data_float.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type float, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = object_data_double.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type double, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = object_data_vec2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec2, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = object_data_vec3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec3, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = object_data_vec4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type vec4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = object_data_int2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int2, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = object_data_int3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int3, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = object_data_int4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = object_data_string.at(label);
+                } else {
+                    helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type string, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type string.");
+                }
+            }
+        }
 
         //! Get the Helios data type of object data
         /**
@@ -1147,246 +1189,279 @@ namespace helios {
 
         //-------- Primitive Data Methods ---------- //
 
-        //! Add data value (int) associated with a primitive element
+        //! Add data value associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(const char *label, int data);
+        template<typename T>
+        void setPrimitiveData(const char *label, const T &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Primitive::setPrimitiveData() was called with an unsupported type.");
 
-        //! Add data value (uint) associated with a primitive element
+            if constexpr (std::is_same_v<T, int>) {
+                primitive_data_int[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                primitive_data_uint[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                primitive_data_float[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                primitive_data_double[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                primitive_data_vec2[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                primitive_data_vec3[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                primitive_data_vec4[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                primitive_data_int2[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                primitive_data_int3[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                primitive_data_int4[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                primitive_data_string[label] = {data};
+                primitive_data_types[label] = HELIOS_TYPE_STRING;
+            }
+            dirty_flag = true;
+        }
+
+        //! Add data value associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
+         * \param[in] data Primitive data (vector)
          */
-        void setPrimitiveData(const char *label, uint data);
+        template<typename T>
+        void setPrimitiveData(const char *label, const std::vector<T> &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Primitive::setPrimitiveData() was called with an unsupported type.");
 
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, float data);
+            if constexpr (std::is_same_v<T, int>) {
+                primitive_data_int[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                primitive_data_uint[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                primitive_data_float[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                primitive_data_double[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                primitive_data_vec2[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                primitive_data_vec3[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                primitive_data_vec4[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                primitive_data_int2[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                primitive_data_int3[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                primitive_data_int4[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                primitive_data_string[label] = data;
+                primitive_data_types[label] = HELIOS_TYPE_STRING;
+            }
+            dirty_flag = true;
+        }
 
-        //! Add data value (double) associated with a primitive element
+        //! Get data associated with a primitive element
         /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, double data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const char *label, const std::string &data);
-
-        //! Add (array) data associated with a primitive element
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] type Helios data type of primitive data (see \ref HeliosDataType)
-         * \param[in] size Number of data elements
-         * \param[in] data Pointer to primitive data
-         * \note While this method still works for scalar data, it is typically preferable to use the scalar versions of this method.
-         */
-        void setPrimitiveData(const char *label, HeliosDataType type, uint size, void *data);
-
-        //! Get data associated with a primitive element (integer scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int &data) const;
-
-        //! Get data associated with a primitive element (vector of integers)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int> &data) const;
-
-        //! Get data associated with a primitive element (unsigned integer scalar)
-        /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[out] data Primitive data structure
          */
-        void getPrimitiveData(const char *label, uint &data) const;
+        template<typename T>
+        void getPrimitiveData(const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+            if (!doesPrimitiveDataExist(label)) {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID));
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Primitive::getPrimitiveData() was called with an unsupported type.");
 
-        //! Get data associated with a primitive element (vector of unsigned integers)
+            HeliosDataType type = primitive_data_types.at(label);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = primitive_data_int.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = primitive_data_uint.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = primitive_data_float.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = primitive_data_double.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = primitive_data_vec2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = primitive_data_vec3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = primitive_data_vec4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = primitive_data_int2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = primitive_data_int3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = primitive_data_int4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = primitive_data_string.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string.");
+                }
+            }
+        }
+
+        //! Get vector data associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] label Name/label associated with data
          * \param[out] data Primitive data structure
          */
-        void getPrimitiveData(const char *label, std::vector<uint> &data) const;
+        template<typename T>
+        void getPrimitiveData(const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+            if (!doesPrimitiveDataExist(label)) {
+                helios_runtime_error("ERROR (Primitive::getPrimitiveData): Primitive data " + std::string(label) + " does not exist for primitive " + std::to_string(UUID));
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Primitive::getPrimitiveData() was called with an unsupported type.");
 
-        //! Get data associated with a primitive element (float scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, float &data) const;
+            HeliosDataType type = primitive_data_types.at(label);
 
-        //! Get data associated with a primitive element (vector of floats)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<float> &data) const;
-
-        //! Get data associated with a primitive element (double scalar)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, double &data) const;
-
-        //! Get data associated with a primitive element (vector of doubles)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<double> &data) const;
-
-        //! Get data associated with a primitive element (vec2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec2 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec2> &data) const;
-
-        //! Get data associated with a primitive element (vec3 scalar)
-        /**
-         *  \param[in] label Name/label associated with data
-         *  \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec3 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec3> &data) const;
-
-        //! Get data associated with a primitive element (vec4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, vec4 &data) const;
-
-        //! Get data associated with a primitive element (vector of vec4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<vec4> &data) const;
-
-        //! Get data associated with a primitive element (int2 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int2 &data) const;
-
-        //! Get data associated with a primitive element (vector of int2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int2> &data) const;
-
-        //! Get data associated with a primitive element (int3 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int3 &data) const;
-
-        //! Get data associated with a primitive element (vector of int3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int3> &data) const;
-
-        //! Get data associated with a primitive element (int4 scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, int4 &data) const;
-
-        //! Get data associated with a primitive element (vector of int4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<int4> &data) const;
-
-        //! Get data associated with a primitive element (string scalar)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::string &data) const;
-
-        //! Get data associated with a primitive element (vector of strings)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure
-         */
-        void getPrimitiveData(const char *label, std::vector<std::string> &data) const;
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = primitive_data_int.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = primitive_data_uint.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type uint, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = primitive_data_float.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type float, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = primitive_data_double.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type double, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = primitive_data_vec2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = primitive_data_vec3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = primitive_data_vec4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type vec4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = primitive_data_int2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int2, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = primitive_data_int3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int3, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = primitive_data_int4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type int4, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = primitive_data_string.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Primitive::getPrimitiveData): Attempted to get data for type string, but data " + std::string(label) + " for primitive " + std::to_string(UUID) + " does not have type string.");
+                }
+            }
+        }
 
         //! Get the Helios data type of primitive data
         /**
@@ -2707,649 +2782,104 @@ namespace helios {
 
         //-------- Primitive Data Methods ---------- //
 
-        //! Add data value (int) associated with a primitive element
+        //! Add data value associated with a primitive element
         /**
+         * \tparam T Primitive data type
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(uint UUID, const char *label, int data);
+        template<typename T>
+        void setPrimitiveData(uint UUID, const char *label, const T &data) {
+#ifdef HELIOS_DEBUG
+            if (primitives.find(UUID) == primitives.end()) {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+            }
+#endif
+            primitives.at(UUID)->setPrimitiveData(label, data);
+        }
 
-        //! Add data value (int) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
+        //! Add data value associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
         /**
+         * \tparam T Primitive data type
          * \note the size of UUIDs and data must match
          * \param[in] UUIDs Unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
          */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<int> &data);
+        template<typename T>
+        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<T> &data) {
+#ifdef HELIOS_DEBUG
+            if (UUIDs.size() != data.size()) {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+            }
+#endif
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            for (size_t i = 0; i < UUIDs.size(); ++i) {
+                primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
+            }
+        }
 
-        //! Add data value (uint) associated with a primitive element
+        //! Add scalar data to multiple primitive elements
         /**
+         * \tparam T Primitive data type
+         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
+         * \param[in] label Name/label associated with data
+         * \param[in] data Primitive data value (scalar)
+         */
+        template<typename T>
+        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data) {
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            for (uint id: UUIDs) {
+                primitives.at(id)->setPrimitiveData(label, data);
+            }
+        }
+
+        //! Get data value associated with a primitive element
+        /**
+         * \tparam T Primitive data type
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
          */
-        void setPrimitiveData(uint UUID, const char *label, uint data);
+        template<typename T>
+        void getPrimitiveData(uint UUID, const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+            if (primitives.find(UUID) == primitives.end()) {
+                helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+            }
+#endif
+            primitives.at(UUID)->getPrimitiveData(label, data);
+        }
 
-        //! Add data value (uint) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
+        //! Get data value associated with a vector of primitive elements.
         /**
+         * \tparam T Primitive data type
          * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
+         * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
          */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<uint> &data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, float data);
-
-        //! Add data value (float) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<float> &data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, double data);
-
-        //! Add data value (double) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<double> &data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec2) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<vec2> &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec3) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<vec3> &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::vec4 &data);
-
-        //! Add data value (vec4) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<vec4> &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::int2 &data);
-
-        //! Add data value (int2) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<int2> &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::int3 &data);
-
-        //! Add data value (int3) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<int3> &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const helios::int4 &data);
-
-        //! Add data value (int4) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<int4> &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(uint UUID, const char *label, const std::string &data);
-
-        //! Add data value (string) associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
-        /**
-         * \note the size of UUIDs and data must match
-         * \param[in] UUIDs Unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (vector)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<std::string> &data);
-
-        //! Add data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[in] type Helios data type of primitive data (see \ref HeliosDataType)
-         * \param[in] size Number of data elements
-         * \param[in] data Pointer to primitive data
-         */
-        void setPrimitiveData(uint UUID, const char *label, HeliosDataType type, uint size, void *data);
-
-        //! Add data value (int) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::string &data);
-
-        //! Add data value (int) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<uint>> &UUIDs, const char *label, const std::string &data);
-
-        //! Add data value (int) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a primitive element
-        /**
-         * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
-         * \param[in] label Name/label associated with data
-         * \param[in] data Primitive data value (scalar)
-         */
-        void setPrimitiveData(const std::vector<std::vector<std::vector<uint>>> &UUIDs, const char *label, const std::string &data);
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar integer)
-         */
-        void getPrimitiveData(uint UUID, const char *label, int &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of integers)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<int> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar unsigned integer)
-         */
-        void getPrimitiveData(uint UUID, const char *label, uint &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of unsigned integers)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<uint> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar float)
-         */
-        void getPrimitiveData(uint UUID, const char *label, float &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of floats)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<float> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar double)
-         */
-        void getPrimitiveData(uint UUID, const char *label, double &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of doubles)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<double> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar vec2)
-         */
-        void getPrimitiveData(uint UUID, const char *label, vec2 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of vec2's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<vec2> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar vec3)
-         */
-        void getPrimitiveData(uint UUID, const char *label, vec3 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of vec3's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<vec3> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar vec4)
-         */
-        void getPrimitiveData(uint UUID, const char *label, vec4 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of vec4's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<vec4> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar int2)
-         */
-        void getPrimitiveData(uint UUID, const char *label, int2 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of int2's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<int2> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar int3)
-         */
-        void getPrimitiveData(uint UUID, const char *label, int3 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of int3's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<int3> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar int4)
-         */
-        void getPrimitiveData(uint UUID, const char *label, int4 &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of int4's)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<int4> &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (scalar string)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::string &data) const;
-
-        //! Get data associated with a primitive element
-        /**
-         * \param[in] UUID Unique universal identifier of Primitive element
-         * \param[in] label Name/label associated with data
-         * \param[out] data Primitive data structure (vector of strings)
-         */
-        void getPrimitiveData(uint UUID, const char *label, std::vector<std::string> &data) const;
+        template<typename T>
+        void getPrimitiveData(uint UUID, const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+            if (primitives.find(UUID) == primitives.end()) {
+                helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+            }
+#endif
+            primitives.at(UUID)->getPrimitiveData(label, data);
+        }
 
         //! Get the Helios data type of primitive data
         /**
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
-         \return Helios data type of primitive data
-         \sa HeliosDataType
+         * \return Helios data type of primitive data
+         * \sa HeliosDataType
          */
         HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
 
@@ -3357,7 +2887,7 @@ namespace helios {
         /**
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
-         \return Size/length of primitive data array
+         * \return Size/length of primitive data array
          */
         uint getPrimitiveDataSize(uint UUID, const char *label) const;
 
@@ -3365,7 +2895,7 @@ namespace helios {
         /**
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
-         \return True/false
+         * \return True/false
          */
         bool doesPrimitiveDataExist(uint UUID, const char *label) const;
 
@@ -3386,7 +2916,7 @@ namespace helios {
         //! Method to get the Primitive type
         /**
          * \param[in] UUID Universal unique identifier of primitive.
-         * sa \ref PrimitiveType
+         * \sa \ref PrimitiveType
          */
         [[nodiscard]] PrimitiveType getPrimitiveType(uint UUID) const;
 
@@ -3801,542 +3331,179 @@ namespace helios {
 
         //-------- Compound Object Data Methods ---------- //
 
-        //! Add data value (int) associated with a compound object
+        //! Add data value associated with a compound object
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \param[in] objID Unique identifier of compound object
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
          */
-        void setObjectData(uint objID, const char *label, const int &data);
+        template<typename T>
+        void setObjectData(uint objID, const char *label, const T &data) {
+#ifdef HELIOS_DEBUG
+            if (objects.find(objID) == objects.end()) {
+                helios_runtime_error("ERROR (Context::setObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            objects.at(objID)->setObjectData(label, data);
+        }
 
-        //! Add data value (uint) associated with a compound object
+        //! Add scalar data to multiple compound objects
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
          */
-        void setObjectData(uint objID, const char *label, const uint &data);
+        template<typename T>
+        void setObjectData(const std::vector<uint> &objIDs, const char *label, const T &data) {
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            for (uint id: objIDs) {
+                objects.at(id)->setObjectData(label, data);
+            }
+        }
 
-        //! Add data value (float) associated with a compound object
+        //! Add scalar data to multiple compound objects
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
          */
-        void setObjectData(uint objID, const char *label, const float &data);
+        template<typename T>
+        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const T &data) {
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            for (const auto &j: objIDs) {
+                for (uint id: j) {
+                    objects.at(id)->setObjectData(label, data);
+                }
+            }
+        }
 
-        //! Add data value (double) associated with a compound object
+        //! Add scalar data to multiple compound objects
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
          */
-        void setObjectData(uint objID, const char *label, const double &data);
+        template<typename T>
+        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const T &data) {
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            for (const auto &k: objIDs) {
+                for (const auto &j: k) {
+                    for (uint id: j) {
+                        objects.at(id)->setObjectData(label, data);
+                    }
+                }
+            }
+        }
 
-        //! Add data value (vec2) associated with a compound object
+        //! Add a vector of data for a compound object
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \note the size of objIDs and data must match
+         * \param[in] objID Unique identifier of compound object
+         * \param[in] label Name/label associated with data
+         * \param[in] data Object data value (vector)
+         */
+        template<typename T>
+        void setObjectData(uint objID, const char *label, const std::vector<T> &data) {
+#ifdef HELIOS_DEBUG
+            if (objects.find(objID) == objects.end()) {
+                helios_runtime_error("ERROR (Context::setObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            objects.at(objID)->setObjectData(label, data);
+        }
+
+        //! Add data value associated with a vector of compound objects. Each element in objIDs maps to each element in data.
+        /**
+         * \tparam T Object data type
+         * \note the size of objIDs and data must match
+         * \param[in] objIDs Unique identifiers of compound object
+         * \param[in] label Name/label associated with data
+         * \param[in] data Object data value (vector)
+         */
+        template<typename T>
+        void setObjectData(const std::vector<uint> &objIDs, const char *label, const std::vector<T> &data) {
+#ifdef HELIOS_DEBUG
+            if (objIDs.size() != data.size()) {
+                helios_runtime_error("ERROR (Context::setObjectData): Object IDs and data vectors must be the same size.");
+            }
+#endif
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::setObjectData() was called with an unsupported type.");
+            for (size_t i = 0; i < objIDs.size(); ++i) {
+                objects.at(objIDs[i])->setObjectData(label, data[i]);
+            }
+        }
+
+        //! Get data value associated with a compound object
+        /**
+         * \tparam T Object data type
+         * \param[in] objID Unique identifier of compound object
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
          */
-        void setObjectData(uint objID, const char *label, const helios::vec2 &data);
+        template<typename T>
+        void getObjectData(uint objID, const char *label, T &data) const {
+#ifdef HELIOS_DEBUG
+            if (objects.find(objID) == objects.end()) {
+                helios_runtime_error("ERROR (Context::getObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::getObjectData() was called with an unsupported type.");
+            objects.at(objID)->getObjectData(label, data);
+        }
 
-        //! Add data value (vec3) associated with a compound object
+        //! Get data value associated with a vector of compound objects
         /**
-         * \param[in] objID Unique universal identifier of compound object
+         * \tparam T Object data type
+         * \note the size of objIDs and data must match
+         * \param[in] objID Unique identifier of compound object
          * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
+         * \param[in] data Object data value (vector)
          */
-        void setObjectData(uint objID, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(uint objID, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(uint objID, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(uint objID, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(uint objID, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(uint objID, const char *label, const std::string &data);
-
-        //! Add data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[in] type Helios data type of primitive data (see \ref HeliosDataType)
-         * \param[in] size Number of data elements
-         * \param[in] data Pointer to primitive data
-         */
-        void setObjectData(uint objID, const char *label, HeliosDataType type, uint size, void *data);
-
-        //! Add data value (int) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<uint> &objIDs, const char *label, const std::string &data);
-
-        //! Add data value (int) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const std::string &data);
-        //! Add data value (int) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const int &data);
-
-        //! Add data value (uint) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const uint &data);
-
-        //! Add data value (float) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const float &data);
-
-        //! Add data value (double) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const double &data);
-
-        //! Add data value (vec2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::vec2 &data);
-
-        //! Add data value (vec3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::vec3 &data);
-
-        //! Add data value (vec4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::vec4 &data);
-
-        //! Add data value (int2) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::int2 &data);
-
-        //! Add data value (int3) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::int3 &data);
-
-        //! Add data value (int4) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const helios::int4 &data);
-
-        //! Add data value (string) associated with a compound object
-        /**
-         * \param[in] objIDs Vector of unique universal identifiers of compound objects
-         * \param[in] label Name/label associated with data
-         * \param[in] data Object data value (scalar)
-         */
-        void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const std::string &data);
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar integer)
-         */
-        void getObjectData(uint objID, const char *label, int &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of integers)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<int> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar unsigned integer)
-         */
-        void getObjectData(uint objID, const char *label, uint &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of unsigned integers)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<uint> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar float)
-         */
-        void getObjectData(uint objID, const char *label, float &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of floats)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<float> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar double)
-         */
-        void getObjectData(uint objID, const char *label, double &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of doubles)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<double> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar vec2)
-         */
-        void getObjectData(uint objID, const char *label, vec2 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of vec2's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<vec2> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar vec3)
-         */
-        void getObjectData(uint objID, const char *label, vec3 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of vec3's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<vec3> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar vec4)
-         */
-        void getObjectData(uint objID, const char *label, vec4 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of vec4's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<vec4> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar int2)
-         */
-        void getObjectData(uint objID, const char *label, int2 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of int2's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<int2> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar int3)
-         */
-        void getObjectData(uint objID, const char *label, int3 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of int3's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<int3> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar int4)
-         */
-        void getObjectData(uint objID, const char *label, int4 &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of int4's)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<int4> &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (scalar string)
-         */
-        void getObjectData(uint objID, const char *label, std::string &data) const;
-
-        //! Get data associated with a compound object
-        /**
-         * \param[in] objID Unique universal identifier of compound object
-         * \param[in] label Name/label associated with data
-         * \param[out] data Object data structure (vector of strings)
-         */
-        void getObjectData(uint objID, const char *label, std::vector<std::string> &data) const;
+        template<typename T>
+        void getObjectData(uint objID, const char *label, std::vector<T> &data) const {
+#ifdef HELIOS_DEBUG
+            if (objects.find(objID) == objects.end()) {
+                helios_runtime_error("ERROR (Context::getObjectData): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+            }
+#endif
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Context::getObjectData() was called with an unsupported type.");
+            objects.at(objID)->getObjectData(label, data);
+        }
 
         //! Get the Helios data type of primitive data
         /**
@@ -4404,92 +3571,286 @@ namespace helios {
 
         //-------- Global Data Methods ---------- //
 
-        //! Add global data value (int)
+        //! Add global data value (scalar)
         /**
          * \param[in] label Name/label associated with data
          * \param[in] data Global data value (scalar)
          */
-        void setGlobalData(const char *label, int data);
+        template<typename T>
+        void setGlobalData(const char *label, const T &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *> || std::is_same_v<T, bool>,
+                          "Context::setGlobalData() was called with an unsupported type.");
 
-        //! Add global data value (uint)
+            globaldata[label].size = 1;
+            if constexpr (std::is_same_v<T, int>) {
+                globaldata[label].global_data_int = {data};
+                globaldata[label].type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                globaldata[label].global_data_uint = {data};
+                globaldata[label].type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                globaldata[label].global_data_float = {data};
+                globaldata[label].type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                globaldata[label].global_data_double = {data};
+                globaldata[label].type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                globaldata[label].global_data_vec2 = {data};
+                globaldata[label].type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                globaldata[label].global_data_vec3 = {data};
+                globaldata[label].type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                globaldata[label].global_data_vec4 = {data};
+                globaldata[label].type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                globaldata[label].global_data_int2 = {data};
+                globaldata[label].type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                globaldata[label].global_data_int3 = {data};
+                globaldata[label].type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                globaldata[label].global_data_int4 = {data};
+                globaldata[label].type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                globaldata[label].global_data_string = {data};
+                globaldata[label].type = HELIOS_TYPE_STRING;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                globaldata[label].global_data_bool = {data};
+                globaldata[label].type = HELIOS_TYPE_BOOL;
+            }
+        }
+
+        //! Add global data value (vector)
         /**
          * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
+         * \param[in] data Global data value (vector)
          */
-        void setGlobalData(const char *label, uint data);
+        template<typename T>
+        void setGlobalData(const char *label, const std::vector<T> &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *> || std::is_same_v<T, bool>,
+                          "Context::setGlobalData() was called with an unsupported type.");
 
-        //! Add global data value (float)
+            globaldata[label].size = data.size();
+            if constexpr (std::is_same_v<T, int>) {
+                globaldata[label].global_data_int = data;
+                globaldata[label].type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                globaldata[label].global_data_uint = data;
+                globaldata[label].type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                globaldata[label].global_data_float = data;
+                globaldata[label].type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                globaldata[label].global_data_double = data;
+                globaldata[label].type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                globaldata[label].global_data_vec2 = data;
+                globaldata[label].type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                globaldata[label].global_data_vec3 = data;
+                globaldata[label].type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                globaldata[label].global_data_vec4 = data;
+                globaldata[label].type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                globaldata[label].global_data_int2 = data;
+                globaldata[label].type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                globaldata[label].global_data_int3 = data;
+                globaldata[label].type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                globaldata[label].global_data_int4 = data;
+                globaldata[label].type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                globaldata[label].global_data_string = data;
+                globaldata[label].type = HELIOS_TYPE_STRING;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                globaldata[label].global_data_bool = data;
+                globaldata[label].type = HELIOS_TYPE_BOOL;
+            }
+        }
+
+        //! Get global data value (scalar or vector)
         /**
          * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
+         * \param[out] data Global data value (scalar or vector)
          */
-        void setGlobalData(const char *label, float data);
-
-        //! Add global data value (double)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, double data);
-
-        //! Add global data value (vec2)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const helios::vec2 &data);
-
-        //! Add global data value (vec3)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const helios::vec3 &data);
-
-        //! Add global data value (vec4)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const helios::vec4 &data);
-
-        //! Add global data value (int2)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const helios::int2 &data);
-
-        //! Add global data value (int3)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const helios::int3 &data);
-
-        //! Add global data value (int4)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-
-        void setGlobalData(const char *label, const helios::int4 &data);
-
-        //! Add global data value (string)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, const std::string &data);
-
-        //! Add global data value (any type)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] type Helios data type of primitive data
-         * \param[in] size Number of elements in global data
-         * \param[in] data Global data value (scalar)
-         */
-        void setGlobalData(const char *label, HeliosDataType type, size_t size, void *data);
+        template<typename T>
+        void getGlobalData(const char *label, T &data) const {
+            // Use SFINAE to detect if T is std::vector<U> for some U
+            if constexpr (std::is_same_v<T, std::vector<int>>) {
+                // Vector case for int
+                if (globaldata.at(label).type == HELIOS_TYPE_INT) {
+                    data = globaldata.at(label).global_data_int;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int, but data " + std::string(label) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<uint>>) {
+                // Vector case for uint
+                if (globaldata.at(label).type == HELIOS_TYPE_UINT) {
+                    data = globaldata.at(label).global_data_uint;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type uint, but data " + std::string(label) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<float>>) {
+                // Vector case for float
+                if (globaldata.at(label).type == HELIOS_TYPE_FLOAT) {
+                    data = globaldata.at(label).global_data_float;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type float, but data " + std::string(label) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<double>>) {
+                // Vector case for double
+                if (globaldata.at(label).type == HELIOS_TYPE_DOUBLE) {
+                    data = globaldata.at(label).global_data_double;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type double, but data " + std::string(label) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<vec2>>) {
+                // Vector case for vec2
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC2) {
+                    data = globaldata.at(label).global_data_vec2;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec2, but data " + std::string(label) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<vec3>>) {
+                // Vector case for vec3
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC3) {
+                    data = globaldata.at(label).global_data_vec3;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec3, but data " + std::string(label) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<vec4>>) {
+                // Vector case for vec4
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC4) {
+                    data = globaldata.at(label).global_data_vec4;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec4, but data " + std::string(label) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<int2>>) {
+                // Vector case for int2
+                if (globaldata.at(label).type == HELIOS_TYPE_INT2) {
+                    data = globaldata.at(label).global_data_int2;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int2, but data " + std::string(label) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<int3>>) {
+                // Vector case for int3
+                if (globaldata.at(label).type == HELIOS_TYPE_INT3) {
+                    data = globaldata.at(label).global_data_int3;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int3, but data " + std::string(label) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<int4>>) {
+                // Vector case for int4
+                if (globaldata.at(label).type == HELIOS_TYPE_INT4) {
+                    data = globaldata.at(label).global_data_int4;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int4, but data " + std::string(label) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                // Vector case for string
+                if (globaldata.at(label).type == HELIOS_TYPE_STRING) {
+                    data = globaldata.at(label).global_data_string;
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type string, but data " + std::string(label) + " does not have type string.");
+                }
+            } else if constexpr (std::is_same_v<T, int>) {
+                // Scalar case for int
+                if (globaldata.at(label).type == HELIOS_TYPE_INT) {
+                    data = globaldata.at(label).global_data_int.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int, but data " + std::string(label) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                // Scalar case for uint
+                if (globaldata.at(label).type == HELIOS_TYPE_UINT) {
+                    data = globaldata.at(label).global_data_uint.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type uint, but data " + std::string(label) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                // Scalar case for float
+                if (globaldata.at(label).type == HELIOS_TYPE_FLOAT) {
+                    data = globaldata.at(label).global_data_float.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type float, but data " + std::string(label) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                // Scalar case for double
+                if (globaldata.at(label).type == HELIOS_TYPE_DOUBLE) {
+                    data = globaldata.at(label).global_data_double.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type double, but data " + std::string(label) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                // Scalar case for vec2
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC2) {
+                    data = globaldata.at(label).global_data_vec2.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec2, but data " + std::string(label) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                // Scalar case for vec3
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC3) {
+                    data = globaldata.at(label).global_data_vec3.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec3, but data " + std::string(label) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                // Scalar case for vec4
+                if (globaldata.at(label).type == HELIOS_TYPE_VEC4) {
+                    data = globaldata.at(label).global_data_vec4.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type vec4, but data " + std::string(label) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                // Scalar case for int2
+                if (globaldata.at(label).type == HELIOS_TYPE_INT2) {
+                    data = globaldata.at(label).global_data_int2.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int2, but data " + std::string(label) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                // Scalar case for int3
+                if (globaldata.at(label).type == HELIOS_TYPE_INT3) {
+                    data = globaldata.at(label).global_data_int3.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int3, but data " + std::string(label) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                // Scalar case for int4
+                if (globaldata.at(label).type == HELIOS_TYPE_INT4) {
+                    data = globaldata.at(label).global_data_int4.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type int4, but data " + std::string(label) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                // Scalar case for string
+                if (globaldata.at(label).type == HELIOS_TYPE_STRING) {
+                    data = globaldata.at(label).global_data_string.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type string, but data " + std::string(label) + " does not have type string.");
+                }
+            } else if constexpr (std::is_same_v<T, bool>) {
+                // Scalar case for bool
+                if (globaldata.at(label).type == HELIOS_TYPE_BOOL) {
+                    data = globaldata.at(label).global_data_bool.front();
+                } else {
+                    helios_runtime_error("ERROR (Context::getGlobalData): Attempted to get data for type bool, but data " + std::string(label) + " does not have type bool.");
+                }
+            } else {
+                static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                      std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *> ||
+                                      std::is_same_v<T, std::vector<int>> || std::is_same_v<T, std::vector<uint>> || std::is_same_v<T, std::vector<float>> || std::is_same_v<T, std::vector<double>> || std::is_same_v<T, std::vector<vec2>> ||
+                                      std::is_same_v<T, std::vector<vec3>> || std::is_same_v<T, std::vector<vec4>> || std::is_same_v<T, std::vector<int2>> || std::is_same_v<T, std::vector<int3>> || std::is_same_v<T, std::vector<int4>> ||
+                                      std::is_same_v<T, std::vector<std::string>> || std::is_same_v<T, std::vector<bool>>,
+                              "CompoundObject::getGlobalData() was called with an unsupported type.");
+            }
+        }
 
         //! Rename global data
         /**
@@ -4510,160 +3871,6 @@ namespace helios {
          * \param[in] label Name/label associated with data
          */
         void clearGlobalData(const char *label);
-
-        //! Get global data value (scalar integer)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar integer)
-         */
-        void getGlobalData(const char *label, int &data) const;
-
-        //! Get global data (array of integers)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of integers)
-         */
-        void getGlobalData(const char *label, std::vector<int> &data) const;
-
-        //! Get global data value (scalar uint)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar uint)
-         */
-        void getGlobalData(const char *label, uint &data) const;
-
-        //! Get global data (array of uint's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of uint's)
-         */
-        void getGlobalData(const char *label, std::vector<uint> &data) const;
-
-        //! Get global data value (scalar float)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar float)
-         */
-        void getGlobalData(const char *label, float &data) const;
-
-        //! Get global data (array of floats)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of floats)
-         */
-        void getGlobalData(const char *label, std::vector<float> &data) const;
-
-        //! Get global data value (scalar double)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar double)
-         */
-        void getGlobalData(const char *label, double &data) const;
-
-        //! Get global data (array of doubles)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of doubles)
-         */
-        void getGlobalData(const char *label, std::vector<double> &data) const;
-
-        //! Get global data value (scalar vec2)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar vec2)
-         */
-        void getGlobalData(const char *label, helios::vec2 &data) const;
-
-        //! Get global data (array of vec2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of vec2's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::vec2> &data) const;
-
-        //! Get global data value (scalar vec3)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[in] data Global data value (scalar vec3)
-         */
-        void getGlobalData(const char *label, helios::vec3 &data) const;
-
-        //! Get global data (array of vec3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of vec3's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::vec3> &data) const;
-
-        //! Get global data value (scalar vec4)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar vec4)
-         */
-        void getGlobalData(const char *label, helios::vec4 &data) const;
-
-        //! Get global data (array of vec4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of vec4's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::vec4> &data) const;
-
-        //! Get global data value (scalar int2)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar int2)
-         */
-        void getGlobalData(const char *label, helios::int2 &data) const;
-
-        //! Get global data (array of int2's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of int2's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::int2> &data) const;
-
-        //! Get global data value (scalar int3)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar int3)
-         */
-        void getGlobalData(const char *label, helios::int3 &data) const;
-
-        //! Get global data (array of int3's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of int3's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::int3> &data) const;
-
-        //! Get global data value (scalar int4)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar int4)
-         */
-        void getGlobalData(const char *label, helios::int4 &data) const;
-
-        //! Get global data (array of int4's)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of int4's)
-         */
-        void getGlobalData(const char *label, std::vector<helios::int4> &data) const;
-
-        //! Get global data value (scalar string)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Global data value (scalar string)
-         */
-        void getGlobalData(const char *label, std::string &data) const;
-
-        //! Get global data (array of strings)
-        /**
-         * \param[in] label Name/label associated with data
-         * \param[out] data Pointer to global data (array of strings)
-         */
-        void getGlobalData(const char *label, std::vector<std::string> &data) const;
 
         //! Get the Helios data type of global data
         /**
@@ -6221,7 +5428,7 @@ namespace helios {
          * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
          */
-        void writePrimitiveData(std::string filename, const std::vector<std::string> &column_format, bool print_header = false) const;
+        void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header = false) const;
 
         //! Write primitive data to an ASCII text file for selected primitives in the Context
         /**
@@ -6230,7 +5437,7 @@ namespace helios {
          * \param[in] UUIDs Unique universal identifiers for primitives to include when writing data to file.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
          */
-        void writePrimitiveData(std::string filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false) const;
+        void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false) const;
 
         //! Load geometry contained in a Stanford polygon file (.ply). Model will be placed at the origin with no scaling or rotation applied.
         /**
@@ -6854,7 +6061,6 @@ namespace helios {
          */
         [[nodiscard]] std::vector<uint> filterObjectsByData(const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value) const;
     };
-
 
 } // namespace helios
 

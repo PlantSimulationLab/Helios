@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -500,7 +500,7 @@ Running the Model in Dynamic Mode</h2>
 <div class="line"> </div>
 <div class="line">  <span class="comment">//Set the initial stomatal conductance value</span></div>
 <div class="line">  <span class="keywordtype">float</span> gs_initial = 0.2f;</div>
-<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_initial );</div>
+<div class="line">  context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_initial );</div>
 <div class="line"> </div>
 <div class="line">  <span class="keywordtype">float</span> dt = 1; <span class="comment">//timestep (seconds)</span></div>
 <div class="line">  <span class="keywordtype">int</span> Nsteps = 50; <span class="comment">//number of timesteps to run</span></div>
@@ -512,7 +512,7 @@ Running the Model in Dynamic Mode</h2>
 <div class="line"> </div>
 <div class="line">      <span class="comment">//Get and print the stomatal conductance value</span></div>
 <div class="line">      <span class="keywordtype">float</span> gs_dyn;</div>
-<div class="line">      context.<a class="code hl_function" href="classhelios_1_1_context.html#a2144eea981e4030c973287ce2c38315e" title="Get data associated with a primitive element.">getPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_dyn );</div>
+<div class="line">      context.<a class="code hl_function" href="classhelios_1_1_context.html#acafae8c5565a136422f455f6f556e6c5" title="Get data value associated with a primitive element.">getPrimitiveData</a>( UUID, <span class="stringliteral">&quot;moisture_conductance&quot;</span>, gs_dyn );</div>
 <div class="line">      std::cout &lt;&lt; <span class="stringliteral">&quot;Timestep &quot;</span> &lt;&lt; t &lt;&lt; <span class="stringliteral">&quot;: &quot;</span> &lt;&lt; gs_dyn &lt;&lt; std::endl;</div>
 <div class="line"> </div>
 <div class="line">  }</div>

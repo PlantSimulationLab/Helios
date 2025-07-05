@@ -483,7 +483,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             }
         }
 
-        context->setPrimitiveData(UUID, "net_photosynthesis", HELIOS_TYPE_FLOAT, 1, &A);
+        context->setPrimitiveData(UUID, "net_photosynthesis", A);
 
         for (const auto &data: output_prim_data) {
             if (data == "Ci" && model == "farquhar") {

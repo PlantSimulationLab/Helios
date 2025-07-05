@@ -55,6 +55,7 @@ if ( WIN32 )
         set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "${CMAKE_BINARY_DIR}/lib" )
     endforeach(OUTPUTCONFIG)
 endif()
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 cmake_policy(SET CMP0079 NEW)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 

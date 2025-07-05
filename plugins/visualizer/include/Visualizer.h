@@ -44,10 +44,9 @@ int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, ui
  * \param[in] filename Name of the JPEG image file
  * \param[in] width Width of the graphics window in pixels
  * \param[in] height Height of the graphics window in pixels
- * \param[in] window Pointer to the window object
  * \param[in] print_messages [optional] Flag to print output messages to the console
 */
-int write_JPEG_file(const char *filename, uint width, uint height, void *window, bool print_messages = true);
+int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages = true);
 
 //! Write a JPEG image file based on array of pixel data
 /**
@@ -1127,6 +1126,9 @@ private:
 
     //! x- and y- dimensions of colorbar in normalized window coordinates
     helios::vec2 colorbar_size;
+
+    //! UUIDs associated with the current colorbar geometry
+    std::vector<size_t> colorbar_IDs;
 
     //! Buffer objects to hold per-vertex data
     std::vector<GLuint> face_index_buffer, vertex_buffer, uv_buffer;

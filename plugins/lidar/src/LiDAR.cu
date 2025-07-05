@@ -3797,7 +3797,7 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea( helios::Context* cont
         if( prim_vol[p]>=0 ){
             uint gridcell = prim_vol[p];
             total_area.at(gridcell) += context->getPrimitiveArea(UUIDs_all.at(p));
-            context->setPrimitiveData(UUIDs_all.at(p),"gridCell",helios::HELIOS_TYPE_UINT,1,&gridcell);
+            context->setPrimitiveData(UUIDs_all.at(p),"gridCell",gridcell);
         }
     }
 

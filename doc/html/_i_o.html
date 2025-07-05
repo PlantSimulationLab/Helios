@@ -87,7 +87,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.37</span>
+       <span id="projectnumber">&#160;v1.3.38</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -403,7 +403,7 @@ Exporting Project to XML File Format</h1>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
 <div class="line"> </div>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d" title="Write Context geometry and data to XML file for all UUIDs in the context.">writeXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
@@ -422,7 +422,7 @@ Exporting Project to XML File Format</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="ExportASCII"></a>
 Exporting Primitive Data to Text File</h1>
-<p>It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the <a class="el" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData()</a> function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.</p>
+<p>It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the <a class="el" href="classhelios_1_1_context.html#ae98cc7d133238ab7fb79fb6862737eff">helios::Context::writePrimitiveData()</a> function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -432,12 +432,12 @@ Exporting Primitive Data to Text File</h1>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
 <div class="line"> </div>
 <div class="line">    std::string columns{<span class="stringliteral">&quot;somedata&quot;</span>,<span class="stringliteral">&quot;otherdata&quot;</span>};</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844" title="Write primitive data to an ASCII text file for all primitives in the Context.">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ae98cc7d133238ab7fb79fb6862737eff" title="Write primitive data to an ASCII text file for all primitives in the Context.">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file. </p>

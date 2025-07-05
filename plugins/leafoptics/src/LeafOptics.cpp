@@ -180,8 +180,8 @@ void LeafOptics::run(const std::vector<uint> &UUIDs , const LeafOpticsProperties
 
     std::string leaf_reflectivity_label = "leaf_reflectivity_"+label;
     std::string leaf_transmissivity_label = "leaf_transmissivity_"+label;
-    context->setGlobalData(leaf_reflectivity_label.c_str(),HELIOS_TYPE_VEC2,reflectivities_fit.size(),&reflectivities_fit[0]);
-    context->setGlobalData(leaf_transmissivity_label.c_str(),HELIOS_TYPE_VEC2,transmissivities_fit.size(),&transmissivities_fit[0]);
+    context->setGlobalData(leaf_reflectivity_label.c_str(),reflectivities_fit);
+    context->setGlobalData(leaf_transmissivity_label.c_str(),transmissivities_fit);
 
     context->setPrimitiveData( UUIDs, "reflectivity_spectrum", leaf_reflectivity_label);
     context->setPrimitiveData( UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
@@ -195,8 +195,8 @@ void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::stri
 
     std::string leaf_reflectivity_label = "leaf_reflectivity_"+label;
     std::string leaf_transmissivity_label = "leaf_transmissivity_"+label;
-    context->setGlobalData(leaf_reflectivity_label.c_str(),HELIOS_TYPE_VEC2,reflectivities_fit.size(),&reflectivities_fit[0]);
-    context->setGlobalData(leaf_transmissivity_label.c_str(),HELIOS_TYPE_VEC2,transmissivities_fit.size(),&transmissivities_fit[0]);
+    context->setGlobalData(leaf_reflectivity_label.c_str(),reflectivities_fit);
+    context->setGlobalData(leaf_transmissivity_label.c_str(),transmissivities_fit);
 
 }
 

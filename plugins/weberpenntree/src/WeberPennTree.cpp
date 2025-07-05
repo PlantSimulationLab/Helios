@@ -325,13 +325,13 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
   uint flag=1;
   for( size_t i=0; i<UUID_leaf.at(TreeID).size(); i++ ){
-    context->setPrimitiveData(UUID_leaf.at(TreeID).at(i),"twosided_flag",HELIOS_TYPE_UINT,1,&flag);
+    context->setPrimitiveData(UUID_leaf.at(TreeID).at(i),"twosided_flag",flag);
   }
   for( size_t i=0; i<UUID_branch.at(TreeID).size(); i++ ){
-    context->setPrimitiveData(UUID_branch.at(TreeID).at(i),"twosided_flag",HELIOS_TYPE_UINT,1,&flag);
+    context->setPrimitiveData(UUID_branch.at(TreeID).at(i),"twosided_flag",flag);
   }
   for( size_t i=0; i<UUID_trunk.at(TreeID).size(); i++ ){
-    context->setPrimitiveData(UUID_trunk.at(TreeID).at(i),"twosided_flag",HELIOS_TYPE_UINT,1,&flag);
+    context->setPrimitiveData(UUID_trunk.at(TreeID).at(i),"twosided_flag",flag);
   }
 
   return TreeID;

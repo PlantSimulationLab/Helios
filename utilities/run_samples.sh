@@ -95,7 +95,13 @@ while [ $# -gt 0 ]; do
       echo "Error: --log-file requires a file path."
       usage
     fi
-    LOG_FILE="$2"
+    # Use an absolute path for the log file so subsequent
+    # directory changes do not affect where output is written
+    if [[ "$2" = /* ]]; then
+      LOG_FILE="$2"
+    else
+      LOG_FILE="$(pwd)/$2"
+    fi
     shift
     ;;
 

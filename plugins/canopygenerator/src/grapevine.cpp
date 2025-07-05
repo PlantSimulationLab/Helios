@@ -65,7 +65,7 @@ std::vector<std::vector<uint> > CanopyGenerator::addGrapeCluster( vec3 position,
     }
 
     if( enable_element_labels ) {
-        context->setPrimitiveData( UUID, "element_label", "berry");
+        context->setPrimitiveData( flatten(UUID), "element_label", "berry");
     }
 
     return UUID;
