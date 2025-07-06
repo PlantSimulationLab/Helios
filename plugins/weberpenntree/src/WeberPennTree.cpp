@@ -173,6 +173,10 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
   if( base_size > 0 && parameters.BaseSizeV > 0 )
     base_size += getVariation(parameters.BaseSizeV);
 
+  helios::vec2 base_tilt = parameters.BaseTilt;
+  base_tilt.x += getVariation(parameters.BaseTiltV.x);
+  base_tilt.y += getVariation(parameters.BaseTiltV.y);
+
   //Region above trunk base
 
   if( base_splits > 0 ){ //trunk splits at base
@@ -190,7 +194,16 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
     for( uint i=1; i<base_nodes; i++ ){
 
       //nodes.at(i) = nodes.at(i-1) + rotatePoint( make_vec3( 0, 0, length0*(1-parameters.BaseSize)/parameters.nCurveRes.at(0) ), theta, phi );
-      nodes.at(i) = nodes.at(i-1) + make_vec3( 0, 0, length0*base0/float(base_nodes) );
+      nodes.at(i) = make_vec3(
+          i * base_tilt.x / base_nodes,
+          i * base_tilt.y / base_nodes,
+          nodes.at(i-1).z
+        ) +
+        make_vec3(
+          getVariation(parameters.BaseAlignmentV.x),
+          getVariation(parameters.BaseAlignmentV.y),
+          length0*base0/float(base_nodes)
+        );
 
       float y = std::max( 0.f, 1.f-8.f*nodes.at(i).z/length0 );
       float flarez = parameters.Flare*(pow(100.f,y)-1.f)/100.f+1.f;
@@ -233,7 +246,20 @@ uint WeberPennTree::buildTree( const char* treename, helios::vec3 origin, float 
 
       //---- nodes ----//      
 
-      nodes.at(i) = nodes.at(i-1) + rotatePoint( make_vec3( 0, 0, dlength0 ), theta, phi );
+      nodes.at(i) = make_vec3(
+          i * base_tilt.x / parameters.nCurveRes.at(0),
+          i * base_tilt.y / parameters.nCurveRes.at(0),
+          nodes.at(i-1).z
+        ) +
+        rotatePoint(
+          make_vec3(
+            getVariation(parameters.BaseAlignmentV.x),
+            getVariation(parameters.BaseAlignmentV.y),
+            dlength0
+          ),
+          theta,
+          phi
+        );
 
       vec3 current_normal = nodes.at(i)-nodes.at(i-1);
       current_normal.normalize();
@@ -891,6 +917,15 @@ void WeberPennTree::loadXML( const char* filename ){
       }
       params.BaseSplitSizeV = bssv;
     }
+
+    // * Base tilt * //
+    params.BaseTilt = XMLloadvec2(p, "BaseTilt");
+
+    // * Base tilt V * //
+    params.BaseTiltV = XMLloadvec2(p, "BaseTiltV");
+
+    // * Base alignment variation * //
+    params.BaseAlignmentV = XMLloadvec2(p, "BaseAlignmentV");
 
     // * Scale * //
     pugi::xml_node scale_node = p.child("Scale");
