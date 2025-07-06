@@ -1175,6 +1175,9 @@ private:
     //! Function to actually update Context geometry (if needed), which is called by the visualizer before plotting
     void buildContextGeometry_private();
 
+    //! Update only the color data for Context primitives
+    void updateContextPrimitiveColors();
+
     float colorbar_min;
     float colorbar_max;
     std::vector<float> colorbar_ticks;

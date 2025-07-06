@@ -1990,6 +1990,10 @@ void Visualizer::addGridWireFrame(const helios::vec3 &center, const helios::vec3
             UUIDs.push_back(addLine(make_vec3(boxmin.x + i * spacing_x, boxmin.y, boxmin.z + j * spacing_z), make_vec3(boxmin.x + i * spacing_x, boxmax.y, boxmin.z + j * spacing_z), RGB::black, Visualizer::COORDINATES_CARTESIAN));
         }
     }
+
+    if (primitiveColorsNeedUpdate) {
+        updateContextPrimitiveColors();
+    }
 }
 
 void Visualizer::enableColorbar() {
@@ -2130,12 +2134,7 @@ void Visualizer::buildContextGeometry_private() {
         if (contextUUIDs_build.empty()) {
             include_deleted_UUIDs = false;
         }
-        if ( primitiveColorsNeedUpdate ) {
-            //\todo This is a temporary fix to ensure that the colors are update if the visualization mode changes. This is inefficient because it would be better to just update the colors since the geometry has not changed.
-            contextUUIDs_build = context->getAllUUIDs();
-        }else {
-            contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
-        }
+        contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
     }
 
     // Populate contextUUIDs_needupdate based on dirty primitives in the Context
@@ -2163,19 +2162,21 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
-    if (contextUUIDs_needupdate.empty()) {
+    if (contextUUIDs_needupdate.empty() && !primitiveColorsNeedUpdate) {
         return;
     }
 
     if (!colorPrimitivesByData.empty()) {
         if (colorPrimitives_UUIDs.empty()) { // load all primitives
-            for (uint UUID: contextUUIDs_build) {
+            std::vector<uint> all_UUIDs = context->getAllUUIDs();
+            for (uint UUID: all_UUIDs) {
                 if (context->doesPrimitiveExist(UUID)) {
                     colorPrimitives_UUIDs[UUID] = UUID;
                 }
             }
         } else { // double check that primitives exist
-            for (uint UUID: contextUUIDs_build) {
+            std::vector<uint> all_UUIDs = context->getAllUUIDs();
+            for (uint UUID: all_UUIDs) {
                 if (!context->doesPrimitiveExist(UUID)) {
                     auto it = colorPrimitives_UUIDs.find(UUID);
                     colorPrimitives_UUIDs.erase(it);
@@ -2514,6 +2515,198 @@ void Visualizer::buildContextGeometry_private() {
             }
         }
     }
+
+    if (primitiveColorsNeedUpdate) {
+        updateContextPrimitiveColors();
+    }
+}
+
+void Visualizer::updateContextPrimitiveColors() {
+
+    std::vector<size_t> geometry_UUIDs = geometry_handler.getAllGeometryIDs();
+
+    if (geometry_UUIDs.empty()) {
+        primitiveColorsNeedUpdate = false;
+        return;
+    }
+
+    colormap_current.setRange(colorbar_min, colorbar_max);
+
+    if ((!colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty()) && colorbar_min == 0 && colorbar_max == 0) {
+        colorbar_min = (std::numeric_limits<float>::max)();
+        colorbar_max = (std::numeric_limits<float>::lowest)();
+
+        for (auto UUID: geometry_UUIDs) {
+            if (!context->doesPrimitiveExist(static_cast<uint>(UUID))) {
+                continue;
+            }
+
+            float colorValue = -9999.f;
+            if (!colorPrimitivesByData.empty()) {
+                if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
+                    if (context->doesPrimitiveDataExist(static_cast<uint>(UUID), colorPrimitivesByData.c_str())) {
+                        HeliosDataType type = context->getPrimitiveDataType(static_cast<uint>(UUID), colorPrimitivesByData.c_str());
+                        if (type == HELIOS_TYPE_FLOAT) {
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), colorValue);
+                        } else if (type == HELIOS_TYPE_INT) {
+                            int cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_UINT) {
+                            uint cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_DOUBLE) {
+                            double cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else {
+                            colorValue = 0.f;
+                        }
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+            } else if (!colorPrimitivesByObjectData.empty()) {
+                if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
+                    uint ObjID = context->getPrimitiveParentObjectID(static_cast<uint>(UUID));
+                    if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
+                        HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                        if (type == HELIOS_TYPE_FLOAT) {
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
+                        } else if (type == HELIOS_TYPE_INT) {
+                            int cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_UINT) {
+                            uint cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_DOUBLE) {
+                            double cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else {
+                            colorValue = 0.f;
+                        }
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+            }
+
+            if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                colorValue = 0.f;
+            }
+
+            if (colorValue != -9999.f) {
+                if (colorValue < colorbar_min) {
+                    colorbar_min = colorValue;
+                }
+                if (colorValue > colorbar_max) {
+                    colorbar_max = colorValue;
+                }
+            }
+        }
+
+        if (!std::isinf(colorbar_min) && !std::isinf(colorbar_max)) {
+            colormap_current.setRange(colorbar_min, colorbar_max);
+        }
+    }
+
+    for (auto UUID: geometry_UUIDs) {
+        uint uid = static_cast<uint>(UUID);
+        if (!context->doesPrimitiveExist(uid) || !geometry_handler.doesGeometryExist(UUID)) {
+            continue;
+        }
+
+        RGBAcolor color = context->getPrimitiveColorRGBA(uid);
+
+        const std::string texture_file = context->getPrimitiveTextureFile(uid);
+
+        if (!colorPrimitivesByData.empty()) {
+            if (colorPrimitives_UUIDs.find(uid) != colorPrimitives_UUIDs.end()) {
+                float colorValue = 0.f;
+                if (context->doesPrimitiveDataExist(uid, colorPrimitivesByData.c_str())) {
+                    HeliosDataType type = context->getPrimitiveDataType(uid, colorPrimitivesByData.c_str());
+                    if (type == HELIOS_TYPE_FLOAT) {
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), colorValue);
+                    } else if (type == HELIOS_TYPE_INT) {
+                        int cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_UINT) {
+                        uint cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_DOUBLE) {
+                        double cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+
+                if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                    colorValue = 0.f;
+                }
+
+                color = make_RGBAcolor(colormap_current.query(colorValue), 1.f);
+
+                if (!texture_file.empty()) {
+                    geometry_handler.overrideTextureColor(UUID);
+                }
+            } else if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        } else if (!colorPrimitivesByObjectData.empty()) {
+            if (colorPrimitives_UUIDs.find(uid) != colorPrimitives_UUIDs.end()) {
+                float colorValue = 0.f;
+                uint ObjID = context->getPrimitiveParentObjectID(uid);
+                if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
+                    HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                    if (type == HELIOS_TYPE_FLOAT) {
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
+                    } else if (type == HELIOS_TYPE_INT) {
+                        int cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_UINT) {
+                        uint cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_DOUBLE) {
+                        double cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+
+                if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                    colorValue = 0.f;
+                }
+
+                color = make_RGBAcolor(colormap_current.query(colorValue), 1.f);
+
+                if (!texture_file.empty()) {
+                    geometry_handler.overrideTextureColor(UUID);
+                }
+            } else if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        } else {
+            if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        }
+
+        geometry_handler.setColor(UUID, color);
+    }
+
+    primitiveColorsNeedUpdate = false;
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name) {
