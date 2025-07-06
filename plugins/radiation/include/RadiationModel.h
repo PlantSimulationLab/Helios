@@ -945,7 +945,7 @@ public:
     //! Adds all geometric primitives from the Context to OptiX
     /**
      * This function should be called anytime Context geometry is created or modified
-     * \note \ref helios::Context::updateGeometry() must be called before simulation can be run
+     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
      */
     void updateGeometry();
 
@@ -953,23 +953,23 @@ public:
     /**
      * This function should be called anytime Context geometry is created or modified
      * \param[in] UUIDs Vector of universal unique identifiers of Context primitives to be updated
-     * \note \ref helios::Context::updateGeometry() must be called before simulation can be run
+     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
      */
     void updateGeometry(const std::vector<uint> &UUIDs);
 
     //! Run the simulation for a single radiative band
     /**
      * \param[in] label Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref helios::Context::updateGeometry()),
-     * and 3) update radiative properties in the model (see \ref RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
+     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
      */
     void runBand(const std::string &label);
 
     //! Run the simulation for a multiple radiative bands
     /**
      * \param[in] labels Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref helios::Context::updateGeometry()),
-     * and 3) update radiative properties in the model (see \ref RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
+     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
      */
     void runBand(const std::vector<std::string> &labels);
 

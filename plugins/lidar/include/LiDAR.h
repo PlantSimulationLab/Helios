@@ -833,7 +833,7 @@ class LiDARcloud{
   //! Filter scan by imposing a minimum reflectance value
   /**
    * \param[in] minreflectance Miniimum hit point reflectance value
-   * \note If `reflectance' data was not provided for a hit point when calling \ref Scan::addHitPoint(), the point will not be filtered.
+   * \note If `reflectance' data was not provided for a hit point when calling \ref LiDARcloud::addHitPoint(), the point will not be filtered.
   */
   void reflectanceFilter( float minreflectance );
 
@@ -952,7 +952,7 @@ d the last cell's index is Ncells-1.
 
   //! Determine the grid cell in which each hit point resides for the whole point cloud - GPU accelerated version */
   /**
-   * \note This function does not return a value, rather, it set the Scan variable `hit_vol' which is queried by the function `Scan::getHitGridCell()'.
+   * \note This function does not return a value, rather, it sets the Scan variable `hit_vol' which is queried by the function \ref LiDARcloud::getHitGridCell().
    */
   void calculateHitGridCellGPU();
 
