@@ -805,6 +805,9 @@ public:
     //! Make Helios logo watermark visible
     void showWatermark();
 
+    //! Update watermark geometry to match current window size
+    void updateWatermark();
+
     //! Plot current geometry into an interactive graphics window
     std::vector<helios::vec3> plotInteractive();
 
@@ -1101,6 +1104,9 @@ private:
     float lightintensity = 1.f;
 
     bool isWatermarkVisible;
+
+    //! UUID associated with the watermark rectangle
+    size_t watermark_ID;
 
     //! Color of the window background
     helios::RGBcolor backgroundColor;

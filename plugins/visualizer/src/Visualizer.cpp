@@ -435,6 +435,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     primitiveColorsNeedUpdate = false;
 
     isWatermarkVisible = true;
+    watermark_ID = 0;
 
     colorbar_flag = 0;
 
@@ -1045,10 +1046,15 @@ void Visualizer::closeWindow() const {
 
 void Visualizer::hideWatermark() {
     isWatermarkVisible = false;
+    if (watermark_ID != 0) {
+        geometry_handler.deleteGeometry(watermark_ID);
+        watermark_ID = 0;
+    }
 }
 
 void Visualizer::showWatermark() {
     isWatermarkVisible = true;
+    updateWatermark();
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
@@ -2755,11 +2761,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
 
     // Watermark
-    if (isWatermarkVisible) {
-        float hratio = float(Wdisplay) / float(Hdisplay);
-        float width = 0.2389f / 0.8f / hratio;
-        addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
-    }
+    updateWatermark();
 
     transferBufferData();
 
@@ -3305,11 +3307,7 @@ void Visualizer::plotUpdate(bool hide_window) {
     }
 
     // Watermark
-    if (isWatermarkVisible) {
-        float hratio = float(Wdisplay) / float(Hdisplay);
-        float width = 0.2389f / 0.8f / hratio;
-        addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
-    }
+    updateWatermark();
 
     transferBufferData();
 
@@ -3957,7 +3955,28 @@ void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height)
         viz->Hdisplay = static_cast<uint>(height);
         viz->Wframebuffer = static_cast<uint>(fbw);
         viz->Hframebuffer = static_cast<uint>(fbh);
+        viz->updateWatermark();
     }
+}
+
+void Visualizer::updateWatermark() {
+    if (!isWatermarkVisible) {
+        if (watermark_ID != 0) {
+            geometry_handler.deleteGeometry(watermark_ID);
+            watermark_ID = 0;
+        }
+        return;
+    }
+
+    float hratio = float(Wdisplay) / float(Hdisplay);
+    float width = 0.2389f / 0.8f / hratio;
+    if (watermark_ID != 0) {
+        geometry_handler.deleteGeometry(watermark_ID);
+    }
+    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0),
+                                        make_vec2(width, 0.07), make_SphericalCoord(0, 0),
+                                        "plugins/visualizer/textures/Helios_watermark.png",
+                                        COORDINATES_WINDOW_NORMALIZED);
 }
 
 
