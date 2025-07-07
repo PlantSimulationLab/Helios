@@ -367,6 +367,10 @@ void Visualizer::openWindow() {
     }
     glfwMakeContextCurrent(_window);
 
+    // Associate this Visualizer instance with the GLFW window so that
+    // callbacks have access to it.
+    glfwSetWindowUserPointer(_window, this);
+
     // Ensure we can capture the escape key being pressed below
     glfwSetInputMode(_window, GLFW_STICKY_KEYS, GL_TRUE);
 
@@ -390,7 +394,16 @@ void Visualizer::openWindow() {
 
     glfwSetWindowSize(_window, window_width, window_height);
 
-    glfwSetWindowAspectRatio(_window, Wdisplay, Hdisplay);
+    // Allow the window to freely resize so that entering full-screen
+    // results in the framebuffer matching the display resolution.
+    // This prevents the operating system from simply scaling the
+    // window contents, which can skew geometry.
+    glfwSetWindowAspectRatio(_window, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+    // Register callbacks so that window and framebuffer size changes
+    // properly update the internal dimensions used for rendering.
+    glfwSetWindowSizeCallback(_window, Visualizer::windowResizeCallback);
+    glfwSetFramebufferSizeCallback(_window, Visualizer::framebufferResizeCallback);
 
     // Initialize GLEW
     glewExperimental = GL_TRUE; // Needed in core profile
@@ -3914,6 +3927,37 @@ void Shader::setLightIntensity(float lightintensity) const {
 
 void Shader::useShader() const {
     glUseProgram(shaderID);
+}
+
+void Visualizer::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+    if (viz != nullptr) {
+        viz->Wframebuffer = static_cast<uint>(width);
+        viz->Hframebuffer = static_cast<uint>(height);
+    }
+}
+
+void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+    if (viz != nullptr) {
+        int fbw, fbh;
+        glfwGetFramebufferSize(window, &fbw, &fbh);
+        if (fbw != width || fbh != height) {
+            glfwSetWindowSize(window, width, height);
+            fbw = width;
+            fbh = height;
+        }
+        viz->Wdisplay = static_cast<uint>(width);
+        viz->Hdisplay = static_cast<uint>(height);
+        viz->Wframebuffer = static_cast<uint>(fbw);
+        viz->Hframebuffer = static_cast<uint>(fbh);
+    }
 }
 
 

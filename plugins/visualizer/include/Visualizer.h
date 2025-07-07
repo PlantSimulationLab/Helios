@@ -978,6 +978,12 @@ private:
 
     void openWindow();
 
+    //! Callback when the window framebuffer is resized
+    static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
+
+    //! Callback when the window size is changed
+    static void windowResizeCallback(GLFWwindow *window, int width, int height);
+
     void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations);
 
     void render(bool shadow) const;
