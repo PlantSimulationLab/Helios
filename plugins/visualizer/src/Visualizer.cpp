@@ -1049,12 +1049,14 @@ void Visualizer::hideWatermark() {
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
         watermark_ID = 0;
+        transferBufferData();
     }
 }
 
 void Visualizer::showWatermark() {
     isWatermarkVisible = true;
     updateWatermark();
+    transferBufferData();
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
