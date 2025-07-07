@@ -996,6 +996,12 @@ private:
 
     void transferBufferData();
 
+    //! Upload updated vertex and normal data for the specified primitive
+    void uploadPrimitiveVertices(size_t UUID);
+
+    //! Upload updated visibility flag for the specified primitive
+    void uploadPrimitiveVisibility(size_t UUID);
+
     /**
      * \brief Registers a texture file and obtains its unique texture ID.
      *

@@ -1047,16 +1047,18 @@ void Visualizer::closeWindow() const {
 void Visualizer::hideWatermark() {
     isWatermarkVisible = false;
     if (watermark_ID != 0) {
-        geometry_handler.deleteGeometry(watermark_ID);
-        watermark_ID = 0;
-        transferBufferData();
+        geometry_handler.setVisibility(watermark_ID, false);
+        uploadPrimitiveVisibility(watermark_ID);
     }
 }
 
 void Visualizer::showWatermark() {
+    bool need_transfer = (watermark_ID == 0);
     isWatermarkVisible = true;
     updateWatermark();
-    transferBufferData();
+    if (need_transfer && watermark_ID != 0) {
+        transferBufferData();
+    }
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
@@ -2765,8 +2767,6 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     // Watermark
     updateWatermark();
 
-    transferBufferData();
-
     assert(checkerrors());
 
     bool shadow_flag = false;
@@ -3097,6 +3097,48 @@ void Visualizer::transferBufferData() {
     assert(checkerrors());
 }
 
+void Visualizer::uploadPrimitiveVertices(size_t UUID) {
+    const auto &idx = geometry_handler.getIndexMap(UUID);
+    size_t type_ind = std::find(GeometryHandler::all_geometry_types.begin(),
+                                GeometryHandler::all_geometry_types.end(),
+                                idx.geometry_type) -
+                       GeometryHandler::all_geometry_types.begin();
+
+    char vcount = GeometryHandler::getVertexCount(idx.geometry_type);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(type_ind));
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    static_cast<GLintptr>(idx.vertex_index * sizeof(GLfloat)),
+                    static_cast<GLsizeiptr>(vcount * 3 * sizeof(GLfloat)),
+                    geometry_handler.getVertexData_ptr(idx.geometry_type)->data() +
+                        idx.vertex_index);
+
+    glBindBuffer(GL_ARRAY_BUFFER, normal_buffer.at(type_ind));
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    static_cast<GLintptr>(idx.normal_index * sizeof(GLfloat)),
+                    static_cast<GLsizeiptr>(3 * sizeof(GLfloat)),
+                    geometry_handler.getNormalData_ptr(idx.geometry_type)->data() +
+                        idx.normal_index);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void Visualizer::uploadPrimitiveVisibility(size_t UUID) {
+    const auto &idx = geometry_handler.getIndexMap(UUID);
+    size_t type_ind = std::find(GeometryHandler::all_geometry_types.begin(),
+                                GeometryHandler::all_geometry_types.end(),
+                                idx.geometry_type) -
+                       GeometryHandler::all_geometry_types.begin();
+
+    glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(type_ind));
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    static_cast<GLintptr>(idx.visible_index * sizeof(GLbyte)),
+                    static_cast<GLsizeiptr>(sizeof(GLbyte)),
+                    geometry_handler.getVisibilityFlagData_ptr(idx.geometry_type)->data() +
+                        idx.visible_index);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void Visualizer::render(bool shadow) const {
     size_t rectangle_ind = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), GeometryHandler::GEOMETRY_TYPE_RECTANGLE) - GeometryHandler::all_geometry_types.begin();
     size_t triangle_ind = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), GeometryHandler::GEOMETRY_TYPE_TRIANGLE) - GeometryHandler::all_geometry_types.begin();
@@ -3310,8 +3352,6 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     // Watermark
     updateWatermark();
-
-    transferBufferData();
 
     bool shadow_flag = false;
     for (const auto &model: primaryLightingModel) {
@@ -3944,9 +3984,6 @@ void Visualizer::handleWindowResize(int width, int height) {
     Hframebuffer = static_cast<uint>(fbh);
 
     updateWatermark();
-    // Push geometry updates immediately so that onscreen elements resize
-    // correctly while the user is interacting with the window.
-    transferBufferData();
 }
 
 void Visualizer::framebufferResizeCallback(GLFWwindow *glfw_window, int width, int height) {
@@ -3970,28 +4007,40 @@ void Visualizer::windowResizeCallback(GLFWwindow *glfw_window, int width, int he
 }
 
 void Visualizer::updateWatermark() {
+    constexpr float texture_aspect = 675.f / 195.f; // image width / height
+
+    float window_aspect = float(Wframebuffer) / float(Hframebuffer);
+    float width = 0.07f * texture_aspect / window_aspect;
+
+    helios::vec3 center = make_vec3(0.75f * width, 0.95f, 0.f);
+    helios::vec2 size = make_vec2(width, 0.07f);
+
     if (!isWatermarkVisible) {
         if (watermark_ID != 0) {
-            geometry_handler.deleteGeometry(watermark_ID);
-            watermark_ID = 0;
+            geometry_handler.setVisibility(watermark_ID, false);
+            uploadPrimitiveVisibility(watermark_ID);
         }
         return;
     }
 
-    constexpr float texture_aspect = 675.f / 195.f; // image width / height
-
-    // Maintain the watermark texture aspect ratio regardless of the window
-    // aspect ratio. We base the calculation on the framebuffer size so the
-    // watermark scales correctly on high DPI displays.
-    float window_aspect = float(Wframebuffer) / float(Hframebuffer);
-    float width = 0.07f * texture_aspect / window_aspect;
-    if (watermark_ID != 0) {
-        geometry_handler.deleteGeometry(watermark_ID);
+    if (watermark_ID == 0) {
+        watermark_ID = addRectangleByCenter(center, size, make_SphericalCoord(0, 0),
+                                            "plugins/visualizer/textures/Helios_watermark.png",
+                                            COORDINATES_WINDOW_NORMALIZED);
+        transferBufferData();
+        return;
     }
-    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0),
-                                        make_vec2(width, 0.07), make_SphericalCoord(0, 0),
-                                        "plugins/visualizer/textures/Helios_watermark.png",
-                                        COORDINATES_WINDOW_NORMALIZED);
+
+    std::vector<helios::vec3> verts{
+        make_vec3(center.x - 0.5f * size.x, center.y - 0.5f * size.y, 0.f),
+        make_vec3(center.x + 0.5f * size.x, center.y - 0.5f * size.y, 0.f),
+        make_vec3(center.x + 0.5f * size.x, center.y + 0.5f * size.y, 0.f),
+        make_vec3(center.x - 0.5f * size.x, center.y + 0.5f * size.y, 0.f)};
+
+    geometry_handler.setVertices(watermark_ID, verts);
+    geometry_handler.setVisibility(watermark_ID, true);
+    uploadPrimitiveVertices(watermark_ID);
+    uploadPrimitiveVisibility(watermark_ID);
 }
 
 

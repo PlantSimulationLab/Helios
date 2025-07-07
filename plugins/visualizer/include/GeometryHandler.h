@@ -376,6 +376,9 @@ public:
      */
     size_t sampleUUID();
 
+    //! Retrieve internal buffer indices for a primitive
+    [[nodiscard]] const PrimitiveIndexMap &getIndexMap(size_t UUID) const;
+
     constexpr static std::array<VisualizerGeometryType,4> all_geometry_types = {
         GEOMETRY_TYPE_RECTANGLE,
         GEOMETRY_TYPE_TRIANGLE,
