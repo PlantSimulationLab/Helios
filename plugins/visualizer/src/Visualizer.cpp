@@ -3953,8 +3953,10 @@ void Visualizer::framebufferResizeCallback(GLFWwindow *glfw_window, int width, i
     }
     auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(glfw_window));
     if (viz != nullptr) {
-        viz->Wframebuffer = static_cast<uint>(width);
-        viz->Hframebuffer = static_cast<uint>(height);
+        int w = 0;
+        int h = 0;
+        glfwGetWindowSize(glfw_window, &w, &h);
+        viz->handleWindowResize(w, h);
     }
 }
 
