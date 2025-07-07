@@ -3974,12 +3974,13 @@ void Visualizer::updateWatermark() {
         return;
     }
 
-    float hratio = float(Wdisplay) / float(Hdisplay);
+    constexpr float texture_aspect = 675.f / 195.f; // image width / height
+
     // Maintain the watermark texture aspect ratio regardless of the window
-    // aspect ratio. The constant 0.2389 corresponds to the product of the
-    // texture aspect ratio and the desired watermark height (0.07) in
-    // normalized window coordinates.
-    float width = 0.2389f / hratio;
+    // aspect ratio. We base the calculation on the framebuffer size so the
+    // watermark scales correctly on high DPI displays.
+    float window_aspect = float(Wframebuffer) / float(Hframebuffer);
+    float width = 0.07f * texture_aspect / window_aspect;
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
     }
