@@ -2165,14 +2165,15 @@ std::string helios::getFileName(const std::string &filepath) {
 
 std::string helios::getFilePath(const std::string &filepath, bool trailingslash) {
     std::filesystem::path output_path_fs = filepath;
-    std::string output_path = output_path_fs.parent_path().string();
-    if (trailingslash) {
-        if (output_path.find_last_of('/') != output_path.length() - 1) {
-            output_path += "/";
+    std::filesystem::path output_path = output_path_fs.parent_path();
+    std::string out_str = output_path.make_preferred().string();
+    if (trailingslash && !out_str.empty()) {
+        char last = out_str.back();
+        if (last != '/' && last != '\\') {
+            out_str += std::filesystem::path::preferred_separator;
         }
     }
-
-    return output_path;
+    return out_str;
 }
 
 bool helios::validateOutputPath(std::string &output_path, const std::vector<std::string> &allowable_file_extensions) {
@@ -2184,13 +2185,16 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
 
     std::string output_file = output_path_fs.filename().string();
     std::string output_file_ext = output_path_fs.extension().string();
-    std::string output_dir = output_path_fs.parent_path().string();
+    std::string output_dir = output_path_fs.parent_path().make_preferred().string();
 
     if (output_file.empty()) { //path was a directory without a file
 
         // Make sure directory has a trailing slash
-        if (output_dir.find_last_of('/') != output_dir.length() - 1) {
-            output_path += "/";
+        if (!output_dir.empty()) {
+            char last = output_dir.back();
+            if (last != '/' && last != '\\') {
+                output_path += std::filesystem::path::preferred_separator;
+            }
         }
     }
 
