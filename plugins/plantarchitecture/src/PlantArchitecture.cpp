@@ -19,6 +19,16 @@
 
 using namespace helios;
 
+static float clampOffset(int count_per_axis, float offset) {
+    if (count_per_axis > 2) {
+        float denom = 0.5f * float(count_per_axis) - 1.f;
+        if (offset * denom > 1.f) {
+            offset = 1.f / denom;
+        }
+    }
+    return offset;
+}
+
 float PlantArchitecture::interpolateTube(const std::vector<float> &P, const float frac) {
     assert(frac >= 0 && frac <= 1);
     assert(!P.empty());
@@ -931,6 +941,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     leaf_size_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_rotation.resize(phytomer_parameters.petiole.petioles_per_internode);
     int leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
+    float leaflet_offset_val = clampOffset(leaves_per_petiole, phytomer_parameters.leaf.leaflet_offset.val());
     phytomer_parameters.leaf.leaves_per_petiole.resample();
     for (uint petiole = 0; petiole < phytomer_parameters.petiole.petioles_per_internode; petiole++) {
         leaf_size_max.at(petiole).resize(leaves_per_petiole);
@@ -1206,7 +1217,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             float compound_rotation = 0;
             if (leaves_per_petiole > 1) {
-                if (phytomer_parameters.leaf.leaflet_offset.val() == 0) {
+                if (leaflet_offset_val == 0) {
                     float dphi = PI_F / (floor(0.5 * float(leaves_per_petiole - 1)) + 1);
                     compound_rotation = -float(PI_F) + dphi * (leaf + 0.5f);
                 } else {
@@ -1261,9 +1272,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // -- leaf translation -- //
 
             vec3 leaf_base = petiole_vertices.at(petiole).back();
-            if (leaves_per_petiole > 1 && phytomer_parameters.leaf.leaflet_offset.val() > 0) {
+            if (leaves_per_petiole > 1 && leaflet_offset_val > 0) {
                 if (ind_from_tip != 0) {
-                    float offset = (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
+                    float offset = (fabs(ind_from_tip) - 0.5f) * leaflet_offset_val * phytomer_parameters.petiole.length.val();
                     leaf_base = PlantArchitecture::interpolateTube(petiole_vertices.at(petiole), 1.f - offset / phytomer_parameters.petiole.length.val());
                 }
             }
@@ -1398,7 +1409,9 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         }
     }
 
-    for (int fruit = 0; fruit < phytomer_parameters.inflorescence.flowers_per_peduncle.val(); fruit++) {
+    int flowers_per_peduncle = phytomer_parameters.inflorescence.flowers_per_peduncle.val();
+    float flower_offset_val = clampOffset(flowers_per_peduncle, phytomer_parameters.inflorescence.flower_offset.val());
+    for (int fruit = 0; fruit < flowers_per_peduncle; fruit++) {
         uint objID_fruit;
         helios::vec3 fruit_scale;
 
@@ -1434,16 +1447,16 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             phytomer_parameters.inflorescence.flower_prototype_scale.resample();
         }
 
-        float ind_from_tip = fabs(fruit - float(phytomer_parameters.inflorescence.flowers_per_peduncle.val() - 1) / float(phytomer_parameters.petiole.petioles_per_internode));
+        float ind_from_tip = fabs(fruit - float(flowers_per_peduncle - 1) / float(phytomer_parameters.petiole.petioles_per_internode));
 
         context_ptr->scaleObject(objID_fruit, fruit_scale);
 
         // if we have more than one flower/fruit, we need to adjust the base position of the fruit
         vec3 fruit_base = peduncle_vertices.back();
         float frac = 1;
-        if (phytomer_parameters.inflorescence.flowers_per_peduncle.val() > 1 && phytomer_parameters.inflorescence.flower_offset.val() > 0) {
+        if (flowers_per_peduncle > 1 && flower_offset_val > 0) {
             if (ind_from_tip != 0) {
-                float offset = offset = (ind_from_tip - 0.5f) * phytomer_parameters.inflorescence.flower_offset.val() * phytomer_parameters.peduncle.length.val();
+                float offset = (ind_from_tip - 0.5f) * flower_offset_val * phytomer_parameters.peduncle.length.val();
                 if (phytomer_parameters.peduncle.length.val() > 0) {
                     frac = 1.f - offset / phytomer_parameters.peduncle.length.val();
                 }
@@ -1453,9 +1466,9 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
         // if we have more than one flower/fruit, we need to adjust the rotation about the peduncle
         float compound_rotation = 0;
-        if (phytomer_parameters.inflorescence.flowers_per_peduncle.val() > 1) {
-            if (phytomer_parameters.inflorescence.flower_offset.val() == 0) { // flowers/fruit are all at the tip, so just equally distribute them about the azimuth
-                float dphi = PI_F / (floor(0.5 * float(phytomer_parameters.inflorescence.flowers_per_peduncle.val() - 1)) + 1);
+        if (flowers_per_peduncle > 1) {
+            if (flower_offset_val == 0) { // flowers/fruit are all at the tip, so just equally distribute them about the azimuth
+                float dphi = PI_F / (floor(0.5 * float(flowers_per_peduncle - 1)) + 1);
                 compound_rotation = -float(PI_F) + dphi * (fruit + 0.5f);
             } else {
                 compound_rotation = deg2rad(phytomer_parameters.internode.phyllotactic_angle.val()) * float(ind_from_tip) + 2.f * PI_F / float(phytomer_parameters.petiole.petioles_per_internode) * float(fruit);
@@ -1718,13 +1731,15 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
     for (int leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
         float ind_from_tip = float(leaf) - float(leaf_objIDs.at(petiole_index).size() - 1) / 2.f;
 
+        float leaflet_offset_val = clampOffset(int(leaf_objIDs.at(petiole_index).size()), phytomer_parameters.leaf.leaflet_offset.val());
+
         context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), -1 * leaf_bases.at(petiole_index).at(leaf));
         context_ptr->scaleObject(leaf_objIDs.at(petiole_index).at(leaf), delta_scale * make_vec3(1, 1, 1));
         if (ind_from_tip == 0) {
             context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), petiole_vertices.at(petiole_index).back());
             leaf_bases.at(petiole_index).at(leaf) = petiole_vertices.at(petiole_index).back();
         } else {
-            float offset = (fabs(ind_from_tip) - 0.5f) * phytomer_parameters.leaf.leaflet_offset.val() * phytomer_parameters.petiole.length.val();
+            float offset = (fabs(ind_from_tip) - 0.5f) * leaflet_offset_val * phytomer_parameters.petiole.length.val();
             vec3 leaf_base = PlantArchitecture::interpolateTube(petiole_vertices.at(petiole_index), 1.f - offset / phytomer_parameters.petiole.length.val());
             context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), leaf_base);
             leaf_bases.at(petiole_index).at(leaf) = leaf_base;
