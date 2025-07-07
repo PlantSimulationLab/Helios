@@ -987,6 +987,9 @@ private:
     //! Callback when the window size is changed
     static void windowResizeCallback(GLFWwindow *window, int width, int height);
 
+    //! Handle resize events and update internal dimensions
+    void handleWindowResize(int width, int height);
+
     void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations);
 
     void render(bool shadow) const;

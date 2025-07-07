@@ -3927,35 +3927,38 @@ void Shader::useShader() const {
     glUseProgram(shaderID);
 }
 
-void Visualizer::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
+void Visualizer::handleWindowResize(int width, int height) {
     if (width <= 0 || height <= 0) {
         return;
     }
-    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+
+    Wdisplay = static_cast<uint>(width);
+    Hdisplay = static_cast<uint>(height);
+
+    int fbw = width;
+    int fbh = height;
+    glfwGetFramebufferSize(static_cast<GLFWwindow *>(window), &fbw, &fbh);
+    Wframebuffer = static_cast<uint>(fbw);
+    Hframebuffer = static_cast<uint>(fbh);
+
+    updateWatermark();
+}
+
+void Visualizer::framebufferResizeCallback(GLFWwindow *glfw_window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(glfw_window));
     if (viz != nullptr) {
         viz->Wframebuffer = static_cast<uint>(width);
         viz->Hframebuffer = static_cast<uint>(height);
     }
 }
 
-void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height) {
-    if (width <= 0 || height <= 0) {
-        return;
-    }
-    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+void Visualizer::windowResizeCallback(GLFWwindow *glfw_window, int width, int height) {
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(glfw_window));
     if (viz != nullptr) {
-        int fbw, fbh;
-        glfwGetFramebufferSize(window, &fbw, &fbh);
-        if (fbw != width || fbh != height) {
-            glfwSetWindowSize(window, width, height);
-            fbw = width;
-            fbh = height;
-        }
-        viz->Wdisplay = static_cast<uint>(width);
-        viz->Hdisplay = static_cast<uint>(height);
-        viz->Wframebuffer = static_cast<uint>(fbw);
-        viz->Hframebuffer = static_cast<uint>(fbh);
-        viz->updateWatermark();
+        viz->handleWindowResize(width, height);
     }
 }
 
