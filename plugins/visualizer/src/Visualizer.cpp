@@ -3942,6 +3942,9 @@ void Visualizer::handleWindowResize(int width, int height) {
     Hframebuffer = static_cast<uint>(fbh);
 
     updateWatermark();
+    // Push geometry updates immediately so that onscreen elements resize
+    // correctly while the user is interacting with the window.
+    transferBufferData();
 }
 
 void Visualizer::framebufferResizeCallback(GLFWwindow *glfw_window, int width, int height) {
@@ -3972,7 +3975,11 @@ void Visualizer::updateWatermark() {
     }
 
     float hratio = float(Wdisplay) / float(Hdisplay);
-    float width = 0.2389f / 0.8f / hratio;
+    // Maintain the watermark texture aspect ratio regardless of the window
+    // aspect ratio. The constant 0.2389 corresponds to the product of the
+    // texture aspect ratio and the desired watermark height (0.07) in
+    // normalized window coordinates.
+    float width = 0.2389f / hratio;
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
     }
