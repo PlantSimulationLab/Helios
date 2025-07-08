@@ -24,13 +24,13 @@
 
  <table>
  <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value</th></tr>
- <tr><td>radiation\_flux\_PAR</td><td>\f$Q\f$</td><td>W/m<sup>2</sup></td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by \ref RadiationModel plug-in.</td><td>0</td></tr>
- <tr><td>temperature</td><td>\f$T_s\f$</td><td>Kelvin</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Primitive surface temperature.</td><td>Can be computed by \ref EnergyBalanceModel plug-in.</td><td>300 K</td></tr>
- <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
- <tr><td>moisture\_conductance</td><td>\f$g_S\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
- <tr><td>boundarylayer\_conductance**</td><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
- <tr><td>twosided\_flag <td>N/A <td>N/A <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). <td>N/A <td>1 </tr>
- <tr><td>stomatal\_sidedness <td>\f$\zeta\f$ <td>unitless <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly <td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal\_sidedness will be automatically set to 0.<td>N/A <td>0  </tr>
+ <tr><td>radiation\_flux\_PAR</td><td>\f$Q\f$</td><td>W/m<sup>2</sup></td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by \ref RadiationModel plug-in.</td><td>0</td></tr>
+ <tr><td>temperature</td><td>\f$T_s\f$</td><td>Kelvin</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Primitive surface temperature.</td><td>Can be computed by \ref EnergyBalanceModel plug-in.</td><td>300 K</td></tr>
+ <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
+ <tr><td>moisture\_conductance</td><td>\f$g_S\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>boundarylayer\_conductance**</td><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
+ <tr><td>twosided\_flag <td>N/A <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). <td>N/A <td>1 </tr>
+ <tr><td>stomatal\_sidedness <td>\f$\zeta\f$ <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal\_sidedness will be automatically set to 0.<td>N/A <td>0  </tr>
  </table>
 
  \*\*The photosynthesis model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.
@@ -38,16 +38,16 @@
  \subsection PhotoOutputData Default Output Primitive Data
 
  <table>
- <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr><tr><td>net_photosynthesis</td><td>\f$A\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/m<sup>2</sup>-sec</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Net rate of carbon transfer per unit one-sided area.</td></tr>
+ <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr><tr><td>net_photosynthesis</td><td>\f$A\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/m<sup>2</sup>-sec</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Net rate of carbon transfer per unit one-sided area.</td></tr>
  </table>
 
  \subsection PhotoOptionalOutputData Optional Output Primitive Data
 
  <table>
  <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
- <tr><td>Ci</td><td>\f$C_i\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
-  <tr><td>Gamma\_CO2</td><td>\f$\Gamma\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration").</td></tr>
- <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.</td></tr>
+ <tr><td>Ci</td><td>\f$C_i\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
+  <tr><td>Gamma\_CO2</td><td>\f$\Gamma\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration").</td></tr>
+ <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.</td></tr>
  </table>
 
  \section PhotoDescription Introduction

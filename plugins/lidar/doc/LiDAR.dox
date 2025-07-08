@@ -59,7 +59,7 @@
 
  <table>
   <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value</th></tr>
-  <tr><td>reflectivity_lidar</td><td>\f$\rho_l\f$</td><td>unitless</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0</td></tr>
+  <tr><td>reflectivity_lidar</td><td>\f$\rho_l\f$</td><td>unitless</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0</td></tr>
  </table>
 
  \section LiDARbg Background information
