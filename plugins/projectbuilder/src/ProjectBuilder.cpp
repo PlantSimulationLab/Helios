@@ -1890,7 +1890,6 @@ void ProjectBuilder::visualize() {
     io.Fonts->Build();
     // ImGui::PushFont(arial);
     io.FontDefault = arial;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
     // void* window;
@@ -5661,7 +5660,15 @@ void ProjectBuilder::outputConsole() {
     // original buffer at program exit.
     std::streambuf *prev_buf = std::cout.rdbuf();
     std::string buffer = captured_cout.str();
-    ImGui::InputTextMultiline("##console", &buffer[0], buffer.size() + 1, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AllowTabInput);
+    std::size_t buffer_size = buffer.size();
+    if (ImGui::BeginChild("##console", ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar)) {
+        ImGui::TextUnformatted(buffer.c_str());
+        if (buffer_size != last_console_size) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+        ImGui::EndChild();
+    }
+    last_console_size = buffer_size;
     std::cout.rdbuf(prev_buf);
 }
 

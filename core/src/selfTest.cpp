@@ -1171,24 +1171,38 @@ int Context::selfTest(){
 
     std::string filename = "/path/to/.hidden/file/filename";
 
+    std::string expected_path;
+#ifdef _WIN32
+    expected_path = "\\path\\to\\.hidden\\file\\";
+#else
+    expected_path = "/path/to/.hidden/file/";
+#endif
+
+
     std::string ext = getFileExtension(filename);
     std::string name = getFileName(filename);
     std::string stem = getFileStem(filename);
     std::string path = getFilePath(filename,true);
 
-    if( !ext.empty() || name!="filename" || stem!="filename" || path!="/path/to/.hidden/file/" ){
+    if( !ext.empty() || name!="filename" || stem!="filename" || path!=expected_path ){
       std::cerr << "failed: file path parsing functions were not correct." << std::endl;
       error_count++;
     }
 
     filename = ".hidden/path/to/file/filename.ext";
 
+#ifdef _WIN32
+    expected_path = ".hidden\\path\\to\\file";
+#else
+    expected_path = ".hidden/path/to/file";
+#endif
+
     ext = getFileExtension(filename);
     name = getFileName(filename);
     stem = getFileStem(filename);
     path = getFilePath(filename,false);
 
-    if( ext!=".ext" || name!="filename.ext" || stem!="filename" || path!=".hidden/path/to/file" ){
+    if( ext!=".ext" || name!="filename.ext" || stem!="filename" || path!=expected_path ){
       std::cerr << "failed: file path parsing functions were not correct." << std::endl;
       error_count++;
     }

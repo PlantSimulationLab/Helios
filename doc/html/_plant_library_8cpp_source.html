@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -3198,7 +3195,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l03035" name="l03035"></a><span class="lineno"> 3035</span> </div>
 <div class="line"><a id="l03036" name="l03036"></a><span class="lineno"> 3036</span>    <a class="code hl_function" href="class_plant_architecture.html#aae2ece36da6b34572da01f9b6afe9100" title="Breaks the dormancy of all shoots in the specified plant.">breakPlantDormancy</a>(plantID);</div>
 <div class="line"><a id="l03037" name="l03037"></a><span class="lineno"> 3037</span> </div>
-<div class="line"><a id="l03038" name="l03038"></a><span class="lineno"> 3038</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 50, 10, 5, 30, 1000, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03038" name="l03038"></a><span class="lineno"> 3038</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 50, 10, 5, 30, 1000);</div>
 <div class="line"><a id="l03039" name="l03039"></a><span class="lineno"> 3039</span> </div>
 <div class="line"><a id="l03040" name="l03040"></a><span class="lineno"> 3040</span>    plant_instances.at(plantID).max_age = 175;</div>
 <div class="line"><a id="l03041" name="l03041"></a><span class="lineno"> 3041</span> </div>

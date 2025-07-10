@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -249,7 +246,7 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8h_source.html#l00103">103</a> of file <a class="el" href="_stomatal_conductance_model_8h_source.html">StomatalConductanceModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8h_source.html#l00099">99</a> of file <a class="el" href="_stomatal_conductance_model_8h_source.html">StomatalConductanceModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8d0993a2649b696c37c2f24799b1b545" name="a8d0993a2649b696c37c2f24799b1b545"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8d0993a2649b696c37c2f24799b1b545">&#9670;&#160;</a></span>StomatalConductanceModel()</h2>
@@ -304,7 +301,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable output messages to the standard output. </p>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00804">804</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00808">808</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -325,7 +322,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Ensable output messages to the standard output. </p>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00808">808</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00812">812</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -352,7 +349,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00209">209</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00206">206</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +376,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00812">812</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00816">816</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -400,7 +397,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Print a report detailing usage of default input values for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00824">824</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00829">829</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -427,7 +424,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00828">828</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00833">833</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -448,7 +445,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Update the stomatal conductance for all primitives in the context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00338">338</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00331">331</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -475,7 +472,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00342">342</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00335">335</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -507,7 +504,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00350">350</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00343">343</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -534,7 +531,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00346">346</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00339">339</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -582,7 +579,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00193">193</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00190">190</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -614,7 +611,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00200">200</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00197">197</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -646,7 +643,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00327">327</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00320">320</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -684,7 +681,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00332">332</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00325">325</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -711,7 +708,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00314">314</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00307">307</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -743,7 +740,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00320">320</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00313">313</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -770,7 +767,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00154">154</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00151">151</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -802,7 +799,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00160">160</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00157">157</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -829,7 +826,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00180">180</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00177">177</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -861,7 +858,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00186">186</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00183">183</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -888,7 +885,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00141">141</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00138">138</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -920,7 +917,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00147">147</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00144">144</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -947,7 +944,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00167">167</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00164">164</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -979,7 +976,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00173">173</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_stomatal_conductance_model_8cpp_source.html#l00170">170</a> of file <a class="el" href="_stomatal_conductance_model_8cpp_source.html">StomatalConductanceModel.cpp</a>.</p>
 
 </div>
 </div>

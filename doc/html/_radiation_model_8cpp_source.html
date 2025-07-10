@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -869,7 +866,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="foldopen" id="foldopen00638" data-start="{" data-end="}">
 <div class="line"><a id="l00638" name="l00638"></a><span class="lineno"><a class="line" href="class_radiation_model.html#a1b1ae98cd2ba54fb8d1da8d434014e3d">  638</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_radiation_model.html#a1b1ae98cd2ba54fb8d1da8d434014e3d" title="Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of ...">RadiationModel::setDiffuseSpectrum</a>(<span class="keyword">const</span> std::string &amp;band_label, <span class="keyword">const</span> std::string &amp;spectrum_label) {</div>
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span> </div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <a class="code hl_function" href="class_radiation_model.html#a1b1ae98cd2ba54fb8d1da8d434014e3d" title="Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of ...">setDiffuseSpectrum</a>(std::vector&lt;std::string&gt;(band_label), spectrum_label);</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <a class="code hl_function" href="class_radiation_model.html#a1b1ae98cd2ba54fb8d1da8d434014e3d" title="Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of ...">setDiffuseSpectrum</a>(std::vector&lt;std::string&gt;{band_label}, spectrum_label);</div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>}</div>
 </div>
 <div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span> </div>
@@ -1201,13 +1198,13 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="foldopen" id="foldopen00950" data-start="{" data-end="}">
 <div class="line"><a id="l00950" name="l00950"></a><span class="lineno"><a class="line" href="class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f">  950</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f" title="Scale an entire spectrum by a constant factor. Creates new global data for scaled spectrum.">RadiationModel::scaleSpectrum</a>(<span class="keyword">const</span> std::string &amp;existing_global_data_label, <span class="keyword">const</span> std::string &amp;new_global_data_label, <span class="keywordtype">float</span> scale_factor)<span class="keyword"> const </span>{</div>
 <div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span> </div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    std::vector&lt;vec2&gt; spectrum = loadSpectralData(existing_global_data_label);</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    std::vector&lt;helios::vec2&gt; spectrum = loadSpectralData(existing_global_data_label);</div>
 <div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span> </div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>    <span class="keywordflow">for</span> (<a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> &amp;s: spectrum) {</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>    <span class="keywordflow">for</span> (<a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">helios::vec2</a> &amp;s: spectrum) {</div>
 <div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        s.y *= scale_factor;</div>
 <div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    }</div>
 <div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span> </div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    context-&gt;setGlobalData(new_global_data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, spectrum.size(), &amp;spectrum.at(0));</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    context-&gt;setGlobalData(new_global_data_label.c_str(), spectrum);</div>
 <div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>}</div>
 </div>
 <div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span> </div>
@@ -1220,7 +1217,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>        s.y *= scale_factor;</div>
 <div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    }</div>
 <div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span> </div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    context-&gt;setGlobalData(global_data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, spectrum.size(), &amp;spectrum.at(0));</div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    context-&gt;setGlobalData(global_data_label.c_str(), spectrum);</div>
 <div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>}</div>
 </div>
 <div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span> </div>
@@ -1304,7 +1301,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>        }</div>
 <div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>    }</div>
 <div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span> </div>
-<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>    context-&gt;setGlobalData(new_spectrum_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, new_spectrum.size(), &amp;new_spectrum.front());</div>
+<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>    context-&gt;setGlobalData(new_spectrum_label.c_str(), new_spectrum);</div>
 <div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>}</div>
 </div>
 <div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span> </div>
@@ -1719,7 +1716,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l01419" name="l01419"></a><span class="lineno"> 1419</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;val: cameradata) {</div>
 <div class="line"><a id="l01420" name="l01420"></a><span class="lineno"> 1420</span>            val = val / maxval;</div>
 <div class="line"><a id="l01421" name="l01421"></a><span class="lineno"> 1421</span>        }</div>
-<div class="line"><a id="l01422" name="l01422"></a><span class="lineno"> 1422</span>        context-&gt;setGlobalData(global_data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>, cameradata.size(), &amp;cameradata[0]);</div>
+<div class="line"><a id="l01422" name="l01422"></a><span class="lineno"> 1422</span>        context-&gt;setGlobalData(global_data_label.c_str(), cameradata);</div>
 <div class="line"><a id="l01423" name="l01423"></a><span class="lineno"> 1423</span>    }</div>
 <div class="line"><a id="l01424" name="l01424"></a><span class="lineno"> 1424</span> </div>
 <div class="line"><a id="l01425" name="l01425"></a><span class="lineno"> 1425</span>    <a class="code hl_function" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de" title="Write camera data for one or more bands to a JPEG image.">RadiationModel::writeCameraImage</a>(camera, bands, imagefile_base, image_path, frame);</div>
@@ -3125,7 +3122,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l02818" name="l02818"></a><span class="lineno"> 2818</span>            <span class="comment">//                    context-&gt;getPrimitiveData(UUID, prop.c_str(), rho.at(u).at(b));</span></div>
 <div class="line"><a id="l02819" name="l02819"></a><span class="lineno"> 2819</span>            <span class="comment">//                } else {</span></div>
 <div class="line"><a id="l02820" name="l02820"></a><span class="lineno"> 2820</span>            <span class="comment">//                    rho.at(u).at(b) = kappa_default;</span></div>
-<div class="line"><a id="l02821" name="l02821"></a><span class="lineno"> 2821</span>            <span class="comment">//                    context-&gt;setPrimitiveData(UUID, prop.c_str(), helios::HELIOS_TYPE_FLOAT, 1, &amp;kappa_default);</span></div>
+<div class="line"><a id="l02821" name="l02821"></a><span class="lineno"> 2821</span>            <span class="comment">//                    context-&gt;setPrimitiveData(UUID, prop.c_str(), kappa_default);</span></div>
 <div class="line"><a id="l02822" name="l02822"></a><span class="lineno"> 2822</span>            <span class="comment">//                }</span></div>
 <div class="line"><a id="l02823" name="l02823"></a><span class="lineno"> 2823</span>            <span class="comment">//</span></div>
 <div class="line"><a id="l02824" name="l02824"></a><span class="lineno"> 2824</span>            <span class="comment">//                if (rho.at(u).at(b) &lt; 0) {</span></div>
@@ -3152,7 +3149,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l02845" name="l02845"></a><span class="lineno"> 2845</span>            <span class="comment">//                    context-&gt;getPrimitiveData(UUID, prop.c_str(), tau[u]);</span></div>
 <div class="line"><a id="l02846" name="l02846"></a><span class="lineno"> 2846</span>            <span class="comment">//                } else {</span></div>
 <div class="line"><a id="l02847" name="l02847"></a><span class="lineno"> 2847</span>            <span class="comment">//                    tau.at(u).at(b) = sigmas_default;</span></div>
-<div class="line"><a id="l02848" name="l02848"></a><span class="lineno"> 2848</span>            <span class="comment">//                    context-&gt;setPrimitiveData(UUID, prop.c_str(), helios::HELIOS_TYPE_FLOAT, 1, &amp;sigmas_default);</span></div>
+<div class="line"><a id="l02848" name="l02848"></a><span class="lineno"> 2848</span>            <span class="comment">//                    context-&gt;setPrimitiveData(UUID, prop.c_str(), sigmas_default);</span></div>
 <div class="line"><a id="l02849" name="l02849"></a><span class="lineno"> 2849</span>            <span class="comment">//                }</span></div>
 <div class="line"><a id="l02850" name="l02850"></a><span class="lineno"> 2850</span>            <span class="comment">//</span></div>
 <div class="line"><a id="l02851" name="l02851"></a><span class="lineno"> 2851</span>            <span class="comment">//                if (tau.at(u).at(b) &lt; 0) {</span></div>
@@ -4028,7 +4025,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l03718" name="l03718"></a><span class="lineno"> 3718</span>                    camera.second.pixel_data.at(band_labels.at(b)).at(p) = radiation_camera.at(p * Nbands_launch + b);</div>
 <div class="line"><a id="l03719" name="l03719"></a><span class="lineno"> 3719</span>                }</div>
 <div class="line"><a id="l03720" name="l03720"></a><span class="lineno"> 3720</span> </div>
-<div class="line"><a id="l03721" name="l03721"></a><span class="lineno"> 3721</span>                context-&gt;setGlobalData(data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>, camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> * camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>, &amp;camera.second.pixel_data.at(band_labels.at(b))[0]);</div>
+<div class="line"><a id="l03721" name="l03721"></a><span class="lineno"> 3721</span>                context-&gt;setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));</div>
 <div class="line"><a id="l03722" name="l03722"></a><span class="lineno"> 3722</span>            }</div>
 <div class="line"><a id="l03723" name="l03723"></a><span class="lineno"> 3723</span> </div>
 <div class="line"><a id="l03724" name="l03724"></a><span class="lineno"> 3724</span>            <span class="comment">//--- Pixel Labeling Trace ---//</span></div>
@@ -4056,11 +4053,11 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l03746" name="l03746"></a><span class="lineno"> 3746</span> </div>
 <div class="line"><a id="l03747" name="l03747"></a><span class="lineno"> 3747</span>            std::string data_label = <span class="stringliteral">&quot;camera_&quot;</span> + camera_label + <span class="stringliteral">&quot;_pixel_UUID&quot;</span>;</div>
 <div class="line"><a id="l03748" name="l03748"></a><span class="lineno"> 3748</span> </div>
-<div class="line"><a id="l03749" name="l03749"></a><span class="lineno"> 3749</span>            context-&gt;setGlobalData(data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>, camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> * camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>, &amp;camera.second.pixel_label_UUID[0]);</div>
+<div class="line"><a id="l03749" name="l03749"></a><span class="lineno"> 3749</span>            context-&gt;setGlobalData(data_label.c_str(), camera.second.pixel_label_UUID);</div>
 <div class="line"><a id="l03750" name="l03750"></a><span class="lineno"> 3750</span> </div>
 <div class="line"><a id="l03751" name="l03751"></a><span class="lineno"> 3751</span>            data_label = <span class="stringliteral">&quot;camera_&quot;</span> + camera_label + <span class="stringliteral">&quot;_pixel_depth&quot;</span>;</div>
 <div class="line"><a id="l03752" name="l03752"></a><span class="lineno"> 3752</span> </div>
-<div class="line"><a id="l03753" name="l03753"></a><span class="lineno"> 3753</span>            context-&gt;setGlobalData(data_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>, camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#ae14968ab74816df03efc977bb5d7b9c7" title="First element in vector.">x</a> * camera.second.resolution.<a class="code hl_variable" href="structhelios_1_1int2.html#a369861259a6061aa4287f954238e1e21" title="Second element in vector.">y</a>, &amp;camera.second.pixel_depth[0]);</div>
+<div class="line"><a id="l03753" name="l03753"></a><span class="lineno"> 3753</span>            context-&gt;setGlobalData(data_label.c_str(), camera.second.pixel_depth);</div>
 <div class="line"><a id="l03754" name="l03754"></a><span class="lineno"> 3754</span> </div>
 <div class="line"><a id="l03755" name="l03755"></a><span class="lineno"> 3755</span>            cam++;</div>
 <div class="line"><a id="l03756" name="l03756"></a><span class="lineno"> 3756</span>        }</div>
@@ -5258,7 +5255,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l04940" name="l04940"></a><span class="lineno"> 4940</span>            icalsource.at(1).x += 1;</div>
 <div class="line"><a id="l04941" name="l04941"></a><span class="lineno"> 4941</span>            std::string sourcelable = <span class="stringliteral">&quot;Cal_source_&quot;</span> + sourcelabel_raw;</div>
 <div class="line"><a id="l04942" name="l04942"></a><span class="lineno"> 4942</span>            sourcelabels.push_back(sourcelable);</div>
-<div class="line"><a id="l04943" name="l04943"></a><span class="lineno"> 4943</span>            context-&gt;setGlobalData(sourcelable.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, 2, &amp;icalsource[0]);</div>
+<div class="line"><a id="l04943" name="l04943"></a><span class="lineno"> 4943</span>            context-&gt;setGlobalData(sourcelable.c_str(), icalsource);</div>
 <div class="line"><a id="l04944" name="l04944"></a><span class="lineno"> 4944</span>        }</div>
 <div class="line"><a id="l04945" name="l04945"></a><span class="lineno"> 4945</span> </div>
 <div class="line"><a id="l04946" name="l04946"></a><span class="lineno"> 4946</span>        std::vector&lt;vec2&gt; icalcamera(2);</div>
@@ -5267,14 +5264,14 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l04949" name="l04949"></a><span class="lineno"> 4949</span>        icalcamera.at(0).x = wavelengths.at(iw);</div>
 <div class="line"><a id="l04950" name="l04950"></a><span class="lineno"> 4950</span>        icalcamera.at(1).x = wavelengths.at(iw) + 1;</div>
 <div class="line"><a id="l04951" name="l04951"></a><span class="lineno"> 4951</span>        std::string camlable = <span class="stringliteral">&quot;Cal_cameraresponse&quot;</span>;</div>
-<div class="line"><a id="l04952" name="l04952"></a><span class="lineno"> 4952</span>        context-&gt;setGlobalData(camlable.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, 2, &amp;icalcamera[0]);</div>
+<div class="line"><a id="l04952" name="l04952"></a><span class="lineno"> 4952</span>        context-&gt;setGlobalData(camlable.c_str(), icalcamera);</div>
 <div class="line"><a id="l04953" name="l04953"></a><span class="lineno"> 4953</span> </div>
 <div class="line"><a id="l04954" name="l04954"></a><span class="lineno"> 4954</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span> objectpair: cameracalibration-&gt;processedspectra.at(<span class="stringliteral">&quot;object&quot;</span>)) {</div>
 <div class="line"><a id="l04955" name="l04955"></a><span class="lineno"> 4955</span>            std::vector&lt;vec2&gt; spectrum_obj;</div>
 <div class="line"><a id="l04956" name="l04956"></a><span class="lineno"> 4956</span>            spectrum_obj.push_back(objectpair.second.at(iw));</div>
 <div class="line"><a id="l04957" name="l04957"></a><span class="lineno"> 4957</span>            spectrum_obj.push_back(objectpair.second.at(iw));</div>
 <div class="line"><a id="l04958" name="l04958"></a><span class="lineno"> 4958</span>            spectrum_obj.at(1).x += 1;</div>
-<div class="line"><a id="l04959" name="l04959"></a><span class="lineno"> 4959</span>            context-&gt;setGlobalData(objectpair.first.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>, 2, &amp;spectrum_obj[0]);</div>
+<div class="line"><a id="l04959" name="l04959"></a><span class="lineno"> 4959</span>            context-&gt;setGlobalData(objectpair.first.c_str(), spectrum_obj);</div>
 <div class="line"><a id="l04960" name="l04960"></a><span class="lineno"> 4960</span>        }</div>
 <div class="line"><a id="l04961" name="l04961"></a><span class="lineno"> 4961</span> </div>
 <div class="line"><a id="l04962" name="l04962"></a><span class="lineno"> 4962</span>        <a class="code hl_function" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054" title="Add a spectral radiation band to the model.">RadiationModel::addRadiationBand</a>(wavelengthlabel, std::stof(wavelengthlabel), std::stof(wavelengthlabel) + 1);</div>
@@ -5995,7 +5992,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l05657" name="l05657"></a><span class="lineno"> 5657</span>                cameradata.at(i) = padvalues.at(b);</div>
 <div class="line"><a id="l05658" name="l05658"></a><span class="lineno"> 5658</span>            }</div>
 <div class="line"><a id="l05659" name="l05659"></a><span class="lineno"> 5659</span>        }</div>
-<div class="line"><a id="l05660" name="l05660"></a><span class="lineno"> 5660</span>        context-&gt;setGlobalData(image_value_label.c_str(), <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>, cameradata.size(), &amp;cameradata[0]);</div>
+<div class="line"><a id="l05660" name="l05660"></a><span class="lineno"> 5660</span>        context-&gt;setGlobalData(image_value_label.c_str(), cameradata);</div>
 <div class="line"><a id="l05661" name="l05661"></a><span class="lineno"> 5661</span>    }</div>
 <div class="line"><a id="l05662" name="l05662"></a><span class="lineno"> 5662</span>}</div>
 </div>
@@ -6119,7 +6116,7 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l05776" name="l05776"></a><span class="lineno"> 5776</span>}</div>
 <div class="line"><a id="l05777" name="l05777"></a><span class="lineno"> 5777</span> </div>
 <div class="foldopen" id="foldopen05778" data-start="{" data-end="}">
-<div class="line"><a id="l05778" name="l05778"></a><span class="lineno"><a class="line" href="class_radiation_model.html#aa5a066898eb6cfe59f91839c08cbf631"> 5778</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_radiation_model.html#aa5a066898eb6cfe59f91839c08cbf631" title="Apply a digital camera-like processing pipeline to the camera image.">RadiationModel::applyImageProcessingPipeline</a>(<span class="keyword">const</span> std::string &amp;cameralabel, <span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">bool</span> apply_HDR_toning ) {</div>
+<div class="line"><a id="l05778" name="l05778"></a><span class="lineno"><a class="line" href="class_radiation_model.html#a34166a6372732ae246bd57b63647ecf4"> 5778</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_radiation_model.html#a34166a6372732ae246bd57b63647ecf4" title="Apply a digital camera-like processing pipeline to the camera image.">RadiationModel::applyImageProcessingPipeline</a>(<span class="keyword">const</span> std::string &amp;cameralabel, <span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> saturation_adjustment, <span class="keywordtype">float</span> brightness_adjustment, <span class="keywordtype">float</span> contrast_adjustment) {</div>
 <div class="line"><a id="l05779" name="l05779"></a><span class="lineno"> 5779</span> </div>
 <div class="line"><a id="l05780" name="l05780"></a><span class="lineno"> 5780</span>    <span class="keywordflow">if</span> (cameras.find(cameralabel) == cameras.end()) {</div>
 <div class="line"><a id="l05781" name="l05781"></a><span class="lineno"> 5781</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationModel::applyImageProcessingPipeline): Camera &#39;&quot;</span> + cameralabel + <span class="stringliteral">&quot;&#39; does not exist.&quot;</span>);</div>
@@ -6138,455 +6135,345 @@ $(function(){initNavTree('_radiation_model_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l05794" name="l05794"></a><span class="lineno"> 5794</span> </div>
 <div class="line"><a id="l05795" name="l05795"></a><span class="lineno"> 5795</span>    camera.<a class="code hl_function" href="struct_radiation_camera.html#a708a4f725d65ddb94359a5f52e53aaee" title="Apply auto-white balancing to image data based on Minkowski mean.">whiteBalance</a>(red_band_label, green_band_label, blue_band_label, 5.0);</div>
 <div class="line"><a id="l05796" name="l05796"></a><span class="lineno"> 5796</span> </div>
-<div class="line"><a id="l05797" name="l05797"></a><span class="lineno"> 5797</span>    <span class="keywordflow">if</span> ( apply_HDR_toning ) {</div>
-<div class="line"><a id="l05798" name="l05798"></a><span class="lineno"> 5798</span>        camera.<a class="code hl_function" href="struct_radiation_camera.html#aea7695260befc781d2378511f3b85806" title="Applies HDR toning to the specified color bands based on the local adaptation method.">HDRToning</a>( red_band_label, green_band_label, blue_band_label );</div>
-<div class="line"><a id="l05799" name="l05799"></a><span class="lineno"> 5799</span>    }<span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l05800" name="l05800"></a><span class="lineno"> 5800</span>        camera.<a class="code hl_function" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49" title="Apply image gain.">applyGain</a>(red_band_label, green_band_label, blue_band_label, 0.9f);</div>
-<div class="line"><a id="l05801" name="l05801"></a><span class="lineno"> 5801</span>    }</div>
-<div class="line"><a id="l05802" name="l05802"></a><span class="lineno"> 5802</span> </div>
-<div class="line"><a id="l05803" name="l05803"></a><span class="lineno"> 5803</span>    camera.<a class="code hl_function" href="struct_radiation_camera.html#a1775a8a965d84eafef6fee9f0e7e3b9a" title="Apply the color correction matrix to image data.">applyCCM</a>(red_band_label, green_band_label, blue_band_label);</div>
+<div class="line"><a id="l05797" name="l05797"></a><span class="lineno"> 5797</span>    camera.<a class="code hl_function" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49" title="Apply image gain.">applyGain</a>(red_band_label, green_band_label, blue_band_label, 0.9f);</div>
+<div class="line"><a id="l05798" name="l05798"></a><span class="lineno"> 5798</span> </div>
+<div class="line"><a id="l05799" name="l05799"></a><span class="lineno"> 5799</span>    camera.<a class="code hl_function" href="struct_radiation_camera.html#a36452d0b507309680c794c0607e39fc4" title="Performs global histogram equalization on the specified color bands.">globalHistogramEqualization</a>(red_band_label, green_band_label, blue_band_label);</div>
+<div class="line"><a id="l05800" name="l05800"></a><span class="lineno"> 5800</span> </div>
+<div class="line"><a id="l05801" name="l05801"></a><span class="lineno"> 5801</span>    <span class="keywordflow">if</span> ( saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {</div>
+<div class="line"><a id="l05802" name="l05802"></a><span class="lineno"> 5802</span>        camera.<a class="code hl_function" href="struct_radiation_camera.html#a68674e96b32dfc81d502d5c254c4bb43" title="Applies HDR toning to the specified color bands based on the local adaptation method.">adjustSBC</a>(red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);</div>
+<div class="line"><a id="l05803" name="l05803"></a><span class="lineno"> 5803</span>    }</div>
 <div class="line"><a id="l05804" name="l05804"></a><span class="lineno"> 5804</span> </div>
-<div class="line"><a id="l05805" name="l05805"></a><span class="lineno"> 5805</span>    <span class="comment">// camera.gammaCompress(red_band_label, green_band_label, blue_band_label);</span></div>
+<div class="line"><a id="l05805" name="l05805"></a><span class="lineno"> 5805</span>    <span class="comment">//camera.applyCCM(red_band_label, green_band_label, blue_band_label);</span></div>
 <div class="line"><a id="l05806" name="l05806"></a><span class="lineno"> 5806</span> </div>
-<div class="line"><a id="l05807" name="l05807"></a><span class="lineno"> 5807</span>}</div>
+<div class="line"><a id="l05807" name="l05807"></a><span class="lineno"> 5807</span>    <span class="comment">// camera.gammaCompress(red_band_label, green_band_label, blue_band_label);</span></div>
+<div class="line"><a id="l05808" name="l05808"></a><span class="lineno"> 5808</span>}</div>
 </div>
-<div class="line"><a id="l05808" name="l05808"></a><span class="lineno"> 5808</span> </div>
-<div class="foldopen" id="foldopen05809" data-start="{" data-end="}">
-<div class="line"><a id="l05809" name="l05809"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e"> 5809</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e" title="Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0....">RadiationCamera::normalizePixels</a>() {</div>
-<div class="line"><a id="l05810" name="l05810"></a><span class="lineno"> 5810</span> </div>
-<div class="line"><a id="l05811" name="l05811"></a><span class="lineno"> 5811</span>    <span class="keywordtype">float</span> min_P = (std::numeric_limits&lt;float&gt;::max)();</div>
-<div class="line"><a id="l05812" name="l05812"></a><span class="lineno"> 5812</span>    <span class="keywordtype">float</span> max_P = 0.0f;</div>
-<div class="line"><a id="l05813" name="l05813"></a><span class="lineno"> 5813</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;[channel_label, data]: pixel_data) {</div>
-<div class="line"><a id="l05814" name="l05814"></a><span class="lineno"> 5814</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> v: data) {</div>
-<div class="line"><a id="l05815" name="l05815"></a><span class="lineno"> 5815</span>            <span class="keywordflow">if</span> (v &lt; min_P) {</div>
-<div class="line"><a id="l05816" name="l05816"></a><span class="lineno"> 5816</span>                min_P = v;</div>
-<div class="line"><a id="l05817" name="l05817"></a><span class="lineno"> 5817</span>            }</div>
-<div class="line"><a id="l05818" name="l05818"></a><span class="lineno"> 5818</span>            <span class="keywordflow">if</span> (v &gt; max_P) {</div>
-<div class="line"><a id="l05819" name="l05819"></a><span class="lineno"> 5819</span>                max_P = v;</div>
-<div class="line"><a id="l05820" name="l05820"></a><span class="lineno"> 5820</span>            }</div>
-<div class="line"><a id="l05821" name="l05821"></a><span class="lineno"> 5821</span>        }</div>
-<div class="line"><a id="l05822" name="l05822"></a><span class="lineno"> 5822</span>    }</div>
-<div class="line"><a id="l05823" name="l05823"></a><span class="lineno"> 5823</span> </div>
-<div class="line"><a id="l05824" name="l05824"></a><span class="lineno"> 5824</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel_label, data]: pixel_data) {</div>
-<div class="line"><a id="l05825" name="l05825"></a><span class="lineno"> 5825</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
-<div class="line"><a id="l05826" name="l05826"></a><span class="lineno"> 5826</span>            v = (v - min_P) / (max_P - min_P); <span class="comment">// Normalize to [0, 1]</span></div>
-<div class="line"><a id="l05827" name="l05827"></a><span class="lineno"> 5827</span>        }</div>
-<div class="line"><a id="l05828" name="l05828"></a><span class="lineno"> 5828</span>    }</div>
-<div class="line"><a id="l05829" name="l05829"></a><span class="lineno"> 5829</span>}</div>
+<div class="line"><a id="l05809" name="l05809"></a><span class="lineno"> 5809</span> </div>
+<div class="foldopen" id="foldopen05810" data-start="{" data-end="}">
+<div class="line"><a id="l05810" name="l05810"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e"> 5810</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#abd534b27c7cc19902621b12b8bdcc97e" title="Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0....">RadiationCamera::normalizePixels</a>() {</div>
+<div class="line"><a id="l05811" name="l05811"></a><span class="lineno"> 5811</span> </div>
+<div class="line"><a id="l05812" name="l05812"></a><span class="lineno"> 5812</span>    <span class="keywordtype">float</span> min_P = (std::numeric_limits&lt;float&gt;::max)();</div>
+<div class="line"><a id="l05813" name="l05813"></a><span class="lineno"> 5813</span>    <span class="keywordtype">float</span> max_P = 0.0f;</div>
+<div class="line"><a id="l05814" name="l05814"></a><span class="lineno"> 5814</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;[channel_label, data]: pixel_data) {</div>
+<div class="line"><a id="l05815" name="l05815"></a><span class="lineno"> 5815</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> v: data) {</div>
+<div class="line"><a id="l05816" name="l05816"></a><span class="lineno"> 5816</span>            <span class="keywordflow">if</span> (v &lt; min_P) {</div>
+<div class="line"><a id="l05817" name="l05817"></a><span class="lineno"> 5817</span>                min_P = v;</div>
+<div class="line"><a id="l05818" name="l05818"></a><span class="lineno"> 5818</span>            }</div>
+<div class="line"><a id="l05819" name="l05819"></a><span class="lineno"> 5819</span>            <span class="keywordflow">if</span> (v &gt; max_P) {</div>
+<div class="line"><a id="l05820" name="l05820"></a><span class="lineno"> 5820</span>                max_P = v;</div>
+<div class="line"><a id="l05821" name="l05821"></a><span class="lineno"> 5821</span>            }</div>
+<div class="line"><a id="l05822" name="l05822"></a><span class="lineno"> 5822</span>        }</div>
+<div class="line"><a id="l05823" name="l05823"></a><span class="lineno"> 5823</span>    }</div>
+<div class="line"><a id="l05824" name="l05824"></a><span class="lineno"> 5824</span> </div>
+<div class="line"><a id="l05825" name="l05825"></a><span class="lineno"> 5825</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel_label, data]: pixel_data) {</div>
+<div class="line"><a id="l05826" name="l05826"></a><span class="lineno"> 5826</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
+<div class="line"><a id="l05827" name="l05827"></a><span class="lineno"> 5827</span>            v = (v - min_P) / (max_P - min_P); <span class="comment">// Normalize to [0, 1]</span></div>
+<div class="line"><a id="l05828" name="l05828"></a><span class="lineno"> 5828</span>        }</div>
+<div class="line"><a id="l05829" name="l05829"></a><span class="lineno"> 5829</span>    }</div>
+<div class="line"><a id="l05830" name="l05830"></a><span class="lineno"> 5830</span>}</div>
 </div>
-<div class="line"><a id="l05830" name="l05830"></a><span class="lineno"> 5830</span> </div>
-<div class="foldopen" id="foldopen05831" data-start="{" data-end="}">
-<div class="line"><a id="l05831" name="l05831"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a21d338461c81fca6a3da4ca5d1d12ed9"> 5831</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a21d338461c81fca6a3da4ca5d1d12ed9" title="Applies a bilateral filter to the input data.">RadiationCamera::bilateralFilter</a>(<span class="keyword">const</span> std::vector&lt;float&gt;&amp; in, std::vector&lt;float&gt;&amp; out, <span class="keywordtype">int</span> w, <span class="keywordtype">int</span> h, <span class="keywordtype">float</span> ss, <span class="keywordtype">float</span> sr) {</div>
-<div class="line"><a id="l05832" name="l05832"></a><span class="lineno"> 5832</span>    <span class="keywordtype">int</span> radius = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(ceil(2 * ss));</div>
-<div class="line"><a id="l05833" name="l05833"></a><span class="lineno"> 5833</span>    out.assign(w * h, 0.0f);</div>
-<div class="line"><a id="l05834" name="l05834"></a><span class="lineno"> 5834</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> ss_2_sq = 2.f*ss*ss; <span class="keyword">const</span> <span class="keywordtype">float</span> sr_2_sq = 2.f*sr*sr;</div>
-<div class="line"><a id="l05835" name="l05835"></a><span class="lineno"> 5835</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> y=0; y&lt;h; ++y) <span class="keywordflow">for</span> (<span class="keywordtype">int</span> x=0; x&lt;w; ++x) {</div>
-<div class="line"><a id="l05836" name="l05836"></a><span class="lineno"> 5836</span>        <span class="keywordtype">float</span> center_v = in[y*w+x]; <span class="keywordtype">float</span> <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>=0.f; <span class="keywordtype">float</span> Wp=0.f;</div>
-<div class="line"><a id="l05837" name="l05837"></a><span class="lineno"> 5837</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j=-radius; j&lt;=radius; ++j) <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i=-radius; i&lt;=radius; ++i) {</div>
-<div class="line"><a id="l05838" name="l05838"></a><span class="lineno"> 5838</span>            <span class="keywordtype">int</span> nx=x+i, ny=y+j;</div>
-<div class="line"><a id="l05839" name="l05839"></a><span class="lineno"> 5839</span>            <span class="keywordflow">if</span> (nx&gt;=0 &amp;&amp; nx&lt;w &amp;&amp; ny&gt;=0 &amp;&amp; ny&lt;h) {</div>
-<div class="line"><a id="l05840" name="l05840"></a><span class="lineno"> 5840</span>                <span class="keywordtype">float</span> v = in[ny*w+nx];</div>
-<div class="line"><a id="l05841" name="l05841"></a><span class="lineno"> 5841</span>                <span class="keywordtype">float</span> w_s = exp(-(i*i+j*j)/ss_2_sq);</div>
-<div class="line"><a id="l05842" name="l05842"></a><span class="lineno"> 5842</span>                <span class="keywordtype">float</span> w_r = exp(-((v-center_v)*(v-center_v))/sr_2_sq);</div>
-<div class="line"><a id="l05843" name="l05843"></a><span class="lineno"> 5843</span>                <span class="keywordtype">float</span> weight = w_s * w_r;</div>
-<div class="line"><a id="l05844" name="l05844"></a><span class="lineno"> 5844</span>                <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a> += v * weight; Wp += weight;</div>
-<div class="line"><a id="l05845" name="l05845"></a><span class="lineno"> 5845</span>            }</div>
-<div class="line"><a id="l05846" name="l05846"></a><span class="lineno"> 5846</span>        }</div>
-<div class="line"><a id="l05847" name="l05847"></a><span class="lineno"> 5847</span>        out[y*w+x] = <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>/Wp;</div>
-<div class="line"><a id="l05848" name="l05848"></a><span class="lineno"> 5848</span>    }</div>
-<div class="line"><a id="l05849" name="l05849"></a><span class="lineno"> 5849</span>}</div>
-</div>
+<div class="line"><a id="l05831" name="l05831"></a><span class="lineno"> 5831</span> </div>
+<div class="foldopen" id="foldopen05832" data-start="{" data-end="}">
+<div class="line"><a id="l05832" name="l05832"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a090aa842e322551a73e45295490f0e40"> 5832</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a090aa842e322551a73e45295490f0e40" title="Apply auto-exposure scaling to image data to scale the average luminance to a target value.">RadiationCamera::scaleToGreyTarget</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> target) {</div>
+<div class="line"><a id="l05833" name="l05833"></a><span class="lineno"> 5833</span> </div>
+<div class="line"><a id="l05834" name="l05834"></a><span class="lineno"> 5834</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l05835" name="l05835"></a><span class="lineno"> 5835</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
+<div class="line"><a id="l05836" name="l05836"></a><span class="lineno"> 5836</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::scaleToGreyTarget): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l05837" name="l05837"></a><span class="lineno"> 5837</span>    }</div>
+<div class="line"><a id="l05838" name="l05838"></a><span class="lineno"> 5838</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l05839" name="l05839"></a><span class="lineno"> 5839</span> </div>
+<div class="line"><a id="l05840" name="l05840"></a><span class="lineno"> 5840</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
+<div class="line"><a id="l05841" name="l05841"></a><span class="lineno"> 5841</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
+<div class="line"><a id="l05842" name="l05842"></a><span class="lineno"> 5842</span> </div>
+<div class="line"><a id="l05843" name="l05843"></a><span class="lineno"> 5843</span>    <span class="keywordtype">double</span> logSum = 0.0;</div>
+<div class="line"><a id="l05844" name="l05844"></a><span class="lineno"> 5844</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l05845" name="l05845"></a><span class="lineno"> 5845</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l05846" name="l05846"></a><span class="lineno"> 5846</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
+<div class="line"><a id="l05847" name="l05847"></a><span class="lineno"> 5847</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
+<div class="line"><a id="l05848" name="l05848"></a><span class="lineno"> 5848</span>        logSum += std::log(luminance(data_red[i], data_green[i], data_blue[i]) + eps);</div>
+<div class="line"><a id="l05849" name="l05849"></a><span class="lineno"> 5849</span>    }</div>
 <div class="line"><a id="l05850" name="l05850"></a><span class="lineno"> 5850</span> </div>
-<div class="foldopen" id="foldopen05851" data-start="{" data-end="}">
-<div class="line"><a id="l05851" name="l05851"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a76ad26befb647e0bcb281a1ef7b3c73c"> 5851</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a76ad26befb647e0bcb281a1ef7b3c73c" title="Applies a fast bilateral filter to the input data.">RadiationCamera::fastBilateralFilter</a>(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;in, std::vector&lt;float&gt; &amp;out, <span class="keywordtype">int</span> w, <span class="keywordtype">int</span> h, <span class="keywordtype">float</span> ss, <span class="keywordtype">float</span> sr, <span class="keywordtype">int</span> df) {</div>
-<div class="line"><a id="l05852" name="l05852"></a><span class="lineno"> 5852</span>    <span class="keywordtype">int</span> sw = w / df, sh = h / df;</div>
-<div class="line"><a id="l05853" name="l05853"></a><span class="lineno"> 5853</span>    std::vector&lt;float&gt; small_in;</div>
-<div class="line"><a id="l05854" name="l05854"></a><span class="lineno"> 5854</span>    <a class="code hl_function" href="struct_radiation_camera.html#a44844c9818c575efdd7ade4f784662a2" title="Resizes a source image to the specified dimensions.">resizeImage</a>(in, small_in, w, h, sw, sh);</div>
-<div class="line"><a id="l05855" name="l05855"></a><span class="lineno"> 5855</span>    std::vector&lt;float&gt; small_out;</div>
-<div class="line"><a id="l05856" name="l05856"></a><span class="lineno"> 5856</span>    <a class="code hl_function" href="struct_radiation_camera.html#a21d338461c81fca6a3da4ca5d1d12ed9" title="Applies a bilateral filter to the input data.">bilateralFilter</a>(small_in, small_out, sw, sh, ss / df, sr);</div>
-<div class="line"><a id="l05857" name="l05857"></a><span class="lineno"> 5857</span>    <a class="code hl_function" href="struct_radiation_camera.html#a44844c9818c575efdd7ade4f784662a2" title="Resizes a source image to the specified dimensions.">resizeImage</a>(small_out, out, sw, sh, w, h);</div>
-<div class="line"><a id="l05858" name="l05858"></a><span class="lineno"> 5858</span>}</div>
+<div class="line"><a id="l05851" name="l05851"></a><span class="lineno"> 5851</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> Llog = std::exp(logSum / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(N));</div>
+<div class="line"><a id="l05852" name="l05852"></a><span class="lineno"> 5852</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> k = target / Llog;</div>
+<div class="line"><a id="l05853" name="l05853"></a><span class="lineno"> 5853</span> </div>
+<div class="line"><a id="l05854" name="l05854"></a><span class="lineno"> 5854</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
+<div class="line"><a id="l05855" name="l05855"></a><span class="lineno"> 5855</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
+<div class="line"><a id="l05856" name="l05856"></a><span class="lineno"> 5856</span>            v *= k;</div>
+<div class="line"><a id="l05857" name="l05857"></a><span class="lineno"> 5857</span>        }</div>
+<div class="line"><a id="l05858" name="l05858"></a><span class="lineno"> 5858</span>    }</div>
+<div class="line"><a id="l05859" name="l05859"></a><span class="lineno"> 5859</span>}</div>
 </div>
-<div class="line"><a id="l05859" name="l05859"></a><span class="lineno"> 5859</span> </div>
-<div class="line"><a id="l05860" name="l05860"></a><span class="lineno"> 5860</span><span class="keywordtype">void</span> RadiationCamera::gaussianBlur(<span class="keyword">const</span> std::vector&lt;float&gt;&amp; in, std::vector&lt;float&gt;&amp; out, <span class="keywordtype">int</span> w, <span class="keywordtype">int</span> h, <span class="keywordtype">float</span> sigma) {</div>
-<div class="line"><a id="l05861" name="l05861"></a><span class="lineno"> 5861</span>    <span class="keywordtype">int</span> radius = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(ceil(2 * sigma));</div>
-<div class="line"><a id="l05862" name="l05862"></a><span class="lineno"> 5862</span>    out.assign(w*h, 0.f);</div>
-<div class="line"><a id="l05863" name="l05863"></a><span class="lineno"> 5863</span>    std::vector&lt;float&gt; temp(w*h);</div>
-<div class="line"><a id="l05864" name="l05864"></a><span class="lineno"> 5864</span>    <span class="comment">// Horizontal pass</span></div>
-<div class="line"><a id="l05865" name="l05865"></a><span class="lineno"> 5865</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> y=0; y&lt;h; ++y) <span class="keywordflow">for</span> (<span class="keywordtype">int</span> x=0; x&lt;w; ++x) {</div>
-<div class="line"><a id="l05866" name="l05866"></a><span class="lineno"> 5866</span>        <span class="keywordtype">float</span> <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>=0.f, Wp=0.f;</div>
-<div class="line"><a id="l05867" name="l05867"></a><span class="lineno"> 5867</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i=-radius; i&lt;=radius; ++i) {</div>
-<div class="line"><a id="l05868" name="l05868"></a><span class="lineno"> 5868</span>            <span class="keywordtype">int</span> nx = x + i;</div>
-<div class="line"><a id="l05869" name="l05869"></a><span class="lineno"> 5869</span>            <span class="keywordflow">if</span> (nx&gt;=0 &amp;&amp; nx&lt;w) {</div>
-<div class="line"><a id="l05870" name="l05870"></a><span class="lineno"> 5870</span>                <span class="keywordtype">float</span> weight = exp(-(i*i)/(2.f*sigma*sigma));</div>
-<div class="line"><a id="l05871" name="l05871"></a><span class="lineno"> 5871</span>                <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a> += in[y*w+nx] * weight; Wp += weight;</div>
-<div class="line"><a id="l05872" name="l05872"></a><span class="lineno"> 5872</span>            }</div>
-<div class="line"><a id="l05873" name="l05873"></a><span class="lineno"> 5873</span>        }</div>
-<div class="line"><a id="l05874" name="l05874"></a><span class="lineno"> 5874</span>        temp[y*w+x] = <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>/Wp;</div>
-<div class="line"><a id="l05875" name="l05875"></a><span class="lineno"> 5875</span>    }</div>
-<div class="line"><a id="l05876" name="l05876"></a><span class="lineno"> 5876</span>    <span class="comment">// Vertical pass</span></div>
-<div class="line"><a id="l05877" name="l05877"></a><span class="lineno"> 5877</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> y=0; y&lt;h; ++y) <span class="keywordflow">for</span> (<span class="keywordtype">int</span> x=0; x&lt;w; ++x) {</div>
-<div class="line"><a id="l05878" name="l05878"></a><span class="lineno"> 5878</span>        <span class="keywordtype">float</span> <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>=0.f, Wp=0.f;</div>
-<div class="line"><a id="l05879" name="l05879"></a><span class="lineno"> 5879</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j=-radius; j&lt;=radius; ++j) {</div>
-<div class="line"><a id="l05880" name="l05880"></a><span class="lineno"> 5880</span>            <span class="keywordtype">int</span> ny = y + j;</div>
-<div class="line"><a id="l05881" name="l05881"></a><span class="lineno"> 5881</span>            <span class="keywordflow">if</span> (ny&gt;=0 &amp;&amp; ny&lt;h) {</div>
-<div class="line"><a id="l05882" name="l05882"></a><span class="lineno"> 5882</span>                <span class="keywordtype">float</span> weight = exp(-(j*j)/(2.f*sigma*sigma));</div>
-<div class="line"><a id="l05883" name="l05883"></a><span class="lineno"> 5883</span>                <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a> += temp[ny*w+x] * weight; Wp += weight;</div>
-<div class="line"><a id="l05884" name="l05884"></a><span class="lineno"> 5884</span>            }</div>
-<div class="line"><a id="l05885" name="l05885"></a><span class="lineno"> 5885</span>        }</div>
-<div class="line"><a id="l05886" name="l05886"></a><span class="lineno"> 5886</span>        out[y*w+x] = <a class="code hl_function" href="group__functions.html#gaa20cc657b6475964d10022adc9850313" title="Sum of a vector of floats.">sum</a>/Wp;</div>
-<div class="line"><a id="l05887" name="l05887"></a><span class="lineno"> 5887</span>    }</div>
-<div class="line"><a id="l05888" name="l05888"></a><span class="lineno"> 5888</span>}</div>
-<div class="line"><a id="l05889" name="l05889"></a><span class="lineno"> 5889</span> </div>
-<div class="foldopen" id="foldopen05890" data-start="{" data-end="}">
-<div class="line"><a id="l05890" name="l05890"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a44844c9818c575efdd7ade4f784662a2"> 5890</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a44844c9818c575efdd7ade4f784662a2" title="Resizes a source image to the specified dimensions.">RadiationCamera::resizeImage</a>(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;src, std::vector&lt;float&gt; &amp;dst, <span class="keywordtype">int</span> src_w, <span class="keywordtype">int</span> src_h, <span class="keywordtype">int</span> dst_w, <span class="keywordtype">int</span> dst_h) {</div>
-<div class="line"><a id="l05891" name="l05891"></a><span class="lineno"> 5891</span>    dst.assign(dst_w * dst_h, 0.0f);</div>
-<div class="line"><a id="l05892" name="l05892"></a><span class="lineno"> 5892</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> x_ratio = <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(src_w) / dst_w;</div>
-<div class="line"><a id="l05893" name="l05893"></a><span class="lineno"> 5893</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> y_ratio = <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(src_h) / dst_h;</div>
-<div class="line"><a id="l05894" name="l05894"></a><span class="lineno"> 5894</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> y = 0; y &lt; dst_h; ++y) {</div>
-<div class="line"><a id="l05895" name="l05895"></a><span class="lineno"> 5895</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> x = 0; x &lt; dst_w; ++x) {</div>
-<div class="line"><a id="l05896" name="l05896"></a><span class="lineno"> 5896</span>            <span class="keywordtype">float</span> px = (x + 0.5f) * x_ratio - 0.5f;</div>
-<div class="line"><a id="l05897" name="l05897"></a><span class="lineno"> 5897</span>            <span class="keywordtype">float</span> py = (y + 0.5f) * y_ratio - 0.5f;</div>
-<div class="line"><a id="l05898" name="l05898"></a><span class="lineno"> 5898</span>            <span class="keywordtype">int</span> ix = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(floor(px));</div>
-<div class="line"><a id="l05899" name="l05899"></a><span class="lineno"> 5899</span>            <span class="keywordtype">int</span> iy = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(floor(py));</div>
-<div class="line"><a id="l05900" name="l05900"></a><span class="lineno"> 5900</span>            <span class="keywordtype">float</span> fx = px - ix;</div>
-<div class="line"><a id="l05901" name="l05901"></a><span class="lineno"> 5901</span>            <span class="keywordtype">float</span> fy = py - iy;</div>
-<div class="line"><a id="l05902" name="l05902"></a><span class="lineno"> 5902</span>            ix = (std::max)(0, (std::min)(ix, src_w - 2));</div>
-<div class="line"><a id="l05903" name="l05903"></a><span class="lineno"> 5903</span>            iy = (std::max)(0, (std::min)(iy, src_h - 2));</div>
-<div class="line"><a id="l05904" name="l05904"></a><span class="lineno"> 5904</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> c00 = src[iy*src_w + ix];       <span class="keyword">const</span> <span class="keywordtype">float</span> c10 = src[iy*src_w + (ix+1)];</div>
-<div class="line"><a id="l05905" name="l05905"></a><span class="lineno"> 5905</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> c01 = src[(iy+1)*src_w + ix];   <span class="keyword">const</span> <span class="keywordtype">float</span> c11 = src[(iy+1)*src_w + (ix+1)];</div>
-<div class="line"><a id="l05906" name="l05906"></a><span class="lineno"> 5906</span>            <span class="keywordtype">float</span> r0 = c00 * (1.f - fx) + c10 * fx;</div>
-<div class="line"><a id="l05907" name="l05907"></a><span class="lineno"> 5907</span>            <span class="keywordtype">float</span> r1 = c01 * (1.f - fx) + c11 * fx;</div>
-<div class="line"><a id="l05908" name="l05908"></a><span class="lineno"> 5908</span>            dst[y * dst_w + x] = r0 * (1.f - fy) + r1 * fy;</div>
-<div class="line"><a id="l05909" name="l05909"></a><span class="lineno"> 5909</span>        }</div>
-<div class="line"><a id="l05910" name="l05910"></a><span class="lineno"> 5910</span>    }</div>
-<div class="line"><a id="l05911" name="l05911"></a><span class="lineno"> 5911</span>}</div>
+<div class="line"><a id="l05860" name="l05860"></a><span class="lineno"> 5860</span> </div>
+<div class="foldopen" id="foldopen05861" data-start="{" data-end="}">
+<div class="line"><a id="l05861" name="l05861"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a708a4f725d65ddb94359a5f52e53aaee"> 5861</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a708a4f725d65ddb94359a5f52e53aaee" title="Apply auto-white balancing to image data based on Minkowski mean.">RadiationCamera::whiteBalance</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> p) {</div>
+<div class="line"><a id="l05862" name="l05862"></a><span class="lineno"> 5862</span> </div>
+<div class="line"><a id="l05863" name="l05863"></a><span class="lineno"> 5863</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l05864" name="l05864"></a><span class="lineno"> 5864</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
+<div class="line"><a id="l05865" name="l05865"></a><span class="lineno"> 5865</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l05866" name="l05866"></a><span class="lineno"> 5866</span>    }</div>
+<div class="line"><a id="l05867" name="l05867"></a><span class="lineno"> 5867</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l05868" name="l05868"></a><span class="lineno"> 5868</span> </div>
+<div class="line"><a id="l05869" name="l05869"></a><span class="lineno"> 5869</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l05870" name="l05870"></a><span class="lineno"> 5870</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l05871" name="l05871"></a><span class="lineno"> 5871</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
+<div class="line"><a id="l05872" name="l05872"></a><span class="lineno"> 5872</span> </div>
+<div class="line"><a id="l05873" name="l05873"></a><span class="lineno"> 5873</span>    <span class="keyword">const</span> std::size_t N = data_red.size();</div>
+<div class="line"><a id="l05874" name="l05874"></a><span class="lineno"> 5874</span>    <span class="keywordflow">if</span> (data_green.size() != N || data_blue.size() != N) {</div>
+<div class="line"><a id="l05875" name="l05875"></a><span class="lineno"> 5875</span>        <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">&quot;All channels must have the same length&quot;</span>);</div>
+<div class="line"><a id="l05876" name="l05876"></a><span class="lineno"> 5876</span>    }</div>
+<div class="line"><a id="l05877" name="l05877"></a><span class="lineno"> 5877</span>    <span class="keywordflow">if</span> (p &lt; 1.0f) {</div>
+<div class="line"><a id="l05878" name="l05878"></a><span class="lineno"> 5878</span>        <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">&quot;Minkowski exponent p must satisfy p &gt;= 1&quot;</span>);</div>
+<div class="line"><a id="l05879" name="l05879"></a><span class="lineno"> 5879</span>    }</div>
+<div class="line"><a id="l05880" name="l05880"></a><span class="lineno"> 5880</span> </div>
+<div class="line"><a id="l05881" name="l05881"></a><span class="lineno"> 5881</span>    <span class="comment">// Compute Minkowski means:</span></div>
+<div class="line"><a id="l05882" name="l05882"></a><span class="lineno"> 5882</span>    <span class="comment">// \[ M_R = \Bigl(\frac{1}{N}\sum_{i=1}^{N}R_i^p\Bigr)^{1/p},\quad</span></div>
+<div class="line"><a id="l05883" name="l05883"></a><span class="lineno"> 5883</span>    <span class="comment">//    M_G = \Bigl(\frac{1}{N}\sum_{i=1}^{N}G_i^p\Bigr)^{1/p},\quad</span></div>
+<div class="line"><a id="l05884" name="l05884"></a><span class="lineno"> 5884</span>    <span class="comment">//    M_B = \Bigl(\frac{1}{N}\sum_{i=1}^{N}B_i^p\Bigr)^{1/p} \]</span></div>
+<div class="line"><a id="l05885" name="l05885"></a><span class="lineno"> 5885</span>    <span class="keywordtype">float</span> acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f;</div>
+<div class="line"><a id="l05886" name="l05886"></a><span class="lineno"> 5886</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
+<div class="line"><a id="l05887" name="l05887"></a><span class="lineno"> 5887</span>        acc_r += std::pow(data_red[i], p);</div>
+<div class="line"><a id="l05888" name="l05888"></a><span class="lineno"> 5888</span>        acc_g += std::pow(data_green[i], p);</div>
+<div class="line"><a id="l05889" name="l05889"></a><span class="lineno"> 5889</span>        acc_b += std::pow(data_blue[i], p);</div>
+<div class="line"><a id="l05890" name="l05890"></a><span class="lineno"> 5890</span>    }</div>
+<div class="line"><a id="l05891" name="l05891"></a><span class="lineno"> 5891</span>    <span class="keywordtype">float</span> mean_r_p = acc_r / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
+<div class="line"><a id="l05892" name="l05892"></a><span class="lineno"> 5892</span>    <span class="keywordtype">float</span> mean_g_p = acc_g / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
+<div class="line"><a id="l05893" name="l05893"></a><span class="lineno"> 5893</span>    <span class="keywordtype">float</span> mean_b_p = acc_b / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
+<div class="line"><a id="l05894" name="l05894"></a><span class="lineno"> 5894</span> </div>
+<div class="line"><a id="l05895" name="l05895"></a><span class="lineno"> 5895</span>    <span class="keywordtype">float</span> M_R = std::pow(mean_r_p, 1.0f / p);</div>
+<div class="line"><a id="l05896" name="l05896"></a><span class="lineno"> 5896</span>    <span class="keywordtype">float</span> M_G = std::pow(mean_g_p, 1.0f / p);</div>
+<div class="line"><a id="l05897" name="l05897"></a><span class="lineno"> 5897</span>    <span class="keywordtype">float</span> M_B = std::pow(mean_b_p, 1.0f / p);</div>
+<div class="line"><a id="l05898" name="l05898"></a><span class="lineno"> 5898</span> </div>
+<div class="line"><a id="l05899" name="l05899"></a><span class="lineno"> 5899</span>    <span class="comment">// Avoid division by zero</span></div>
+<div class="line"><a id="l05900" name="l05900"></a><span class="lineno"> 5900</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
+<div class="line"><a id="l05901" name="l05901"></a><span class="lineno"> 5901</span>    <span class="keywordflow">if</span> (M_R &lt; eps || M_G &lt; eps || M_B &lt; eps) {</div>
+<div class="line"><a id="l05902" name="l05902"></a><span class="lineno"> 5902</span>        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;Channel Minkowski mean too small&quot;</span>);</div>
+<div class="line"><a id="l05903" name="l05903"></a><span class="lineno"> 5903</span>    }</div>
+<div class="line"><a id="l05904" name="l05904"></a><span class="lineno"> 5904</span> </div>
+<div class="line"><a id="l05905" name="l05905"></a><span class="lineno"> 5905</span>    <span class="comment">// Compute gray reference:</span></div>
+<div class="line"><a id="l05906" name="l05906"></a><span class="lineno"> 5906</span>    <span class="comment">// \[ M = \frac{M_R + M_G + M_B}{3} \]</span></div>
+<div class="line"><a id="l05907" name="l05907"></a><span class="lineno"> 5907</span>    <span class="keywordtype">float</span> M = (M_R + M_G + M_B) / 3.0f;</div>
+<div class="line"><a id="l05908" name="l05908"></a><span class="lineno"> 5908</span> </div>
+<div class="line"><a id="l05909" name="l05909"></a><span class="lineno"> 5909</span>    <span class="comment">// Derive per-channel gains:</span></div>
+<div class="line"><a id="l05910" name="l05910"></a><span class="lineno"> 5910</span>    <span class="comment">// \[ s_R = M / M_R,\quad s_G = M / M_G,\quad s_B = M / M_B \]</span></div>
+<div class="line"><a id="l05911" name="l05911"></a><span class="lineno"> 5911</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> scale;</div>
+<div class="line"><a id="l05912" name="l05912"></a><span class="lineno"> 5912</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> = M / M_R;</div>
+<div class="line"><a id="l05913" name="l05913"></a><span class="lineno"> 5913</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> = M / M_G;</div>
+<div class="line"><a id="l05914" name="l05914"></a><span class="lineno"> 5914</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> = M / M_B;</div>
+<div class="line"><a id="l05915" name="l05915"></a><span class="lineno"> 5915</span> </div>
+<div class="line"><a id="l05916" name="l05916"></a><span class="lineno"> 5916</span>    <span class="comment">// Apply gains to each pixel:</span></div>
+<div class="line"><a id="l05917" name="l05917"></a><span class="lineno"> 5917</span>    <span class="comment">// \[ R&#39;_i = s_R\,R_i,\quad G&#39;_i = s_G\,G_i,\quad B&#39;_i = s_B\,B_i \]</span></div>
+<div class="line"><a id="l05918" name="l05918"></a><span class="lineno"> 5918</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
+<div class="line"><a id="l05919" name="l05919"></a><span class="lineno"> 5919</span>        data_red[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>;</div>
+<div class="line"><a id="l05920" name="l05920"></a><span class="lineno"> 5920</span>        data_green[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>;</div>
+<div class="line"><a id="l05921" name="l05921"></a><span class="lineno"> 5921</span>        data_blue[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
+<div class="line"><a id="l05922" name="l05922"></a><span class="lineno"> 5922</span>    }</div>
+<div class="line"><a id="l05923" name="l05923"></a><span class="lineno"> 5923</span>}</div>
 </div>
-<div class="line"><a id="l05912" name="l05912"></a><span class="lineno"> 5912</span> </div>
-<div class="foldopen" id="foldopen05913" data-start="{" data-end="}">
-<div class="line"><a id="l05913" name="l05913"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#aedd82aa7872ce6159080c698bf7b0614"> 5913</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="struct_radiation_camera.html#aedd82aa7872ce6159080c698bf7b0614" title="Performs a smoothstep interpolation between two edge values.">RadiationCamera::smoothstep</a>(<span class="keywordtype">float</span> edge0, <span class="keywordtype">float</span> edge1, <span class="keywordtype">float</span> x) {</div>
-<div class="line"><a id="l05914" name="l05914"></a><span class="lineno"> 5914</span>    <span class="keywordtype">float</span> t = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);</div>
-<div class="line"><a id="l05915" name="l05915"></a><span class="lineno"> 5915</span>    <span class="keywordflow">return</span> t * t * (3.0f - 2.0f * t);</div>
-<div class="line"><a id="l05916" name="l05916"></a><span class="lineno"> 5916</span>}</div>
+<div class="line"><a id="l05924" name="l05924"></a><span class="lineno"> 5924</span> </div>
+<div class="foldopen" id="foldopen05925" data-start="{" data-end="}">
+<div class="line"><a id="l05925" name="l05925"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a287f2582ba09ba6d2a863ed67652ff7b"> 5925</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a287f2582ba09ba6d2a863ed67652ff7b" title="Apply Reinhard tone mapping curve to image data.">RadiationCamera::reinhardToneMapping</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
+<div class="line"><a id="l05926" name="l05926"></a><span class="lineno"> 5926</span> </div>
+<div class="line"><a id="l05927" name="l05927"></a><span class="lineno"> 5927</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l05928" name="l05928"></a><span class="lineno"> 5928</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
+<div class="line"><a id="l05929" name="l05929"></a><span class="lineno"> 5929</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l05930" name="l05930"></a><span class="lineno"> 5930</span>    }</div>
+<div class="line"><a id="l05931" name="l05931"></a><span class="lineno"> 5931</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l05932" name="l05932"></a><span class="lineno"> 5932</span> </div>
+<div class="line"><a id="l05933" name="l05933"></a><span class="lineno"> 5933</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
+<div class="line"><a id="l05934" name="l05934"></a><span class="lineno"> 5934</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
+<div class="line"><a id="l05935" name="l05935"></a><span class="lineno"> 5935</span> </div>
+<div class="line"><a id="l05936" name="l05936"></a><span class="lineno"> 5936</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l05937" name="l05937"></a><span class="lineno"> 5937</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l05938" name="l05938"></a><span class="lineno"> 5938</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
+<div class="line"><a id="l05939" name="l05939"></a><span class="lineno"> 5939</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
+<div class="line"><a id="l05940" name="l05940"></a><span class="lineno"> 5940</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
+<div class="line"><a id="l05941" name="l05941"></a><span class="lineno"> 5941</span>        <span class="keywordtype">float</span> L = luminance(<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, G, B);</div>
+<div class="line"><a id="l05942" name="l05942"></a><span class="lineno"> 5942</span>        <span class="keywordtype">float</span> s = (L &gt; eps) ? (L / (1.0f + L)) / L : 0.0f;</div>
+<div class="line"><a id="l05943" name="l05943"></a><span class="lineno"> 5943</span> </div>
+<div class="line"><a id="l05944" name="l05944"></a><span class="lineno"> 5944</span>        data_red[i] = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * s;</div>
+<div class="line"><a id="l05945" name="l05945"></a><span class="lineno"> 5945</span>        data_green[i] = G * s;</div>
+<div class="line"><a id="l05946" name="l05946"></a><span class="lineno"> 5946</span>        data_blue[i] = B * s;</div>
+<div class="line"><a id="l05947" name="l05947"></a><span class="lineno"> 5947</span>    }</div>
+<div class="line"><a id="l05948" name="l05948"></a><span class="lineno"> 5948</span>}</div>
 </div>
-<div class="line"><a id="l05917" name="l05917"></a><span class="lineno"> 5917</span> </div>
-<div class="foldopen" id="foldopen05918" data-start="{" data-end="}">
-<div class="line"><a id="l05918" name="l05918"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a090aa842e322551a73e45295490f0e40"> 5918</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a090aa842e322551a73e45295490f0e40" title="Apply auto-exposure scaling to image data to scale the average luminance to a target value.">RadiationCamera::scaleToGreyTarget</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> target) {</div>
-<div class="line"><a id="l05919" name="l05919"></a><span class="lineno"> 5919</span> </div>
-<div class="line"><a id="l05920" name="l05920"></a><span class="lineno"> 5920</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l05921" name="l05921"></a><span class="lineno"> 5921</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
-<div class="line"><a id="l05922" name="l05922"></a><span class="lineno"> 5922</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::scaleToGreyTarget): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
-<div class="line"><a id="l05923" name="l05923"></a><span class="lineno"> 5923</span>    }</div>
-<div class="line"><a id="l05924" name="l05924"></a><span class="lineno"> 5924</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l05925" name="l05925"></a><span class="lineno"> 5925</span> </div>
-<div class="line"><a id="l05926" name="l05926"></a><span class="lineno"> 5926</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
-<div class="line"><a id="l05927" name="l05927"></a><span class="lineno"> 5927</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
-<div class="line"><a id="l05928" name="l05928"></a><span class="lineno"> 5928</span> </div>
-<div class="line"><a id="l05929" name="l05929"></a><span class="lineno"> 5929</span>    <span class="keywordtype">double</span> logSum = 0.0;</div>
-<div class="line"><a id="l05930" name="l05930"></a><span class="lineno"> 5930</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l05931" name="l05931"></a><span class="lineno"> 5931</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l05932" name="l05932"></a><span class="lineno"> 5932</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l05933" name="l05933"></a><span class="lineno"> 5933</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l05934" name="l05934"></a><span class="lineno"> 5934</span>        logSum += std::log(<a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>(data_red[i], data_green[i], data_blue[i]) + eps);</div>
-<div class="line"><a id="l05935" name="l05935"></a><span class="lineno"> 5935</span>    }</div>
-<div class="line"><a id="l05936" name="l05936"></a><span class="lineno"> 5936</span> </div>
-<div class="line"><a id="l05937" name="l05937"></a><span class="lineno"> 5937</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> Llog = std::exp(logSum / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(N));</div>
-<div class="line"><a id="l05938" name="l05938"></a><span class="lineno"> 5938</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> k = target / Llog;</div>
-<div class="line"><a id="l05939" name="l05939"></a><span class="lineno"> 5939</span> </div>
-<div class="line"><a id="l05940" name="l05940"></a><span class="lineno"> 5940</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
-<div class="line"><a id="l05941" name="l05941"></a><span class="lineno"> 5941</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
-<div class="line"><a id="l05942" name="l05942"></a><span class="lineno"> 5942</span>            v *= k;</div>
-<div class="line"><a id="l05943" name="l05943"></a><span class="lineno"> 5943</span>        }</div>
-<div class="line"><a id="l05944" name="l05944"></a><span class="lineno"> 5944</span>    }</div>
-<div class="line"><a id="l05945" name="l05945"></a><span class="lineno"> 5945</span>}</div>
+<div class="line"><a id="l05949" name="l05949"></a><span class="lineno"> 5949</span> </div>
+<div class="foldopen" id="foldopen05950" data-start="{" data-end="}">
+<div class="line"><a id="l05950" name="l05950"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49"> 5950</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49" title="Apply image gain.">RadiationCamera::applyGain</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> percentile) {</div>
+<div class="line"><a id="l05951" name="l05951"></a><span class="lineno"> 5951</span> </div>
+<div class="line"><a id="l05952" name="l05952"></a><span class="lineno"> 5952</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l05953" name="l05953"></a><span class="lineno"> 5953</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
+<div class="line"><a id="l05954" name="l05954"></a><span class="lineno"> 5954</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::applyGain): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l05955" name="l05955"></a><span class="lineno"> 5955</span>    }</div>
+<div class="line"><a id="l05956" name="l05956"></a><span class="lineno"> 5956</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l05957" name="l05957"></a><span class="lineno"> 5957</span> </div>
+<div class="line"><a id="l05958" name="l05958"></a><span class="lineno"> 5958</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
+<div class="line"><a id="l05959" name="l05959"></a><span class="lineno"> 5959</span> </div>
+<div class="line"><a id="l05960" name="l05960"></a><span class="lineno"> 5960</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l05961" name="l05961"></a><span class="lineno"> 5961</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l05962" name="l05962"></a><span class="lineno"> 5962</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
+<div class="line"><a id="l05963" name="l05963"></a><span class="lineno"> 5963</span> </div>
+<div class="line"><a id="l05964" name="l05964"></a><span class="lineno"> 5964</span>    std::vector&lt;float&gt; luminance_pixel;</div>
+<div class="line"><a id="l05965" name="l05965"></a><span class="lineno"> 5965</span>    luminance_pixel.reserve(N);</div>
+<div class="line"><a id="l05966" name="l05966"></a><span class="lineno"> 5966</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
+<div class="line"><a id="l05967" name="l05967"></a><span class="lineno"> 5967</span>        luminance_pixel.push_back(luminance(data_red[i], data_green[i], data_blue[i]));</div>
+<div class="line"><a id="l05968" name="l05968"></a><span class="lineno"> 5968</span>    }</div>
+<div class="line"><a id="l05969" name="l05969"></a><span class="lineno"> 5969</span> </div>
+<div class="line"><a id="l05970" name="l05970"></a><span class="lineno"> 5970</span>    std::size_t k = std::size_t(percentile * (luminance_pixel.size() - 1));</div>
+<div class="line"><a id="l05971" name="l05971"></a><span class="lineno"> 5971</span>    std::nth_element(luminance_pixel.begin(), luminance_pixel.begin() + k, luminance_pixel.end());</div>
+<div class="line"><a id="l05972" name="l05972"></a><span class="lineno"> 5972</span>    <span class="keywordtype">float</span> peak = luminance_pixel[k];</div>
+<div class="line"><a id="l05973" name="l05973"></a><span class="lineno"> 5973</span>    <span class="keywordtype">float</span> gain = (peak &gt; 0.0f) ? 1.0f / peak : 1.0f;</div>
+<div class="line"><a id="l05974" name="l05974"></a><span class="lineno"> 5974</span> </div>
+<div class="line"><a id="l05975" name="l05975"></a><span class="lineno"> 5975</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
+<div class="line"><a id="l05976" name="l05976"></a><span class="lineno"> 5976</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
+<div class="line"><a id="l05977" name="l05977"></a><span class="lineno"> 5977</span>            v *= gain;</div>
+<div class="line"><a id="l05978" name="l05978"></a><span class="lineno"> 5978</span>        }</div>
+<div class="line"><a id="l05979" name="l05979"></a><span class="lineno"> 5979</span>    }</div>
+<div class="line"><a id="l05980" name="l05980"></a><span class="lineno"> 5980</span>}</div>
 </div>
-<div class="line"><a id="l05946" name="l05946"></a><span class="lineno"> 5946</span> </div>
-<div class="foldopen" id="foldopen05947" data-start="{" data-end="}">
-<div class="line"><a id="l05947" name="l05947"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a708a4f725d65ddb94359a5f52e53aaee"> 5947</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a708a4f725d65ddb94359a5f52e53aaee" title="Apply auto-white balancing to image data based on Minkowski mean.">RadiationCamera::whiteBalance</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> p) {</div>
-<div class="line"><a id="l05948" name="l05948"></a><span class="lineno"> 5948</span> </div>
-<div class="line"><a id="l05949" name="l05949"></a><span class="lineno"> 5949</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l05950" name="l05950"></a><span class="lineno"> 5950</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
-<div class="line"><a id="l05951" name="l05951"></a><span class="lineno"> 5951</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
-<div class="line"><a id="l05952" name="l05952"></a><span class="lineno"> 5952</span>    }</div>
-<div class="line"><a id="l05953" name="l05953"></a><span class="lineno"> 5953</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l05954" name="l05954"></a><span class="lineno"> 5954</span> </div>
-<div class="line"><a id="l05955" name="l05955"></a><span class="lineno"> 5955</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l05956" name="l05956"></a><span class="lineno"> 5956</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l05957" name="l05957"></a><span class="lineno"> 5957</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l05958" name="l05958"></a><span class="lineno"> 5958</span> </div>
-<div class="line"><a id="l05959" name="l05959"></a><span class="lineno"> 5959</span>    <span class="keyword">const</span> std::size_t N = data_red.size();</div>
-<div class="line"><a id="l05960" name="l05960"></a><span class="lineno"> 5960</span>    <span class="keywordflow">if</span> (data_green.size() != N || data_blue.size() != N) {</div>
-<div class="line"><a id="l05961" name="l05961"></a><span class="lineno"> 5961</span>        <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">&quot;All channels must have the same length&quot;</span>);</div>
-<div class="line"><a id="l05962" name="l05962"></a><span class="lineno"> 5962</span>    }</div>
-<div class="line"><a id="l05963" name="l05963"></a><span class="lineno"> 5963</span>    <span class="keywordflow">if</span> (p &lt; 1.0f) {</div>
-<div class="line"><a id="l05964" name="l05964"></a><span class="lineno"> 5964</span>        <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">&quot;Minkowski exponent p must satisfy p &gt;= 1&quot;</span>);</div>
-<div class="line"><a id="l05965" name="l05965"></a><span class="lineno"> 5965</span>    }</div>
-<div class="line"><a id="l05966" name="l05966"></a><span class="lineno"> 5966</span> </div>
-<div class="line"><a id="l05967" name="l05967"></a><span class="lineno"> 5967</span>    <span class="comment">// Compute Minkowski means:</span></div>
-<div class="line"><a id="l05968" name="l05968"></a><span class="lineno"> 5968</span>    <span class="comment">// \[ M_R = \Bigl(\frac{1}{N}\sum_{i=1}^{N}R_i^p\Bigr)^{1/p},\quad</span></div>
-<div class="line"><a id="l05969" name="l05969"></a><span class="lineno"> 5969</span>    <span class="comment">//    M_G = \Bigl(\frac{1}{N}\sum_{i=1}^{N}G_i^p\Bigr)^{1/p},\quad</span></div>
-<div class="line"><a id="l05970" name="l05970"></a><span class="lineno"> 5970</span>    <span class="comment">//    M_B = \Bigl(\frac{1}{N}\sum_{i=1}^{N}B_i^p\Bigr)^{1/p} \]</span></div>
-<div class="line"><a id="l05971" name="l05971"></a><span class="lineno"> 5971</span>    <span class="keywordtype">float</span> acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f;</div>
-<div class="line"><a id="l05972" name="l05972"></a><span class="lineno"> 5972</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l05973" name="l05973"></a><span class="lineno"> 5973</span>        acc_r += std::pow(data_red[i], p);</div>
-<div class="line"><a id="l05974" name="l05974"></a><span class="lineno"> 5974</span>        acc_g += std::pow(data_green[i], p);</div>
-<div class="line"><a id="l05975" name="l05975"></a><span class="lineno"> 5975</span>        acc_b += std::pow(data_blue[i], p);</div>
-<div class="line"><a id="l05976" name="l05976"></a><span class="lineno"> 5976</span>    }</div>
-<div class="line"><a id="l05977" name="l05977"></a><span class="lineno"> 5977</span>    <span class="keywordtype">float</span> mean_r_p = acc_r / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
-<div class="line"><a id="l05978" name="l05978"></a><span class="lineno"> 5978</span>    <span class="keywordtype">float</span> mean_g_p = acc_g / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
-<div class="line"><a id="l05979" name="l05979"></a><span class="lineno"> 5979</span>    <span class="keywordtype">float</span> mean_b_p = acc_b / <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(N);</div>
-<div class="line"><a id="l05980" name="l05980"></a><span class="lineno"> 5980</span> </div>
-<div class="line"><a id="l05981" name="l05981"></a><span class="lineno"> 5981</span>    <span class="keywordtype">float</span> M_R = std::pow(mean_r_p, 1.0f / p);</div>
-<div class="line"><a id="l05982" name="l05982"></a><span class="lineno"> 5982</span>    <span class="keywordtype">float</span> M_G = std::pow(mean_g_p, 1.0f / p);</div>
-<div class="line"><a id="l05983" name="l05983"></a><span class="lineno"> 5983</span>    <span class="keywordtype">float</span> M_B = std::pow(mean_b_p, 1.0f / p);</div>
-<div class="line"><a id="l05984" name="l05984"></a><span class="lineno"> 5984</span> </div>
-<div class="line"><a id="l05985" name="l05985"></a><span class="lineno"> 5985</span>    <span class="comment">// Avoid division by zero</span></div>
-<div class="line"><a id="l05986" name="l05986"></a><span class="lineno"> 5986</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
-<div class="line"><a id="l05987" name="l05987"></a><span class="lineno"> 5987</span>    <span class="keywordflow">if</span> (M_R &lt; eps || M_G &lt; eps || M_B &lt; eps) {</div>
-<div class="line"><a id="l05988" name="l05988"></a><span class="lineno"> 5988</span>        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;Channel Minkowski mean too small&quot;</span>);</div>
-<div class="line"><a id="l05989" name="l05989"></a><span class="lineno"> 5989</span>    }</div>
+<div class="line"><a id="l05981" name="l05981"></a><span class="lineno"> 5981</span> </div>
+<div class="foldopen" id="foldopen05982" data-start="{" data-end="}">
+<div class="line"><a id="l05982" name="l05982"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a36452d0b507309680c794c0607e39fc4"> 5982</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a36452d0b507309680c794c0607e39fc4" title="Performs global histogram equalization on the specified color bands.">RadiationCamera::globalHistogramEqualization</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label){</div>
+<div class="line"><a id="l05983" name="l05983"></a><span class="lineno"> 5983</span> </div>
+<div class="line"><a id="l05984" name="l05984"></a><span class="lineno"> 5984</span>    <span class="keyword">const</span> <span class="keywordtype">size_t</span> N = resolution.x * resolution.y;</div>
+<div class="line"><a id="l05985" name="l05985"></a><span class="lineno"> 5985</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
+<div class="line"><a id="l05986" name="l05986"></a><span class="lineno"> 5986</span> </div>
+<div class="line"><a id="l05987" name="l05987"></a><span class="lineno"> 5987</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l05988" name="l05988"></a><span class="lineno"> 5988</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l05989" name="l05989"></a><span class="lineno"> 5989</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
 <div class="line"><a id="l05990" name="l05990"></a><span class="lineno"> 5990</span> </div>
-<div class="line"><a id="l05991" name="l05991"></a><span class="lineno"> 5991</span>    <span class="comment">// Compute gray reference:</span></div>
-<div class="line"><a id="l05992" name="l05992"></a><span class="lineno"> 5992</span>    <span class="comment">// \[ M = \frac{M_R + M_G + M_B}{3} \]</span></div>
-<div class="line"><a id="l05993" name="l05993"></a><span class="lineno"> 5993</span>    <span class="keywordtype">float</span> M = (M_R + M_G + M_B) / 3.0f;</div>
-<div class="line"><a id="l05994" name="l05994"></a><span class="lineno"> 5994</span> </div>
-<div class="line"><a id="l05995" name="l05995"></a><span class="lineno"> 5995</span>    <span class="comment">// Derive per-channel gains:</span></div>
-<div class="line"><a id="l05996" name="l05996"></a><span class="lineno"> 5996</span>    <span class="comment">// \[ s_R = M / M_R,\quad s_G = M / M_G,\quad s_B = M / M_B \]</span></div>
-<div class="line"><a id="l05997" name="l05997"></a><span class="lineno"> 5997</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> scale;</div>
-<div class="line"><a id="l05998" name="l05998"></a><span class="lineno"> 5998</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> = M / M_R;</div>
-<div class="line"><a id="l05999" name="l05999"></a><span class="lineno"> 5999</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> = M / M_G;</div>
-<div class="line"><a id="l06000" name="l06000"></a><span class="lineno"> 6000</span>    scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> = M / M_B;</div>
+<div class="line"><a id="l05991" name="l05991"></a><span class="lineno"> 5991</span>    <span class="comment">/* luminance array */</span></div>
+<div class="line"><a id="l05992" name="l05992"></a><span class="lineno"> 5992</span>    std::vector&lt;float&gt; lum(N);</div>
+<div class="line"><a id="l05993" name="l05993"></a><span class="lineno"> 5993</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i=0;i&lt;N;++i){</div>
+<div class="line"><a id="l05994" name="l05994"></a><span class="lineno"> 5994</span>        <span class="comment">// vec3 p;</span></div>
+<div class="line"><a id="l05995" name="l05995"></a><span class="lineno"> 5995</span>        <span class="comment">// p.x = srgb_to_lin(data_red[i]);</span></div>
+<div class="line"><a id="l05996" name="l05996"></a><span class="lineno"> 5996</span>        <span class="comment">// p.y = srgb_to_lin(data_green[i]);</span></div>
+<div class="line"><a id="l05997" name="l05997"></a><span class="lineno"> 5997</span>        <span class="comment">// p.z = srgb_to_lin(data_blue[i]);</span></div>
+<div class="line"><a id="l05998" name="l05998"></a><span class="lineno"> 5998</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> p(data_red[i], data_green[i], data_blue[i]);</div>
+<div class="line"><a id="l05999" name="l05999"></a><span class="lineno"> 5999</span>        lum[i] = 0.2126f*p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> + 0.7152f*p.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> + 0.0722f*p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
+<div class="line"><a id="l06000" name="l06000"></a><span class="lineno"> 6000</span>    }</div>
 <div class="line"><a id="l06001" name="l06001"></a><span class="lineno"> 6001</span> </div>
-<div class="line"><a id="l06002" name="l06002"></a><span class="lineno"> 6002</span>    <span class="comment">// Apply gains to each pixel:</span></div>
-<div class="line"><a id="l06003" name="l06003"></a><span class="lineno"> 6003</span>    <span class="comment">// \[ R&#39;_i = s_R\,R_i,\quad G&#39;_i = s_G\,G_i,\quad B&#39;_i = s_B\,B_i \]</span></div>
-<div class="line"><a id="l06004" name="l06004"></a><span class="lineno"> 6004</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06005" name="l06005"></a><span class="lineno"> 6005</span>        data_red[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>;</div>
-<div class="line"><a id="l06006" name="l06006"></a><span class="lineno"> 6006</span>        data_green[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>;</div>
-<div class="line"><a id="l06007" name="l06007"></a><span class="lineno"> 6007</span>        data_blue[i] *= scale.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
+<div class="line"><a id="l06002" name="l06002"></a><span class="lineno"> 6002</span>    <span class="comment">/* build CDF on 2048-bin histogram */</span></div>
+<div class="line"><a id="l06003" name="l06003"></a><span class="lineno"> 6003</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> B=2048;</div>
+<div class="line"><a id="l06004" name="l06004"></a><span class="lineno"> 6004</span>    std::vector&lt;int&gt; hist(B,0);</div>
+<div class="line"><a id="l06005" name="l06005"></a><span class="lineno"> 6005</span>    <span class="keywordflow">for</span> (<span class="keywordtype">float</span> v:lum){</div>
+<div class="line"><a id="l06006" name="l06006"></a><span class="lineno"> 6006</span>        <span class="keywordtype">int</span> b = int(std::clamp(v,0.0f,1.0f-eps)*B);</div>
+<div class="line"><a id="l06007" name="l06007"></a><span class="lineno"> 6007</span>        hist[b]++;</div>
 <div class="line"><a id="l06008" name="l06008"></a><span class="lineno"> 6008</span>    }</div>
-<div class="line"><a id="l06009" name="l06009"></a><span class="lineno"> 6009</span>}</div>
-</div>
-<div class="line"><a id="l06010" name="l06010"></a><span class="lineno"> 6010</span> </div>
-<div class="foldopen" id="foldopen06011" data-start="{" data-end="}">
-<div class="line"><a id="l06011" name="l06011"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a287f2582ba09ba6d2a863ed67652ff7b"> 6011</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a287f2582ba09ba6d2a863ed67652ff7b" title="Apply Reinhard tone mapping curve to image data.">RadiationCamera::reinhardToneMapping</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
-<div class="line"><a id="l06012" name="l06012"></a><span class="lineno"> 6012</span> </div>
-<div class="line"><a id="l06013" name="l06013"></a><span class="lineno"> 6013</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l06014" name="l06014"></a><span class="lineno"> 6014</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
-<div class="line"><a id="l06015" name="l06015"></a><span class="lineno"> 6015</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::reinhardToneMapping): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
-<div class="line"><a id="l06016" name="l06016"></a><span class="lineno"> 6016</span>    }</div>
-<div class="line"><a id="l06017" name="l06017"></a><span class="lineno"> 6017</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l06009" name="l06009"></a><span class="lineno"> 6009</span>    std::vector&lt;float&gt; cdf(B); <span class="keywordtype">int</span> acc=0;</div>
+<div class="line"><a id="l06010" name="l06010"></a><span class="lineno"> 6010</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> b=0;b&lt;B;++b){</div>
+<div class="line"><a id="l06011" name="l06011"></a><span class="lineno"> 6011</span>        acc+=hist[b];</div>
+<div class="line"><a id="l06012" name="l06012"></a><span class="lineno"> 6012</span>        cdf[b]=float(acc)/float(N);</div>
+<div class="line"><a id="l06013" name="l06013"></a><span class="lineno"> 6013</span>    }</div>
+<div class="line"><a id="l06014" name="l06014"></a><span class="lineno"> 6014</span> </div>
+<div class="line"><a id="l06015" name="l06015"></a><span class="lineno"> 6015</span>    <span class="comment">/* remap */</span></div>
+<div class="line"><a id="l06016" name="l06016"></a><span class="lineno"> 6016</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i=0;i&lt;N;++i){</div>
+<div class="line"><a id="l06017" name="l06017"></a><span class="lineno"> 6017</span>        <span class="keywordtype">int</span> b=int(std::clamp(lum[i],0.0f,1.0f-eps)*B);</div>
 <div class="line"><a id="l06018" name="l06018"></a><span class="lineno"> 6018</span> </div>
-<div class="line"><a id="l06019" name="l06019"></a><span class="lineno"> 6019</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
-<div class="line"><a id="l06020" name="l06020"></a><span class="lineno"> 6020</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> eps = 1e-6f;</div>
+<div class="line"><a id="l06019" name="l06019"></a><span class="lineno"> 6019</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> k  = 0.2f;   <span class="comment">// how far to pull towards equalised value  (0.2–0.3 OK)</span></div>
+<div class="line"><a id="l06020" name="l06020"></a><span class="lineno"> 6020</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> cs = 0.2f;   <span class="comment">// S-curve strength   (0.4–0.7 recommended)</span></div>
 <div class="line"><a id="l06021" name="l06021"></a><span class="lineno"> 6021</span> </div>
-<div class="line"><a id="l06022" name="l06022"></a><span class="lineno"> 6022</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l06023" name="l06023"></a><span class="lineno"> 6023</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l06024" name="l06024"></a><span class="lineno"> 6024</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l06025" name="l06025"></a><span class="lineno"> 6025</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06026" name="l06026"></a><span class="lineno"> 6026</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
-<div class="line"><a id="l06027" name="l06027"></a><span class="lineno"> 6027</span>        <span class="keywordtype">float</span> L = <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>(<a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>, G, B);</div>
-<div class="line"><a id="l06028" name="l06028"></a><span class="lineno"> 6028</span>        <span class="keywordtype">float</span> s = (L &gt; eps) ? (L / (1.0f + L)) / L : 0.0f;</div>
-<div class="line"><a id="l06029" name="l06029"></a><span class="lineno"> 6029</span> </div>
-<div class="line"><a id="l06030" name="l06030"></a><span class="lineno"> 6030</span>        data_red[i] = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> * s;</div>
-<div class="line"><a id="l06031" name="l06031"></a><span class="lineno"> 6031</span>        data_green[i] = G * s;</div>
-<div class="line"><a id="l06032" name="l06032"></a><span class="lineno"> 6032</span>        data_blue[i] = B * s;</div>
+<div class="line"><a id="l06022" name="l06022"></a><span class="lineno"> 6022</span>        <span class="keywordtype">float</span> Yeq  = cdf[b];                      <span class="comment">// equalised luminance  ∈[0,1]</span></div>
+<div class="line"><a id="l06023" name="l06023"></a><span class="lineno"> 6023</span>        <span class="keywordtype">float</span> Ynew = (1.0f - k)*lum[i] + k*Yeq;   <span class="comment">// partial equalisation</span></div>
+<div class="line"><a id="l06024" name="l06024"></a><span class="lineno"> 6024</span> </div>
+<div class="line"><a id="l06025" name="l06025"></a><span class="lineno"> 6025</span>        <span class="comment">/* symmetric S-curve centred at 0.5  :  y = ½ + (x–½)*(1+cs–2·cs·|x–½|)   */</span></div>
+<div class="line"><a id="l06026" name="l06026"></a><span class="lineno"> 6026</span>        <span class="keywordtype">float</span> t = Ynew - 0.5f;</div>
+<div class="line"><a id="l06027" name="l06027"></a><span class="lineno"> 6027</span>        Ynew = 0.5f + t * (1.0f + cs - 2.0f*cs*std::fabs(t));</div>
+<div class="line"><a id="l06028" name="l06028"></a><span class="lineno"> 6028</span> </div>
+<div class="line"><a id="l06029" name="l06029"></a><span class="lineno"> 6029</span>        <span class="keywordtype">float</span> scale = lum[i]&gt;0.0f? Ynew/lum[i]:0;</div>
+<div class="line"><a id="l06030" name="l06030"></a><span class="lineno"> 6030</span>        data_red[i] = lin_to_srgb(data_red[i]*scale);</div>
+<div class="line"><a id="l06031" name="l06031"></a><span class="lineno"> 6031</span>        data_green[i] = lin_to_srgb(data_green[i]*scale);</div>
+<div class="line"><a id="l06032" name="l06032"></a><span class="lineno"> 6032</span>        data_blue[i] = lin_to_srgb(data_blue[i]*scale);</div>
 <div class="line"><a id="l06033" name="l06033"></a><span class="lineno"> 6033</span>    }</div>
 <div class="line"><a id="l06034" name="l06034"></a><span class="lineno"> 6034</span>}</div>
 </div>
 <div class="line"><a id="l06035" name="l06035"></a><span class="lineno"> 6035</span> </div>
 <div class="foldopen" id="foldopen06036" data-start="{" data-end="}">
-<div class="line"><a id="l06036" name="l06036"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49"> 6036</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a7bf9dbc2a04bc04c4f9b4b17d30b3f49" title="Apply image gain.">RadiationCamera::applyGain</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> percentile) {</div>
-<div class="line"><a id="l06037" name="l06037"></a><span class="lineno"> 6037</span> </div>
-<div class="line"><a id="l06038" name="l06038"></a><span class="lineno"> 6038</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l06039" name="l06039"></a><span class="lineno"> 6039</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
-<div class="line"><a id="l06040" name="l06040"></a><span class="lineno"> 6040</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::applyGain): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
-<div class="line"><a id="l06041" name="l06041"></a><span class="lineno"> 6041</span>    }</div>
-<div class="line"><a id="l06042" name="l06042"></a><span class="lineno"> 6042</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l06043" name="l06043"></a><span class="lineno"> 6043</span> </div>
-<div class="line"><a id="l06044" name="l06044"></a><span class="lineno"> 6044</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
-<div class="line"><a id="l06045" name="l06045"></a><span class="lineno"> 6045</span> </div>
-<div class="line"><a id="l06046" name="l06046"></a><span class="lineno"> 6046</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l06047" name="l06047"></a><span class="lineno"> 6047</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l06048" name="l06048"></a><span class="lineno"> 6048</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l06049" name="l06049"></a><span class="lineno"> 6049</span> </div>
-<div class="line"><a id="l06050" name="l06050"></a><span class="lineno"> 6050</span>    std::vector&lt;float&gt; luminance_pixel;</div>
-<div class="line"><a id="l06051" name="l06051"></a><span class="lineno"> 6051</span>    luminance_pixel.reserve(N);</div>
-<div class="line"><a id="l06052" name="l06052"></a><span class="lineno"> 6052</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06053" name="l06053"></a><span class="lineno"> 6053</span>        luminance_pixel.push_back(<a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>(data_red[i], data_green[i], data_blue[i]));</div>
-<div class="line"><a id="l06054" name="l06054"></a><span class="lineno"> 6054</span>    }</div>
-<div class="line"><a id="l06055" name="l06055"></a><span class="lineno"> 6055</span> </div>
-<div class="line"><a id="l06056" name="l06056"></a><span class="lineno"> 6056</span>    std::size_t k = std::size_t(percentile * (luminance_pixel.size() - 1));</div>
-<div class="line"><a id="l06057" name="l06057"></a><span class="lineno"> 6057</span>    std::nth_element(luminance_pixel.begin(), luminance_pixel.begin() + k, luminance_pixel.end());</div>
-<div class="line"><a id="l06058" name="l06058"></a><span class="lineno"> 6058</span>    <span class="keywordtype">float</span> peak = luminance_pixel[k];</div>
-<div class="line"><a id="l06059" name="l06059"></a><span class="lineno"> 6059</span>    <span class="keywordtype">float</span> gain = (peak &gt; 0.0f) ? 1.0f / peak : 1.0f;</div>
-<div class="line"><a id="l06060" name="l06060"></a><span class="lineno"> 6060</span> </div>
-<div class="line"><a id="l06061" name="l06061"></a><span class="lineno"> 6061</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
-<div class="line"><a id="l06062" name="l06062"></a><span class="lineno"> 6062</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
-<div class="line"><a id="l06063" name="l06063"></a><span class="lineno"> 6063</span>            v *= gain;</div>
-<div class="line"><a id="l06064" name="l06064"></a><span class="lineno"> 6064</span>        }</div>
-<div class="line"><a id="l06065" name="l06065"></a><span class="lineno"> 6065</span>    }</div>
-<div class="line"><a id="l06066" name="l06066"></a><span class="lineno"> 6066</span>}</div>
-</div>
-<div class="line"><a id="l06067" name="l06067"></a><span class="lineno"> 6067</span> </div>
-<div class="foldopen" id="foldopen06068" data-start="{" data-end="}">
-<div class="line"><a id="l06068" name="l06068"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#aea7695260befc781d2378511f3b85806"> 6068</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#aea7695260befc781d2378511f3b85806" title="Applies HDR toning to the specified color bands based on the local adaptation method.">RadiationCamera::HDRToning</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
-<div class="line"><a id="l06069" name="l06069"></a><span class="lineno"> 6069</span> </div>
-<div class="line"><a id="l06070" name="l06070"></a><span class="lineno"> 6070</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l06071" name="l06071"></a><span class="lineno"> 6071</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
-<div class="line"><a id="l06072" name="l06072"></a><span class="lineno"> 6072</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::HDRToning): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l06036" name="l06036"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a68674e96b32dfc81d502d5c254c4bb43"> 6036</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a68674e96b32dfc81d502d5c254c4bb43" title="Applies HDR toning to the specified color bands based on the local adaptation method.">RadiationCamera::adjustSBC</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label, <span class="keywordtype">float</span> saturation, <span class="keywordtype">float</span> brightness, <span class="keywordtype">float</span> contrast) {</div>
+<div class="line"><a id="l06037" name="l06037"></a><span class="lineno"> 6037</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l06038" name="l06038"></a><span class="lineno"> 6038</span>    <span class="keywordflow">if</span> (pixel_data.size() != 3) {</div>
+<div class="line"><a id="l06039" name="l06039"></a><span class="lineno"> 6039</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (RadiationCamera::adjustSBC): Image data must have 3 channels (RGB). This camera has &quot;</span> + std::to_string(pixel_data.size()) + <span class="stringliteral">&quot; channels.&quot;</span>);</div>
+<div class="line"><a id="l06040" name="l06040"></a><span class="lineno"> 6040</span>    }</div>
+<div class="line"><a id="l06041" name="l06041"></a><span class="lineno"> 6041</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l06042" name="l06042"></a><span class="lineno"> 6042</span> </div>
+<div class="line"><a id="l06043" name="l06043"></a><span class="lineno"> 6043</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kRedW   = 0.2126f;</div>
+<div class="line"><a id="l06044" name="l06044"></a><span class="lineno"> 6044</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kGreenW = 0.7152f;</div>
+<div class="line"><a id="l06045" name="l06045"></a><span class="lineno"> 6045</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kBlueW  = 0.0722f;</div>
+<div class="line"><a id="l06046" name="l06046"></a><span class="lineno"> 6046</span> </div>
+<div class="line"><a id="l06047" name="l06047"></a><span class="lineno"> 6047</span>    <span class="keyword">const</span> <span class="keywordtype">size_t</span> N = resolution.x * resolution.y;</div>
+<div class="line"><a id="l06048" name="l06048"></a><span class="lineno"> 6048</span> </div>
+<div class="line"><a id="l06049" name="l06049"></a><span class="lineno"> 6049</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
+<div class="line"><a id="l06050" name="l06050"></a><span class="lineno"> 6050</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
+<div class="line"><a id="l06051" name="l06051"></a><span class="lineno"> 6051</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
+<div class="line"><a id="l06052" name="l06052"></a><span class="lineno"> 6052</span> </div>
+<div class="line"><a id="l06053" name="l06053"></a><span class="lineno"> 6053</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i=0; i&lt;N; ++i) {</div>
+<div class="line"><a id="l06054" name="l06054"></a><span class="lineno"> 6054</span> </div>
+<div class="line"><a id="l06055" name="l06055"></a><span class="lineno"> 6055</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> p(data_red[i], data_green[i], data_blue[i]);</div>
+<div class="line"><a id="l06056" name="l06056"></a><span class="lineno"> 6056</span> </div>
+<div class="line"><a id="l06057" name="l06057"></a><span class="lineno"> 6057</span>        <span class="comment">/* ----- 1. luminance ----- */</span></div>
+<div class="line"><a id="l06058" name="l06058"></a><span class="lineno"> 6058</span>        <span class="keywordtype">float</span> Y = kRedW * p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> + kGreenW * p.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> + kBlueW * p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
+<div class="line"><a id="l06059" name="l06059"></a><span class="lineno"> 6059</span> </div>
+<div class="line"><a id="l06060" name="l06060"></a><span class="lineno"> 6060</span>        <span class="comment">/* ----- 2. saturation ----- */</span></div>
+<div class="line"><a id="l06061" name="l06061"></a><span class="lineno"> 6061</span>        p = <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>(Y, Y, Y) + (p - <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>(Y, Y, Y)) * saturation;</div>
+<div class="line"><a id="l06062" name="l06062"></a><span class="lineno"> 6062</span> </div>
+<div class="line"><a id="l06063" name="l06063"></a><span class="lineno"> 6063</span>        <span class="comment">/* ----- 3. brightness (gain) ----- */</span></div>
+<div class="line"><a id="l06064" name="l06064"></a><span class="lineno"> 6064</span>        p *= brightness;</div>
+<div class="line"><a id="l06065" name="l06065"></a><span class="lineno"> 6065</span> </div>
+<div class="line"><a id="l06066" name="l06066"></a><span class="lineno"> 6066</span>        <span class="comment">/* ----- 4. contrast ----- */</span></div>
+<div class="line"><a id="l06067" name="l06067"></a><span class="lineno"> 6067</span>        p = (p - <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>(0.5f, 0.5f, 0.5f)) * contrast + <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>(0.5f, 0.5f, 0.5f);</div>
+<div class="line"><a id="l06068" name="l06068"></a><span class="lineno"> 6068</span> </div>
+<div class="line"><a id="l06069" name="l06069"></a><span class="lineno"> 6069</span>        <span class="comment">/* ----- 5. clamp to valid range ----- */</span></div>
+<div class="line"><a id="l06070" name="l06070"></a><span class="lineno"> 6070</span>        data_red[i] = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>, 0.0f, 1.0f);</div>
+<div class="line"><a id="l06071" name="l06071"></a><span class="lineno"> 6071</span>        data_green[i] = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(p.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>, 0.0f, 1.0f);</div>
+<div class="line"><a id="l06072" name="l06072"></a><span class="lineno"> 6072</span>        data_blue[i] = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(p.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>, 0.0f, 1.0f);</div>
 <div class="line"><a id="l06073" name="l06073"></a><span class="lineno"> 6073</span>    }</div>
-<div class="line"><a id="l06074" name="l06074"></a><span class="lineno"> 6074</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l06075" name="l06075"></a><span class="lineno"> 6075</span> </div>
-<div class="line"><a id="l06076" name="l06076"></a><span class="lineno"> 6076</span>    <span class="comment">// --- Main HDR Effect Parameters ---</span></div>
-<div class="line"><a id="l06077" name="l06077"></a><span class="lineno"> 6077</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> detail_boost = 1.3f; <span class="comment">// How much fine detail to preserve/enhance.</span></div>
-<div class="line"><a id="l06078" name="l06078"></a><span class="lineno"> 6078</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> local_contrast = 1.0f; <span class="comment">// Adds &quot;pop&quot; or &quot;clarity&quot; to the image.</span></div>
-<div class="line"><a id="l06079" name="l06079"></a><span class="lineno"> 6079</span> </div>
-<div class="line"><a id="l06080" name="l06080"></a><span class="lineno"> 6080</span>    <span class="comment">// --- Targeted Shadow Adjustment Parameters ---</span></div>
-<div class="line"><a id="l06081" name="l06081"></a><span class="lineno"> 6081</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> shadow_brightness = 1.3f; <span class="comment">// [1..] How much to brighten the darkest tones.</span></div>
-<div class="line"><a id="l06082" name="l06082"></a><span class="lineno"> 6082</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> shadow_contrast = 0.85f; <span class="comment">// [..1] Gamma for shadows. &lt;1.0 increases contrast.</span></div>
-<div class="line"><a id="l06083" name="l06083"></a><span class="lineno"> 6083</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> shadow_thresh_low = 0.0f; <span class="comment">// Start of the deep shadow range.</span></div>
-<div class="line"><a id="l06084" name="l06084"></a><span class="lineno"> 6084</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> shadow_thresh_high = 0.15f; <span class="comment">// End of the shadow range / start of mid-tones.</span></div>
-<div class="line"><a id="l06085" name="l06085"></a><span class="lineno"> 6085</span> </div>
-<div class="line"><a id="l06086" name="l06086"></a><span class="lineno"> 6086</span>    <span class="comment">// --- NEW: Targeted Highlight Adjustment Parameters ---</span></div>
-<div class="line"><a id="l06087" name="l06087"></a><span class="lineno"> 6087</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> highlight_compression = 2.f; <span class="comment">// [1..] How much to compress bright tones. Higher values recover more detail.</span></div>
-<div class="line"><a id="l06088" name="l06088"></a><span class="lineno"> 6088</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> highlight_thresh_low = 0.75f; <span class="comment">// Start of the highlight range.</span></div>
-<div class="line"><a id="l06089" name="l06089"></a><span class="lineno"> 6089</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> highlight_thresh_high = 1.0f; <span class="comment">// End of the highlight range.</span></div>
+<div class="line"><a id="l06074" name="l06074"></a><span class="lineno"> 6074</span> </div>
+<div class="line"><a id="l06075" name="l06075"></a><span class="lineno"> 6075</span>}</div>
+</div>
+<div class="line"><a id="l06076" name="l06076"></a><span class="lineno"> 6076</span> </div>
+<div class="line"><a id="l06077" name="l06077"></a><span class="lineno"> 6077</span><span class="comment">// void RadiationCamera::applyCCM(const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label) {</span></div>
+<div class="line"><a id="l06078" name="l06078"></a><span class="lineno"> 6078</span><span class="comment">//</span></div>
+<div class="line"><a id="l06079" name="l06079"></a><span class="lineno"> 6079</span><span class="comment">//     const std::size_t N = resolution.x * resolution.y;</span></div>
+<div class="line"><a id="l06080" name="l06080"></a><span class="lineno"> 6080</span><span class="comment">//     auto &amp;data_red = pixel_data.at(red_band_label);</span></div>
+<div class="line"><a id="l06081" name="l06081"></a><span class="lineno"> 6081</span><span class="comment">//     auto &amp;data_green = pixel_data.at(green_band_label);</span></div>
+<div class="line"><a id="l06082" name="l06082"></a><span class="lineno"> 6082</span><span class="comment">//     auto &amp;data_blue = pixel_data.at(blue_band_label);</span></div>
+<div class="line"><a id="l06083" name="l06083"></a><span class="lineno"> 6083</span><span class="comment">//     for (std::size_t i = 0; i &lt; N; ++i) {</span></div>
+<div class="line"><a id="l06084" name="l06084"></a><span class="lineno"> 6084</span><span class="comment">//         float R = data_red[i], G = data_green[i], B = data_blue[i];</span></div>
+<div class="line"><a id="l06085" name="l06085"></a><span class="lineno"> 6085</span><span class="comment">//         data_red[i] = color_correction_matrix[0] * R + color_correction_matrix[1] * G + color_correction_matrix[2] * B + color_correction_matrix[9];</span></div>
+<div class="line"><a id="l06086" name="l06086"></a><span class="lineno"> 6086</span><span class="comment">//         data_green[i] = color_correction_matrix[3] * R + color_correction_matrix[4] * G + color_correction_matrix[5] * B + color_correction_matrix[10];</span></div>
+<div class="line"><a id="l06087" name="l06087"></a><span class="lineno"> 6087</span><span class="comment">//         data_blue[i] = color_correction_matrix[6] * R + color_correction_matrix[7] * G + color_correction_matrix[8] * B + color_correction_matrix[11];</span></div>
+<div class="line"><a id="l06088" name="l06088"></a><span class="lineno"> 6088</span><span class="comment">//     }</span></div>
+<div class="line"><a id="l06089" name="l06089"></a><span class="lineno"> 6089</span><span class="comment">// }</span></div>
 <div class="line"><a id="l06090" name="l06090"></a><span class="lineno"> 6090</span> </div>
-<div class="line"><a id="l06091" name="l06091"></a><span class="lineno"> 6091</span>    <span class="comment">// --- Final Global Tuning ---</span></div>
-<div class="line"><a id="l06092" name="l06092"></a><span class="lineno"> 6092</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> exposure = 1.1f; <span class="comment">// Final global brightness adjustment.</span></div>
-<div class="line"><a id="l06093" name="l06093"></a><span class="lineno"> 6093</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> saturation = 1.5f; <span class="comment">// Final color intensity.</span></div>
-<div class="line"><a id="l06094" name="l06094"></a><span class="lineno"> 6094</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> gamma = 1.0f; <span class="comment">// Global gamma is less needed now.</span></div>
-<div class="line"><a id="l06095" name="l06095"></a><span class="lineno"> 6095</span> </div>
-<div class="line"><a id="l06096" name="l06096"></a><span class="lineno"> 6096</span>    <span class="comment">// --- Filter Parameters ---</span></div>
-<div class="line"><a id="l06097" name="l06097"></a><span class="lineno"> 6097</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sigma_r = 0.8f;</div>
-<div class="line"><a id="l06098" name="l06098"></a><span class="lineno"> 6098</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sigma_s = 80.0f;</div>
-<div class="line"><a id="l06099" name="l06099"></a><span class="lineno"> 6099</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> downsample_factor = 6;</div>
-<div class="line"><a id="l06100" name="l06100"></a><span class="lineno"> 6100</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> epsilon = 1e-6f;</div>
-<div class="line"><a id="l06101" name="l06101"></a><span class="lineno"> 6101</span> </div>
-<div class="line"><a id="l06102" name="l06102"></a><span class="lineno"> 6102</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l06103" name="l06103"></a><span class="lineno"> 6103</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l06104" name="l06104"></a><span class="lineno"> 6104</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l06105" name="l06105"></a><span class="lineno"> 6105</span> </div>
-<div class="line"><a id="l06106" name="l06106"></a><span class="lineno"> 6106</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> num_pixels = resolution.x * resolution.y;</div>
-<div class="line"><a id="l06107" name="l06107"></a><span class="lineno"> 6107</span> </div>
-<div class="line"><a id="l06108" name="l06108"></a><span class="lineno"> 6108</span>    std::vector&lt;float&gt; <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>(num_pixels);</div>
-<div class="line"><a id="l06109" name="l06109"></a><span class="lineno"> 6109</span>    std::vector&lt;float&gt; log_luminance(num_pixels);</div>
-<div class="line"><a id="l06110" name="l06110"></a><span class="lineno"> 6110</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_pixels; ++i) {</div>
-<div class="line"><a id="l06111" name="l06111"></a><span class="lineno"> 6111</span>        <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i] = 0.2126f * data_red.at(i) + 0.7152f * data_green.at(i) + 0.0722f * data_blue.at(i);</div>
-<div class="line"><a id="l06112" name="l06112"></a><span class="lineno"> 6112</span>        log_luminance[i] = log10(<a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i] + epsilon);</div>
-<div class="line"><a id="l06113" name="l06113"></a><span class="lineno"> 6113</span>    }</div>
-<div class="line"><a id="l06114" name="l06114"></a><span class="lineno"> 6114</span> </div>
-<div class="line"><a id="l06115" name="l06115"></a><span class="lineno"> 6115</span>    std::vector&lt;float&gt; base_layer(num_pixels);</div>
-<div class="line"><a id="l06116" name="l06116"></a><span class="lineno"> 6116</span>    <a class="code hl_function" href="struct_radiation_camera.html#a76ad26befb647e0bcb281a1ef7b3c73c" title="Applies a fast bilateral filter to the input data.">fastBilateralFilter</a>(log_luminance, base_layer, resolution.x, resolution.y, sigma_s, sigma_r, downsample_factor);</div>
-<div class="line"><a id="l06117" name="l06117"></a><span class="lineno"> 6117</span> </div>
-<div class="line"><a id="l06118" name="l06118"></a><span class="lineno"> 6118</span>    std::vector&lt;float&gt; blended_lum(num_pixels);</div>
-<div class="line"><a id="l06119" name="l06119"></a><span class="lineno"> 6119</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_pixels; ++i) {</div>
-<div class="line"><a id="l06120" name="l06120"></a><span class="lineno"> 6120</span>        <span class="keywordtype">float</span> detail_layer = log_luminance[i] - base_layer[i];</div>
-<div class="line"><a id="l06121" name="l06121"></a><span class="lineno"> 6121</span>        <span class="keywordtype">float</span> toned_log_lum = base_layer[i] + detail_layer * detail_boost;</div>
-<div class="line"><a id="l06122" name="l06122"></a><span class="lineno"> 6122</span>        blended_lum[i] = pow(10.f, toned_log_lum);</div>
-<div class="line"><a id="l06123" name="l06123"></a><span class="lineno"> 6123</span>    }</div>
-<div class="line"><a id="l06124" name="l06124"></a><span class="lineno"> 6124</span> </div>
-<div class="line"><a id="l06125" name="l06125"></a><span class="lineno"> 6125</span>    std::vector&lt;float&gt; contrast_enhanced_lum(num_pixels);</div>
-<div class="line"><a id="l06126" name="l06126"></a><span class="lineno"> 6126</span>    gaussianBlur(blended_lum, contrast_enhanced_lum, resolution.x, resolution.y, 1.0f);</div>
-<div class="line"><a id="l06127" name="l06127"></a><span class="lineno"> 6127</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_pixels; ++i) {</div>
-<div class="line"><a id="l06128" name="l06128"></a><span class="lineno"> 6128</span>        <span class="keywordtype">float</span> fine_detail = blended_lum[i] - contrast_enhanced_lum[i];</div>
-<div class="line"><a id="l06129" name="l06129"></a><span class="lineno"> 6129</span>        contrast_enhanced_lum[i] = blended_lum[i] + fine_detail * local_contrast;</div>
-<div class="line"><a id="l06130" name="l06130"></a><span class="lineno"> 6130</span>    }</div>
-<div class="line"><a id="l06131" name="l06131"></a><span class="lineno"> 6131</span> </div>
-<div class="line"><a id="l06132" name="l06132"></a><span class="lineno"> 6132</span>    std::vector&lt;float&gt; final_lum(num_pixels);</div>
-<div class="line"><a id="l06133" name="l06133"></a><span class="lineno"> 6133</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_pixels; ++i) {</div>
-<div class="line"><a id="l06134" name="l06134"></a><span class="lineno"> 6134</span>        <span class="keywordtype">float</span> L_in = contrast_enhanced_lum[i];</div>
-<div class="line"><a id="l06135" name="l06135"></a><span class="lineno"> 6135</span> </div>
-<div class="line"><a id="l06136" name="l06136"></a><span class="lineno"> 6136</span>        <span class="comment">// --- Create masks for shadows and highlights ---</span></div>
-<div class="line"><a id="l06137" name="l06137"></a><span class="lineno"> 6137</span>        <span class="comment">// Shadow mask is 1.0 in deep shadows, 0.0 in mid-tones/highlights.</span></div>
-<div class="line"><a id="l06138" name="l06138"></a><span class="lineno"> 6138</span>        <span class="keywordtype">float</span> shadow_mask = <a class="code hl_function" href="struct_radiation_camera.html#aedd82aa7872ce6159080c698bf7b0614" title="Performs a smoothstep interpolation between two edge values.">smoothstep</a>(shadow_thresh_high, shadow_thresh_low, L_in);</div>
-<div class="line"><a id="l06139" name="l06139"></a><span class="lineno"> 6139</span>        <span class="comment">// Highlight mask is 1.0 in bright highlights, 0.0 in mid-tones/shadows.</span></div>
-<div class="line"><a id="l06140" name="l06140"></a><span class="lineno"> 6140</span>        <span class="keywordtype">float</span> highlight_mask = <a class="code hl_function" href="struct_radiation_camera.html#aedd82aa7872ce6159080c698bf7b0614" title="Performs a smoothstep interpolation between two edge values.">smoothstep</a>(highlight_thresh_low, highlight_thresh_high, L_in);</div>
-<div class="line"><a id="l06141" name="l06141"></a><span class="lineno"> 6141</span> </div>
-<div class="line"><a id="l06142" name="l06142"></a><span class="lineno"> 6142</span>        <span class="comment">// --- Calculate the adjusted luminance for each region ---</span></div>
-<div class="line"><a id="l06143" name="l06143"></a><span class="lineno"> 6143</span>        <span class="comment">// 1. Shadow adjustment: Brighten and add contrast.</span></div>
-<div class="line"><a id="l06144" name="l06144"></a><span class="lineno"> 6144</span>        <span class="keywordtype">float</span> L_shadow = pow(L_in, shadow_contrast) * shadow_brightness;</div>
-<div class="line"><a id="l06145" name="l06145"></a><span class="lineno"> 6145</span> </div>
-<div class="line"><a id="l06146" name="l06146"></a><span class="lineno"> 6146</span>        <span class="comment">// 2. Highlight adjustment: Compress highlights to recover detail.</span></div>
-<div class="line"><a id="l06147" name="l06147"></a><span class="lineno"> 6147</span>        <span class="comment">// This formula smoothly bends the bright values down towards 1.0.</span></div>
-<div class="line"><a id="l06148" name="l06148"></a><span class="lineno"> 6148</span>        <span class="keywordtype">float</span> L_highlight = 1.0f - pow(1.0f - L_in, highlight_compression);</div>
-<div class="line"><a id="l06149" name="l06149"></a><span class="lineno"> 6149</span> </div>
-<div class="line"><a id="l06150" name="l06150"></a><span class="lineno"> 6150</span>        <span class="comment">// --- Blend the original, shadow, and highlight versions ---</span></div>
-<div class="line"><a id="l06151" name="l06151"></a><span class="lineno"> 6151</span>        <span class="comment">// We calculate a mid-tone mask to ensure we don&#39;t double-apply adjustments.</span></div>
-<div class="line"><a id="l06152" name="l06152"></a><span class="lineno"> 6152</span>        <span class="keywordtype">float</span> mid_mask = 1.0f - shadow_mask - highlight_mask;</div>
-<div class="line"><a id="l06153" name="l06153"></a><span class="lineno"> 6153</span> </div>
-<div class="line"><a id="l06154" name="l06154"></a><span class="lineno"> 6154</span>        final_lum[i] = (L_shadow * shadow_mask) + (L_highlight * highlight_mask) + (L_in * mid_mask);</div>
-<div class="line"><a id="l06155" name="l06155"></a><span class="lineno"> 6155</span>    }</div>
-<div class="line"><a id="l06156" name="l06156"></a><span class="lineno"> 6156</span> </div>
-<div class="line"><a id="l06157" name="l06157"></a><span class="lineno"> 6157</span> </div>
-<div class="line"><a id="l06158" name="l06158"></a><span class="lineno"> 6158</span>    <span class="comment">// Reconstruct final color</span></div>
-<div class="line"><a id="l06159" name="l06159"></a><span class="lineno"> 6159</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_pixels; ++i) {</div>
-<div class="line"><a id="l06160" name="l06160"></a><span class="lineno"> 6160</span>        <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> new_rgb;</div>
-<div class="line"><a id="l06161" name="l06161"></a><span class="lineno"> 6161</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i] &gt; epsilon) {</div>
-<div class="line"><a id="l06162" name="l06162"></a><span class="lineno"> 6162</span>            new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> = data_red.at(i) * (final_lum[i] / <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i]);</div>
-<div class="line"><a id="l06163" name="l06163"></a><span class="lineno"> 6163</span>            new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> = data_green.at(i) * (final_lum[i] / <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i]);</div>
-<div class="line"><a id="l06164" name="l06164"></a><span class="lineno"> 6164</span>            new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> = data_blue.at(i) * (final_lum[i] / <a class="code hl_function" href="struct_radiation_camera.html#acd56f9ce91ab4150aac8fd857b7ef30f" title="Computes the luminance of a color given its red, green, and blue components.">luminance</a>[i]);</div>
-<div class="line"><a id="l06165" name="l06165"></a><span class="lineno"> 6165</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l06166" name="l06166"></a><span class="lineno"> 6166</span>            new_rgb = {0, 0, 0};</div>
-<div class="line"><a id="l06167" name="l06167"></a><span class="lineno"> 6167</span>        }</div>
-<div class="line"><a id="l06168" name="l06168"></a><span class="lineno"> 6168</span>        <span class="keywordtype">float</span> gray = 0.2126f * new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> + 0.7152f * new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> + 0.0722f * new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
-<div class="line"><a id="l06169" name="l06169"></a><span class="lineno"> 6169</span>        new_rgb = <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>(gray, gray, gray) + (new_rgb - <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a>(gray, gray, gray)) * saturation;</div>
-<div class="line"><a id="l06170" name="l06170"></a><span class="lineno"> 6170</span>        new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(powf(new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a> * exposure, 1.0f / gamma), 0.0f, 1.0f);</div>
-<div class="line"><a id="l06171" name="l06171"></a><span class="lineno"> 6171</span>        new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(powf(new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a> * exposure, 1.0f / gamma), 0.0f, 1.0f);</div>
-<div class="line"><a id="l06172" name="l06172"></a><span class="lineno"> 6172</span>        new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> = <a class="code hl_function" href="group__functions.html#gafc2084bde2f2a0e15d637e973658a5a4" title="Clamp value to be within some specified bounds.">clamp</a>(powf(new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> * exposure, 1.0f / gamma), 0.0f, 1.0f);</div>
-<div class="line"><a id="l06173" name="l06173"></a><span class="lineno"> 6173</span>        data_red.at(i) = new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a80003da235393c031b8561e678a184a1" title="First element in vector.">x</a>;</div>
-<div class="line"><a id="l06174" name="l06174"></a><span class="lineno"> 6174</span>        data_green.at(i) = new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#ac0be54042f7a639c99ea4dce377f9a65" title="Second element in vector.">y</a>;</div>
-<div class="line"><a id="l06175" name="l06175"></a><span class="lineno"> 6175</span>        data_blue.at(i) = new_rgb.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a>;</div>
-<div class="line"><a id="l06176" name="l06176"></a><span class="lineno"> 6176</span>    }</div>
-<div class="line"><a id="l06177" name="l06177"></a><span class="lineno"> 6177</span>}</div>
+<div class="foldopen" id="foldopen06091" data-start="{" data-end="}">
+<div class="line"><a id="l06091" name="l06091"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#ab496ecab01aaff065e9631bf0f7ace28"> 6091</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#ab496ecab01aaff065e9631bf0f7ace28" title="Apply the color correction matrix to image data.">RadiationCamera::gammaCompress</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
+<div class="line"><a id="l06092" name="l06092"></a><span class="lineno"> 6092</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
+<div class="line"><a id="l06093" name="l06093"></a><span class="lineno"> 6093</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
+<div class="line"><a id="l06094" name="l06094"></a><span class="lineno"> 6094</span>            v = lin_to_srgb(std::fmaxf(0.0f, v));</div>
+<div class="line"><a id="l06095" name="l06095"></a><span class="lineno"> 6095</span>        }</div>
+<div class="line"><a id="l06096" name="l06096"></a><span class="lineno"> 6096</span>    }</div>
+<div class="line"><a id="l06097" name="l06097"></a><span class="lineno"> 6097</span>}</div>
 </div>
-<div class="line"><a id="l06178" name="l06178"></a><span class="lineno"> 6178</span> </div>
-<div class="foldopen" id="foldopen06179" data-start="{" data-end="}">
-<div class="line"><a id="l06179" name="l06179"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#a1775a8a965d84eafef6fee9f0e7e3b9a"> 6179</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#a1775a8a965d84eafef6fee9f0e7e3b9a" title="Apply the color correction matrix to image data.">RadiationCamera::applyCCM</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
-<div class="line"><a id="l06180" name="l06180"></a><span class="lineno"> 6180</span> </div>
-<div class="line"><a id="l06181" name="l06181"></a><span class="lineno"> 6181</span>    <span class="keyword">const</span> std::size_t N = resolution.x * resolution.y;</div>
-<div class="line"><a id="l06182" name="l06182"></a><span class="lineno"> 6182</span>    <span class="keyword">auto</span> &amp;data_red = pixel_data.at(red_band_label);</div>
-<div class="line"><a id="l06183" name="l06183"></a><span class="lineno"> 6183</span>    <span class="keyword">auto</span> &amp;data_green = pixel_data.at(green_band_label);</div>
-<div class="line"><a id="l06184" name="l06184"></a><span class="lineno"> 6184</span>    <span class="keyword">auto</span> &amp;data_blue = pixel_data.at(blue_band_label);</div>
-<div class="line"><a id="l06185" name="l06185"></a><span class="lineno"> 6185</span>    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; N; ++i) {</div>
-<div class="line"><a id="l06186" name="l06186"></a><span class="lineno"> 6186</span>        <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = data_red[i], G = data_green[i], B = data_blue[i];</div>
-<div class="line"><a id="l06187" name="l06187"></a><span class="lineno"> 6187</span>        data_red[i] = color_correction_matrix[0] * <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[1] * G + color_correction_matrix[2] * B + color_correction_matrix[9];</div>
-<div class="line"><a id="l06188" name="l06188"></a><span class="lineno"> 6188</span>        data_green[i] = color_correction_matrix[3] * <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[4] * G + color_correction_matrix[5] * B + color_correction_matrix[10];</div>
-<div class="line"><a id="l06189" name="l06189"></a><span class="lineno"> 6189</span>        data_blue[i] = color_correction_matrix[6] * <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> + color_correction_matrix[7] * G + color_correction_matrix[8] * B + color_correction_matrix[11];</div>
-<div class="line"><a id="l06190" name="l06190"></a><span class="lineno"> 6190</span>    }</div>
-<div class="line"><a id="l06191" name="l06191"></a><span class="lineno"> 6191</span>}</div>
-</div>
-<div class="line"><a id="l06192" name="l06192"></a><span class="lineno"> 6192</span> </div>
-<div class="foldopen" id="foldopen06193" data-start="{" data-end="}">
-<div class="line"><a id="l06193" name="l06193"></a><span class="lineno"><a class="line" href="struct_radiation_camera.html#ab496ecab01aaff065e9631bf0f7ace28"> 6193</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="struct_radiation_camera.html#ab496ecab01aaff065e9631bf0f7ace28" title="Apply gamma compression to image data.">RadiationCamera::gammaCompress</a>(<span class="keyword">const</span> std::string &amp;red_band_label, <span class="keyword">const</span> std::string &amp;green_band_label, <span class="keyword">const</span> std::string &amp;blue_band_label) {</div>
-<div class="line"><a id="l06194" name="l06194"></a><span class="lineno"> 6194</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[channel, data]: pixel_data) {</div>
-<div class="line"><a id="l06195" name="l06195"></a><span class="lineno"> 6195</span>        <span class="keywordflow">for</span> (<span class="keywordtype">float</span> &amp;v: data) {</div>
-<div class="line"><a id="l06196" name="l06196"></a><span class="lineno"> 6196</span>            v = <a class="code hl_function" href="struct_radiation_camera.html#a18e4adc26e7e1fc28c7e4633eb1677cb" title="Converts a value to the sRGB color space.">toSRGB</a>(std::fmaxf(0.0f, v));</div>
-<div class="line"><a id="l06197" name="l06197"></a><span class="lineno"> 6197</span>        }</div>
-<div class="line"><a id="l06198" name="l06198"></a><span class="lineno"> 6198</span>    }</div>
-<div class="line"><a id="l06199" name="l06199"></a><span class="lineno"> 6199</span>}</div>
-</div>
-<div class="line"><a id="l06200" name="l06200"></a><span class="lineno"> 6200</span> </div>
-<div class="line"><a id="l06201" name="l06201"></a><span class="lineno"> 6201</span> </div>
-<div class="line"><a id="l06202" name="l06202"></a><span class="lineno"> 6202</span><span class="keywordtype">void</span> sutilHandleError(RTcontext context, RTresult code, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, <span class="keywordtype">int</span> line) {</div>
-<div class="line"><a id="l06203" name="l06203"></a><span class="lineno"> 6203</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *message;</div>
-<div class="line"><a id="l06204" name="l06204"></a><span class="lineno"> 6204</span>    <span class="keywordtype">char</span> s[2048];</div>
-<div class="line"><a id="l06205" name="l06205"></a><span class="lineno"> 6205</span>    rtContextGetErrorString(context, code, &amp;message);</div>
-<div class="line"><a id="l06206" name="l06206"></a><span class="lineno"> 6206</span>    sprintf(s, <span class="stringliteral">&quot;%s\n(%s:%d)&quot;</span>, message, file, line);</div>
-<div class="line"><a id="l06207" name="l06207"></a><span class="lineno"> 6207</span>    sutilReportError(s);</div>
-<div class="line"><a id="l06208" name="l06208"></a><span class="lineno"> 6208</span>    exit(1);</div>
-<div class="line"><a id="l06209" name="l06209"></a><span class="lineno"> 6209</span>}</div>
-<div class="line"><a id="l06210" name="l06210"></a><span class="lineno"> 6210</span> </div>
-<div class="line"><a id="l06211" name="l06211"></a><span class="lineno"> 6211</span><span class="keywordtype">void</span> sutilReportError(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
-<div class="line"><a id="l06212" name="l06212"></a><span class="lineno"> 6212</span>    fprintf(stderr, <span class="stringliteral">&quot;OptiX Error: %s\n&quot;</span>, message);</div>
-<div class="line"><a id="l06213" name="l06213"></a><span class="lineno"> 6213</span><span class="preprocessor">#if defined(_WIN32) &amp;&amp; defined(RELEASE_PUBLIC)</span></div>
-<div class="line"><a id="l06214" name="l06214"></a><span class="lineno"> 6214</span>    {</div>
-<div class="line"><a id="l06215" name="l06215"></a><span class="lineno"> 6215</span>        <span class="keywordtype">char</span> s[2048];</div>
-<div class="line"><a id="l06216" name="l06216"></a><span class="lineno"> 6216</span>        sprintf(s, <span class="stringliteral">&quot;OptiX Error: %s&quot;</span>, message);</div>
-<div class="line"><a id="l06217" name="l06217"></a><span class="lineno"> 6217</span>        MessageBox(0, s, <span class="stringliteral">&quot;OptiX Error&quot;</span>, MB_OK | MB_ICONWARNING | MB_SYSTEMMODAL);</div>
-<div class="line"><a id="l06218" name="l06218"></a><span class="lineno"> 6218</span>    }</div>
-<div class="line"><a id="l06219" name="l06219"></a><span class="lineno"> 6219</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l06220" name="l06220"></a><span class="lineno"> 6220</span>}</div>
+<div class="line"><a id="l06098" name="l06098"></a><span class="lineno"> 6098</span> </div>
+<div class="line"><a id="l06099" name="l06099"></a><span class="lineno"> 6099</span> </div>
+<div class="line"><a id="l06100" name="l06100"></a><span class="lineno"> 6100</span><span class="keywordtype">void</span> sutilHandleError(RTcontext context, RTresult code, <span class="keyword">const</span> <span class="keywordtype">char</span> *file, <span class="keywordtype">int</span> line) {</div>
+<div class="line"><a id="l06101" name="l06101"></a><span class="lineno"> 6101</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *message;</div>
+<div class="line"><a id="l06102" name="l06102"></a><span class="lineno"> 6102</span>    <span class="keywordtype">char</span> s[2048];</div>
+<div class="line"><a id="l06103" name="l06103"></a><span class="lineno"> 6103</span>    rtContextGetErrorString(context, code, &amp;message);</div>
+<div class="line"><a id="l06104" name="l06104"></a><span class="lineno"> 6104</span>    sprintf(s, <span class="stringliteral">&quot;%s\n(%s:%d)&quot;</span>, message, file, line);</div>
+<div class="line"><a id="l06105" name="l06105"></a><span class="lineno"> 6105</span>    sutilReportError(s);</div>
+<div class="line"><a id="l06106" name="l06106"></a><span class="lineno"> 6106</span>    exit(1);</div>
+<div class="line"><a id="l06107" name="l06107"></a><span class="lineno"> 6107</span>}</div>
+<div class="line"><a id="l06108" name="l06108"></a><span class="lineno"> 6108</span> </div>
+<div class="line"><a id="l06109" name="l06109"></a><span class="lineno"> 6109</span><span class="keywordtype">void</span> sutilReportError(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
+<div class="line"><a id="l06110" name="l06110"></a><span class="lineno"> 6110</span>    fprintf(stderr, <span class="stringliteral">&quot;OptiX Error: %s\n&quot;</span>, message);</div>
+<div class="line"><a id="l06111" name="l06111"></a><span class="lineno"> 6111</span><span class="preprocessor">#if defined(_WIN32) &amp;&amp; defined(RELEASE_PUBLIC)</span></div>
+<div class="line"><a id="l06112" name="l06112"></a><span class="lineno"> 6112</span>    {</div>
+<div class="line"><a id="l06113" name="l06113"></a><span class="lineno"> 6113</span>        <span class="keywordtype">char</span> s[2048];</div>
+<div class="line"><a id="l06114" name="l06114"></a><span class="lineno"> 6114</span>        sprintf(s, <span class="stringliteral">&quot;OptiX Error: %s&quot;</span>, message);</div>
+<div class="line"><a id="l06115" name="l06115"></a><span class="lineno"> 6115</span>        MessageBox(0, s, <span class="stringliteral">&quot;OptiX Error&quot;</span>, MB_OK | MB_ICONWARNING | MB_SYSTEMMODAL);</div>
+<div class="line"><a id="l06116" name="l06116"></a><span class="lineno"> 6116</span>    }</div>
+<div class="line"><a id="l06117" name="l06117"></a><span class="lineno"> 6117</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l06118" name="l06118"></a><span class="lineno"> 6118</span>}</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

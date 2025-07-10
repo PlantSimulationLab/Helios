@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -436,9 +433,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a63f23da646aac79163c8154ef3a6e93e" id="r_a63f23da646aac79163c8154ef3a6e93e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63f23da646aac79163c8154ef3a6e93e">runRadiationImaging</a> (const std::vector&lt; std::string &gt; &amp;cameralabels, const std::vector&lt; std::string &gt; &amp;sourcelabels, const std::vector&lt; std::string &gt; &amp;bandlabels, const std::vector&lt; std::string &gt; &amp;cameraresponselabels, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> wavelengthrange, float fluxscale=1, float diffusefactor=0.0005, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> scatteringdepth=4)</td></tr>
 <tr class="memdesc:a63f23da646aac79163c8154ef3a6e93e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run radiation imaging simulation.  <br /></td></tr>
 <tr class="separator:a63f23da646aac79163c8154ef3a6e93e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa5a066898eb6cfe59f91839c08cbf631" id="r_aa5a066898eb6cfe59f91839c08cbf631"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa5a066898eb6cfe59f91839c08cbf631">applyImageProcessingPipeline</a> (const std::string &amp;cameralabel, const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, bool apply_HDR_toning=true)</td></tr>
-<tr class="memdesc:aa5a066898eb6cfe59f91839c08cbf631"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply a digital camera-like processing pipeline to the camera image.  <br /></td></tr>
-<tr class="separator:aa5a066898eb6cfe59f91839c08cbf631"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34166a6372732ae246bd57b63647ecf4" id="r_a34166a6372732ae246bd57b63647ecf4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a34166a6372732ae246bd57b63647ecf4">applyImageProcessingPipeline</a> (const std::string &amp;cameralabel, const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, float saturation_adjustment=1.f, float brightness_adjustment=1.f, float contrast_adjustment=1.f)</td></tr>
+<tr class="memdesc:a34166a6372732ae246bd57b63647ecf4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply a digital camera-like processing pipeline to the camera image.  <br /></td></tr>
+<tr class="separator:a34166a6372732ae246bd57b63647ecf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa30ec7ec3b6c3b109e9a9544b890e8de" id="r_aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa30ec7ec3b6c3b109e9a9544b890e8de">writeCameraImage</a> (const std::string &amp;camera, const std::vector&lt; std::string &gt; &amp;bands, const std::string &amp;imagefile_base, const std::string &amp;image_path=&quot;./&quot;, int frame=-1, float flux_to_pixel_conversion=1.f)</td></tr>
 <tr class="memdesc:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write camera data for one or more bands to a JPEG image.  <br /></td></tr>
 <tr class="separator:aa30ec7ec3b6c3b109e9a9544b890e8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -479,7 +476,7 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Radiation transport model plugin. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00388">388</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00356">356</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acfcbd32e59e2b2728dabde1c7fa74329" name="acfcbd32e59e2b2728dabde1c7fa74329"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acfcbd32e59e2b2728dabde1c7fa74329">&#9670;&#160;</a></span>RadiationModel()</h2>
@@ -976,8 +973,8 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aa5a066898eb6cfe59f91839c08cbf631" name="aa5a066898eb6cfe59f91839c08cbf631"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa5a066898eb6cfe59f91839c08cbf631">&#9670;&#160;</a></span>applyImageProcessingPipeline()</h2>
+<a id="a34166a6372732ae246bd57b63647ecf4" name="a34166a6372732ae246bd57b63647ecf4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a34166a6372732ae246bd57b63647ecf4">&#9670;&#160;</a></span>applyImageProcessingPipeline()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1005,7 +1002,17 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>apply_HDR_toning</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturation_adjustment</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>brightness_adjustment</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>contrast_adjustment</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.f</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1018,7 +1025,9 @@ Public Member Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label of the red band </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label of the green band </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label of the blue band </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">apply_HDR_toning</td><td>Whether to apply HDR toning to the image </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">saturation_adjustment</td><td>[optional] Adjustment factor for saturation (default is 1.0, which means no adjustment) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">brightness_adjustment</td><td>[optional] Adjustment factor for brightness (default is 1.0, which means no adjustment) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">contrast_adjustment</td><td>[optional] Adjustment factor for contrast (default is 1.0, which means no adjustment) </td></tr>
   </table>
   </dd>
 </dl>
@@ -2139,7 +2148,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>), 2) update the Context geometry in the model (see helios::Context::updateGeometry()), and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">RadiationModel::updateGeometry()</a>), and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()). </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03154">3154</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
@@ -2167,7 +2176,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>), 2) update the Context geometry in the model (see helios::Context::updateGeometry()), and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Before running the band simulation, you must 1) add at least one radiative band to the simulation (see <a class="el" href="#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>), 2) update the Context geometry in the model (see <a class="el" href="#acf5fe304146a9270bf0e841f59e51934">RadiationModel::updateGeometry()</a>), and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()). </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l03159">3159</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
@@ -3567,7 +3576,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Adds all geometric primitives from the Context to OptiX. </p>
-<p>This function should be called anytime Context geometry is created or modified </p><dl class="section note"><dt>Note</dt><dd>helios::Context::updateGeometry() must be called before simulation can be run </dd></dl>
+<p>This function should be called anytime Context geometry is created or modified </p><dl class="section note"><dt>Note</dt><dd><a class="el" href="#acf5fe304146a9270bf0e841f59e51934">RadiationModel::updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l01996">1996</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
@@ -3595,7 +3604,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>helios::Context::updateGeometry() must be called before simulation can be run </dd></dl>
+<dl class="section note"><dt>Note</dt><dd><a class="el" href="#acf5fe304146a9270bf0e841f59e51934">RadiationModel::updateGeometry()</a> must be called before simulation can be run </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l02000">2000</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 

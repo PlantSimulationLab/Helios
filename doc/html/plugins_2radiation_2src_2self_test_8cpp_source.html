@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -213,7 +210,7 @@ $(function(){initNavTree('plugins_2radiation_2src_2self_test_8cpp_source.html','
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(1,<span class="stringliteral">&quot;temperature&quot;</span>,0.f);</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    shortwave_rho = 0.3f;</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(0,<span class="stringliteral">&quot;reflectivity_SW&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>,1,&amp;shortwave_rho);</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    context_1.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(0,<span class="stringliteral">&quot;reflectivity_SW&quot;</span>,shortwave_rho);</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <a class="code hl_function" href="class_radiation_model.html#acfcbd32e59e2b2728dabde1c7fa74329" title="Default constructor.">RadiationModel</a> radiationmodel_1(&amp;context_1);</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    radiationmodel_1.<a class="code hl_function" href="class_radiation_model.html#a173a9cb77b4dfda7a008267d6331b7b7" title="Disable/silence status messages.">disableMessages</a>();</div>
@@ -1826,10 +1823,10 @@ $(function(){initNavTree('plugins_2radiation_2src_2self_test_8cpp_source.html','
 <div class="line"><a id="l01676" name="l01676"></a><span class="lineno"> 1676</span>        sourceintensity.at(i).x = float(301+i);</div>
 <div class="line"><a id="l01677" name="l01677"></a><span class="lineno"> 1677</span>        sourceintensity.at(i).y=1;</div>
 <div class="line"><a id="l01678" name="l01678"></a><span class="lineno"> 1678</span>    }</div>
-<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;leaf_reflectivity&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,leafspectrarho.size(),&amp;leafspectrarho[0]);</div>
-<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;leaf_transmissivity&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,leafspectratau.size(),&amp;leafspectratau[0]);</div>
-<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;camera_response&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,sourceintensity.size(),&amp;sourceintensity[0]);  <span class="comment">// camera response is 1</span></div>
-<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;source_intensity&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,sourceintensity.size(),&amp;sourceintensity[0]); <span class="comment">// source intensity is 1</span></div>
+<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;leaf_reflectivity&quot;</span>,leafspectrarho);</div>
+<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;leaf_transmissivity&quot;</span>,leafspectratau);</div>
+<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;camera_response&quot;</span>,sourceintensity);  <span class="comment">// camera response is 1</span></div>
+<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span>    context_17.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;source_intensity&quot;</span>,sourceintensity); <span class="comment">// source intensity is 1</span></div>
 <div class="line"><a id="l01683" name="l01683"></a><span class="lineno"> 1683</span> </div>
 <div class="line"><a id="l01684" name="l01684"></a><span class="lineno"> 1684</span>    <span class="comment">// Add sensors to receive radiation</span></div>
 <div class="line"><a id="l01685" name="l01685"></a><span class="lineno"> 1685</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> camera_lookat= <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,heightscene);</div>

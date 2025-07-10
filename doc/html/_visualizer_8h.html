@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -165,10 +162,10 @@ $(function(){initNavTree('_visualizer_8h.html',''); initResizable(true); });
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="_context_8h_source.html">Context.h</a>&quot;</code><br />
+<code>#include &lt;GLFW/glfw3.h&gt;</code><br />
 <code>#include &quot;glm/glm.hpp&quot;</code><br />
 <code>#include &quot;glm/gtc/matrix_transform.hpp&quot;</code><br />
 <code>#include &quot;glm/gtx/transform.hpp&quot;</code><br />
-<code>#include &lt;GLFW/glfw3.h&gt;</code><br />
 <code>#include &quot;<a class="el" href="_geometry_handler_8h_source.html">GeometryHandler.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>&quot;</code><br />
 </div>
@@ -260,7 +257,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04176">4176</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04487">4487</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -290,7 +287,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse cursor movements. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03954">3954</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04265">4265</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -317,7 +314,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l01302">1302</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8h_source.html#l01348">1348</a> of file <a class="el" href="_visualizer_8h_source.html">Visualizer.h</a>.</p>
 
 </div>
 </div>
@@ -352,7 +349,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse button presses. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03928">3928</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04239">4239</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -470,7 +467,7 @@ Functions</h2></td></tr>
 
 <p>Callback function for mouse scroll. </p>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03969">3969</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l04280">4280</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>
@@ -504,7 +501,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the texture file is valid, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03661">3661</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l03920">3920</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
 
 </div>
 </div>

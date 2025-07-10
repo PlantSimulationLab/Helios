@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -968,168 +965,177 @@ $(function(){initNavTree('_geometry_handler_8cpp_source.html',''); initResizable
 <div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>}</div>
 </div>
 <div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span> </div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span><span class="keywordtype">void</span> GeometryHandler::defragmentBuffers() {</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span> </div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    <span class="comment">// If no primitives were deleted, nothing to do</span></div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    <span class="keywordflow">if</span> (deleted_primitive_count == 0) {</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    }</div>
+<div class="foldopen" id="foldopen00752" data-start="{" data-end="}">
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno"><a class="line" href="class_geometry_handler.html#a1b60dc964a683ab12083e5782fc6639d">  752</a></span><span class="keyword">const</span> GeometryHandler::PrimitiveIndexMap &amp;<a class="code hl_function" href="class_geometry_handler.html#a1b60dc964a683ab12083e5782fc6639d" title="Retrieve internal buffer indices for a primitive.">GeometryHandler::getIndexMap</a>(<span class="keywordtype">size_t</span> UUID)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    assert(UUID_map.find(UUID) != UUID_map.end());</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    <span class="keywordflow">return</span> UUID_map.at(UUID);</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>}</div>
+</div>
 <div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span> </div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="comment">// Iterate each geometry type</span></div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span><span class="keywordtype">void</span> GeometryHandler::defragmentBuffers() {</div>
 <div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span> </div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span> &amp;geometry_type : all_geometry_types ) {</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>        <span class="keywordflow">if</span> ( vertex_data.find(geometry_type) == vertex_data.end() ) {</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>        }</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    <span class="comment">// If no primitives were deleted, nothing to do</span></div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    <span class="keywordflow">if</span> (deleted_primitive_count == 0) {</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    }</div>
 <div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span> </div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>        <span class="keyword">auto</span> &amp;oldFace = face_index_data.at(geometry_type);</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        <span class="keyword">auto</span> &amp;oldVertex = vertex_data.at(geometry_type);</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        <span class="keyword">auto</span> &amp;oldNormal = normal_data.at(geometry_type);</div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        <span class="keyword">auto</span> &amp;oldUV = uv_data.at(geometry_type);</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>        <span class="keyword">auto</span> &amp;oldColor = color_data.at(geometry_type);</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>        <span class="keyword">auto</span> &amp;oldTexFlag = texture_flag_data.at(geometry_type);</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <span class="keyword">auto</span> &amp;oldTexID = texture_ID_data.at(geometry_type);</div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        <span class="keyword">auto</span> &amp;oldCoordFlag = coordinate_flag_data.at(geometry_type);</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        <span class="keyword">auto</span> &amp;oldVisible = visible_flag_data.at(geometry_type);</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        <span class="keyword">auto</span> &amp;oldContextFlag = context_geometry_flag_data.at(geometry_type);</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>        <span class="keyword">auto</span> &amp;oldDeleteFlag = delete_flag_data.at(geometry_type);</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span> </div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>        <span class="comment">// New buffers</span></div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>        std::vector&lt;VisualizerGeometryType&gt; newType;</div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        std::vector&lt;float&gt; newVertex, newNormal, newUV, newColor;</div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        std::vector&lt;int&gt; newFace, newTexFlag, newTexID, newCoordFlag;</div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>        std::vector&lt;bool&gt; newDeleteFlag, newContextFlag;</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>        std::vector&lt;char&gt; newVisible;</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    <span class="comment">// Iterate each geometry type</span></div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span> </div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>    <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span> &amp;geometry_type : all_geometry_types ) {</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        <span class="keywordflow">if</span> ( vertex_data.find(geometry_type) == vertex_data.end() ) {</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>        }</div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span> </div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        <span class="keyword">auto</span> &amp;oldFace = face_index_data.at(geometry_type);</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        <span class="keyword">auto</span> &amp;oldVertex = vertex_data.at(geometry_type);</div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        <span class="keyword">auto</span> &amp;oldNormal = normal_data.at(geometry_type);</div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>        <span class="keyword">auto</span> &amp;oldUV = uv_data.at(geometry_type);</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>        <span class="keyword">auto</span> &amp;oldColor = color_data.at(geometry_type);</div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>        <span class="keyword">auto</span> &amp;oldTexFlag = texture_flag_data.at(geometry_type);</div>
+<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>        <span class="keyword">auto</span> &amp;oldTexID = texture_ID_data.at(geometry_type);</div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        <span class="keyword">auto</span> &amp;oldCoordFlag = coordinate_flag_data.at(geometry_type);</div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        <span class="keyword">auto</span> &amp;oldVisible = visible_flag_data.at(geometry_type);</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>        <span class="keyword">auto</span> &amp;oldContextFlag = context_geometry_flag_data.at(geometry_type);</div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>        <span class="keyword">auto</span> &amp;oldDeleteFlag = delete_flag_data.at(geometry_type);</div>
 <div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span> </div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>        <span class="comment">// Collect UUIDs to drop</span></div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>        std::vector&lt;size_t&gt; toErase;</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span> </div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>        <span class="comment">// Walk the UUID_map and rebuild entries</span></div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[UUID, prim]: UUID_map) {</div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>            <span class="keywordflow">if</span> (prim.geometry_type != geometry_type) {</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>                <span class="keywordflow">continue</span>; <span class="comment">// this UUID is another geometry type</span></div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>            }</div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span> </div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>            <span class="comment">// If marked deleted =&gt; drop</span></div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>            <span class="keywordflow">if</span> (oldDeleteFlag[prim.delete_flag_index]) {</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>                toErase.push_back(UUID);</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>            }</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span> </div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>            <span class="comment">// Otherwise copy its slices into the new buffers</span></div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> vcount = <a class="code hl_function" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2" title="Returns the vertex count for a given geometry type.">getVertexCount</a>(prim.geometry_type);</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> v3 = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(vcount) * 3;</div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> v2 = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(vcount) * 2;</div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span> </div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>            <span class="comment">// Record new base indices</span></div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> fi = newFace.size();</div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> vi = newVertex.size();</div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ni = newNormal.size();</div>
-<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ui = newUV.size();</div>
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ci = newColor.size();</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> tfi = newTexFlag.size();</div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> tidi = newTexID.size();</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> cfi = newCoordFlag.size();</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> vi2 = newVisible.size();</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> cfi2 = newContextFlag.size();</div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> dfi = newDeleteFlag.size();</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span> </div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>            <span class="comment">// Copy raw data</span></div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            newFace.insert( newFace.end(), vcount, <a class="code hl_function" href="global_8h.html#ab41db2f933a3e448d99437bf66ae9520" title="Static cast for converting between types.">scast&lt;int&gt;</a>(newVisible.size()) ); <span class="comment">//the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.</span></div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span> </div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            newVertex.insert(newVertex.end(),</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>                             oldVertex.begin() + prim.vertex_index,</div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>                             oldVertex.begin() + prim.vertex_index + v3);</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>        <span class="comment">// New buffers</span></div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>        std::vector&lt;VisualizerGeometryType&gt; newType;</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        std::vector&lt;float&gt; newVertex, newNormal, newUV, newColor;</div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>        std::vector&lt;int&gt; newFace, newTexFlag, newTexID, newCoordFlag;</div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        std::vector&lt;bool&gt; newDeleteFlag, newContextFlag;</div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        std::vector&lt;char&gt; newVisible;</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span> </div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>        <span class="comment">// Collect UUIDs to drop</span></div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>        std::vector&lt;size_t&gt; toErase;</div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span> </div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>        <span class="comment">// Walk the UUID_map and rebuild entries</span></div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;[UUID, prim]: UUID_map) {</div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>            <span class="keywordflow">if</span> (prim.geometry_type != geometry_type) {</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>                <span class="keywordflow">continue</span>; <span class="comment">// this UUID is another geometry type</span></div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>            }</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span> </div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>            <span class="comment">// If marked deleted =&gt; drop</span></div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>            <span class="keywordflow">if</span> (oldDeleteFlag[prim.delete_flag_index]) {</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>                toErase.push_back(UUID);</div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>            }</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span> </div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>            <span class="comment">// Otherwise copy its slices into the new buffers</span></div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> vcount = <a class="code hl_function" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2" title="Returns the vertex count for a given geometry type.">getVertexCount</a>(prim.geometry_type);</div>
+<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> v3 = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(vcount) * 3;</div>
+<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> v2 = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(vcount) * 2;</div>
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span> </div>
+<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>            <span class="comment">// Record new base indices</span></div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> fi = newFace.size();</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> vi = newVertex.size();</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ni = newNormal.size();</div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ui = newUV.size();</div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> ci = newColor.size();</div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> tfi = newTexFlag.size();</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> tidi = newTexID.size();</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> cfi = newCoordFlag.size();</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> vi2 = newVisible.size();</div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> cfi2 = newContextFlag.size();</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>            <span class="keyword">const</span> <span class="keywordtype">size_t</span> dfi = newDeleteFlag.size();</div>
 <div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span> </div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>            newNormal.insert(newNormal.end(),</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>                             oldNormal.begin() + prim.normal_index,</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>                             oldNormal.begin() + prim.normal_index + 3);</div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span> </div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>            newUV.insert(newUV.end(),</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>                         oldUV.begin() + prim.uv_index,</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>                         oldUV.begin() + prim.uv_index + v2);</div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span> </div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>            newColor.insert(newColor.end(),</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>                            oldColor.begin() + prim.color_index,</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>                            oldColor.begin() + prim.color_index + 4);</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span> </div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>            newTexFlag.push_back(oldTexFlag[prim.texture_flag_index]);</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>            newTexID.push_back(oldTexID[prim.texture_ID_index]);</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>            newCoordFlag.push_back(oldCoordFlag[prim.coordinate_flag_index]);</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>            newVisible.push_back(oldVisible[prim.visible_index]);</div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>            newContextFlag.push_back(oldContextFlag[prim.context_geometry_flag_index]);</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>            newDeleteFlag.push_back(oldDeleteFlag[prim.delete_flag_index]);</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>            <span class="comment">// Copy raw data</span></div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>            newFace.insert( newFace.end(), vcount, <a class="code hl_function" href="global_8h.html#ab41db2f933a3e448d99437bf66ae9520" title="Static cast for converting between types.">scast&lt;int&gt;</a>(newVisible.size()) ); <span class="comment">//the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.</span></div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span> </div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>            newVertex.insert(newVertex.end(),</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>                             oldVertex.begin() + prim.vertex_index,</div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>                             oldVertex.begin() + prim.vertex_index + v3);</div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span> </div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>            newNormal.insert(newNormal.end(),</div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>                             oldNormal.begin() + prim.normal_index,</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>                             oldNormal.begin() + prim.normal_index + 3);</div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span> </div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>            newUV.insert(newUV.end(),</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>                         oldUV.begin() + prim.uv_index,</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>                         oldUV.begin() + prim.uv_index + v2);</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span> </div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>            newColor.insert(newColor.end(),</div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>                            oldColor.begin() + prim.color_index,</div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>                            oldColor.begin() + prim.color_index + 4);</div>
 <div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span> </div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>            <span class="comment">// Update the map entry to point at the new positions</span></div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>            prim.face_index_index = fi;</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>            prim.vertex_index = vi;</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>            prim.normal_index = ni;</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>            prim.uv_index = ui;</div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>            prim.color_index = ci;</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>            prim.texture_flag_index = tfi;</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>            prim.texture_ID_index = tidi;</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>            prim.coordinate_flag_index = cfi;</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>            prim.visible_index = vi2;</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>            prim.context_geometry_flag_index = cfi2;</div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>            prim.delete_flag_index = dfi;</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>        }</div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span> </div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        <span class="comment">// Erase deleted UUIDs</span></div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span> UUID: toErase) {</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>            UUID_map.erase(UUID);</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        }</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span> </div>
-<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>        <span class="comment">// Swap into place</span></div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>        oldFace.swap(newFace);</div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>        oldVertex.swap(newVertex);</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        oldNormal.swap(newNormal);</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        oldUV.swap(newUV);</div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        oldColor.swap(newColor);</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>        oldTexFlag.swap(newTexFlag);</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>        oldTexID.swap(newTexID);</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        oldCoordFlag.swap(newCoordFlag);</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        oldVisible.swap(newVisible);</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        oldContextFlag.swap(newContextFlag);</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>        oldDeleteFlag.swap(newDeleteFlag);</div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>    }</div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span> </div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>    <span class="comment">// Reset deleted count</span></div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    deleted_primitive_count = 0;</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>}</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span> </div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span><span class="keywordtype">void</span> GeometryHandler::registerUUID(<span class="keywordtype">size_t</span> UUID, <span class="keyword">const</span> VisualizerGeometryType &amp;geometry_type) {</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span> </div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    UUID_map[UUID] = {</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>        geometry_type,</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>        face_index_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        vertex_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>        normal_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>        uv_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>        color_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>        texture_flag_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        texture_ID_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        coordinate_flag_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        visible_flag_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>        context_geometry_flag_data.at(geometry_type).size(),</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>        delete_flag_data.at(geometry_type).size()</div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    };</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span> </div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>}</div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span> </div>
-<div class="foldopen" id="foldopen00900" data-start="{" data-end="}">
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno"><a class="line" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2">  900</a></span><span class="keywordtype">char</span> <a class="code hl_function" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2" title="Returns the vertex count for a given geometry type.">GeometryHandler::getVertexCount</a>(<span class="keyword">const</span> <a class="code hl_enumeration" href="class_geometry_handler.html#a6b777fd59c0ceee97cd80fae4e5f4005" title="Enum representing different types of visualizer geometry.">VisualizerGeometryType</a> &amp;geometry_type) {</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    <span class="keywordflow">switch</span> (geometry_type) {</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_RECTANGLE: <span class="keywordflow">return</span> 4;</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_TRIANGLE:  <span class="keywordflow">return</span> 3;</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_POINT:     <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_LINE:      <span class="keywordflow">return</span> 2;</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        <span class="keywordflow">default</span>:</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>            assert(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>            <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>    }</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span> </div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>}</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>            newTexFlag.push_back(oldTexFlag[prim.texture_flag_index]);</div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>            newTexID.push_back(oldTexID[prim.texture_ID_index]);</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>            newCoordFlag.push_back(oldCoordFlag[prim.coordinate_flag_index]);</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>            newVisible.push_back(oldVisible[prim.visible_index]);</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>            newContextFlag.push_back(oldContextFlag[prim.context_geometry_flag_index]);</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>            newDeleteFlag.push_back(oldDeleteFlag[prim.delete_flag_index]);</div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span> </div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>            <span class="comment">// Update the map entry to point at the new positions</span></div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>            prim.face_index_index = fi;</div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>            prim.vertex_index = vi;</div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>            prim.normal_index = ni;</div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>            prim.uv_index = ui;</div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>            prim.color_index = ci;</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>            prim.texture_flag_index = tfi;</div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>            prim.texture_ID_index = tidi;</div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>            prim.coordinate_flag_index = cfi;</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>            prim.visible_index = vi2;</div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>            prim.context_geometry_flag_index = cfi2;</div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>            prim.delete_flag_index = dfi;</div>
+<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>        }</div>
+<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span> </div>
+<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>        <span class="comment">// Erase deleted UUIDs</span></div>
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span> UUID: toErase) {</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>            UUID_map.erase(UUID);</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        }</div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span> </div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>        <span class="comment">// Swap into place</span></div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        oldFace.swap(newFace);</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        oldVertex.swap(newVertex);</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        oldNormal.swap(newNormal);</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>        oldUV.swap(newUV);</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>        oldColor.swap(newColor);</div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>        oldTexFlag.swap(newTexFlag);</div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>        oldTexID.swap(newTexID);</div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>        oldCoordFlag.swap(newCoordFlag);</div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>        oldVisible.swap(newVisible);</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>        oldContextFlag.swap(newContextFlag);</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>        oldDeleteFlag.swap(newDeleteFlag);</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    }</div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span> </div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <span class="comment">// Reset deleted count</span></div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    deleted_primitive_count = 0;</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>}</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span> </div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span><span class="keywordtype">void</span> GeometryHandler::registerUUID(<span class="keywordtype">size_t</span> UUID, <span class="keyword">const</span> VisualizerGeometryType &amp;geometry_type) {</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span> </div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>    UUID_map[UUID] = {</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        geometry_type,</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        face_index_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        vertex_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>        normal_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>        uv_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>        color_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>        texture_flag_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>        texture_ID_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        coordinate_flag_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>        visible_flag_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>        context_geometry_flag_data.at(geometry_type).size(),</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>        delete_flag_data.at(geometry_type).size()</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    };</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span> </div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>}</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
+<div class="foldopen" id="foldopen00907" data-start="{" data-end="}">
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno"><a class="line" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2">  907</a></span><span class="keywordtype">char</span> <a class="code hl_function" href="class_geometry_handler.html#af56ff5b79a21b045f999927f4d05baf2" title="Returns the vertex count for a given geometry type.">GeometryHandler::getVertexCount</a>(<span class="keyword">const</span> <a class="code hl_enumeration" href="class_geometry_handler.html#a6b777fd59c0ceee97cd80fae4e5f4005" title="Enum representing different types of visualizer geometry.">VisualizerGeometryType</a> &amp;geometry_type) {</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span> </div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    <span class="keywordflow">switch</span> (geometry_type) {</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_RECTANGLE: <span class="keywordflow">return</span> 4;</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_TRIANGLE:  <span class="keywordflow">return</span> 3;</div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_POINT:     <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>        <span class="keywordflow">case</span> GEOMETRY_TYPE_LINE:      <span class="keywordflow">return</span> 2;</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>        <span class="keywordflow">default</span>:</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>            assert(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>            <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    }</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>}</div>
 </div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

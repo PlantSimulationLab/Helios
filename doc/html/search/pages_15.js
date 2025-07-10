@@ -3,7 +3,8 @@ var searchData=
   ['o_0',['Tutorial 4: File I/O',['../context_fileio_tutorial.html',1,'Tutorials']]],
   ['of_20spherical_20crowns_1',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
   ['of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_2',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
-  ['optix_20version_3',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
-  ['output_4',['File Input/Output',['../_i_o.html',1,'']]],
-  ['overview_5',['Overview',['../index.html',1,'']]]
+  ['optics_20plugin_20documentation_3',['Leaf Optics Plugin Documentation',['../_leaf_optics_doc.html',1,'PlugIns']]],
+  ['optix_20version_4',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['output_5',['File Input/Output',['../_i_o.html',1,'']]],
+  ['overview_6',['Overview',['../index.html',1,'']]]
 ];

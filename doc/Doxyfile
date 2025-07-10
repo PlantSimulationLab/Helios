@@ -48,7 +48,7 @@ PROJECT_NAME           = Helios
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = v1.3.38
+PROJECT_NUMBER         = v1.3.39
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -1302,7 +1302,8 @@ HTML_EXTRA_STYLESHEET  = doc/assets/doxygen-awesome-sidebar-only-darkmode-toggle
 HTML_EXTRA_FILES = doc/assets/doxygen-awesome-darkmode-toggle.js \
                      doc/assets/doxygen-awesome-tabs.js \
                         doc/assets/doxygen-awesome-interactive-toc.js \
-                        doc/assets/doxygen-awesome-paragraph-link.js
+                        doc/assets/doxygen-awesome-paragraph-link.js \
+                        doc/assets/navsync-default.js
 
 # The HTML_COLORSTYLE tag can be used to specify if the generated HTML output
 # should be rendered with a dark or light theme.

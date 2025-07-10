@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -431,7 +428,7 @@ Code</h1>
 <div class="line">        visualizer.setColorbarPosition(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.75, 0.9, 0) );</div>
 <div class="line">        <span class="keywordtype">char</span> time_string[6];</div>
 <div class="line">        sprintf(time_string, <span class="stringliteral">&quot;%02d:%02d&quot;</span>, time.hour, time.minute);</div>
-<div class="line">        visualizer.addTextboxByCenter( time_string, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.5,0.9,0), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5" title="Coordinates are normalized to unity and are window-aligned. The point (x,y)=(0,0) is in the bottom le...">Visualizer::COORDINATES_WINDOW_NORMALIZED</a> );</div>
+<div class="line">        visualizer.addTextboxByCenter( time_string, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.5,0.9,0), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5">Visualizer::COORDINATES_WINDOW_NORMALIZED</a> );</div>
 <div class="line">        visualizer.plotInteractive(); <span class="comment">// !!! Close the window to advance to the next time step</span></div>
 <div class="line"> </div>
 <div class="line">    }</div>

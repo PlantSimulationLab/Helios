@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
 
     if [ -e "./helios_test" ]; then
       chmod -R 777 ./helios_test
-      rm -r ./helios_test
+      rm -rf ./helios_test
     fi
 
     git clone https://www.github.com/PlantSimulationLab/Helios ./helios_test
@@ -148,10 +148,9 @@ fi
 ERROR_COUNT=0
 
 if [ -e "temp" ]; then
-  rm -rf temp/*
-else
-  mkdir temp
+  rm -rf temp
 fi
+mkdir temp
 
 if [ ! -e "../utilities/create_project.sh" ]; then
   echo -e "\r\x1B[31mProject creation script create_project.sh does not exist...failed.\x1B[39m"
@@ -330,10 +329,9 @@ for i in "${SAMPLES[@]}"; do
   cd ../..
 
 done
-
 if [ "$CHECKOUT_MODE" == "ON" ]; then
   cd ../..
-  rm -r ./helios_test
+  rm -rf ./helios_test
 fi
 
 if ((ERROR_COUNT == 0)); then

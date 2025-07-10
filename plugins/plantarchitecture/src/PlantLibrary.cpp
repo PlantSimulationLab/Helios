@@ -3035,7 +3035,7 @@ uint PlantArchitecture::buildCherryTomatoPlant(const helios::vec3 &base_position
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, 50, 10, 5, 30, 1000, false);
+    setPlantPhenologicalThresholds(plantID, 0, 50, 10, 5, 30, 1000);
 
     plant_instances.at(plantID).max_age = 175;
 

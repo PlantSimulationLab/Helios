@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -251,15 +248,15 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value </th></tr>
 <tr>
-<td>wind_speed </td><td>m/s </td><td> <font face="courier" color="green">float</font> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
+<td>wind_speed </td><td>m/s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
 <tr>
-<td>object_length </td><td>m </td><td> <font face="courier" color="green">float</font> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
+<td>object_length </td><td>m </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
 <tr>
-<td>air_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>290 K </td></tr>
+<td>air_temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>290 K </td></tr>
 <tr>
-<td>surface_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Object surface temperature. </td><td><a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> </td><td>300 K </td></tr>
+<td>surface_temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Object surface temperature. </td><td><a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> </td><td>300 K </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Number of primitive faces with energy transfer (must be 1 or 2). </td><td>N/A </td><td>2 </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Number of primitive faces with energy transfer (must be 1 or 2). </td><td>N/A </td><td>2 </td></tr>
 </table>
 <h2><a class="anchor" id="BLOutputData"></a>
 Default Output Primitive Data</h2>
@@ -267,7 +264,7 @@ Default Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th></tr>
 <tr>
-<td>boundarylayer_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
+<td>boundarylayer_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
 </table>
 <h1><a class="anchor" id="BLUse"></a>
 Using the Boundary Layer Conductance Model Plug-in</h1>

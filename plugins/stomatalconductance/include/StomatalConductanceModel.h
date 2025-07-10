@@ -67,10 +67,6 @@ struct BMFcoefficients{
       i0 = 38.65;
       k = 232916.82;
       b = 609.67;
-//      Em = 7.0;
-//      k = 496;
-//      b = 6.1;
-//      i0 = 6.6;
     }
 
     float Em;  //mmol/m^2/s

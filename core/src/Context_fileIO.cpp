@@ -3936,7 +3936,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         mtlfilename.append(".mtl");
     } else {
         if (!file_path.empty()) {
-            mtlfilename = file_path + "/" + file_stem + ".mtl";
+            std::filesystem::path mtl_path = std::filesystem::path(file_path) / (file_stem + ".mtl");
+            mtlfilename = mtl_path.string();
         } else {
             mtlfilename = file_stem + ".mtl";
         }
@@ -4119,12 +4120,12 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     }
 
     // copy material textures to new directory and edit old file paths
-    std::string texture_dir = std::string(file_path);
+    std::filesystem::path texture_dir = std::filesystem::path(file_path);
     for (auto &material: materials) {
         std::string texture = material.texture;
         if (!texture.empty() && std::filesystem::exists(texture)) {
             auto file = std::filesystem::path(texture).filename();
-            std::filesystem::copy_file(texture, texture_dir + file.string(), std::filesystem::copy_options::overwrite_existing);
+            std::filesystem::copy_file(texture, texture_dir / file, std::filesystem::copy_options::overwrite_existing);
             material.texture = file.string();
         }
     }
@@ -4250,7 +4251,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 
 
         for (const std::string &label: primitive_dat_fields) {
-            std::string datfilename = file_path + file_stem + "_" + std::string(label) + ".dat";
+            std::filesystem::path dat_path = std::filesystem::path(file_path) / (file_stem + "_" + std::string(label) + ".dat");
+            std::string datfilename = dat_path.string();
             std::ofstream datout(datfilename);
 
             for (int mat = 0; mat < materials.size(); mat++) {

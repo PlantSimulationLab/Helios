@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -174,6 +171,9 @@ $(function(){initNavTree('_stomatal_doc.html',''); initResizable(true); });
       <li class="level2">
         <a href="#StomatalOutputData">Output Primitive Data</a>
       </li>
+      <li class="level2">
+        <a href="#GsOptionalOutputData">Optional Output Primitive Data</a>
+      </li>
     </ul>
   </li>
   <li class="level1">
@@ -236,25 +236,25 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description </th><th>Applicable model(s) </th><th>Available Plug-ins </th><th>Default Value  </th></tr>
 <tr>
-<td>radiation_flux_PAR </td><td>\(Q\) </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \(\mu\)mol/m<sup>2</sup>/s using a factor of 4.57. </td><td>BMF </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>0  </td></tr>
+<td>radiation_flux_PAR </td><td>\(Q\) </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \(\mu\)mol/m<sup>2</sup>/s using a factor of 4.57. </td><td>BMF </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>0  </td></tr>
 <tr>
-<td>temperature </td><td>\(T_s\) </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. </td><td>All </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in. </td><td>300 K  </td></tr>
+<td>temperature </td><td>\(T_s\) </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive surface temperature. </td><td>All </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in. </td><td>300 K  </td></tr>
 <tr>
-<td>air_pressure </td><td>\(p_{atm}\) </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>All </td><td>N/A </td><td>101,000 Pa  </td></tr>
+<td>air_pressure </td><td>\(p_{atm}\) </td><td>Pascals </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Atmospheric pressure. </td><td>All </td><td>N/A </td><td>101,000 Pa  </td></tr>
 <tr>
-<td>air_temperature </td><td>\(T_a\) </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Temperature of air outside of primitive boundary-layer. </td><td>All </td><td>N/A </td><td>300 K  </td></tr>
+<td>air_temperature </td><td>\(T_a\) </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Temperature of air outside of primitive boundary-layer. </td><td>All </td><td>N/A </td><td>300 K  </td></tr>
 <tr>
-<td>air_humidity </td><td>\(h\) </td><td>Unitless </td><td> <font face="courier" color="green">float</font> </td><td>Relative humidity of air outside of primitive boundary-layer. </td><td>All </td><td>N/A </td><td>0.5  </td></tr>
+<td>air_humidity </td><td>\(h\) </td><td>Unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Relative humidity of air outside of primitive boundary-layer. </td><td>All </td><td>N/A </td><td>0.5  </td></tr>
 <tr>
-<td>boundarylayer_conductance** </td><td>\(g_H\) </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 1.08 that of heat.) </td><td>All </td><td>Can be computed by <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled. </td><td>0.1 mol/m<sup>2</sup>-s  </td></tr>
+<td>boundarylayer_conductance** </td><td>\(g_H\) </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 1.08 that of heat.) </td><td>All </td><td>Can be computed by <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled. </td><td>0.1 mol/m<sup>2</sup>-s  </td></tr>
 <tr>
-<td>beta_soil </td><td>\(\beta\) </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Soil moisture factor, defined as \((\theta-\theta_w)/(\theta_f-\theta_w)\), with \(\theta,\,\theta_f,\,\theta_w\) being the effective soil water content, water content at field capacity, and water content at the wilting point. </td><td>All </td><td>N/A </td><td>1.0  </td></tr>
+<td>beta_soil </td><td>\(\beta\) </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Soil moisture factor, defined as \((\theta-\theta_w)/(\theta_f-\theta_w)\), with \(\theta,\,\theta_f,\,\theta_w\) being the effective soil water content, water content at field capacity, and water content at the wilting point. </td><td>All </td><td>N/A </td><td>1.0  </td></tr>
 <tr>
-<td>net_photosynthesis </td><td>\(A\) </td><td>\(\mu\)mol/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Net CO<sub>2</sub> (photosynthetic) flux. </td><td>BWB, BBL, Mopt </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in. </td><td>0  </td></tr>
+<td>net_photosynthesis </td><td>\(A\) </td><td>\(\mu\)mol/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Net CO<sub>2</sub> (photosynthetic) flux. </td><td>BWB, BBL, Mopt </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in. </td><td>0  </td></tr>
 <tr>
-<td>air_CO2 </td><td>\(C_a\) </td><td>\(\mu\)mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>CO<sub>2</sub> concentration of air outside primitive boundary-layer. </td><td>BWB, BBL, Mopt </td><td>N/A </td><td>400 \(\mu\)mol/mol  </td></tr>
+<td>air_CO2 </td><td>\(C_a\) </td><td>\(\mu\)mol/mol </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>CO<sub>2</sub> concentration of air outside primitive boundary-layer. </td><td>BWB, BBL, Mopt </td><td>N/A </td><td>400 \(\mu\)mol/mol  </td></tr>
 <tr>
-<td>Gamma_CO2 </td><td>\(\Gamma\) </td><td>\(\mu\)mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.) </td><td>BBL </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in (need to enable optional primitive data output). </td><td><p class="starttd">100 \(\mu\)mol/mol </p>
+<td>Gamma_CO2 </td><td>\(\Gamma\) </td><td>\(\mu\)mol/mol </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.) </td><td>BBL </td><td>Can be computed by <a class="el" href="class_photosynthesis_model.html">PhotosynthesisModel</a> plug-in (need to enable optional primitive data output). </td><td><p class="starttd">100 \(\mu\)mol/mol </p>
 <p class="endtd"></p>
 </td></tr>
 </table>
@@ -266,8 +266,48 @@ Output Primitive Data</h2>
 <th>Primitive Data Label </th><th>Symbol </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
 <td>moisture_conductance </td><td>\(g_s\) </td><td>mol air/m<sup>2</sup>-sec <br  />
- </td><td> <font face="courier" color="green">float</font> </td><td>Conductance of water vapor through stomata. <br  />
+ </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Conductance of water vapor through stomata. <br  />
   </td></tr>
+</table>
+<h2><a class="anchor" id="GsOptionalOutputData"></a>
+Optional Output Primitive Data</h2>
+<p>Optional output primitive data can be written to the context by calling <a class="el" href="class_stomatal_conductance_model.html#a9618e00c9b4649c289debff2a4a1cfd4">StomatalConductanceModel::optionalOutputPrimitiveData()</a>, with an argument of one of the primitive data labels given in the table below.</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> stomatalmodel( &amp;context );</div>
+<div class="line">stomatalmodel.optionalOutputPrimitiveData( <span class="stringliteral">&quot;vapor_pressure_deficit&quot;</span> );</div>
+</div><!-- fragment --><table class="doxtable">
+<tr>
+<th>Primitive Data Label</th><th>Units</th><th>Data Type</th><th>Description </th></tr>
+<tr>
+<td>vapor_pressure_deficit</td><td>mmol/mol</td><td> <font face="courier" color="green">float</font></td><td>Vapor pressure deficit between the stomatal cavity and leaf surface. Only applicable for BMF model. </td></tr>
+<tr>
+<td>model_parameters</td><td>N/A</td><td> <font face="courier" color="green">std::string</font></td><td>Model parameters for each primitive. See table below for the actual primitive data labels that are created. </td></tr>
+</table>
+<p>If you enable the optional output primitive data "model_parameters", different primtive data will be created based on the selected model corresponding to each model parameter.</p>
+<table class="doxtable">
+<tr>
+<th>Model</th><th>Model Parameter</th><th>Output Primitive Data Label  </th></tr>
+<tr>
+<td rowspan="2">Ball-Woodrow-Berry</td><td>\(g_{s,0}\)</td><td>gs0_BWB  </td></tr>
+<tr>
+<td>\(a_1\)</td><td>a1_BWB  </td></tr>
+<tr>
+<td rowspan="3">Ball-Berry-Leuning</td><td>\(g_{s,0}\)</td><td>gs0_BBL  </td></tr>
+<tr>
+<td>\(a_1\)</td><td>a1_BBL  </td></tr>
+<tr>
+<td>\(D_0\)</td><td>D0_BBL  </td></tr>
+<tr>
+<td rowspan="2">Medlyn Optimality</td><td>\(g_{s,0}\)</td><td>gs0_MOPT  </td></tr>
+<tr>
+<td>\(g_1\)</td><td>g1_MOPT  </td></tr>
+<tr>
+<td rowspan="4">Buckley-Mott-Farquhar</td><td>\(E_m\)</td><td>Em_BMF  </td></tr>
+<tr>
+<td>\(i_0\)</td><td>i0_BMF  </td></tr>
+<tr>
+<td>\(k\)</td><td>k_BMF  </td></tr>
+<tr>
+<td>\(b\)</td><td>b_BMF  </td></tr>
 </table>
 <h1><a class="anchor" id="StomatalIntro"></a>
 Introduction</h1>

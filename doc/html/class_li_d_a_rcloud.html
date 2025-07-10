@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1365,7 +1362,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Determine the grid cell in which each hit point resides for the whole point cloud - GPU accelerated version *&zwj;/. </p>
-<dl class="section note"><dt>Note</dt><dd>This function does not return a value, rather, it set the Scan variable &lsquo;hit_vol&rsquo; which is queried by the function &lsquo;Scan::getHitGridCell()&rsquo;. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function does not return a value, rather, it sets the Scan variable &lsquo;hit_vol&rsquo; which is queried by the function <a class="el" href="#a251c4f3bbefdd07212cd8fe1037dc0d7">LiDARcloud::getHitGridCell()</a>. </dd></dl>
 <p>Grid cell centers on device (GPU) memory</p>
 <p>Grid cell global anchor on device (GPU) memory</p>
 <p>Grid sizes on device (GPU) memory</p>
@@ -3470,7 +3467,7 @@ Calling this function requires that the function calculateHitGridCell[*]() has b
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>If &lsquo;reflectance&rsquo; data was not provided for a hit point when calling Scan::addHitPoint(), the point will not be filtered. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>If &lsquo;reflectance&rsquo; data was not provided for a hit point when calling <a class="el" href="#a6f01d5c6bdab78ee7bc08c90ba5f2217">LiDARcloud::addHitPoint()</a>, the point will not be filtered. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_li_d_a_r_8cpp_source.html#l01055">1055</a> of file <a class="el" href="_li_d_a_r_8cpp_source.html">LiDAR.cpp</a>.</p>
 

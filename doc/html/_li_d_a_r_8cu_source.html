@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -3955,7 +3952,7 @@ $(function(){initNavTree('_li_d_a_r_8cu_source.html',''); initResizable(true); }
 <div class="line"><a id="l03797" name="l03797"></a><span class="lineno"> 3797</span>        <span class="keywordflow">if</span>( prim_vol[p]&gt;=0 ){</div>
 <div class="line"><a id="l03798" name="l03798"></a><span class="lineno"> 3798</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> gridcell = prim_vol[p];</div>
 <div class="line"><a id="l03799" name="l03799"></a><span class="lineno"> 3799</span>            total_area.at(gridcell) += context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d" title="Method to return the surface area of a Primitive.">getPrimitiveArea</a>(UUIDs_all.at(p));</div>
-<div class="line"><a id="l03800" name="l03800"></a><span class="lineno"> 3800</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUIDs_all.at(p),<span class="stringliteral">&quot;gridCell&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">helios::HELIOS_TYPE_UINT</a>,1,&amp;gridcell);</div>
+<div class="line"><a id="l03800" name="l03800"></a><span class="lineno"> 3800</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>(UUIDs_all.at(p),<span class="stringliteral">&quot;gridCell&quot;</span>,gridcell);</div>
 <div class="line"><a id="l03801" name="l03801"></a><span class="lineno"> 3801</span>        }</div>
 <div class="line"><a id="l03802" name="l03802"></a><span class="lineno"> 3802</span>    }</div>
 <div class="line"><a id="l03803" name="l03803"></a><span class="lineno"> 3803</span> </div>

@@ -19,6 +19,7 @@ var class_geometry_handler =
     [ "getDomainBoundingBox", "class_geometry_handler.html#a76209138070a4a6296c403258d98c24e", null ],
     [ "getDomainBoundingSphere", "class_geometry_handler.html#a5f9950b9e64ac51f2922d3b37724b901", null ],
     [ "getFaceIndexData_ptr", "class_geometry_handler.html#a11586ceb650d63c75fdb6b47d2d0d330", null ],
+    [ "getIndexMap", "class_geometry_handler.html#a1b60dc964a683ab12083e5782fc6639d", null ],
     [ "getLineCount", "class_geometry_handler.html#a3932beabf1f0799befe820b25aa0968f", null ],
     [ "getNormal", "class_geometry_handler.html#a5632d660ed6fd85f5aee6cfaadf267fe", null ],
     [ "getNormalData_ptr", "class_geometry_handler.html#ae57501423ab47eb837220fad16206b4f", null ],
