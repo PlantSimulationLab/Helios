@@ -1,0 +1,84 @@
+/*! \page LeafOpticsDoc Leaf Optics Plugin Documentation
+
+\tableofcontents
+
+<p> <br><br> </p>
+
+<table>
+ <tr><th>Dependencies</th><td>None</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "leafoptics" )</td></tr>
+ <tr><th>Header File</th><td>#include "LeafOptics.h"</td></tr>
+ <tr><th>Class</th><td>\ref LeafOptics</td></tr>
+</table>
+
+\section LOIntro Introduction
+
+This plug-in computes leaf spectral reflectance and transmittance using the
+PROSPECT family of models.  The implementation follows the <a href="https://doi.org/10.1016/j.rse.2017.08.004">PROSPECT--PRO</a>
+formulation with eight absorbing constituents and a structural parameter
+\f$N\f$ that represents the number of elementary layers in the leaf.  Output
+spectra cover the range 400--2500&nbsp;nm in 1&nbsp;nm steps.
+
+For each wavelength \f$\lambda\f$ the absorption coefficient of a single layer
+is calculated as
+\f[ k(\lambda)=\frac{C_{ab}a_{ab}(\lambda)+C_{ar}a_{ar}(\lambda)+C_{an}a_{an}(\lambda)+C_{br}a_{br}(\lambda)
++C_{w}a_{w}(\lambda)+C_{m}a_{m}(\lambda)+C_{p}a_{p}(\lambda)+C_{c}a_{c}(\lambda)}{N}, \f]
+where the \f$C\f$ variables are the constituent masses per area and the
+\f$a(\lambda)\f$ terms are the specific absorption coefficients loaded from the
+internal spectral library.  Fresnel equations are used to compute surface
+reflectance and a radiative transfer solution gives the total leaf
+reflectance and transmittance.
+
+\section LOConstructor LeafOptics Class Constructor
+
+<table>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref LeafOptics::LeafOptics( helios::Context* context )</td></tr>
+</table>
+
+The constructor simply stores a pointer to the Helios context and loads the
+spectral library data required by the model.
+
+\section LOProps LeafOpticsProperties Structure
+
+The \ref LeafOpticsProperties structure stores the biochemical inputs to the
+model.
+
+<table>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default Value</th></tr>
+ <tr><td>numberlayers</td><td>unitless</td><td>Leaf structure parameter \f$N\f$</td><td>1.5</td></tr>
+ <tr><td>brownpigments</td><td>unitless</td><td>Mass of brown pigments</td><td>0</td></tr>
+ <tr><td>chlorophyllcontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Total chlorophyll</td><td>30</td></tr>
+ <tr><td>carotenoidcontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Total carotenoids</td><td>7</td></tr>
+ <tr><td>anthocyancontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Anthocyanins</td><td>1</td></tr>
+ <tr><td>watermass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Equivalent water thickness</td><td>0.015</td></tr>
+ <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Dry matter mass</td><td>0.09</td></tr>
+ <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein mass</td><td>0</td></tr>
+ <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Cellulose and other carbon compounds</td><td>0</td></tr>
+</table>
+
+\section LOUse Using the LeafOptics Plug-in
+
+The model can be run to produce global spectra and, optionally, assign those
+spectra and optical properties to a set of primitives.
+
+~~~~~~{.cpp}
+#include "LeafOptics.h"
+
+Context context;
+LeafOptics leafoptics( &context );
+
+LeafOpticsProperties props;
+props.chlorophyllcontent = 40.0f;
+props.watermass = 0.02f;
+
+std::vector<uint> leafIDs = ...; //UUIDs for leaf primitives
+leafoptics.run( leafIDs, props, "example" );
+~~~~~~
+
+This command creates global data labeled
+"leaf_reflectivity_example" and "leaf_transmissivity_example" containing the
+computed spectra.  The spectra labels are also stored as primitive data for the
+specified UUIDs together with the biochemical property values.
+
+*/

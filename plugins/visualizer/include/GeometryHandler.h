@@ -19,6 +19,8 @@ Copyright (C) 2016-2025 Brian Bailey
 #include "global.h"
 
 class GeometryHandler {
+private:
+    struct PrimitiveIndexMap;
 
 public:
 
@@ -375,6 +377,9 @@ public:
      * \return A randomly generated UUID value.
      */
     size_t sampleUUID();
+
+    //! Retrieve internal buffer indices for a primitive
+    [[nodiscard]] const PrimitiveIndexMap &getIndexMap(size_t UUID) const;
 
     constexpr static std::array<VisualizerGeometryType,4> all_geometry_types = {
         GEOMETRY_TYPE_RECTANGLE,

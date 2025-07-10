@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -177,7 +174,7 @@ $(function(){initNavTree('visualizer_custom_tutorial.html',''); initResizable(tr
 <div class="line"> </div>
 <div class="line">vis.addTextboxByCenter(<span class="stringliteral">&quot;Demo&quot;</span>, make_vec3(0.5,0.9,0), nullrotation,</div>
 <div class="line">                      RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>,</div>
-<div class="line">                      <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5" title="Coordinates are normalized to unity and are window-aligned. The point (x,y)=(0,0) is in the bottom le...">Visualizer::COORDINATES_WINDOW_NORMALIZED</a>);</div>
+<div class="line">                      <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5">Visualizer::COORDINATES_WINDOW_NORMALIZED</a>);</div>
 <div class="line"> </div>
 <div class="line">vis.plotInteractive();</div>
 </div><!-- fragment --><p>The first two commands call <a class="el" href="class_visualizer.html#afc496b8bd99bbb786d553c4b3e8dfded">Visualizer::setLightingModel()</a> and <a class="el" href="class_visualizer.html#ae2227bdf3b92fb67bcad6acf7e9279b0">Visualizer::setLightIntensityFactor()</a> to control shading. We then color primitives by the primitive data label "height" using <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData()</a> and select the <a class="el" href="class_visualizer.html#a992f636c4c406bbfc3f29add1fa3a278">Parula</a> colormap. Calling <a class="el" href="class_visualizer.html#a050807f8462ca95bde2fd737b26830c4">Visualizer::enableColorbar()</a> adds a scale bar that we title "Height (m)" and restrict to a range of 0&ndash;2 meters. Finally, a short text label is placed near the top of the window using <a class="el" href="class_visualizer.html#a2b6e537fa13d94083beb030ea6da5be6">Visualizer::addTextboxByCenter()</a>. </p>

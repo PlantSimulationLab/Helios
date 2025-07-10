@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -282,7 +279,7 @@ Friends</h2></td></tr>
 
 <p>Default constructor - does not set random number generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00166">166</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00176">176</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -311,7 +308,7 @@ Friends</h2></td></tr>
 
 <p>Constructor - sets random number generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00168">168</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00178">178</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -345,7 +342,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The sizes of the input vectors must match, and neither input vector can be empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00208">208</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00218">218</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>

@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1210,28 +1207,27 @@ Data Structures</h1>
 <tr>
 <th>Data type</th><th>Enumeration (HeliosDataType) </th></tr>
 <tr>
-<td> <font face="courier" color="green">int</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7a7039490fc92b5d76ca18b70563ed52">HELIOS_TYPE_INT</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">int</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7a7039490fc92b5d76ca18b70563ed52">HELIOS_TYPE_INT</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">uint</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">HELIOS_TYPE_UINT</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">uint</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f">HELIOS_TYPE_UINT</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">float</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0">HELIOS_TYPE_FLOAT</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">double</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a520daf05a1b3086aabd6cbe6a712c1c3">HELIOS_TYPE_DOUBLE</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">double</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a520daf05a1b3086aabd6cbe6a712c1c3">HELIOS_TYPE_DOUBLE</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">vec2</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233">HELIOS_TYPE_VEC2</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">vec2</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233">HELIOS_TYPE_VEC2</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">vec3</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a8da4db5333fb4d726d17ad82300c9d6c">HELIOS_TYPE_VEC3</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">vec3</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a8da4db5333fb4d726d17ad82300c9d6c">HELIOS_TYPE_VEC3</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">vec4</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ade0fe2a24f299ca147b95a0eebe43e5d">HELIOS_TYPE_VEC4</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">vec4</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ade0fe2a24f299ca147b95a0eebe43e5d">HELIOS_TYPE_VEC4</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">int2</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ad586d734313fa5492db5b8cc84d9eabd">HELIOS_TYPE_INT2</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">int2</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ad586d734313fa5492db5b8cc84d9eabd">HELIOS_TYPE_INT2</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">int3</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a28e69c60e380496c8c35892e76ee4ad3">HELIOS_TYPE_INT3</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">int3</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a28e69c60e380496c8c35892e76ee4ad3">HELIOS_TYPE_INT3</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">int4</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa6e12ea3a9160f59a1208f7cbb6c1ce7">HELIOS_TYPE_INT4</a> </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">int4</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa6e12ea3a9160f59a1208f7cbb6c1ce7">HELIOS_TYPE_INT4</a> </td></tr>
 <tr>
-<td> <font face="courier" color="green">std::string</font></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3">HELIOS_TYPE_STRING</a> <br  />
- </td></tr>
+<td> <span style="font-family: Courier, monospace; color: green;">std::string</span></td><td><a class="el" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3">HELIOS_TYPE_STRING</a> </td></tr>
 </table>
 <h2><a class="anchor" id="PrimData"></a>
 Primitive Data</h2>

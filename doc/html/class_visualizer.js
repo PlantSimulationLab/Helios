@@ -68,6 +68,7 @@ var class_visualizer =
     [ "colorContextPrimitivesByObjectData", "class_visualizer.html#af221d03db54adff2d38f8a938a1512b7", null ],
     [ "colorContextPrimitivesRandomly", "class_visualizer.html#ac82b9c5274ec13dae412a9972fe2a080", null ],
     [ "colorContextPrimitivesRandomly", "class_visualizer.html#afb87c8a06744966e4e02b61cf011ea79", null ],
+    [ "deleteGeometry", "class_visualizer.html#ad06be350b1411cfc7a27b4a2144ed67e", null ],
     [ "DEPRECATED", "class_visualizer.html#a66b16cf0e4d56836fad694658ccb7931", null ],
     [ "DEPRECATED", "class_visualizer.html#a032de084097c4c5857b2138f7288b166", null ],
     [ "disableColorbar", "class_visualizer.html#a3580188fe9f0daf71e1c434fe7f14103", null ],
@@ -110,5 +111,7 @@ var class_visualizer =
     [ "setLightDirection", "class_visualizer.html#a492533fe226fa92d08b010dc9a3f6e93", null ],
     [ "setLightingModel", "class_visualizer.html#afc496b8bd99bbb786d553c4b3e8dfded", null ],
     [ "setLightIntensityFactor", "class_visualizer.html#ae2227bdf3b92fb67bcad6acf7e9279b0", null ],
-    [ "showWatermark", "class_visualizer.html#a2f5e413bb5e48d98f061845065dfb830", null ]
+    [ "showWatermark", "class_visualizer.html#a2f5e413bb5e48d98f061845065dfb830", null ],
+    [ "updateContextPrimitiveColors", "class_visualizer.html#a45ca0e95501d9b8c6af245d1792be08b", null ],
+    [ "updateWatermark", "class_visualizer.html#a6e028edfd86ad409ba73d2379a06b2bf", null ]
 ];

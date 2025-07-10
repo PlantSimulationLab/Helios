@@ -748,6 +748,10 @@ namespace helios {
         inline vec2 &operator+=(const vec2 &a) noexcept;
         //! Decrement vec2 vector
         inline vec2 &operator-=(const vec2 &a) noexcept;
+        //! Multiplication assignment operator for vec2 vector
+        inline vec2 &operator*=(float a) noexcept;
+        //! Division assignment operator for vec2 vector
+        inline vec2 &operator/=(float a) noexcept;
         //! Difference of two vec2 vectors noexcept
         constexpr vec2 operator-(const vec2 &a) const noexcept;
         //! Multiply each element by scalar (scalar is multiplied on right: vec2*a)
@@ -811,6 +815,18 @@ namespace helios {
     inline vec2 &vec2::operator-=(const vec2 &a) noexcept {
         x -= a.x;
         y -= a.y;
+        return *this;
+    }
+
+    inline vec2 &vec2::operator*=(float a) noexcept {
+        x *= a;
+        y *= a;
+        return *this;
+    }
+
+    inline vec2 &vec2::operator/=(float a) noexcept {
+        x /= a;
+        y /= a;
         return *this;
     }
 
@@ -924,6 +940,10 @@ namespace helios {
         inline vec3 &operator+=(const vec3 &a) noexcept;
         //! Decrement vec3 vector
         inline vec3 &operator-=(const vec3 &a) noexcept;
+        //! Multiplication assignment operator for vec3 vector
+        inline vec3 &operator*=(float a) noexcept;
+        //! Division assignment operator for vec2 vector
+        inline vec3 &operator/=(float a) noexcept;
         //! Difference of two vec3 vectors
         constexpr vec3 operator-(const vec3 &a) const noexcept;
         //! Multiply each element by scalar (scalar is multiplied on right: vec3*a)
@@ -994,6 +1014,20 @@ namespace helios {
         this->x -= a.x;
         this->y -= a.y;
         this->z -= a.z;
+        return *this;
+    }
+
+    inline vec3 &vec3::operator*=(float a) noexcept {
+        x *= a;
+        y *= a;
+        z *= a;
+        return *this;
+    }
+
+    inline vec3 &vec3::operator/=(float a) noexcept {
+        x /= a;
+        y /= a;
+        z /= a;
         return *this;
     }
 
@@ -1112,6 +1146,10 @@ namespace helios {
         inline vec4 &operator+=(const vec4 &a) noexcept;
         //! Decrement vec4 vector
         inline vec4 &operator-=(const vec4 &a) noexcept;
+        //! Multiplication assignment operator for vec4 vector
+        inline vec4 &operator*=(float a) noexcept;
+        //! Division assignment operator for vec4 vector
+        inline vec4 &operator/=(float a) noexcept;
         //! Difference of two vec4 vectors
         constexpr vec4 operator-(const vec4 &a) const noexcept;
         //! Multiply each element by scalar (scalar is multiplied on right: vec4*a)
@@ -1179,6 +1217,22 @@ namespace helios {
         this->y -= a.y;
         this->z -= a.z;
         this->w -= a.w;
+        return *this;
+    }
+
+    inline vec4 &vec4::operator*=(float a) noexcept {
+        x *= a;
+        y *= a;
+        z *= a;
+        w *= a;
+        return *this;
+    }
+
+    inline vec4 &vec4::operator/=(float a) noexcept {
+        x /= a;
+        y /= a;
+        z /= a;
+        w /= a;
         return *this;
     }
 

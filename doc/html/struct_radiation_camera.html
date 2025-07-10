@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -159,7 +156,6 @@ $(function(){initNavTree('struct_radiation_camera.html',''); initResizable(true)
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Data Fields</a>  </div>
   <div class="headertitle"><div class="title">RadiationCamera Struct Reference</div></div>
 </div><!--header-->
@@ -189,38 +185,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7bf9dbc2a04bc04c4f9b4b17d30b3f49" id="r_a7bf9dbc2a04bc04c4f9b4b17d30b3f49"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7bf9dbc2a04bc04c4f9b4b17d30b3f49">applyGain</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, float percentile=0.95f)</td></tr>
 <tr class="memdesc:a7bf9dbc2a04bc04c4f9b4b17d30b3f49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply image gain.  <br /></td></tr>
 <tr class="separator:a7bf9dbc2a04bc04c4f9b4b17d30b3f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aea7695260befc781d2378511f3b85806" id="r_aea7695260befc781d2378511f3b85806"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aea7695260befc781d2378511f3b85806">HDRToning</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
-<tr class="memdesc:aea7695260befc781d2378511f3b85806"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies HDR toning to the specified color bands based on the local adaptation method.  <br /></td></tr>
-<tr class="separator:aea7695260befc781d2378511f3b85806"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1775a8a965d84eafef6fee9f0e7e3b9a" id="r_a1775a8a965d84eafef6fee9f0e7e3b9a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1775a8a965d84eafef6fee9f0e7e3b9a">applyCCM</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
-<tr class="memdesc:a1775a8a965d84eafef6fee9f0e7e3b9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the color correction matrix to image data.  <br /></td></tr>
-<tr class="separator:a1775a8a965d84eafef6fee9f0e7e3b9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a68674e96b32dfc81d502d5c254c4bb43" id="r_a68674e96b32dfc81d502d5c254c4bb43"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68674e96b32dfc81d502d5c254c4bb43">adjustSBC</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, float saturation, float brightness, float contrast)</td></tr>
+<tr class="memdesc:a68674e96b32dfc81d502d5c254c4bb43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies HDR toning to the specified color bands based on the local adaptation method.  <br /></td></tr>
+<tr class="separator:a68674e96b32dfc81d502d5c254c4bb43"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab496ecab01aaff065e9631bf0f7ace28" id="r_ab496ecab01aaff065e9631bf0f7ace28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab496ecab01aaff065e9631bf0f7ace28">gammaCompress</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
-<tr class="memdesc:ab496ecab01aaff065e9631bf0f7ace28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply gamma compression to image data.  <br /></td></tr>
+<tr class="memdesc:ab496ecab01aaff065e9631bf0f7ace28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the color correction matrix to image data.  <br /></td></tr>
 <tr class="separator:ab496ecab01aaff065e9631bf0f7ace28"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a21d338461c81fca6a3da4ca5d1d12ed9" id="r_a21d338461c81fca6a3da4ca5d1d12ed9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21d338461c81fca6a3da4ca5d1d12ed9">bilateralFilter</a> (const std::vector&lt; float &gt; &amp;in, std::vector&lt; float &gt; &amp;out, int w, int h, float ss, float sr)</td></tr>
-<tr class="memdesc:a21d338461c81fca6a3da4ca5d1d12ed9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a bilateral filter to the input data.  <br /></td></tr>
-<tr class="separator:a21d338461c81fca6a3da4ca5d1d12ed9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a76ad26befb647e0bcb281a1ef7b3c73c" id="r_a76ad26befb647e0bcb281a1ef7b3c73c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76ad26befb647e0bcb281a1ef7b3c73c">fastBilateralFilter</a> (const std::vector&lt; float &gt; &amp;in, std::vector&lt; float &gt; &amp;out, int w, int h, float ss, float sr, int df)</td></tr>
-<tr class="memdesc:a76ad26befb647e0bcb281a1ef7b3c73c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a fast bilateral filter to the input data.  <br /></td></tr>
-<tr class="separator:a76ad26befb647e0bcb281a1ef7b3c73c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f7797dae6216fc240210e9ba4eebf6d" id="r_a2f7797dae6216fc240210e9ba4eebf6d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f7797dae6216fc240210e9ba4eebf6d">gaussianBlur</a> (const std::vector&lt; float &gt; &amp;in, std::vector&lt; float &gt; &amp;out, int w, int h, float sigma)</td></tr>
-<tr class="separator:a2f7797dae6216fc240210e9ba4eebf6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a44844c9818c575efdd7ade4f784662a2" id="r_a44844c9818c575efdd7ade4f784662a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44844c9818c575efdd7ade4f784662a2">resizeImage</a> (const std::vector&lt; float &gt; &amp;src, std::vector&lt; float &gt; &amp;dst, int src_w, int src_h, int dst_w, int dst_h)</td></tr>
-<tr class="memdesc:a44844c9818c575efdd7ade4f784662a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resizes a source image to the specified dimensions.  <br /></td></tr>
-<tr class="separator:a44844c9818c575efdd7ade4f784662a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aedd82aa7872ce6159080c698bf7b0614" id="r_aedd82aa7872ce6159080c698bf7b0614"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aedd82aa7872ce6159080c698bf7b0614">smoothstep</a> (float edge0, float edge1, float x)</td></tr>
-<tr class="memdesc:aedd82aa7872ce6159080c698bf7b0614"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a smoothstep interpolation between two edge values.  <br /></td></tr>
-<tr class="separator:aedd82aa7872ce6159080c698bf7b0614"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
-Static Public Member Functions</h2></td></tr>
-<tr class="memitem:acd56f9ce91ab4150aac8fd857b7ef30f" id="r_acd56f9ce91ab4150aac8fd857b7ef30f"><td class="memItemLeft" align="right" valign="top">static float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd56f9ce91ab4150aac8fd857b7ef30f">luminance</a> (float red, float green, float blue) noexcept</td></tr>
-<tr class="memdesc:acd56f9ce91ab4150aac8fd857b7ef30f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the luminance of a color given its red, green, and blue components.  <br /></td></tr>
-<tr class="separator:acd56f9ce91ab4150aac8fd857b7ef30f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a18e4adc26e7e1fc28c7e4633eb1677cb" id="r_a18e4adc26e7e1fc28c7e4633eb1677cb"><td class="memItemLeft" align="right" valign="top">static float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18e4adc26e7e1fc28c7e4633eb1677cb">toSRGB</a> (float x) noexcept</td></tr>
-<tr class="memdesc:a18e4adc26e7e1fc28c7e4633eb1677cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts a value to the sRGB color space.  <br /></td></tr>
-<tr class="separator:a18e4adc26e7e1fc28c7e4633eb1677cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36452d0b507309680c794c0607e39fc4" id="r_a36452d0b507309680c794c0607e39fc4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36452d0b507309680c794c0607e39fc4">globalHistogramEqualization</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
+<tr class="memdesc:a36452d0b507309680c794c0607e39fc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs global histogram equalization on the specified color bands.  <br /></td></tr>
+<tr class="separator:a36452d0b507309680c794c0607e39fc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -240,8 +213,6 @@ Data Fields</h2></td></tr>
 <tr class="separator:a7fb50b1f9c57b62e6c910462215cc4a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7775b4ffd95db764deaeca5c12e2ec21" id="r_a7775b4ffd95db764deaeca5c12e2ec21"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7775b4ffd95db764deaeca5c12e2ec21">FOV_aspect_ratio</a></td></tr>
 <tr class="separator:a7775b4ffd95db764deaeca5c12e2ec21"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae4879ca307c149177fa4fa989083568b" id="r_ae4879ca307c149177fa4fa989083568b"><td class="memItemLeft" align="right" valign="top">std::array&lt; float, 12 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae4879ca307c149177fa4fa989083568b">color_correction_matrix</a></td></tr>
-<tr class="separator:ae4879ca307c149177fa4fa989083568b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af8e25275b2a9d592c99dcd998fd16b25" id="r_af8e25275b2a9d592c99dcd998fd16b25"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af8e25275b2a9d592c99dcd998fd16b25">antialiasing_samples</a></td></tr>
 <tr class="separator:af8e25275b2a9d592c99dcd998fd16b25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6fd24491821dfc13fe5ee49fbb37b884" id="r_a6fd24491821dfc13fe5ee49fbb37b884"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6fd24491821dfc13fe5ee49fbb37b884">band_labels</a></td></tr>
@@ -258,7 +229,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Data object for a radiation camera. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00072">72</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00067">67</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a92eb0c07122b536412ed98f33c9377b4" name="a92eb0c07122b536412ed98f33c9377b4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a92eb0c07122b536412ed98f33c9377b4">&#9670;&#160;</a></span>RadiationCamera()</h2>
@@ -307,19 +278,19 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00075">75</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00070">70</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a1775a8a965d84eafef6fee9f0e7e3b9a" name="a1775a8a965d84eafef6fee9f0e7e3b9a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1775a8a965d84eafef6fee9f0e7e3b9a">&#9670;&#160;</a></span>applyCCM()</h2>
+<a id="a68674e96b32dfc81d502d5c254c4bb43" name="a68674e96b32dfc81d502d5c254c4bb43"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a68674e96b32dfc81d502d5c254c4bb43">&#9670;&#160;</a></span>adjustSBC()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void RadiationCamera::applyCCM </td>
+          <td class="memname">void RadiationCamera::adjustSBC </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
         </tr>
@@ -331,22 +302,37 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>&#160;)</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>saturation</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>brightness</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>contrast</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Apply the color correction matrix to image data. </p>
+<p>Applies HDR toning to the specified color bands based on the local adaptation method. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for the red color band to be processed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for the green color band to be processed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for the blue color band to be processed. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06179">6179</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06036">6036</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -391,125 +377,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06036">6036</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a21d338461c81fca6a3da4ca5d1d12ed9" name="a21d338461c81fca6a3da4ca5d1d12ed9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a21d338461c81fca6a3da4ca5d1d12ed9">&#9670;&#160;</a></span>bilateralFilter()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void RadiationCamera::bilateralFilter </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>in</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>w</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>h</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>ss</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sr</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Applies a bilateral filter to the input data. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">in</td><td>The input vector containing image data. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>The output vector where the filtered image data will be stored. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">w</td><td>Width of the image. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">h</td><td>Height of the image. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">ss</td><td>Spatial standard deviation for the filter. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">sr</td><td>Intensity standard deviation for the filter. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05831">5831</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a76ad26befb647e0bcb281a1ef7b3c73c" name="a76ad26befb647e0bcb281a1ef7b3c73c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a76ad26befb647e0bcb281a1ef7b3c73c">&#9670;&#160;</a></span>fastBilateralFilter()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void RadiationCamera::fastBilateralFilter </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>in</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>w</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>h</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>ss</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sr</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>df</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Applies a fast bilateral filter to the input data. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">in</td><td>Input vector containing the source data to be filtered. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>Output vector to store the filtered data. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">w</td><td>Width of the input data. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">h</td><td>Height of the input data. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">ss</td><td>Spatial sigma, controlling the spatial smoothing. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">sr</td><td>Range sigma, controlling the intensity similarity smoothing. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">df</td><td>Downsampling factor for optimization. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05851">5851</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05950">5950</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -537,9 +405,12 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Apply gamma compression to image data. </p>
-<p>Applies the standard sRGB electro-optical transfer function to each channel of a linear-light image—clamping negatives to zero and limiting outputs to [0,1]—thereby encoding the data into display-ready sRGB space. This final step ensures that pixel values map correctly to human‐perceived brightness on typical monitors. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Apply the color correction matrix to image data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band Apply gamma compression to image data Applies the standard sRGB electro-optical transfer function to each channel of a linear-light image—clamping negatives to zero and limiting outputs to [0,1]—thereby encoding the data into display-ready sRGB space. This final step ensures that pixel values map correctly to human‐perceived brightness on typical monitors. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
@@ -547,56 +418,18 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06193">6193</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06091">6091</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a2f7797dae6216fc240210e9ba4eebf6d" name="a2f7797dae6216fc240210e9ba4eebf6d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f7797dae6216fc240210e9ba4eebf6d">&#9670;&#160;</a></span>gaussianBlur()</h2>
+<a id="a36452d0b507309680c794c0607e39fc4" name="a36452d0b507309680c794c0607e39fc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a36452d0b507309680c794c0607e39fc4">&#9670;&#160;</a></span>globalHistogramEqualization()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void RadiationCamera::gaussianBlur </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>in</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>w</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>h</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sigma</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05860">5860</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="aea7695260befc781d2378511f3b85806" name="aea7695260befc781d2378511f3b85806"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aea7695260befc781d2378511f3b85806">&#9670;&#160;</a></span>HDRToning()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void RadiationCamera::HDRToning </td>
+          <td class="memname">void RadiationCamera::globalHistogramEqualization </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
         </tr>
@@ -613,64 +446,17 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Applies HDR toning to the specified color bands based on the local adaptation method. </p>
+<p>Performs global histogram equalization on the specified color bands. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for the red color band to be processed. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for the green color band to be processed. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for the blue color band to be processed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for the red band to be processed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for the green band to be processed. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for the blue band to be processed. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06068">6068</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="acd56f9ce91ab4150aac8fd857b7ef30f" name="acd56f9ce91ab4150aac8fd857b7ef30f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acd56f9ce91ab4150aac8fd857b7ef30f">&#9670;&#160;</a></span>luminance()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">static float RadiationCamera::luminance </td>
-          <td>(</td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>red</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>green</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>blue</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Computes the luminance of a color given its red, green, and blue components. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">red</td><td>Red component of the color. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">green</td><td>Green component of the color. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">blue</td><td>Blue component of the color. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The luminance value calculated as a weighted sum of the red, green, and blue components. </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00192">192</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05982">5982</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -691,7 +477,7 @@ Data Fields</h2></td></tr>
 
 <p>Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0.0 (no clamping applied) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05809">5809</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05810">5810</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -730,63 +516,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l06011">6011</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a44844c9818c575efdd7ade4f784662a2" name="a44844c9818c575efdd7ade4f784662a2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a44844c9818c575efdd7ade4f784662a2">&#9670;&#160;</a></span>resizeImage()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void RadiationCamera::resizeImage </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>src</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>dst</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>src_w</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>src_h</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>dst_w</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>dst_h</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Resizes a source image to the specified dimensions. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">src</td><td>The source image data as a 1D array of float values. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">dst</td><td>The destination image data as a 1D array of float values. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">src_w</td><td>The width of the source image. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">src_h</td><td>The height of the source image. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dst_w</td><td>The width of the destination image. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dst_h</td><td>The height of the destination image. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05890">5890</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05925">5925</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -828,82 +558,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05918">5918</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="aedd82aa7872ce6159080c698bf7b0614" name="aedd82aa7872ce6159080c698bf7b0614"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aedd82aa7872ce6159080c698bf7b0614">&#9670;&#160;</a></span>smoothstep()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float RadiationCamera::smoothstep </td>
-          <td>(</td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>edge0</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>edge1</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>x</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Performs a smoothstep interpolation between two edge values. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">edge0</td><td>The lower edge of the interpolation range. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">edge1</td><td>The upper edge of the interpolation range. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">x</td><td>The input value to interpolate, expected to be between edge0 and edge1. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The interpolated value, ranging from 0 to 1, based on the input value x. </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05913">5913</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a18e4adc26e7e1fc28c7e4633eb1677cb" name="a18e4adc26e7e1fc28c7e4633eb1677cb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a18e4adc26e7e1fc28c7e4633eb1677cb">&#9670;&#160;</a></span>toSRGB()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">static float RadiationCamera::toSRGB </td>
-          <td>(</td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>x</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Converts a value to the sRGB color space. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">x</td><td>Input value to be converted, expected in the range [0.0, 1.0]. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Corresponding value in the sRGB color space. </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00201">201</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05832">5832</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -947,7 +602,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05947">5947</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8cpp_source.html#l05861">5861</a> of file <a class="el" href="_radiation_model_8cpp_source.html">RadiationModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -964,7 +619,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00107">107</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00099">99</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -980,7 +635,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00109">109</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00101">101</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -996,23 +651,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00111">111</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
-
-</div>
-</div>
-<a id="ae4879ca307c149177fa4fa989083568b" name="ae4879ca307c149177fa4fa989083568b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae4879ca307c149177fa4fa989083568b">&#9670;&#160;</a></span>color_correction_matrix</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::array&lt;float, 12&gt; RadiationCamera::color_correction_matrix</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00105">105</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00103">103</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1028,7 +667,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00099">99</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00093">93</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1044,7 +683,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00103">103</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00097">97</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1060,7 +699,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00101">101</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00095">95</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1076,7 +715,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00089">89</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00083">83</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1092,7 +731,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00095">95</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00089">89</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1108,7 +747,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00093">93</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00087">87</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1124,7 +763,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00113">113</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00105">105</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1140,7 +779,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00116">116</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00108">108</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1156,7 +795,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00115">115</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00107">107</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1172,7 +811,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00091">91</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00085">85</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -1188,7 +827,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00097">97</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00091">91</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

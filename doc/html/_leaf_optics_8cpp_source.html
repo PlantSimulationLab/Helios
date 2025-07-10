@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -334,8 +331,8 @@ $(function(){initNavTree('_leaf_optics_8cpp_source.html',''); initResizable(true
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    std::string leaf_reflectivity_label = <span class="stringliteral">&quot;leaf_reflectivity_&quot;</span>+label;</div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    std::string leaf_transmissivity_label = <span class="stringliteral">&quot;leaf_transmissivity_&quot;</span>+label;</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    context-&gt;setGlobalData(leaf_reflectivity_label.c_str(),<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,reflectivities_fit.size(),&amp;reflectivities_fit[0]);</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    context-&gt;setGlobalData(leaf_transmissivity_label.c_str(),<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,transmissivities_fit.size(),&amp;transmissivities_fit[0]);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    context-&gt;setGlobalData(leaf_reflectivity_label.c_str(),reflectivities_fit);</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    context-&gt;setGlobalData(leaf_transmissivity_label.c_str(),transmissivities_fit);</div>
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    context-&gt;setPrimitiveData( UUIDs, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, leaf_reflectivity_label);</div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    context-&gt;setPrimitiveData( UUIDs, <span class="stringliteral">&quot;transmissivity_spectrum&quot;</span>, leaf_transmissivity_label);</div>
@@ -351,8 +348,8 @@ $(function(){initNavTree('_leaf_optics_8cpp_source.html',''); initResizable(true
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    std::string leaf_reflectivity_label = <span class="stringliteral">&quot;leaf_reflectivity_&quot;</span>+label;</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    std::string leaf_transmissivity_label = <span class="stringliteral">&quot;leaf_transmissivity_&quot;</span>+label;</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    context-&gt;setGlobalData(leaf_reflectivity_label.c_str(),<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,reflectivities_fit.size(),&amp;reflectivities_fit[0]);</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    context-&gt;setGlobalData(leaf_transmissivity_label.c_str(),<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3a6269d91d936a3d60a8a763ec122ba233" title="helios::vec2 data type">HELIOS_TYPE_VEC2</a>,transmissivities_fit.size(),&amp;transmissivities_fit[0]);</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    context-&gt;setGlobalData(leaf_reflectivity_label.c_str(),reflectivities_fit);</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    context-&gt;setGlobalData(leaf_transmissivity_label.c_str(),transmissivities_fit);</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>}</div>
 </div>

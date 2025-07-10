@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -470,7 +467,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01808">1808</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01810">1810</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -499,7 +496,7 @@ Data Fields</h2></td></tr>
 
 <p>Destructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01850">1850</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01852">1852</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -538,7 +535,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05483">5483</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05482">5482</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -570,7 +567,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05455">5455</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05454">5454</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -591,7 +588,7 @@ Data Fields</h2></td></tr>
 
 <p>Function to build and visualize XML simulation. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04313">4313</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04312">4312</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -618,7 +615,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04307">4307</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04306">4306</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -722,7 +719,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06081">6081</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06088">6088</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -778,7 +775,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06116">6116</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06123">6123</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -799,7 +796,7 @@ Data Fields</h2></td></tr>
 
 <p>Delete ground. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06011">6011</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06018">6018</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -826,7 +823,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05782">5782</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05789">5789</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -864,7 +861,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05809">5809</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05816">5816</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -902,7 +899,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05795">5795</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05802">5802</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1010,7 +1007,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05364">5364</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05363">5363</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1031,7 +1028,7 @@ Data Fields</h2></td></tr>
 
 <p>Output console as ImGui multiline text. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05658">5658</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05657">5657</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1058,7 +1055,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05513">5513</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05512">5512</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1090,7 +1087,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05319">5319</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05318">5318</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1117,7 +1114,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05580">5580</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05579">5579</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1159,7 +1156,7 @@ Data Fields</h2></td></tr>
 
 <p>Popup that appears when right-clicking the "Record" button. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05934">5934</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05941">5941</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1180,7 +1177,7 @@ Data Fields</h2></td></tr>
 
 <p>Refresh visualizer context and display loading text. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05921">5921</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05928">5928</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1201,7 +1198,7 @@ Data Fields</h2></td></tr>
 
 <p>Refresh visualization types. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06019">6019</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06026">6026</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1228,7 +1225,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05598">5598</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05597">5597</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1249,7 +1246,7 @@ Data Fields</h2></td></tr>
 
 <p>Set value of all variables using random samples from their respective distributions. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05652">5652</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05651">5651</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1299,7 +1296,7 @@ Data Fields</h2></td></tr>
 
 <p>Set object_number primitive data for. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06059">6059</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06066">6066</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1402,7 +1399,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06044">6044</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l06051">6051</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1461,7 +1458,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05668">5668</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05675">5675</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1482,7 +1479,7 @@ Data Fields</h2></td></tr>
 
 <p>Update context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05640">5640</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05639">5639</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1503,7 +1500,7 @@ Data Fields</h2></td></tr>
 
 <p>Update ground. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05952">5952</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05959">5959</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1524,7 +1521,7 @@ Data Fields</h2></td></tr>
 
 <p>Update location. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05943">5943</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05950">5950</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1551,7 +1548,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05713">5713</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05720">5720</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1572,7 +1569,7 @@ Data Fields</h2></td></tr>
 
 <p>Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.) </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05769">5769</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05776">5776</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -1901,7 +1898,7 @@ Data Fields</h2></td></tr>
 
 <p>Function to get all values from current XML. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04546">4546</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04545">4545</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -2308,7 +2305,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04912">4912</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04911">4911</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -2627,7 +2624,7 @@ Data Fields</h2></td></tr>
 
 <p>Function to set all values in GUI from XML. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04319">4319</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04318">4318</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -3088,7 +3085,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04537">4537</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l04536">4536</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -3107,7 +3104,7 @@ Data Fields</h2></td></tr>
 
 <p>Boundary Layer Conductance. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01286">1286</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01288">1288</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3125,7 +3122,7 @@ Data Fields</h2></td></tr>
 
 <p>Camera Properties. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01289">1289</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01291">1291</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3143,7 +3140,7 @@ Data Fields</h2></td></tr>
 
 <p>Canopy Generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01274">1274</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01276">1276</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3161,7 +3158,7 @@ Data Fields</h2></td></tr>
 
 <p>Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01265">1265</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01267">1267</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3179,7 +3176,7 @@ Data Fields</h2></td></tr>
 
 <p>Energy Balance Model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01283">1283</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01285">1285</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3197,7 +3194,7 @@ Data Fields</h2></td></tr>
 
 <p>Plant Architecture. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01271">1271</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01273">1273</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3215,7 +3212,7 @@ Data Fields</h2></td></tr>
 
 <p>Radiation Model. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01277">1277</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01279">1279</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3233,7 +3230,7 @@ Data Fields</h2></td></tr>
 
 <p>Solar Position. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01280">1280</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01282">1282</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -3251,7 +3248,7 @@ Data Fields</h2></td></tr>
 
 <p>Visualizer. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01268">1268</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l01270">1270</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>

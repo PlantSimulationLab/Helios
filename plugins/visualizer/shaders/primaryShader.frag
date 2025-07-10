@@ -103,9 +103,12 @@ void main(){
             discard;
         }
     }else if( textureFlag==3 ){//Color by interpolating the colors at vertices, and set the transparency according to the red channel of the texture map given by textureSampler
-        float alpha = clamp(texture(textureSampler, texcoord3).r, 0, 1);
+        float rawAlpha = texture(textureSampler, texcoord3).r;
+        float edge = fwidth(rawAlpha);
+        float alpha = smoothstep(0.5 - edge, 0.5 + edge, rawAlpha);
         color = vec4(fragmentColor.rgb * alpha, alpha);
-        if( alpha < 0.01 ){
+        color.a = clamp(alpha,0,1);
+        if( color.a < 0.01 ){
             discard;
         }
     }

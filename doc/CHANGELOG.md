@@ -2148,7 +2148,7 @@ The radiation model has been re-designed, with the following primary additions:
 ## Plant Architecture
 - Added PlantArchitecture::isPlantDormant().
 - Carbohydrate model updated to take a parameter structure rather than having hard-coded model parameters. Thanks to Ethan Frehner for these updates.
-- Minor refactoring improvements throughtout plant architecture code.
+- Minor refactoring improvements throughout plant architecture code.
 - Error corrected that was causing plants to flower too quickly if starting with closed flowers.
 
 ## Visualizer
@@ -2209,9 +2209,6 @@ The radiation model has been re-designed, with the following primary additions:
 ## Radiation
 - Added specular reflection in synthetic images for collimated and sun sphere sources (still need to implement disk, rectangle, and sphere sources).
 
-Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
-Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
-
 # [1.3.33] 2025-06-08
 
 ## Context
@@ -2246,9 +2243,6 @@ Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 
 ## Project Builder
 - Several updates including changing how canopies are handled, and improving the rig tab. Credit to Sean Banks for this update.
-
-Co-authored by: Ethan Frehner <ehfrehner@users.noreply.github.com>
-Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 
 # [1.3.34] 2025-06-15
 
@@ -2402,3 +2396,34 @@ Co-authored by: Sean Banks <smbanx@users.noreply.github.com>
 
 ## Radiation, Energy Balance, LiDAR, Aerial LiDAR
 - CMake now uses consistent c++ standard for CUDA code based on the standard used for regular c++ code. It also now explicitly sets the c++ standard for Windows CUDA code.
+
+# [1.3.39] 2025-07-09
+
+- More minor documentation fixes.
+
+## Context
+- Implemented some improvements for file path handling on Windows systems to improve robustness.
+- Added *= and /= operators for `helios::vec2`, `helios::vec3` and `helios::vec4` vector types.
+
+## Visualizer
+- Fixed 'haloing' around text.
+- Efficiency of changing the visualization type was improved (e.g., via `Visualizer::colorContextPrimitivesByData()` or `Visualizer::colorContextObjectsByData()`), whereby only the color data is changed rather than rebuilding the entire geometry.
+- Added `Visualizer::deleteGeometry()` method to delete a geometric element based on its ID.
+- The visualizer window can now be freely resized with arbitrary aspect ratio, including making the visualizer window full screen.
+
+## Project Builder
+- Console now auto-scrolls to the bottom when new text is added.
+- Disabled keyboard controls so that rotating the view via keyboard does not conflict.
+
+## Plant Architecture
+- There was an unhandled error when the combination of `leaves_per_petiole` and `leaflet_offset` are too large such that there is no more space along the petiole to place leaflets. There was a similar issue with flowers for the parameters `flowers_per_peduncle` and `flower_offset`, potentially resulting in too many flowers per peduncle.
+- Fixed a minor issue where the max leaf age was not properly enforced when the plant hits its maximum age and stops growing.
+
+## Radiation
+- Changed how the camera image post-processing pipeline works. It now applies global histogram equalization, followed by an optional saturation, brightness, and contrast adjustment.
+
+## Leaf Optics
+- Added documentation page.
+
+## Stomatal Conductance
+- Added optional output primitive data to write stomatal conductance model parameters to primitive data.

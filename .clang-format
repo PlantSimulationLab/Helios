@@ -30,6 +30,7 @@ BreakConstructorInitializers: AfterColon
 BreakConstructorInitializersBeforeComma: false
 ColumnLimit: 250
 PenaltyBreakString: 1000
+BreakStringLiterals: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ContinuationIndentWidth: 8
 IncludeCategories: 

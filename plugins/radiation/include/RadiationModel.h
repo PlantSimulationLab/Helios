@@ -49,9 +49,6 @@ struct CameraProperties {
     //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
     float FOV_aspect_ratio;
 
-    // The color correction matrix is a 4×3 linear transform that maps a camera’s raw sensor RGB values into a standardized color space by compensating for its spectral sensitivities and channel cross-talk.
-    std::array<float, 12> color_correction_matrix;
-
     CameraProperties() {
         camera_resolution = helios::make_int2(512, 512);
         focal_plane_distance = 1;
@@ -59,12 +56,10 @@ struct CameraProperties {
         FOV_aspect_ratio = 1.f;
         HFOV = 20.f;
         FOV_aspect_ratio = 1.f;
-        color_correction_matrix = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
     }
 
     bool operator==(const CameraProperties &rhs) const {
-        return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio && HFOV == rhs.HFOV &&
-               color_correction_matrix == rhs.color_correction_matrix;
+        return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio && HFOV == rhs.HFOV;
     }
 };
 
@@ -82,7 +77,6 @@ struct RadiationCamera {
         lens_diameter = camera_properties.lens_diameter;
         HFOV_degrees = camera_properties.HFOV;
         FOV_aspect_ratio = camera_properties.FOV_aspect_ratio;
-        color_correction_matrix = camera_properties.color_correction_matrix;
     }
 
     // Label for camera array
@@ -101,8 +95,6 @@ struct RadiationCamera {
     float HFOV_degrees;
     // Ratio of camera horizontal field of view to vertical field of view
     float FOV_aspect_ratio;
-    // The color correction matrix is a 4×3 linear transform that maps a camera’s raw sensor RGB values into a standardized color space by compensating for its spectral sensitivities and channel cross-talk.
-    std::array<float, 12> color_correction_matrix;
     // Number of antialiasing samples per pixel
     uint antialiasing_samples;
 
@@ -162,7 +154,7 @@ struct RadiationCamera {
      * \param[in] green_band_label Label for the green color band to be processed.
      * \param[in] blue_band_label Label for the blue color band to be processed.
      */
-    void HDRToning(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
+    void adjustSBC(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation, float brightness, float contrast);
 
     //! Apply the color correction matrix to image data
     /**
@@ -170,7 +162,7 @@ struct RadiationCamera {
      * \param[in] green_band_label Label for green channel band
      * \param[in] blue_band_label Label for blue channel band
      */
-    void applyCCM(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
+    // void applyCCM(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
 
     //! Apply gamma compression to image data
     /**
@@ -181,6 +173,17 @@ struct RadiationCamera {
      * \param[in] blue_band_label Label for blue channel band
      */
     void gammaCompress(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
+
+    /**
+     * \brief Performs global histogram equalization on the specified color bands.
+     *
+     * \param[in] red_band_label Label for the red band to be processed.
+     * \param[in] green_band_label Label for the green band to be processed.
+     * \param[in] blue_band_label Label for the blue band to be processed.
+     */
+    void globalHistogramEqualization(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
+
+private:
 
     //! Computes the luminance of a color given its red, green, and blue components.
     /**
@@ -198,55 +201,20 @@ struct RadiationCamera {
      * \param[in] x Input value to be converted, expected in the range [0.0, 1.0].
      * \return Corresponding value in the sRGB color space.
      */
-    static float toSRGB(float x) noexcept {
-        x = std::fminf(x, 1.0f);
-        return (x <= 0.0031308f) ? 12.92f * x : 1.055f * std::pow(x, 1.0f / 2.0f) - 0.055f;
+    static float lin_to_srgb(float x) noexcept {
+        x = std::fminf(std::fmaxf(x, 0.0f), 1.0f);
+        return (x <= 0.0031308f) ? 12.92f*x : 1.055f*std::pow(x, 1.0f/2.4f) - 0.055f;
     }
 
-    //! Applies a bilateral filter to the input data.
+    //! Converts an sRGB color component to its linear representation.
     /**
-     * \param[in] in The input vector containing image data.
-     * \param[out] out The output vector where the filtered image data will be stored.
-     * \param[in] w Width of the image.
-     * \param[in] h Height of the image.
-     * \param[in] ss Spatial standard deviation for the filter.
-     * \param[in] sr Intensity standard deviation for the filter.
+     * \param[in] v sRGB color component in the range [0, 1]
+     * \return Corresponding linear color component in the range [0, 1]
      */
-    void bilateralFilter(const std::vector<float>& in, std::vector<float>& out, int w, int h, float ss, float sr);
+    static float srgb_to_lin(float v) noexcept {
+        return (v <= 0.04045f) ? v/12.92f : std::pow((v + 0.055f)/1.055f, 2.4f);
+    }
 
-    //! Applies a fast bilateral filter to the input data.
-    /**
-     * \param[in] in Input vector containing the source data to be filtered.
-     * \param[out] out Output vector to store the filtered data.
-     * \param[in] w Width of the input data.
-     * \param[in] h Height of the input data.
-     * \param[in] ss Spatial sigma, controlling the spatial smoothing.
-     * \param[in] sr Range sigma, controlling the intensity similarity smoothing.
-     * \param[in] df Downsampling factor for optimization.
-     */
-    void fastBilateralFilter(const std::vector<float> &in, std::vector<float> &out, int w, int h, float ss, float sr, int df);
-
-    void gaussianBlur(const std::vector<float>& in, std::vector<float>& out, int w, int h, float sigma);
-
-    //! Resizes a source image to the specified dimensions.
-    /**
-     * \param[in] src The source image data as a 1D array of float values.
-     * \param[out] dst The destination image data as a 1D array of float values.
-     * \param[in] src_w The width of the source image.
-     * \param[in] src_h The height of the source image.
-     * \param[in] dst_w The width of the destination image.
-     * \param[in] dst_h The height of the destination image.
-     */
-    void resizeImage(const std::vector<float> &src, std::vector<float> &dst, int src_w, int src_h, int dst_w, int dst_h);
-
-    //! Performs a smoothstep interpolation between two edge values
-    /**
-     * \param[in] edge0 The lower edge of the interpolation range.
-     * \param[in] edge1 The upper edge of the interpolation range.
-     * \param[in] x The input value to interpolate, expected to be between edge0 and edge1.
-     * \return The interpolated value, ranging from 0 to 1, based on the input value x.
-     */
-    float smoothstep(float edge0, float edge1, float x);
 };
 
 //! Properties defining a radiation band
@@ -945,7 +913,7 @@ public:
     //! Adds all geometric primitives from the Context to OptiX
     /**
      * This function should be called anytime Context geometry is created or modified
-     * \note \ref helios::Context::updateGeometry() must be called before simulation can be run
+     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
      */
     void updateGeometry();
 
@@ -953,23 +921,23 @@ public:
     /**
      * This function should be called anytime Context geometry is created or modified
      * \param[in] UUIDs Vector of universal unique identifiers of Context primitives to be updated
-     * \note \ref helios::Context::updateGeometry() must be called before simulation can be run
+     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
      */
     void updateGeometry(const std::vector<uint> &UUIDs);
 
     //! Run the simulation for a single radiative band
     /**
      * \param[in] label Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref helios::Context::updateGeometry()),
-     * and 3) update radiative properties in the model (see \ref RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
+     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
      */
     void runBand(const std::string &label);
 
     //! Run the simulation for a multiple radiative bands
     /**
      * \param[in] labels Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref helios::Context::updateGeometry()),
-     * and 3) update radiative properties in the model (see \ref RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
+     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
      */
     void runBand(const std::vector<std::string> &labels);
 
@@ -1050,9 +1018,11 @@ public:
      * \param[in] red_band_label Label of the red band
      * \param[in] green_band_label Label of the green band
      * \param[in] blue_band_label Label of the blue band
-     * \param[in] apply_HDR_toning Whether to apply HDR toning to the image
+     * \param[in] saturation_adjustment [optional] Adjustment factor for saturation (default is 1.0, which means no adjustment)
+     * \param[in] brightness_adjustment [optional] Adjustment factor for brightness (default is 1.0, which means no adjustment)
+     * \param[in] contrast_adjustment [optional] Adjustment factor for contrast (default is 1.0, which means no adjustment)
      */
-    void applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, bool apply_HDR_toning = true);
+    void applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment = 1.f, float brightness_adjustment = 1.f, float contrast_adjustment = 1.f);
 
     //! Write camera data for one or more bands to a JPEG image
     /**

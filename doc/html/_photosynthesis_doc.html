@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -269,19 +266,19 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value </th></tr>
 <tr>
-<td>radiation_flux_PAR</td><td>\(Q\)</td><td>W/m<sup>2</sup></td><td> <font face="courier" color="green">float</font></td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in.</td><td>0 </td></tr>
+<td>radiation_flux_PAR</td><td>\(Q\)</td><td>W/m<sup>2</sup></td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Radiative flux in PAR band. NOTE: this is automatically converted to units of photon flux density, which are the units used in the photosynthesis model.</td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in.</td><td>0 </td></tr>
 <tr>
-<td>temperature</td><td>\(T_s\)</td><td>Kelvin</td><td> <font face="courier" color="green">float</font></td><td>Primitive surface temperature.</td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in.</td><td>300 K </td></tr>
+<td>temperature</td><td>\(T_s\)</td><td>Kelvin</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Primitive surface temperature.</td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in.</td><td>300 K </td></tr>
 <tr>
-<td>air_CO2</td><td>\(C_a\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol air</td><td> <font face="courier" color="green">float</font></td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \(\mu\)mol/mol </td></tr>
+<td>air_CO2</td><td>\(C_a\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol air</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \(\mu\)mol/mol </td></tr>
 <tr>
-<td>moisture_conductance</td><td>\(g_S\)</td><td>mol air/m<sup>2</sup>-s</td><td> <font face="courier" color="green">float</font></td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in.</td><td>0.25 mol/m<sup>2</sup>-s </td></tr>
+<td>moisture_conductance</td><td>\(g_S\)</td><td>mol air/m<sup>2</sup>-s</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in.</td><td>0.25 mol/m<sup>2</sup>-s </td></tr>
 <tr>
-<td>boundarylayer_conductance**</td><td>\(g_H\)</td><td>mol air/m<sup>2</sup>-s</td><td> <font face="courier" color="green">float</font></td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s </td></tr>
+<td>boundarylayer_conductance**</td><td>\(g_H\)</td><td>mol air/m<sup>2</sup>-s</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>stomatal_sidedness </td><td>\(\zeta\) </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
+<td>stomatal_sidedness </td><td>\(\zeta\) </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
 </table>
 <p>**The photosynthesis model will also check for primitive data "boundarylayer_conductance_out" if "boundarylayer_conductance" does not exist. If you are using the energy balance model to calculate the boundary-layer conductance, you should enable optional output primitive data "boundarylayer_conductance_out" so that other plug-ins can use it.</p>
 <h2><a class="anchor" id="PhotoOutputData"></a>
@@ -290,19 +287,22 @@ Default Output Primitive Data</h2>
 <tr>
 <th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
 <tr>
-<td>net_photosynthesis</td><td>\(A\)</td><td>\(\mu\)mol CO<sub>2</sub>/m<sup>2</sup>-sec</td><td> <font face="courier" color="green">float</font></td><td>Net rate of carbon transfer per unit one-sided area. </td></tr>
+<td>net_photosynthesis</td><td>\(A\)</td><td>\(\mu\)mol CO<sub>2</sub>/m<sup>2</sup>-sec</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Net rate of carbon transfer per unit one-sided area. </td></tr>
 </table>
 <h2><a class="anchor" id="PhotoOptionalOutputData"></a>
 Optional Output Primitive Data</h2>
-<table class="doxtable">
+<p>Optional output primitive data can be written to the context by calling <a class="el" href="class_photosynthesis_model.html#a9ec83db517f4c7d0eb09c20a9f61ef20">PhotosynthesisModel::optionalOutputPrimitiveData()</a>, with an argument of one of the primitive data labels given in the table below.</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_photosynthesis_model.html">PhotosynthesisModel</a> photomodel( &amp;context );</div>
+<div class="line">photomodel.optionalOutputPrimitiveData( <span class="stringliteral">&quot;Ci&quot;</span> );</div>
+</div><!-- fragment --><table class="doxtable">
 <tr>
 <th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description </th></tr>
 <tr>
-<td>Ci</td><td>\(C_i\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol</td><td> <font face="courier" color="green">float</font></td><td>Intercellular CO<sub>2</sub> concentration. </td></tr>
+<td>Ci</td><td>\(C_i\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Intercellular CO<sub>2</sub> concentration. </td></tr>
 <tr>
-<td>Gamma_CO2</td><td>\(\Gamma\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol</td><td> <font face="courier" color="green">float</font></td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration"). </td></tr>
+<td>Gamma_CO2</td><td>\(\Gamma\)</td><td>\(\mu\)mol CO<sub>2</sub>/mol</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration"). </td></tr>
 <tr>
-<td>limitation_state</td><td>N/A</td><td>N/A</td><td> <font face="courier" color="green">int</font></td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited. </td></tr>
+<td>limitation_state</td><td>N/A</td><td>N/A</td><td> <span style="font-family: Courier, monospace; color: green;">int</span></td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited. </td></tr>
 </table>
 <h1><a class="anchor" id="PhotoDescription"></a>
 Introduction</h1>

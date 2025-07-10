@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1158,9 +1155,9 @@ $(function(){initNavTree('_li_d_a_r_8cpp_source.html',''); initResizable(true); 
 <div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>            UUIDs.push_back( context-&gt;<a class="code hl_function" href="group__primitives.html#ga2a78a464a4c7ef3375a0ced2f1005b77" title="Add new Triangle geometric primitive.">addTriangle</a>( v0, v1, v2, color ) );</div>
 <div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span> </div>
 <div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> zone = reconstructed_triangles.at(g).at(t).gridcell;</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs.back(), <span class="stringliteral">&quot;gridCell&quot;</span>, <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>, 1, &amp;zone );</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs.back(), <span class="stringliteral">&quot;gridCell&quot;</span>, zone );</div>
 <div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span> </div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs.back(), <span class="stringliteral">&quot;leafGroup&quot;</span>, <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>, 1, &amp;leafGroup );</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>            context-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs.back(), <span class="stringliteral">&quot;leafGroup&quot;</span>, leafGroup );</div>
 <div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span> </div>
 <div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>        }</div>
 <div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>

@@ -47,6 +47,7 @@ var NAVTREE =
       [ "Canopy Generator", "_canopy_generator_doc.html#CanopyGeneratorDoc", null ],
       [ "Weber-Penn Tree", "_weber_penn_doc.html#WeberPennDoc", null ],
       [ "Plant Hydraulics Model", "_plant_hydraulics_doc.html#PlantHydraulicsDoc", null ],
+      [ "Leaf Optics Model", "_leaf_optics_doc.html#LeafOpticsDoc", null ],
       [ "Project Builder", "_project_builder_doc.html#ProjectBuilderDoc", null ]
     ] ],
     [ "Tutorials", "_tutorials.html", [
@@ -81,7 +82,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"dir_7b945ff507247f5bd903b50b5c416c04.html"
+"dir_76097ff1d2d869b3a6f5e29bdfb9cd12.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

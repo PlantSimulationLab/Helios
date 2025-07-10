@@ -1224,6 +1224,8 @@ class ProjectBuilder {
     //! Stdout
     std::stringstream captured_cout;
 
+    std::size_t last_console_size = 0;
+
     //! Number of recordings
     int num_recordings = 1;
 

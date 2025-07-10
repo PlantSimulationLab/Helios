@@ -2165,14 +2165,15 @@ std::string helios::getFileName(const std::string &filepath) {
 
 std::string helios::getFilePath(const std::string &filepath, bool trailingslash) {
     std::filesystem::path output_path_fs = filepath;
-    std::string output_path = output_path_fs.parent_path().string();
-    if (trailingslash) {
-        if (output_path.find_last_of('/') != output_path.length() - 1) {
-            output_path += "/";
+    std::filesystem::path output_path = output_path_fs.parent_path();
+    std::string out_str = output_path.make_preferred().string();
+    if (trailingslash && !out_str.empty()) {
+        char last = out_str.back();
+        if (last != '/' && last != '\\') {
+            out_str += std::filesystem::path::preferred_separator;
         }
     }
-
-    return output_path;
+    return out_str;
 }
 
 bool helios::validateOutputPath(std::string &output_path, const std::vector<std::string> &allowable_file_extensions) {

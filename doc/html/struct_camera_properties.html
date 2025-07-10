@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -193,8 +190,6 @@ Data Fields</h2></td></tr>
 <tr class="memitem:ae1e4df4d4612fd652ccd1e57fc71d104" id="r_ae1e4df4d4612fd652ccd1e57fc71d104"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae1e4df4d4612fd652ccd1e57fc71d104">FOV_aspect_ratio</a></td></tr>
 <tr class="memdesc:ae1e4df4d4612fd652ccd1e57fc71d104"><td class="mdescLeft">&#160;</td><td class="mdescRight">Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions.  <br /></td></tr>
 <tr class="separator:ae1e4df4d4612fd652ccd1e57fc71d104"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade827f9b267419fa555f8cf800ae5ff6" id="r_ade827f9b267419fa555f8cf800ae5ff6"><td class="memItemLeft" align="right" valign="top">std::array&lt; float, 12 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade827f9b267419fa555f8cf800ae5ff6">color_correction_matrix</a></td></tr>
-<tr class="separator:ade827f9b267419fa555f8cf800ae5ff6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Properties defining a radiation camera. </p>
@@ -224,7 +219,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00055">55</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00052">52</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -279,7 +274,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00065">65</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00061">61</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -299,22 +294,6 @@ Data Fields</h2></td></tr>
 <p>Camera sensor resolution (number of pixels) in the horizontal (.x) and vertical (.y) directions. </p>
 
 <p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00038">38</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
-
-</div>
-</div>
-<a id="ade827f9b267419fa555f8cf800ae5ff6" name="ade827f9b267419fa555f8cf800ae5ff6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade827f9b267419fa555f8cf800ae5ff6">&#9670;&#160;</a></span>color_correction_matrix</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::array&lt;float, 12&gt; CameraProperties::color_correction_matrix</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00053">53</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

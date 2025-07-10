@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -657,7 +654,7 @@ $(function(){initNavTree('_photosynthesis_model_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span>            }</div>
 <div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span>        }</div>
 <div class="line"><a id="l00485" name="l00485"></a><span class="lineno">  485</span> </div>
-<div class="line"><a id="l00486" name="l00486"></a><span class="lineno">  486</span>        context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, <a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3ae8cb6622468bda0078b0bcfde7677ba0" title="floating point data type">HELIOS_TYPE_FLOAT</a>, 1, &amp;A);</div>
+<div class="line"><a id="l00486" name="l00486"></a><span class="lineno">  486</span>        context-&gt;setPrimitiveData(UUID, <span class="stringliteral">&quot;net_photosynthesis&quot;</span>, A);</div>
 <div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span> </div>
 <div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;data: output_prim_data) {</div>
 <div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span>            <span class="keywordflow">if</span> (data == <span class="stringliteral">&quot;Ci&quot;</span> &amp;&amp; model == <span class="stringliteral">&quot;farquhar&quot;</span>) {</div>

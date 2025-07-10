@@ -5775,7 +5775,7 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
     return cameraresponse;
 }
 
-void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, bool apply_HDR_toning ) {
+void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment, float contrast_adjustment) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
@@ -5794,16 +5794,17 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
 
     camera.whiteBalance(red_band_label, green_band_label, blue_band_label, 5.0);
 
-    if ( apply_HDR_toning ) {
-        camera.HDRToning( red_band_label, green_band_label, blue_band_label );
-    }else {
-        camera.applyGain(red_band_label, green_band_label, blue_band_label, 0.9f);
+    camera.applyGain(red_band_label, green_band_label, blue_band_label, 0.9f);
+
+    camera.globalHistogramEqualization(red_band_label, green_band_label, blue_band_label);
+
+    if ( saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
+        camera.adjustSBC(red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);
     }
 
-    camera.applyCCM(red_band_label, green_band_label, blue_band_label);
+    //camera.applyCCM(red_band_label, green_band_label, blue_band_label);
 
     // camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
-
 }
 
 void RadiationCamera::normalizePixels() {
@@ -5826,93 +5827,6 @@ void RadiationCamera::normalizePixels() {
             v = (v - min_P) / (max_P - min_P); // Normalize to [0, 1]
         }
     }
-}
-
-void RadiationCamera::bilateralFilter(const std::vector<float>& in, std::vector<float>& out, int w, int h, float ss, float sr) {
-    int radius = static_cast<int>(ceil(2 * ss));
-    out.assign(w * h, 0.0f);
-    const float ss_2_sq = 2.f*ss*ss; const float sr_2_sq = 2.f*sr*sr;
-    for (int y=0; y<h; ++y) for (int x=0; x<w; ++x) {
-        float center_v = in[y*w+x]; float sum=0.f; float Wp=0.f;
-        for (int j=-radius; j<=radius; ++j) for (int i=-radius; i<=radius; ++i) {
-            int nx=x+i, ny=y+j;
-            if (nx>=0 && nx<w && ny>=0 && ny<h) {
-                float v = in[ny*w+nx];
-                float w_s = exp(-(i*i+j*j)/ss_2_sq);
-                float w_r = exp(-((v-center_v)*(v-center_v))/sr_2_sq);
-                float weight = w_s * w_r;
-                sum += v * weight; Wp += weight;
-            }
-        }
-        out[y*w+x] = sum/Wp;
-    }
-}
-
-void RadiationCamera::fastBilateralFilter(const std::vector<float> &in, std::vector<float> &out, int w, int h, float ss, float sr, int df) {
-    int sw = w / df, sh = h / df;
-    std::vector<float> small_in;
-    resizeImage(in, small_in, w, h, sw, sh);
-    std::vector<float> small_out;
-    bilateralFilter(small_in, small_out, sw, sh, ss / df, sr);
-    resizeImage(small_out, out, sw, sh, w, h);
-}
-
-void RadiationCamera::gaussianBlur(const std::vector<float>& in, std::vector<float>& out, int w, int h, float sigma) {
-    int radius = static_cast<int>(ceil(2 * sigma));
-    out.assign(w*h, 0.f);
-    std::vector<float> temp(w*h);
-    // Horizontal pass
-    for (int y=0; y<h; ++y) for (int x=0; x<w; ++x) {
-        float sum=0.f, Wp=0.f;
-        for (int i=-radius; i<=radius; ++i) {
-            int nx = x + i;
-            if (nx>=0 && nx<w) {
-                float weight = exp(-(i*i)/(2.f*sigma*sigma));
-                sum += in[y*w+nx] * weight; Wp += weight;
-            }
-        }
-        temp[y*w+x] = sum/Wp;
-    }
-    // Vertical pass
-    for (int y=0; y<h; ++y) for (int x=0; x<w; ++x) {
-        float sum=0.f, Wp=0.f;
-        for (int j=-radius; j<=radius; ++j) {
-            int ny = y + j;
-            if (ny>=0 && ny<h) {
-                float weight = exp(-(j*j)/(2.f*sigma*sigma));
-                sum += temp[ny*w+x] * weight; Wp += weight;
-            }
-        }
-        out[y*w+x] = sum/Wp;
-    }
-}
-
-void RadiationCamera::resizeImage(const std::vector<float> &src, std::vector<float> &dst, int src_w, int src_h, int dst_w, int dst_h) {
-    dst.assign(dst_w * dst_h, 0.0f);
-    const float x_ratio = static_cast<float>(src_w) / dst_w;
-    const float y_ratio = static_cast<float>(src_h) / dst_h;
-    for (int y = 0; y < dst_h; ++y) {
-        for (int x = 0; x < dst_w; ++x) {
-            float px = (x + 0.5f) * x_ratio - 0.5f;
-            float py = (y + 0.5f) * y_ratio - 0.5f;
-            int ix = static_cast<int>(floor(px));
-            int iy = static_cast<int>(floor(py));
-            float fx = px - ix;
-            float fy = py - iy;
-            ix = (std::max)(0, (std::min)(ix, src_w - 2));
-            iy = (std::max)(0, (std::min)(iy, src_h - 2));
-            const float c00 = src[iy*src_w + ix];       const float c10 = src[iy*src_w + (ix+1)];
-            const float c01 = src[(iy+1)*src_w + ix];   const float c11 = src[(iy+1)*src_w + (ix+1)];
-            float r0 = c00 * (1.f - fx) + c10 * fx;
-            float r1 = c01 * (1.f - fx) + c11 * fx;
-            dst[y * dst_w + x] = r0 * (1.f - fy) + r1 * fy;
-        }
-    }
-}
-
-float RadiationCamera::smoothstep(float edge0, float edge1, float x) {
-    float t = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
 }
 
 void RadiationCamera::scaleToGreyTarget(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float target) {
@@ -6065,135 +5979,119 @@ void RadiationCamera::applyGain(const std::string &red_band_label, const std::st
     }
 }
 
-void RadiationCamera::HDRToning(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
+void RadiationCamera::globalHistogramEqualization(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label){
 
+    const size_t N = resolution.x * resolution.y;
+    const float eps = 1e-6f;
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+
+    /* luminance array */
+    std::vector<float> lum(N);
+    for (size_t i=0;i<N;++i){
+        // vec3 p;
+        // p.x = srgb_to_lin(data_red[i]);
+        // p.y = srgb_to_lin(data_green[i]);
+        // p.z = srgb_to_lin(data_blue[i]);
+        vec3 p(data_red[i], data_green[i], data_blue[i]);
+        lum[i] = 0.2126f*p.x + 0.7152f*p.y + 0.0722f*p.z;
+    }
+
+    /* build CDF on 2048-bin histogram */
+    const int B=2048;
+    std::vector<int> hist(B,0);
+    for (float v:lum){
+        int b = int(std::clamp(v,0.0f,1.0f-eps)*B);
+        hist[b]++;
+    }
+    std::vector<float> cdf(B); int acc=0;
+    for (int b=0;b<B;++b){
+        acc+=hist[b];
+        cdf[b]=float(acc)/float(N);
+    }
+
+    /* remap */
+    for (size_t i=0;i<N;++i){
+        int b=int(std::clamp(lum[i],0.0f,1.0f-eps)*B);
+
+        constexpr float k  = 0.2f;   // how far to pull towards equalised value  (0.2–0.3 OK)
+        constexpr float cs = 0.2f;   // S-curve strength   (0.4–0.7 recommended)
+
+        float Yeq  = cdf[b];                      // equalised luminance  ∈[0,1]
+        float Ynew = (1.0f - k)*lum[i] + k*Yeq;   // partial equalisation
+
+        /* symmetric S-curve centred at 0.5  :  y = ½ + (x–½)*(1+cs–2·cs·|x–½|)   */
+        float t = Ynew - 0.5f;
+        Ynew = 0.5f + t * (1.0f + cs - 2.0f*cs*std::fabs(t));
+
+        float scale = lum[i]>0.0f? Ynew/lum[i]:0;
+        data_red[i] = lin_to_srgb(data_red[i]*scale);
+        data_green[i] = lin_to_srgb(data_green[i]*scale);
+        data_blue[i] = lin_to_srgb(data_blue[i]*scale);
+    }
+}
+
+void RadiationCamera::adjustSBC(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation, float brightness, float contrast) {
 #ifdef HELIOS_DEBUG
     if (pixel_data.size() != 3) {
-        helios_runtime_error("ERROR (RadiationCamera::HDRToning): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
+        helios_runtime_error("ERROR (RadiationCamera::adjustSBC): Image data must have 3 channels (RGB). This camera has " + std::to_string(pixel_data.size()) + " channels.");
     }
 #endif
 
-    // --- Main HDR Effect Parameters ---
-    const float detail_boost = 1.3f; // How much fine detail to preserve/enhance.
-    const float local_contrast = 1.0f; // Adds "pop" or "clarity" to the image.
+    constexpr float kRedW   = 0.2126f;
+    constexpr float kGreenW = 0.7152f;
+    constexpr float kBlueW  = 0.0722f;
 
-    // --- Targeted Shadow Adjustment Parameters ---
-    const float shadow_brightness = 1.3f; // [1..] How much to brighten the darkest tones.
-    const float shadow_contrast = 0.85f; // [..1] Gamma for shadows. <1.0 increases contrast.
-    const float shadow_thresh_low = 0.0f; // Start of the deep shadow range.
-    const float shadow_thresh_high = 0.15f; // End of the shadow range / start of mid-tones.
-
-    // --- NEW: Targeted Highlight Adjustment Parameters ---
-    const float highlight_compression = 2.f; // [1..] How much to compress bright tones. Higher values recover more detail.
-    const float highlight_thresh_low = 0.75f; // Start of the highlight range.
-    const float highlight_thresh_high = 1.0f; // End of the highlight range.
-
-    // --- Final Global Tuning ---
-    const float exposure = 1.1f; // Final global brightness adjustment.
-    const float saturation = 1.5f; // Final color intensity.
-    const float gamma = 1.0f; // Global gamma is less needed now.
-
-    // --- Filter Parameters ---
-    const float sigma_r = 0.8f;
-    const float sigma_s = 80.0f;
-    const int downsample_factor = 6;
-    const float epsilon = 1e-6f;
+    const size_t N = resolution.x * resolution.y;
 
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
 
-    const int num_pixels = resolution.x * resolution.y;
+    for (int i=0; i<N; ++i) {
 
-    std::vector<float> luminance(num_pixels);
-    std::vector<float> log_luminance(num_pixels);
-    for (int i = 0; i < num_pixels; ++i) {
-        luminance[i] = 0.2126f * data_red.at(i) + 0.7152f * data_green.at(i) + 0.0722f * data_blue.at(i);
-        log_luminance[i] = log10(luminance[i] + epsilon);
+        helios::vec3 p(data_red[i], data_green[i], data_blue[i]);
+
+        /* ----- 1. luminance ----- */
+        float Y = kRedW * p.x + kGreenW * p.y + kBlueW * p.z;
+
+        /* ----- 2. saturation ----- */
+        p = helios::vec3(Y, Y, Y) + (p - helios::vec3(Y, Y, Y)) * saturation;
+
+        /* ----- 3. brightness (gain) ----- */
+        p *= brightness;
+
+        /* ----- 4. contrast ----- */
+        p = (p - helios::vec3(0.5f, 0.5f, 0.5f)) * contrast + helios::vec3(0.5f, 0.5f, 0.5f);
+
+        /* ----- 5. clamp to valid range ----- */
+        data_red[i] = clamp(p.x, 0.0f, 1.0f);
+        data_green[i] = clamp(p.y, 0.0f, 1.0f);
+        data_blue[i] = clamp(p.z, 0.0f, 1.0f);
     }
 
-    std::vector<float> base_layer(num_pixels);
-    fastBilateralFilter(log_luminance, base_layer, resolution.x, resolution.y, sigma_s, sigma_r, downsample_factor);
-
-    std::vector<float> blended_lum(num_pixels);
-    for (int i = 0; i < num_pixels; ++i) {
-        float detail_layer = log_luminance[i] - base_layer[i];
-        float toned_log_lum = base_layer[i] + detail_layer * detail_boost;
-        blended_lum[i] = pow(10.f, toned_log_lum);
-    }
-
-    std::vector<float> contrast_enhanced_lum(num_pixels);
-    gaussianBlur(blended_lum, contrast_enhanced_lum, resolution.x, resolution.y, 1.0f);
-    for (int i = 0; i < num_pixels; ++i) {
-        float fine_detail = blended_lum[i] - contrast_enhanced_lum[i];
-        contrast_enhanced_lum[i] = blended_lum[i] + fine_detail * local_contrast;
-    }
-
-    std::vector<float> final_lum(num_pixels);
-    for (int i = 0; i < num_pixels; ++i) {
-        float L_in = contrast_enhanced_lum[i];
-
-        // --- Create masks for shadows and highlights ---
-        // Shadow mask is 1.0 in deep shadows, 0.0 in mid-tones/highlights.
-        float shadow_mask = smoothstep(shadow_thresh_high, shadow_thresh_low, L_in);
-        // Highlight mask is 1.0 in bright highlights, 0.0 in mid-tones/shadows.
-        float highlight_mask = smoothstep(highlight_thresh_low, highlight_thresh_high, L_in);
-
-        // --- Calculate the adjusted luminance for each region ---
-        // 1. Shadow adjustment: Brighten and add contrast.
-        float L_shadow = pow(L_in, shadow_contrast) * shadow_brightness;
-
-        // 2. Highlight adjustment: Compress highlights to recover detail.
-        // This formula smoothly bends the bright values down towards 1.0.
-        float L_highlight = 1.0f - pow(1.0f - L_in, highlight_compression);
-
-        // --- Blend the original, shadow, and highlight versions ---
-        // We calculate a mid-tone mask to ensure we don't double-apply adjustments.
-        float mid_mask = 1.0f - shadow_mask - highlight_mask;
-
-        final_lum[i] = (L_shadow * shadow_mask) + (L_highlight * highlight_mask) + (L_in * mid_mask);
-    }
-
-
-    // Reconstruct final color
-    for (int i = 0; i < num_pixels; ++i) {
-        vec3 new_rgb;
-        if (luminance[i] > epsilon) {
-            new_rgb.x = data_red.at(i) * (final_lum[i] / luminance[i]);
-            new_rgb.y = data_green.at(i) * (final_lum[i] / luminance[i]);
-            new_rgb.z = data_blue.at(i) * (final_lum[i] / luminance[i]);
-        } else {
-            new_rgb = {0, 0, 0};
-        }
-        float gray = 0.2126f * new_rgb.x + 0.7152f * new_rgb.y + 0.0722f * new_rgb.z;
-        new_rgb = vec3(gray, gray, gray) + (new_rgb - vec3(gray, gray, gray)) * saturation;
-        new_rgb.x = clamp(powf(new_rgb.x * exposure, 1.0f / gamma), 0.0f, 1.0f);
-        new_rgb.y = clamp(powf(new_rgb.y * exposure, 1.0f / gamma), 0.0f, 1.0f);
-        new_rgb.z = clamp(powf(new_rgb.z * exposure, 1.0f / gamma), 0.0f, 1.0f);
-        data_red.at(i) = new_rgb.x;
-        data_green.at(i) = new_rgb.y;
-        data_blue.at(i) = new_rgb.z;
-    }
 }
 
-void RadiationCamera::applyCCM(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
-
-    const std::size_t N = resolution.x * resolution.y;
-    auto &data_red = pixel_data.at(red_band_label);
-    auto &data_green = pixel_data.at(green_band_label);
-    auto &data_blue = pixel_data.at(blue_band_label);
-    for (std::size_t i = 0; i < N; ++i) {
-        float R = data_red[i], G = data_green[i], B = data_blue[i];
-        data_red[i] = color_correction_matrix[0] * R + color_correction_matrix[1] * G + color_correction_matrix[2] * B + color_correction_matrix[9];
-        data_green[i] = color_correction_matrix[3] * R + color_correction_matrix[4] * G + color_correction_matrix[5] * B + color_correction_matrix[10];
-        data_blue[i] = color_correction_matrix[6] * R + color_correction_matrix[7] * G + color_correction_matrix[8] * B + color_correction_matrix[11];
-    }
-}
+// void RadiationCamera::applyCCM(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
+//
+//     const std::size_t N = resolution.x * resolution.y;
+//     auto &data_red = pixel_data.at(red_band_label);
+//     auto &data_green = pixel_data.at(green_band_label);
+//     auto &data_blue = pixel_data.at(blue_band_label);
+//     for (std::size_t i = 0; i < N; ++i) {
+//         float R = data_red[i], G = data_green[i], B = data_blue[i];
+//         data_red[i] = color_correction_matrix[0] * R + color_correction_matrix[1] * G + color_correction_matrix[2] * B + color_correction_matrix[9];
+//         data_green[i] = color_correction_matrix[3] * R + color_correction_matrix[4] * G + color_correction_matrix[5] * B + color_correction_matrix[10];
+//         data_blue[i] = color_correction_matrix[6] * R + color_correction_matrix[7] * G + color_correction_matrix[8] * B + color_correction_matrix[11];
+//     }
+// }
 
 void RadiationCamera::gammaCompress(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
     for (auto &[channel, data]: pixel_data) {
         for (float &v: data) {
-            v = toSRGB(std::fmaxf(0.0f, v));
+            v = lin_to_srgb(std::fmaxf(0.0f, v));
         }
     }
 }

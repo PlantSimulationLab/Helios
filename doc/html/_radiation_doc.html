@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -329,19 +326,19 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value  </th></tr>
 <tr>
-<td>temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b> </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in </td><td>300 K  </td></tr>
+<td>temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b> </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in </td><td>300 K  </td></tr>
 <tr>
-<td>reflectivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
+<td>reflectivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
 <tr>
-<td>transmissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
+<td>transmissivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
 <tr>
-<td>emissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
+<td>emissivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>specular_exponent </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value controlling the spread of specular reflection distribution in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
+<td>specular_exponent </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Value controlling the spread of specular reflection distribution in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
 <tr>
-<td>specular_scale </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value that scales the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>1.0  </td></tr>
+<td>specular_scale </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Value that scales the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>1.0  </td></tr>
 </table>
 <p><br  />
 </p>
@@ -351,7 +348,7 @@ Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>radiation_flux_* </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').  </td></tr>
+<td>radiation_flux_* </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').  </td></tr>
 </table>
 <h1><a class="anchor" id="RadUse"></a>
 Using the Radiation Model Plug-In</h1>
@@ -578,24 +575,24 @@ Adding a Radiation Camera</h3>
 <tr>
 <th>Parameter </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>camera_position </td><td> <font face="courier" color="green">vec3</font> </td><td>Cartesian (x,y,z) position of the center of the camera lens.  </td></tr>
+<td>camera_position </td><td> <span style="font-family: Courier, monospace; color: green;">vec3</span> </td><td>Cartesian (x,y,z) position of the center of the camera lens.  </td></tr>
 <tr>
-<td>camera_lookat </td><td> <font face="courier" color="green">vec3</font> </td><td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).  </td></tr>
+<td>camera_lookat </td><td> <span style="font-family: Courier, monospace; color: green;">vec3</span> </td><td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).  </td></tr>
 <tr>
-<td>antialiasing_samples </td><td> <font face="courier" color="green">uint</font> </td><td>Number of ray samples launched per camera pixel.  </td></tr>
+<td>antialiasing_samples </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Number of ray samples launched per camera pixel.  </td></tr>
 </table>
 <p>The set of parameters given in the table below define a camera's intrinsic parameters that determines how it captures images. Each of these values are member variables of a parameters structure called <a class="el" href="struct_camera_properties.html">CameraProperties</a>.</p>
 <table class="doxtable">
 <tr>
-<td>lens_diameter </td><td> <font face="courier" color="green">float</font> </td><td>Physical diameter of the camera lens.  </td></tr>
+<td>lens_diameter </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Physical diameter of the camera lens.  </td></tr>
 <tr>
-<td>focal_plane_distance </td><td> <font face="courier" color="green">float</font> </td><td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).  </td></tr>
+<td>focal_plane_distance </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).  </td></tr>
 <tr>
-<td>HFOV </td><td> <font face="courier" color="green">float</font> </td><td>Angle of the horizontal camera field of view in degrees.  </td></tr>
+<td>HFOV </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Angle of the horizontal camera field of view in degrees.  </td></tr>
 <tr>
-<td>FOV_aspect_ratio </td><td> <font face="courier" color="green">float</font> </td><td>Ratio of horizontal to vertical camera field of view.  </td></tr>
+<td>FOV_aspect_ratio </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ratio of horizontal to vertical camera field of view.  </td></tr>
 <tr>
-<td>camera_resolution </td><td> <font face="courier" color="green">int2</font> </td><td>Number of camera pixels in the horizontal and vertical directions.  </td></tr>
+<td>camera_resolution </td><td> <span style="font-family: Courier, monospace; color: green;">int2</span> </td><td>Number of camera pixels in the horizontal and vertical directions.  </td></tr>
 </table>
 <p>The last thing to define before adding a camera is which radiation bands the camera will detect. This is specified via a vector of strings, with each element corresponding to the label for a radiation band that has been added from the <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a> method. Note that if a camera band was never added, an error will be thrown. Each camera band will correspond to a channel of the camera image.</p>
 <p>Once all these parameters have been defined, we can add a camera to the simulation using the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method. The first argument to this method is an arbitrary label string (e.g., "thermal", "multispec", "mycamera") that will later be used to reference the camera. Example code is given below.</p>

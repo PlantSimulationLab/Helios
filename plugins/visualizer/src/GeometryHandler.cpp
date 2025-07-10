@@ -749,6 +749,13 @@ size_t GeometryHandler::sampleUUID(){
     return UUID;
 }
 
+const GeometryHandler::PrimitiveIndexMap &GeometryHandler::getIndexMap(size_t UUID) const {
+#ifdef HELIOS_DEBUG
+    assert(UUID_map.find(UUID) != UUID_map.end());
+#endif
+    return UUID_map.at(UUID);
+}
+
 void GeometryHandler::defragmentBuffers() {
 
     // If no primitives were deleted, nothing to do

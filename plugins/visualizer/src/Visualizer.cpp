@@ -367,6 +367,10 @@ void Visualizer::openWindow() {
     }
     glfwMakeContextCurrent(_window);
 
+    // Associate this Visualizer instance with the GLFW window so that
+    // callbacks have access to it.
+    glfwSetWindowUserPointer(_window, this);
+
     // Ensure we can capture the escape key being pressed below
     glfwSetInputMode(_window, GLFW_STICKY_KEYS, GL_TRUE);
 
@@ -390,7 +394,16 @@ void Visualizer::openWindow() {
 
     glfwSetWindowSize(_window, window_width, window_height);
 
-    glfwSetWindowAspectRatio(_window, Wdisplay, Hdisplay);
+    // Allow the window to freely resize so that entering full-screen
+    // results in the framebuffer matching the display resolution.
+    // This prevents the operating system from simply scaling the
+    // window contents, which can skew geometry.
+    glfwSetWindowAspectRatio(_window, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+    // Register callbacks so that window and framebuffer size changes
+    // properly update the internal dimensions used for rendering.
+    glfwSetWindowSizeCallback(_window, Visualizer::windowResizeCallback);
+    glfwSetFramebufferSizeCallback(_window, Visualizer::framebufferResizeCallback);
 
     // Initialize GLEW
     glewExperimental = GL_TRUE; // Needed in core profile
@@ -422,6 +435,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     primitiveColorsNeedUpdate = false;
 
     isWatermarkVisible = true;
+    watermark_ID = 0;
 
     colorbar_flag = 0;
 
@@ -1032,10 +1046,15 @@ void Visualizer::closeWindow() const {
 
 void Visualizer::hideWatermark() {
     isWatermarkVisible = false;
+    if (watermark_ID != 0) {
+        geometry_handler.deleteGeometry(watermark_ID);
+        watermark_ID = 0;
+    }
 }
 
 void Visualizer::showWatermark() {
     isWatermarkVisible = true;
+    updateWatermark();
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
@@ -1822,6 +1841,12 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
     return UUIDs;
 }
 
+void Visualizer::deleteGeometry( size_t geometry_id) {
+    if ( geometry_handler.doesGeometryExist(geometry_id) ) {
+        geometry_handler.deleteGeometry(geometry_id);
+    }
+}
+
 std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap) {
     uint Ndivs = 50;
 
@@ -1990,6 +2015,10 @@ void Visualizer::addGridWireFrame(const helios::vec3 &center, const helios::vec3
             UUIDs.push_back(addLine(make_vec3(boxmin.x + i * spacing_x, boxmin.y, boxmin.z + j * spacing_z), make_vec3(boxmin.x + i * spacing_x, boxmax.y, boxmin.z + j * spacing_z), RGB::black, Visualizer::COORDINATES_CARTESIAN));
         }
     }
+
+    if (primitiveColorsNeedUpdate) {
+        updateContextPrimitiveColors();
+    }
 }
 
 void Visualizer::enableColorbar() {
@@ -2130,12 +2159,7 @@ void Visualizer::buildContextGeometry_private() {
         if (contextUUIDs_build.empty()) {
             include_deleted_UUIDs = false;
         }
-        if ( primitiveColorsNeedUpdate ) {
-            //\todo This is a temporary fix to ensure that the colors are update if the visualization mode changes. This is inefficient because it would be better to just update the colors since the geometry has not changed.
-            contextUUIDs_build = context->getAllUUIDs();
-        }else {
-            contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
-        }
+        contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
     }
 
     // Populate contextUUIDs_needupdate based on dirty primitives in the Context
@@ -2163,19 +2187,21 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
-    if (contextUUIDs_needupdate.empty()) {
+    if (contextUUIDs_needupdate.empty() && !primitiveColorsNeedUpdate) {
         return;
     }
 
     if (!colorPrimitivesByData.empty()) {
         if (colorPrimitives_UUIDs.empty()) { // load all primitives
-            for (uint UUID: contextUUIDs_build) {
+            std::vector<uint> all_UUIDs = context->getAllUUIDs();
+            for (uint UUID: all_UUIDs) {
                 if (context->doesPrimitiveExist(UUID)) {
                     colorPrimitives_UUIDs[UUID] = UUID;
                 }
             }
         } else { // double check that primitives exist
-            for (uint UUID: contextUUIDs_build) {
+            std::vector<uint> all_UUIDs = context->getAllUUIDs();
+            for (uint UUID: all_UUIDs) {
                 if (!context->doesPrimitiveExist(UUID)) {
                     auto it = colorPrimitives_UUIDs.find(UUID);
                     colorPrimitives_UUIDs.erase(it);
@@ -2514,6 +2540,198 @@ void Visualizer::buildContextGeometry_private() {
             }
         }
     }
+
+    if (primitiveColorsNeedUpdate) {
+        updateContextPrimitiveColors();
+    }
+}
+
+void Visualizer::updateContextPrimitiveColors() {
+
+    std::vector<size_t> geometry_UUIDs = geometry_handler.getAllGeometryIDs();
+
+    if (geometry_UUIDs.empty()) {
+        primitiveColorsNeedUpdate = false;
+        return;
+    }
+
+    colormap_current.setRange(colorbar_min, colorbar_max);
+
+    if ((!colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty()) && colorbar_min == 0 && colorbar_max == 0) {
+        colorbar_min = (std::numeric_limits<float>::max)();
+        colorbar_max = (std::numeric_limits<float>::lowest)();
+
+        for (auto UUID: geometry_UUIDs) {
+            if (!context->doesPrimitiveExist(static_cast<uint>(UUID))) {
+                continue;
+            }
+
+            float colorValue = -9999.f;
+            if (!colorPrimitivesByData.empty()) {
+                if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
+                    if (context->doesPrimitiveDataExist(static_cast<uint>(UUID), colorPrimitivesByData.c_str())) {
+                        HeliosDataType type = context->getPrimitiveDataType(static_cast<uint>(UUID), colorPrimitivesByData.c_str());
+                        if (type == HELIOS_TYPE_FLOAT) {
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), colorValue);
+                        } else if (type == HELIOS_TYPE_INT) {
+                            int cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_UINT) {
+                            uint cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_DOUBLE) {
+                            double cv;
+                            context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else {
+                            colorValue = 0.f;
+                        }
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+            } else if (!colorPrimitivesByObjectData.empty()) {
+                if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
+                    uint ObjID = context->getPrimitiveParentObjectID(static_cast<uint>(UUID));
+                    if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
+                        HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                        if (type == HELIOS_TYPE_FLOAT) {
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
+                        } else if (type == HELIOS_TYPE_INT) {
+                            int cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_UINT) {
+                            uint cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else if (type == HELIOS_TYPE_DOUBLE) {
+                            double cv;
+                            context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                            colorValue = float(cv);
+                        } else {
+                            colorValue = 0.f;
+                        }
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+            }
+
+            if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                colorValue = 0.f;
+            }
+
+            if (colorValue != -9999.f) {
+                if (colorValue < colorbar_min) {
+                    colorbar_min = colorValue;
+                }
+                if (colorValue > colorbar_max) {
+                    colorbar_max = colorValue;
+                }
+            }
+        }
+
+        if (!std::isinf(colorbar_min) && !std::isinf(colorbar_max)) {
+            colormap_current.setRange(colorbar_min, colorbar_max);
+        }
+    }
+
+    for (auto UUID: geometry_UUIDs) {
+        uint uid = static_cast<uint>(UUID);
+        if (!context->doesPrimitiveExist(uid) || !geometry_handler.doesGeometryExist(UUID)) {
+            continue;
+        }
+
+        RGBAcolor color = context->getPrimitiveColorRGBA(uid);
+
+        const std::string texture_file = context->getPrimitiveTextureFile(uid);
+
+        if (!colorPrimitivesByData.empty()) {
+            if (colorPrimitives_UUIDs.find(uid) != colorPrimitives_UUIDs.end()) {
+                float colorValue = 0.f;
+                if (context->doesPrimitiveDataExist(uid, colorPrimitivesByData.c_str())) {
+                    HeliosDataType type = context->getPrimitiveDataType(uid, colorPrimitivesByData.c_str());
+                    if (type == HELIOS_TYPE_FLOAT) {
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), colorValue);
+                    } else if (type == HELIOS_TYPE_INT) {
+                        int cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_UINT) {
+                        uint cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_DOUBLE) {
+                        double cv;
+                        context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+
+                if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                    colorValue = 0.f;
+                }
+
+                color = make_RGBAcolor(colormap_current.query(colorValue), 1.f);
+
+                if (!texture_file.empty()) {
+                    geometry_handler.overrideTextureColor(UUID);
+                }
+            } else if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        } else if (!colorPrimitivesByObjectData.empty()) {
+            if (colorPrimitives_UUIDs.find(uid) != colorPrimitives_UUIDs.end()) {
+                float colorValue = 0.f;
+                uint ObjID = context->getPrimitiveParentObjectID(uid);
+                if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
+                    HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                    if (type == HELIOS_TYPE_FLOAT) {
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
+                    } else if (type == HELIOS_TYPE_INT) {
+                        int cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_UINT) {
+                        uint cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else if (type == HELIOS_TYPE_DOUBLE) {
+                        double cv;
+                        context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), cv);
+                        colorValue = float(cv);
+                    } else {
+                        colorValue = 0.f;
+                    }
+                }
+
+                if (std::isnan(colorValue) || std::isinf(colorValue)) {
+                    colorValue = 0.f;
+                }
+
+                color = make_RGBAcolor(colormap_current.query(colorValue), 1.f);
+
+                if (!texture_file.empty()) {
+                    geometry_handler.overrideTextureColor(UUID);
+                }
+            } else if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        } else {
+            if (!texture_file.empty()) {
+                geometry_handler.useTextureColor(UUID);
+            }
+        }
+
+        geometry_handler.setColor(UUID, color);
+    }
+
+    primitiveColorsNeedUpdate = false;
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name) {
@@ -2742,11 +2960,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
 
     // Watermark
-    if (isWatermarkVisible) {
-        float hratio = float(Wdisplay) / float(Hdisplay);
-        float width = 0.2389f / 0.8f / hratio;
-        addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
-    }
+    updateWatermark();
 
     transferBufferData();
 
@@ -3172,7 +3386,56 @@ void Visualizer::render(bool shadow) const {
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
 
-        glMultiDrawArrays(GL_TRIANGLE_FAN, rectangle_vertex_group_firsts.data(), rectangle_vertex_group_counts.data(), rectangle_count);
+        std::vector<GLint> opaque_firsts;
+        std::vector<GLint> opaque_counts;
+        struct TransparentRect {
+            size_t index;
+            float depth;
+        };
+        std::vector<TransparentRect> transparent_rects;
+
+        const auto &texFlags = *geometry_handler.getTextureFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
+        const auto &colors = *geometry_handler.getColorData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
+        const auto &verts = *geometry_handler.getVertexData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
+
+        opaque_firsts.reserve(rectangle_count);
+        opaque_counts.reserve(rectangle_count);
+        transparent_rects.reserve(rectangle_count);
+
+        for (size_t i = 0; i < rectangle_count; ++i) {
+            bool isGlyph = texFlags.at(i) == 3;
+            float alpha = colors.at(i * 4 + 3);
+            if (!isGlyph && alpha >= 1.f) {
+                opaque_firsts.push_back(static_cast<GLint>(i * 4));
+                opaque_counts.push_back(4);
+            } else {
+                glm::vec3 center(0.f);
+                for (int j = 0; j < 4; ++j) {
+                    center.x += verts.at(i * 12 + j * 3 + 0);
+                    center.y += verts.at(i * 12 + j * 3 + 1);
+                    center.z += verts.at(i * 12 + j * 3 + 2);
+                }
+                center /= 4.f;
+                glm::vec4 viewPos = cameraViewMatrix * glm::vec4(center, 1.f);
+                transparent_rects.push_back({i, viewPos.z});
+            }
+        }
+
+        if (!opaque_firsts.empty()) {
+            glMultiDrawArrays(GL_TRIANGLE_FAN, opaque_firsts.data(), opaque_counts.data(), static_cast<GLsizei>(opaque_firsts.size()));
+        }
+
+        if (!transparent_rects.empty()) {
+            std::sort(transparent_rects.begin(), transparent_rects.end(), [](const TransparentRect &a, const TransparentRect &b) {
+                return a.depth > b.depth; // farthest first
+            });
+
+            glDepthMask(GL_FALSE);
+            for (const auto &tr: transparent_rects) {
+                glDrawArrays(GL_TRIANGLE_FAN, static_cast<GLint>(tr.index * 4), 4);
+            }
+            glDepthMask(GL_TRUE);
+        }
     }
 
     assert(checkerrors());
@@ -3292,11 +3555,7 @@ void Visualizer::plotUpdate(bool hide_window) {
     }
 
     // Watermark
-    if (isWatermarkVisible) {
-        float hratio = float(Wdisplay) / float(Hdisplay);
-        float width = 0.2389f / 0.8f / hratio;
-        addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
-    }
+    updateWatermark();
 
     transferBufferData();
 
@@ -3914,6 +4173,58 @@ void Shader::setLightIntensity(float lightintensity) const {
 
 void Shader::useShader() const {
     glUseProgram(shaderID);
+}
+
+void Visualizer::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+    if (viz != nullptr) {
+        viz->Wframebuffer = static_cast<uint>(width);
+        viz->Hframebuffer = static_cast<uint>(height);
+    }
+}
+
+void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    auto *viz = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+    if (viz != nullptr) {
+        int fbw, fbh;
+        glfwGetFramebufferSize(window, &fbw, &fbh);
+        if (fbw != width || fbh != height) {
+            glfwSetWindowSize(window, width, height);
+            fbw = width;
+            fbh = height;
+        }
+        viz->Wdisplay = static_cast<uint>(width);
+        viz->Hdisplay = static_cast<uint>(height);
+        viz->Wframebuffer = static_cast<uint>(fbw);
+        viz->Hframebuffer = static_cast<uint>(fbh);
+        viz->updateWatermark();
+        viz->transferBufferData(); //\todo This is highly inefficient because it updates the data for all primitives not just the watermark.
+    }
+}
+
+void Visualizer::updateWatermark() {
+    if (!isWatermarkVisible) {
+        if (watermark_ID != 0) {
+            geometry_handler.deleteGeometry(watermark_ID);
+            watermark_ID = 0;
+        }
+        return;
+    }
+
+    constexpr float texture_aspect = 675.f / 195.f; // image width / height
+
+    float window_aspect = float(Wframebuffer) / float(Hframebuffer);
+    float width = 0.07f * texture_aspect / window_aspect;
+    if (watermark_ID != 0) {
+        geometry_handler.deleteGeometry(watermark_ID);
+    }
+    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
 }
 
 

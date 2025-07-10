@@ -1,4 +1,4 @@
-/*! \page "StomatalDoc" Stomatal Conductance Model Plugin Documentation
+/*! \page StomatalDoc Stomatal Conductance Model Plugin Documentation
 
  \tableofcontents
 
@@ -53,7 +53,7 @@
       <td>radiation_flux_PAR</td>
       <td>\f$Q\f$</td>
       <td>W/m<sup>2</sup></td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>PAR photon flux density. Note W/m<sup>2</sup> is automatically converted to \f$\mu\f$mol/m<sup>2</sup>/s using a factor of 4.57.</td>
       <td>BMF</td>
       <td>Can be computed by \ref RadiationModel plug-in.</td>
@@ -63,7 +63,7 @@
       <td>temperature</td>
       <td>\f$T_s\f$</td>
       <td>Kelvin</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Primitive surface temperature.</td>
       <td>All</td>
       <td>Can be computed by \ref EnergyBalanceModel plug-in.</td>
@@ -73,7 +73,7 @@
       <td>air_pressure</td>
       <td>\f$p_{atm}\f$</td>
       <td>Pascals</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Atmospheric pressure.</td>
       <td>All</td>
       <td>N/A</td>
@@ -83,7 +83,7 @@
       <td>air_temperature</td>
       <td>\f$T_a\f$</td>
       <td>Kelvin</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Temperature of air outside of primitive boundary-layer.</td>
       <td>All</td>
       <td>N/A</td>
@@ -93,7 +93,7 @@
       <td>air_humidity</td>
       <td>\f$h\f$</td>
       <td>Unitless</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Relative humidity of air outside of primitive boundary-layer.</td>
       <td>All</td>
       <td>N/A</td>
@@ -103,7 +103,7 @@
       <td>boundarylayer_conductance**</td>
       <td>\f$g_H\f$</td>
       <td>mol air/m<sup>2</sup>-s</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Boundary-layer conductance to heat. (Assumed that b.l. conductance to moisture is 1.08 that of heat.)</td>
       <td>All</td>
       <td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td>
@@ -113,7 +113,7 @@
          <td>beta_soil</td>
          <td>\f$\beta\f$</td>
          <td>unitless</td>
-         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
          <td>Soil moisture factor, defined as \f$(\theta-\theta_w)/(\theta_f-\theta_w)\f$, with \f$\theta,\,\theta_f,\,\theta_w\f$ being the effective soil water content, water content at field capacity, and water content at the wilting point.</td>
          <td>All</td>
          <td>N/A</td>
@@ -123,7 +123,7 @@
          <td>net_photosynthesis</td>
          <td>\f$A\f$</td>
          <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
-         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
          <td>Net CO<sub>2</sub> (photosynthetic) flux.</td>
          <td>BWB, BBL, Mopt</td>
          <td>Can be computed by \ref PhotosynthesisModel plug-in.</td>
@@ -133,7 +133,7 @@
          <td>air_CO2</td>
          <td>\f$C_a\f$</td>
          <td>\f$\mu\f$mol/mol</td>
-         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
          <td>CO<sub>2</sub> concentration of air outside primitive boundary-layer.</td>
          <td>BWB, BBL, Mopt</td>
          <td>N/A</td>
@@ -143,7 +143,7 @@
          <td>Gamma_CO2</td>
          <td>\f$\Gamma\f$</td>
          <td>\f$\mu\f$mol/mol</td>
-         <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
          <td>CO<sub>2</sub> compensation point of photosynthesis including dark respiration. (Note: only used for Ball-Berry models.)</td>
          <td>BBL</td>
          <td>Can be computed by \ref PhotosynthesisModel plug-in (need to enable optional primitive data output).</td>
@@ -169,9 +169,65 @@
      <td>moisture_conductance</td>
      <td>\f$g_s\f$</td>
      <td>mol air/m<sup>2</sup>-sec</td>	  
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Conductance of water vapor through stomata.</td>	  
    </tr>
+ </table>
+
+ \subsection GsOptionalOutputData Optional Output Primitive Data
+
+ Optional output primitive data can be written to the context by calling \ref StomatalConductanceModel::optionalOutputPrimitiveData(), with an argument of one of the primitive data labels given in the table below.
+
+ ~~~~~~~~{.cpp}
+ StomatalConductanceModel stomatalmodel( &context );
+ stomatalmodel.optionalOutputPrimitiveData( "vapor_pressure_deficit" );
+ ~~~~~~~~
+
+ <table>
+    <tr><th>Primitive Data Label</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
+    <tr><td>vapor\_pressure\_deficit</td><td>mmol/mol</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Vapor pressure deficit between the stomatal cavity and leaf surface. Only applicable for BMF model.</td></tr>
+    <tr><td>model\_parameters</td><td>N/A</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Model parameters for each primitive. See table below for the actual primitive data labels that are created.</td></tr>
+ </table>
+
+ If you enable the optional output primitive data "model_parameters", different primtive data will be created based on the selected model corresponding to each model parameter.
+
+ <table>
+    <tr>
+        <th>Model</th><th>Model Parameter</th><th>Output Primitive Data Label</th>
+    </tr>
+    <tr>
+        <td rowspan="2">Ball-Woodrow-Berry</td><td>\f$g_{s,0}\f$</td><td>gs0_BWB</td>
+    </tr>
+    <tr>
+        <td>\f$a_1\f$</td><td>a1_BWB</td>
+    </tr>
+    <tr>
+        <td rowspan="3">Ball-Berry-Leuning</td><td>\f$g_{s,0}\f$</td><td>gs0_BBL</td>
+    </tr>
+    <tr>
+        <td>\f$a_1\f$</td><td>a1_BBL</td>
+    </tr>
+    <tr>
+        <td>\f$D_0\f$</td><td>D0_BBL</td>
+    </tr>
+    <tr>
+        <td rowspan="2">Medlyn Optimality</td><td>\f$g_{s,0}\f$</td><td>gs0_MOPT</td>
+    </tr>
+    <tr>
+        <td>\f$g_1\f$</td><td>g1_MOPT</td>
+    </tr>
+    <tr>
+        <td rowspan="4">Buckley-Mott-Farquhar</td><td>\f$E_m\f$</td><td>Em_BMF</td>
+    </tr>
+    <tr>
+        <td>\f$i_0\f$</td><td>i0_BMF</td>
+    </tr>
+    <tr>
+        <td>\f$k\f$</td><td>k_BMF</td>
+    </tr>
+    <tr>
+        <td>\f$b\f$</td><td>b_BMF</td>
+    </tr>
  </table>
 
  \section StomatalIntro Introduction

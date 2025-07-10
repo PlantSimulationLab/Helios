@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -219,7 +216,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Radiation source data object. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00310">310</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00278">278</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a1d16744d95956e385117f14a10597985" name="a1d16744d95956e385117f14a10597985"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1d16744d95956e385117f14a10597985">&#9670;&#160;</a></span>RadiationSource() <span class="overload">[1/5]</span></h2>
@@ -246,7 +243,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor for collimated radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00313">313</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00281">281</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -279,7 +276,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor for spherical radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00322">322</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00290">290</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -322,7 +319,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor for sun sphere radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00333">333</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00301">301</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -360,7 +357,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor for rectangular radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00341">341</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00309">309</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -398,7 +395,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor for disk radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00350">350</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00318">318</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -417,7 +414,7 @@ Data Fields</h2></td></tr>
 
 <p>Source flux factors used to scale flux in case of a sun sphere source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00378">378</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00346">346</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -435,7 +432,7 @@ Data Fields</h2></td></tr>
 
 <p>Fluxes of radiation source for all bands. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00384">384</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00352">352</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -453,7 +450,7 @@ Data Fields</h2></td></tr>
 
 <p>Positions of radiation source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00361">361</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00329">329</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -471,7 +468,7 @@ Data Fields</h2></td></tr>
 
 <p>Source position factors used to scale position in case of a sun sphere source. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00364">364</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00332">332</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -489,7 +486,7 @@ Data Fields</h2></td></tr>
 
 <p>Rotation (rx,ry,rz) for radiation source (area sources only) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00375">375</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00343">343</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -507,7 +504,7 @@ Data Fields</h2></td></tr>
 
 <p>Spectral distribution of radiation source. Each element of the vector is a wavelength band, where .x is the wavelength in nm and .y is the spectral flux in W/m^2/nm. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00367">367</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00335">335</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -523,7 +520,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00369">369</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00337">337</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -541,7 +538,7 @@ Data Fields</h2></td></tr>
 
 <p>Types of all radiation sources. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00381">381</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00349">349</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -559,7 +556,7 @@ Data Fields</h2></td></tr>
 
 <p>Widths for each radiation source (N/A for collimated sources) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00372">372</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00340">340</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

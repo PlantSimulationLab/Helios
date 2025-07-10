@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -318,31 +315,31 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value </th></tr>
 <tr>
-<td>radiation_flux_[*] </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>N/A (must add at least one band) </td></tr>
+<td>radiation_flux_[*] </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>N/A (must add at least one band) </td></tr>
 <tr>
-<td>wind_speed </td><td>m/s </td><td> <font face="courier" color="green">float</font> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
+<td>wind_speed </td><td>m/s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
 <tr>
-<td>object_length </td><td>m </td><td> <font face="courier" color="green">float</font> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
+<td>object_length </td><td>m </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
 <tr>
-<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td><a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in </td><td>Try calculating from model \(0.135\sqrt{\frac{U}{L}}\) </td></tr>
+<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Leaf boundary-layer conductance to heat. </td><td><a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in </td><td>Try calculating from model \(0.135\sqrt{\frac{U}{L}}\) </td></tr>
 <tr>
-<td>air_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
+<td>air_temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
 <tr>
-<td>moisture_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). </td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in. </td><td>0 </td></tr>
+<td>moisture_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). </td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in. </td><td>0 </td></tr>
 <tr>
-<td>surface_humidity </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Relative humidity of air immediately above surface evaporating site. </td><td>N/A </td><td>1.0 (saturated) </td></tr>
+<td>surface_humidity </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Relative humidity of air immediately above surface evaporating site. </td><td>N/A </td><td>1.0 (saturated) </td></tr>
 <tr>
-<td>air_humidity </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air relative humidity outside of surface boundary layer. </td><td>N/A </td><td>0.5 </td></tr>
+<td>air_humidity </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ambient air relative humidity outside of surface boundary layer. </td><td>N/A </td><td>0.5 </td></tr>
 <tr>
-<td>air_pressure </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa </td></tr>
+<td>air_pressure </td><td>Pascals </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa </td></tr>
 <tr>
-<td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <font face="courier" color="green">float</font> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
+<td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
 <tr>
-<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
+<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>stomatal_sidedness </td><td>\(\zeta\) </td><td> <font face="courier" color="green">float</font> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
+<td>stomatal_sidedness </td><td>\(\zeta\) </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
 </table>
 <h2><a class="anchor" id="EBOutputData"></a>
 Default Output Primitive Data</h2>
@@ -350,11 +347,11 @@ Default Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th></tr>
 <tr>
-<td>temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. </td></tr>
+<td>temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive surface temperature. </td></tr>
 <tr>
-<td>sensible_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Sensible heat flux. </td></tr>
+<td>sensible_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Sensible heat flux. </td></tr>
 <tr>
-<td>latent_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Latent heat flux. </td></tr>
+<td>latent_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Latent heat flux. </td></tr>
 </table>
 <h2><a class="anchor" id="EBOptionalOutputData"></a>
 Optional Output Primitive Data</h2>
@@ -362,13 +359,13 @@ Optional Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th></tr>
 <tr>
-<td>boundarylayer_conductance_out </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
+<td>boundarylayer_conductance_out </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
 <tr>
-<td>vapor_pressure_deficit </td><td>mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>Surface vapor pressure deficit. </td></tr>
+<td>vapor_pressure_deficit </td><td>mol/mol </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Surface vapor pressure deficit. </td></tr>
 <tr>
-<td>storage_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Storage heat flux. </td></tr>
+<td>storage_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Storage heat flux. </td></tr>
 <tr>
-<td>net_radiation_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Primitive net radiation flux (absorption minus emission). </td></tr>
+<td>net_radiation_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive net radiation flux (absorption minus emission). </td></tr>
 </table>
 <h1><a class="anchor" id="EBUse"></a>
 Using the Energy Balance Model Plug-in</h1>

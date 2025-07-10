@@ -28,14 +28,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -87,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.38</span>
+       <span id="projectnumber">&#160;v1.3.39</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -481,13 +478,13 @@ $(function(){initNavTree('_weber_penn_tree_8cpp_source.html',''); initResizable(
 <div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span> </div>
 <div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>  <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> flag=1;</div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>  <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> i=0; i&lt;UUID_leaf.at(TreeID).size(); i++ ){</div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    context-&gt;setPrimitiveData(UUID_leaf.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>,1,&amp;flag);</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    context-&gt;setPrimitiveData(UUID_leaf.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>  }</div>
 <div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>  <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> i=0; i&lt;UUID_branch.at(TreeID).size(); i++ ){</div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    context-&gt;setPrimitiveData(UUID_branch.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>,1,&amp;flag);</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    context-&gt;setPrimitiveData(UUID_branch.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>  }</div>
 <div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>  <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> i=0; i&lt;UUID_trunk.at(TreeID).size(); i++ ){</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    context-&gt;setPrimitiveData(UUID_trunk.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,<a class="code hl_enumvalue" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa8887c77409aaaecc3cd1a097488776f" title="unsigned integer data type">HELIOS_TYPE_UINT</a>,1,&amp;flag);</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    context-&gt;setPrimitiveData(UUID_trunk.at(TreeID).at(i),<span class="stringliteral">&quot;twosided_flag&quot;</span>,flag);</div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>  }</div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span> </div>
 <div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>  <span class="keywordflow">return</span> TreeID;</div>
