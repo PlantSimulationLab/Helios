@@ -16,7 +16,7 @@
 #
 # Output:
 #   Results are written to individual files in benchmarks/report named
-#   <benchmark>_<hostname>_<gpu>.txt.
+#   <benchmark>_<hostname>_<version>_<gpu>.txt.
 #
 # Environment:
 #   Requires NVIDIA GPU with drivers and CUDA toolkit installed. The
@@ -133,8 +133,15 @@ if [ "${GPU_NAME}" == "" ];then
   exit 1
 fi
 
+# Determine the current Helios version from git
+HELIOS_VERSION=$(git describe --tags 2>/dev/null)
+if [ -z "$HELIOS_VERSION" ]; then
+  HELIOS_VERSION="unknown"
+fi
+SANITIZED_VERSION=$(echo "$HELIOS_VERSION" | tr ' /:*?"<>|\\' '_')
+
 echo "---------------------------------------------"
-echo "Benchmarking on ${GPU_NAME}"
+echo "Benchmarking Helios ${HELIOS_VERSION} on ${GPU_NAME}"
 echo "Using thread counts: ${THREAD_COUNTS[*]}"
 echo "---------------------------------------------"
 
@@ -152,8 +159,8 @@ for i in "${SAMPLES[@]}"; do
     HOST_NAME=$(hostname)
     SANITIZED_HOST_NAME=$(echo "${HOST_NAME}" | tr ' /:*?"<>|\\' '_')
 
-    OUTPUT_FILE="${SCRIPT_DIR}/../benchmarks/report/${i}_${SANITIZED_HOST_NAME}_${SANITIZED_GPU_NAME}.txt"
-    git describe --tags > "${OUTPUT_FILE}"
+    OUTPUT_FILE="${SCRIPT_DIR}/../benchmarks/report/${i}_${SANITIZED_HOST_NAME}_${SANITIZED_VERSION}_${SANITIZED_GPU_NAME}.txt"
+    echo "$HELIOS_VERSION" > "${OUTPUT_FILE}"
 
     for build in "${BUILD_TYPES[@]}"; do
         UNIQUE_ID="$(date +%s)_$$"
@@ -238,5 +245,5 @@ for i in "${SAMPLES[@]}"; do
     SANITIZED_GPU_NAME=$(echo "${GPU_NAME}" | tr ' /:*?"<>|\\' '_')
     HOST_NAME=$(hostname)
     SANITIZED_HOST_NAME=$(echo "${HOST_NAME}" | tr ' /:*?"<>|\\' '_')
-    echo " - ${SCRIPT_DIR}/../benchmarks/report/${i}_${SANITIZED_HOST_NAME}_${SANITIZED_GPU_NAME}.txt"
+    echo " - ${SCRIPT_DIR}/../benchmarks/report/${i}_${SANITIZED_HOST_NAME}_${SANITIZED_VERSION}_${SANITIZED_GPU_NAME}.txt"
 done

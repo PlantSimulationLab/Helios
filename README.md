@@ -20,7 +20,8 @@ system.  You can optionally provide a list of thread counts or log the output:
 ```
 
 This produces one results file per benchmark in `benchmarks/report` named
-`<benchmark>_<hostname>_<gpu>.txt`.  After collecting reports from multiple
+`<benchmark>_<hostname>_<version>_<gpu>.txt`. The first line of each
+results file records the Helios version. After collecting reports from multiple
 machines they can be plotted with:
 
 ```bash
