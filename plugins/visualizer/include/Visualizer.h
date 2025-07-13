@@ -1033,6 +1033,7 @@ private:
      */
     void transferBufferData();
 
+
     /**
      * \brief Registers a texture file and obtains its unique texture ID.
      *
