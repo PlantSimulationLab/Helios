@@ -9,3 +9,20 @@ Helios is a C++ library for 3D physical simulation of plant and environmental sy
 In order to build and compile the core library, you will need to install a C/C++ compiler (recommended are the GNU C compilers version 7.0+), and CMake. In order to run many of the model plug-ins, you will need to install NVIDIA CUDA 10.2+, and a GPU with compute capability 5.0+. The software has been tested on Linux, Mac, and Windows platforms. The YouTube channel linked above has a number of tutorials for getting started.
 
 ![Almond Reconstruction](doc/images/AlmondVarietyReconstruction.png)
+
+## Benchmarking
+
+To compare runtime across different machines run the benchmark script on each
+system.  You can optionally provide a list of thread counts or log the output:
+
+```bash
+./utilities/run_benchmarks.sh "1,4,16" --log-file my_benchmark.log --verbose
+```
+
+This produces one results file per benchmark in `benchmarks/report` named
+`<benchmark>_<hostname>_<gpu>.txt`.  After collecting reports from multiple
+machines they can be plotted with:
+
+```bash
+python3 utilities/plot_benchmarks.py benchmarks/report/*.txt
+```
