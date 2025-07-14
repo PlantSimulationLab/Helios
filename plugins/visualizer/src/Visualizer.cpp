@@ -423,6 +423,10 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     maximum_texture_size = make_uint2(2048, 2048);
 
+    texArray = 0;
+    texture_array_layers = 0;
+    textures_dirty = false;
+
     message_flag = true;
 
     frame_counter = 0;
@@ -1841,8 +1845,8 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
     return UUIDs;
 }
 
-void Visualizer::deleteGeometry( size_t geometry_id) {
-    if ( geometry_handler.doesGeometryExist(geometry_id) ) {
+void Visualizer::deleteGeometry(size_t geometry_id) {
+    if (geometry_handler.doesGeometryExist(geometry_id)) {
         geometry_handler.deleteGeometry(geometry_id);
     }
 }
@@ -3051,7 +3055,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
         glfwSwapBuffers((GLFWwindow *) window);
 
-        glfwWaitEvents();
+        glfwWaitEventsTimeout(1.0 / 30.0);
 
         int width, height;
         glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
@@ -3159,140 +3163,222 @@ void Visualizer::plotOnce(bool getKeystrokes) {
 }
 
 void Visualizer::transferBufferData() {
-    //\todo Re-work this so that it only transfers data that has changed.
-
     assert(checkerrors());
 
-    int i = 0;
-    for (const auto &geometry_type: GeometryHandler::all_geometry_types) {
-        // 1st attribute buffer : vertex positions
+    const auto &dirty = geometry_handler.getDirtyUUIDs();
+    if (dirty.empty()) {
+        return;
+    }
+
+    auto ensureArrayBuffer = [](GLuint buf, GLenum target, GLsizeiptr size,
+                                const void *data) {
+        glBindBuffer(target, buf);
+        GLint current_size = 0;
+        glGetBufferParameteriv(target, GL_BUFFER_SIZE, &current_size);
+        if (current_size != size) {
+            glBufferData(target, size, data, GL_STATIC_DRAW);
+        }
+    };
+
+    auto ensureTextureBuffer = [](GLuint buf, GLuint tex, GLenum format,
+                                  GLsizeiptr size, const void *data) {
+        glBindBuffer(GL_TEXTURE_BUFFER, buf);
+        GLint current_size = 0;
+        glGetBufferParameteriv(GL_TEXTURE_BUFFER, GL_BUFFER_SIZE, &current_size);
+        if (current_size != size) {
+            glBufferData(GL_TEXTURE_BUFFER, size, data, GL_STATIC_DRAW);
+        }
+        glBindTexture(GL_TEXTURE_BUFFER, tex);
+        glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
+    };
+
+    // Ensure buffers are allocated to the correct size
+    for (size_t gi = 0; gi < GeometryHandler::all_geometry_types.size(); ++gi) {
+        const auto geometry_type = GeometryHandler::all_geometry_types[gi];
+        const auto *vertex_data = geometry_handler.getVertexData_ptr(geometry_type);
+        const auto *uv_data = geometry_handler.getUVData_ptr(geometry_type);
+        const auto *face_index_data = geometry_handler.getFaceIndexData_ptr(geometry_type);
+        const auto *color_data = geometry_handler.getColorData_ptr(geometry_type);
+        const auto *normal_data = geometry_handler.getNormalData_ptr(geometry_type);
+        const auto *texture_flag_data = geometry_handler.getTextureFlagData_ptr(geometry_type);
+        const auto *texture_ID_data = geometry_handler.getTextureIDData_ptr(geometry_type);
+        const auto *coordinate_flag_data = geometry_handler.getCoordinateFlagData_ptr(geometry_type);
+        const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
+
+        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER,
+                         vertex_data->size() * sizeof(GLfloat), vertex_data->data());
+        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER,
+                         uv_data->size() * sizeof(GLfloat), uv_data->data());
+        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER,
+                         face_index_data->size() * sizeof(GLint), face_index_data->data());
+        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F,
+                            color_data->size() * sizeof(GLfloat), color_data->data());
+        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F,
+                            normal_data->size() * sizeof(GLfloat), normal_data->data());
+        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I,
+                            texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
+        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I,
+                            texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
+        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I,
+                            coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
+        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I,
+                            visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+    }
+
+    bool rect_dirty = false;
+    for (size_t UUID: dirty) {
+        if (!geometry_handler.doesGeometryExist(UUID)) {
+            continue;
+        }
+
+        const auto &index_map = geometry_handler.getIndexMap(UUID);
+        auto geometry_type = index_map.geometry_type;
+        size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
+
+        const char vcount = GeometryHandler::getVertexCount(geometry_type);
+
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getVertexData_ptr(geometry_type)->size() * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data() + index_map.vertex_index);
 
-        // 2nd attribute buffer : vertex uv
         glBindBuffer(GL_ARRAY_BUFFER, uv_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getUVData_ptr(geometry_type)->size() * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.uv_index * sizeof(GLfloat), vcount * 2 * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data() + index_map.uv_index);
 
-        // 3rd attribute buffer : face index
         glBindBuffer(GL_ARRAY_BUFFER, face_index_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getFaceIndexData_ptr(geometry_type)->size() * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.face_index_index * sizeof(GLint), vcount * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data() + index_map.face_index_index);
 
-        // 1st texture buffer : vertex colors
         glBindBuffer(GL_TEXTURE_BUFFER, color_buffer.at(i));
-        glBufferData(GL_TEXTURE_BUFFER, geometry_handler.getColorData_ptr(geometry_type)->size() * sizeof(GLfloat), geometry_handler.getColorData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_TEXTURE_BUFFER, index_map.color_index * sizeof(GLfloat), 4 * sizeof(GLfloat), geometry_handler.getColorData_ptr(geometry_type)->data() + index_map.color_index);
         glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, color_buffer.at(i));
 
-        // 2nd texture buffer : face normals
         glBindBuffer(GL_ARRAY_BUFFER, normal_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getNormalData_ptr(geometry_type)->size() * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.normal_index * sizeof(GLfloat), 3 * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data() + index_map.normal_index);
         glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, normal_buffer.at(i));
 
-        // 3rd texture buffer : face texture flag
         glBindBuffer(GL_ARRAY_BUFFER, texture_flag_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getTextureFlagData_ptr(geometry_type)->size() * sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data() + index_map.texture_flag_index);
         glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_flag_buffer.at(i));
 
-        // 4th texture buffer : image texture ID
         glBindBuffer(GL_ARRAY_BUFFER, texture_ID_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getTextureIDData_ptr(geometry_type)->size() * sizeof(GLint), geometry_handler.getTextureIDData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_ID_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureIDData_ptr(geometry_type)->data() + index_map.texture_ID_index);
         glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_ID_buffer.at(i));
 
-        // 5th attribute buffer : face coordinate flag
         glBindBuffer(GL_ARRAY_BUFFER, coordinate_flag_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getCoordinateFlagData_ptr(geometry_type)->size() * sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.coordinate_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data() + index_map.coordinate_flag_index);
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, coordinate_flag_buffer.at(i));
 
-        // 6th attribute buffer : hidden flag
         glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i));
-        glBufferData(GL_ARRAY_BUFFER, geometry_handler.getVisibilityFlagData_ptr(geometry_type)->size() * sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data(), GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.visible_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data() + index_map.visible_index);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, hidden_flag_buffer.at(i));
 
-        i++;
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+
+        if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE) {
+            rect_dirty = true;
+        }
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindTexture(GL_TEXTURE_BUFFER, 0);
+    if (rect_dirty) {
+        size_t rectangle_count = geometry_handler.getRectangleCount();
 
-    // Pre-compute indexing to draw rectangles as TRIANGLE_FAN
-    size_t rectangle_count = geometry_handler.getRectangleCount();
-
-    rectangle_vertex_group_firsts.resize(rectangle_count);
-    rectangle_vertex_group_counts.resize(rectangle_count, 4);
-    for (int i = 0; i < rectangle_count; ++i) {
-        rectangle_vertex_group_firsts[i] = i * 4; // quad 0 starts at v[0], quad 1 at v[4], …
+        rectangle_vertex_group_firsts.resize(rectangle_count);
+        rectangle_vertex_group_counts.resize(rectangle_count, 4);
+        for (int j = 0; j < rectangle_count; ++j) {
+            rectangle_vertex_group_firsts[j] = j * 4;
+        }
     }
 
-    // Set up textures
+    if (textures_dirty || texArray == 0) {
+    transferTextureData();
+        textures_dirty = false;
+    }
 
-    // if ( !texture_manager.empty() ) {
-    glGenTextures(1, &texArray);
+    geometry_handler.clearDirtyUUIDs();
+
+    assert(checkerrors());
+}
+
+void Visualizer::transferTextureData() {
+    if (texArray == 0) {
+        glGenTextures(1, &texArray);
+    }
+
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
-    // Allocate L layers of size W×H, 1 mip level
-    glTexStorage3D(GL_TEXTURE_2D_ARRAY,
-                   /*levels=*/1,
-                   GL_RGBA8, // 8 bit RGBA per texel
-                   /*width=*/maximum_texture_size.x,
-                   /*height=*/maximum_texture_size.y,
-                   /*layers=*/std::max(1, (int) texture_manager.size()));
+    const size_t layers = std::max<size_t>(1, texture_manager.size());
+    if (layers != texture_array_layers) {
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY,
+                       1,
+                       GL_RGBA8,
+                       maximum_texture_size.x,
+                       maximum_texture_size.y,
+                       layers);
+        texture_array_layers = layers;
+    }
 
-    // Set filtering & wrap
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    const size_t Ntextures = texture_manager.size();
     std::vector<GLfloat> uv_rescale;
-    uv_rescale.resize(Ntextures * 2);
+    uv_rescale.resize(texture_manager.size() * 2);
 
-    for (const auto &[textureID, texture]: texture_manager) {
+    for (const auto &[textureID, texture] : texture_manager) {
         GLenum externalFormat = 0;
         switch (texture.num_channels) {
-            case 1:
-                externalFormat = GL_RED;
-                break;
-            case 3:
-                externalFormat = GL_RGB;
-                break;
-            case 4:
-                externalFormat = GL_RGBA;
-                break;
-            default:
-                throw std::runtime_error("unsupported channel count");
+        case 1:
+            externalFormat = GL_RED;
+            break;
+        case 3:
+            externalFormat = GL_RGB;
+            break;
+        case 4:
+            externalFormat = GL_RGBA;
+            break;
+        default:
+            throw std::runtime_error("unsupported channel count");
         }
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                        /*level=*/0,
-                        /*xoffset=*/0, /*yoffset=*/0, /*zoffset=*/textureID,
-                        /*width=*/texture.texture_resolution.x, /*height=*/texture.texture_resolution.y, /*depth=*/1, externalFormat, GL_UNSIGNED_BYTE,
-                        texture.texture_data.data() // pointer to pixel data
-        );
 
-        uv_rescale.at(textureID * 2 + 0) = float(texture.texture_resolution.x) / float(maximum_texture_size.x);
-        uv_rescale.at(textureID * 2 + 1) = float(texture.texture_resolution.y) / float(maximum_texture_size.y);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                        0,
+                        0,
+                        0,
+                        textureID,
+                        texture.texture_resolution.x,
+                        texture.texture_resolution.y,
+                        1,
+                        externalFormat,
+                        GL_UNSIGNED_BYTE,
+                        texture.texture_data.data());
+
+        uv_rescale.at(textureID * 2 + 0) =
+            float(texture.texture_resolution.x) / float(maximum_texture_size.x);
+        uv_rescale.at(textureID * 2 + 1) =
+            float(texture.texture_resolution.y) / float(maximum_texture_size.y);
     }
 
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-
     glUniform1i(glGetUniformLocation(primaryShader.shaderID, "textureSampler"), 0);
 
-    // Set up (u,v) rescaling
     glBindBuffer(GL_TEXTURE_BUFFER, uv_rescale_buffer);
-    glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat), uv_rescale.data(), GL_STATIC_DRAW);
+    glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat),
+                 uv_rescale.data(), GL_STATIC_DRAW);
     glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RG32F, uv_rescale_buffer);
-
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
-
-    assert(checkerrors());
 }
+
 
 void Visualizer::render(bool shadow) const {
     size_t rectangle_ind = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), GeometryHandler::GEOMETRY_TYPE_RECTANGLE) - GeometryHandler::all_geometry_types.begin();
@@ -3867,6 +3953,7 @@ uint Visualizer::registerTextureImage(const std::string &texture_file) {
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, false);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -3879,6 +3966,7 @@ uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_data, textureID, image_resolution, this->maximum_texture_size);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -3898,6 +3986,7 @@ uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, true);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -3907,6 +3996,7 @@ uint Visualizer::registerTextureGlyph(const Glyph *glyph) {
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, glyph, textureID, this->maximum_texture_size);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -4204,7 +4294,7 @@ void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height)
         viz->Wframebuffer = static_cast<uint>(fbw);
         viz->Hframebuffer = static_cast<uint>(fbh);
         viz->updateWatermark();
-        viz->transferBufferData(); //\todo This is highly inefficient because it updates the data for all primitives not just the watermark.
+        viz->transferBufferData();
     }
 }
 

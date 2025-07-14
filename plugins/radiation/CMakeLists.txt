@@ -1,9 +1,7 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
-include_directories(include)
-include_directories(../../core/include)
 
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
@@ -13,10 +11,16 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 add_library(radiation STATIC "src/RadiationModel.cpp;src/selfTest.cpp;src/CameraCalibration.cpp;")
 
+target_include_directories(radiation
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../core/include
+)
+
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
-	include_directories(${CUDA_INCLUDE_DIRS})
-	target_link_libraries( radiation ${CUDA_LIBRARIES} )
+        target_include_directories(radiation PUBLIC ${CUDA_INCLUDE_DIRS})
+        target_link_libraries( radiation PRIVATE helios ${CUDA_LIBRARIES} )
 endif(CUDA_FOUND)
 
 if(UNIX AND NOT APPLE)
@@ -27,13 +31,13 @@ if(UNIX AND NOT APPLE)
 		set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-6.5.0/)
 		message("Using OptiX version 6.5")
 	endif()
-	include_directories(${OPTIX_PATH}include)
+        target_include_directories(radiation PUBLIC ${OPTIX_PATH}include)
 	add_subdirectory(${OPTIX_PATH} "plugins/radiation")	
 	target_link_libraries( radiation ${OPTIX_PATH}lib64/liboptix.so )
 endif(UNIX AND NOT APPLE)
 if(APPLE)
 	set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/mac64-4.0.2/)
-	include_directories(${OPTIX_PATH}include)
+        target_include_directories(radiation PUBLIC ${OPTIX_PATH}include)
 	add_subdirectory(${OPTIX_PATH})
 	target_link_libraries( radiation ${OPTIX_PATH}lib64/liboptix.dylib )
 endif(APPLE)
@@ -49,7 +53,7 @@ if(WIN32)
 		set(OPTIX_DLL "optix.6.5.0.dll")
 		message("Using OptiX version 6.5")
 	endif()
-	include_directories(${OPTIX_PATH}include)
+        target_include_directories(radiation PUBLIC ${OPTIX_PATH}include)
 	target_link_libraries( radiation "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
 	add_custom_command( TARGET radiation POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
 	add_custom_command( TARGET radiation POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )

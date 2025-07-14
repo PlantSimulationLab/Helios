@@ -1033,6 +1033,9 @@ private:
      */
     void transferBufferData();
 
+    //! Uploads all textures to the texture array and updates UV rescaling.
+    void transferTextureData();
+
     /**
      * \brief Registers a texture file and obtains its unique texture ID.
      *
@@ -1258,6 +1261,8 @@ private:
     GeometryHandler geometry_handler;
 
     GLuint texArray;
+    size_t texture_array_layers;
+    bool textures_dirty;
 
     helios::uint2 maximum_texture_size;
 
