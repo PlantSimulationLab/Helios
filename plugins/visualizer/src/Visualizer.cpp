@@ -425,6 +425,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     texArray = 0;
     texture_array_layers = 0;
+    textures_dirty = false;
 
     message_flag = true;
 
@@ -3324,7 +3325,10 @@ void Visualizer::transferBufferData() {
         }
     }
 
-    transferTextureData();
+    if (textures_dirty || texArray == 0) {
+        transferTextureData();
+        textures_dirty = false;
+    }
 
     geometry_handler.clearDirtyUUIDs();
 
@@ -3977,6 +3981,7 @@ uint Visualizer::registerTextureImage(const std::string &texture_file) {
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, false);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -3989,6 +3994,7 @@ uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_data, textureID, image_resolution, this->maximum_texture_size);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -4008,6 +4014,7 @@ uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, true);
+    textures_dirty = true;
 
     return textureID;
 }
@@ -4017,6 +4024,7 @@ uint Visualizer::registerTextureGlyph(const Glyph *glyph) {
     const uint textureID = texture_manager.size();
 
     texture_manager.try_emplace(textureID, glyph, textureID, this->maximum_texture_size);
+    textures_dirty = true;
 
     return textureID;
 }

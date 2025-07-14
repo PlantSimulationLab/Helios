@@ -1263,6 +1263,7 @@ private:
 
     GLuint texArray;
     size_t texture_array_layers;
+    bool textures_dirty;
 
     helios::uint2 maximum_texture_size;
 
