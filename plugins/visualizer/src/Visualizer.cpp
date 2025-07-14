@@ -423,6 +423,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     maximum_texture_size = make_uint2(2048, 2048);
 
+    texArray = 0;
+    texture_array_layers = 0;
+
     message_flag = true;
 
     frame_counter = 0;
@@ -3321,9 +3324,83 @@ void Visualizer::transferBufferData() {
         }
     }
 
+    transferTextureData();
+
     geometry_handler.clearDirtyUUIDs();
 
     assert(checkerrors());
+}
+
+void Visualizer::transferTextureData() {
+    if (texArray == 0) {
+        glGenTextures(1, &texArray);
+    }
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+
+    const size_t layers = std::max<size_t>(1, texture_manager.size());
+    if (layers != texture_array_layers) {
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY,
+                       1,
+                       GL_RGBA8,
+                       maximum_texture_size.x,
+                       maximum_texture_size.y,
+                       layers);
+        texture_array_layers = layers;
+    }
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    std::vector<GLfloat> uv_rescale;
+    uv_rescale.resize(texture_manager.size() * 2);
+
+    for (const auto &[textureID, texture] : texture_manager) {
+        GLenum externalFormat = 0;
+        switch (texture.num_channels) {
+        case 1:
+            externalFormat = GL_RED;
+            break;
+        case 3:
+            externalFormat = GL_RGB;
+            break;
+        case 4:
+            externalFormat = GL_RGBA;
+            break;
+        default:
+            throw std::runtime_error("unsupported channel count");
+        }
+
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                        0,
+                        0,
+                        0,
+                        textureID,
+                        texture.texture_resolution.x,
+                        texture.texture_resolution.y,
+                        1,
+                        externalFormat,
+                        GL_UNSIGNED_BYTE,
+                        texture.texture_data.data());
+
+        uv_rescale.at(textureID * 2 + 0) =
+            float(texture.texture_resolution.x) / float(maximum_texture_size.x);
+        uv_rescale.at(textureID * 2 + 1) =
+            float(texture.texture_resolution.y) / float(maximum_texture_size.y);
+    }
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i(glGetUniformLocation(primaryShader.shaderID, "textureSampler"), 0);
+
+    glBindBuffer(GL_TEXTURE_BUFFER, uv_rescale_buffer);
+    glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat),
+                 uv_rescale.data(), GL_STATIC_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RG32F, uv_rescale_buffer);
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
 }
 
 
