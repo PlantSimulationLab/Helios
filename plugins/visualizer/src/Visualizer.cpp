@@ -338,20 +338,20 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 }
 
-Visualizer::Visualizer(uint Wdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true);
+Visualizer::Visualizer(uint Wdisplay, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, 16, true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, 16, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, aliasing_samples, true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations, headless);
 }
 
 void Visualizer::openWindow() {
@@ -415,9 +415,11 @@ void Visualizer::openWindow() {
     glGetError();
 }
 
-void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations) {
+void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations, bool headless_mode) {
     Wdisplay = window_width_pixels;
     Hdisplay = window_height_pixels;
+
+    headless = headless_mode;
 
     shadow_buffer_size = make_uint2(8192, 8192);
 
@@ -452,69 +454,70 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     point_width = 1;
 
-    // Initialize OpenGL context and open graphic window
+    if (!headless) {
+        // Initialize OpenGL context and open graphic window
 
-    // Initialise GLFW
-    if (!glfwInit()) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
-    }
+        // Initialise GLFW
+        if (!glfwInit()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
+        }
 
-    glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #if __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
 #endif
-    glfwWindowHint(GLFW_VISIBLE, 0);
+        glfwWindowHint(GLFW_VISIBLE, 0);
 
-    if (!window_decorations) {
-        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-    }
+        if (!window_decorations) {
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        }
 
-    openWindow();
+        openWindow();
 
-    // Initialize GLEW
-    glewExperimental = GL_TRUE; // Needed in core profile
-    if (glewInit() != GLEW_OK) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
-    }
+        // Initialize GLEW
+        glewExperimental = GL_TRUE; // Needed in core profile
+        if (glewInit() != GLEW_OK) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
+        }
 
-    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
-    glGetError();
+        // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+        glGetError();
 
-    assert(checkerrors());
+        assert(checkerrors());
 
-    // Enable relevant parameters
+        // Enable relevant parameters
 
-    glEnable(GL_DEPTH_TEST); // Enable depth test
-    glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
-    // glEnable(GL_DEPTH_CLAMP);
+        glEnable(GL_DEPTH_TEST); // Enable depth test
+        glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
+        // glEnable(GL_DEPTH_CLAMP);
 
-    if (aliasing_samples <= 0) {
-        glDisable(GL_MULTISAMPLE);
-        glDisable(GL_MULTISAMPLE_ARB);
-    }
+        if (aliasing_samples <= 0) {
+            glDisable(GL_MULTISAMPLE);
+            glDisable(GL_MULTISAMPLE_ARB);
+        }
 
-    if (aliasing_samples <= 1) {
-        glDisable(GL_POLYGON_SMOOTH);
-    } else {
-        glEnable(GL_POLYGON_SMOOTH);
-    }
+        if (aliasing_samples <= 1) {
+            glDisable(GL_POLYGON_SMOOTH);
+        } else {
+            glEnable(GL_POLYGON_SMOOTH);
+        }
 
-    // glEnable(GL_TEXTURE0);
-    //  glEnable(GL_TEXTURE_2D_ARRAY);
-    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        // glEnable(GL_TEXTURE0);
+        //  glEnable(GL_TEXTURE_2D_ARRAY);
+        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    assert(checkerrors());
+        assert(checkerrors());
 
-    // glEnable(GL_TEXTURE1);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
-    glDisable(GL_CULL_FACE);
+        // glEnable(GL_TEXTURE1);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.0f, 1.0f);
+        glDisable(GL_CULL_FACE);
 
-    assert(checkerrors());
+        assert(checkerrors());
 
     // Initialize VBO's and texture buffers
     constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
@@ -552,61 +555,66 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
     glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
 
-    glGenBuffers(1, &uv_rescale_buffer);
-    glGenTextures(1, &uv_rescale_texture_object);
+        glGenBuffers(1, &uv_rescale_buffer);
+        glGenTextures(1, &uv_rescale_texture_object);
 
-    assert(checkerrors());
+        assert(checkerrors());
 
-    //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
+        //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
-    primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
-    depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
+        primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
+        depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
 
-    assert(checkerrors());
+        assert(checkerrors());
 
-    primaryShader.useShader();
+        primaryShader.useShader();
 
     // Initialize frame buffer
 
     // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-    glGenFramebuffers(1, &framebufferID);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+        glGenFramebuffers(1, &framebufferID);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
 
     // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
-    glActiveTexture(GL_TEXTURE1);
-    glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
+        glActiveTexture(GL_TEXTURE1);
+        glGenTextures(1, &depthTexture);
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     // enable hardware depth comparison
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
-    assert(checkerrors());
+        assert(checkerrors());
 
     // restore default active texture for subsequent texture setup
-    glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
 
-    glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+        glDrawBuffer(GL_NONE); // No color buffer is drawn to.
 
     // Always check that our framebuffer is ok
-    int max_checks = 10000;
-    int checks = 0;
-    while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
-        checks++;
-    }
-    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+        int max_checks = 10000;
+        int checks = 0;
+        while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
+            checks++;
+        }
+        assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
+        // Finished OpenGL setup
+    } else {
+        Wframebuffer = Wdisplay;
+        Hframebuffer = Hdisplay;
+    }
 
     // Initialize transformation matrices
 
@@ -620,7 +628,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     light_direction = make_vec3(1, 1, 1);
     light_direction.normalize();
-    primaryShader.setLightDirection(light_direction);
+    if (!headless) {
+        primaryShader.setLightDirection(light_direction);
+    }
 
     primaryLightingModel.push_back(Visualizer::LIGHTING_NONE);
 
@@ -675,33 +685,40 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colormap_current = colormap_hot;
 
-    glfwSetMouseButtonCallback((GLFWwindow *) window, mouseCallback);
-    glfwSetCursorPosCallback((GLFWwindow *) window, cursorCallback);
-    glfwSetScrollCallback((GLFWwindow *) window, scrollCallback);
+    if (!headless) {
+        glfwSetMouseButtonCallback((GLFWwindow *) window, mouseCallback);
+        glfwSetCursorPosCallback((GLFWwindow *) window, cursorCallback);
+        glfwSetScrollCallback((GLFWwindow *) window, scrollCallback);
 
-    assert(checkerrors());
+        assert(checkerrors());
+    }
 }
 
 Visualizer::~Visualizer() {
-    glDeleteFramebuffers(1, &framebufferID);
-    glDeleteTextures(1, &depthTexture);
+    if (!headless) {
+        glDeleteFramebuffers(1, &framebufferID);
+        glDeleteTextures(1, &depthTexture);
 
-    glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
-    glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
-    glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+        glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+        glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
+        glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
 
-    glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
-    glDeleteTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
-    glDeleteBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
-    glDeleteTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
-    glDeleteBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
-    glDeleteTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
-    glDeleteBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
-    glDeleteTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
-    glDeleteBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
-    glDeleteTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
-    glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
-    glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
+        glDeleteTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
+        glDeleteBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
+        glDeleteTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
+        glDeleteBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
+        glDeleteTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
+        glDeleteTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
+        glDeleteBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
+        glDeleteTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
+        glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+
+        glfwDestroyWindow(scast<GLFWwindow *>(window));
+        glfwTerminate();
+    }
 
     // for( auto iter=textureIDData.begin(); iter!=textureIDData.end(); ++iter ){
     //     std::vector<int> ID = textureIDData.at(iter->first);
@@ -711,8 +728,6 @@ Visualizer::~Visualizer() {
     //     }
     // }
 
-    glfwDestroyWindow(scast<GLFWwindow *>(window));
-    glfwTerminate();
 }
 
 int Visualizer::selfTest() const {

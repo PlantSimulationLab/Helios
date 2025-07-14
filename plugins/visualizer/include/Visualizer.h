@@ -250,23 +250,26 @@ public:
     //! Visualizer constructor
     /**
      * \param[in] Wdisplay Width of the display window in pixels, and assumes default window aspect ratio of 1.25
+     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    explicit Visualizer(uint Wdisplay);
+    explicit Visualizer(uint Wdisplay, bool headless = false);
 
     //! Visualizer constructor
     /**
      * \param[in] Wdisplay Width of the display window in pixels
      * \param[in] Hdisplay Height of the display window in pixels
+     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay);
+    Visualizer(uint Wdisplay, uint Hdisplay, bool headless = false);
 
     //! Constructs a Visualizer object with the specified display dimensions and anti-aliasing settings.
     /**
      * \param[in] Wdisplay Width of the display in pixels.
      * \param[in] Hdisplay Height of the display in pixels.
      * \param[in] aliasing_samples Number of anti-aliasing samples to use.
+     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples);
+    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool headless = false);
 
     //! Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed
     /**
@@ -274,8 +277,9 @@ public:
      * \param[in] Hdisplay Height of the display in pixels.
      * \param[in] aliasing_samples Number of anti-aliasing samples to use.
      * \param[in] window_decorations Flag to remove window decorations.
+     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations);
+    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless = false);
 
     //! Visualizer destructor
     ~Visualizer();
@@ -1015,8 +1019,9 @@ private:
      * \param[in] window_height_pixels Height of the window in pixels.
      * \param[in] aliasing_samples Number of aliasing samples for rendering.
      * \param[in] window_decorations Indicates whether window decorations (e.g., borders, title bar) should be enabled.
+     * \param[in] headless_mode [optional] If true, skips creation of the OpenGL window.
      */
-    void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations);
+    void initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations, bool headless_mode);
 
     /**
      * \brief Renders the geometry using the current shader program.
@@ -1254,6 +1259,9 @@ private:
     Colormap colormap_gray;
 
     bool message_flag;
+
+    //! Flag indicating whether the visualizer is running without an OpenGL window
+    bool headless;
 
     GeometryHandler geometry_handler;
 
