@@ -3166,6 +3166,64 @@ void Visualizer::transferBufferData() {
         return;
     }
 
+    auto ensureArrayBuffer = [](GLuint buf, GLenum target, GLsizeiptr size,
+                                const void *data) {
+        glBindBuffer(target, buf);
+        GLint current_size = 0;
+        glGetBufferParameteriv(target, GL_BUFFER_SIZE, &current_size);
+        if (current_size != size) {
+            glBufferData(target, size, data, GL_STATIC_DRAW);
+        }
+    };
+
+    auto ensureTextureBuffer = [](GLuint buf, GLuint tex, GLenum format,
+                                  GLsizeiptr size, const void *data) {
+        glBindBuffer(GL_TEXTURE_BUFFER, buf);
+        GLint current_size = 0;
+        glGetBufferParameteriv(GL_TEXTURE_BUFFER, GL_BUFFER_SIZE, &current_size);
+        if (current_size != size) {
+            glBufferData(GL_TEXTURE_BUFFER, size, data, GL_STATIC_DRAW);
+        }
+        glBindTexture(GL_TEXTURE_BUFFER, tex);
+        glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
+    };
+
+    // Ensure buffers are allocated to the correct size
+    for (size_t gi = 0; gi < GeometryHandler::all_geometry_types.size(); ++gi) {
+        const auto geometry_type = GeometryHandler::all_geometry_types[gi];
+        const auto *vertex_data = geometry_handler.getVertexData_ptr(geometry_type);
+        const auto *uv_data = geometry_handler.getUVData_ptr(geometry_type);
+        const auto *face_index_data = geometry_handler.getFaceIndexData_ptr(geometry_type);
+        const auto *color_data = geometry_handler.getColorData_ptr(geometry_type);
+        const auto *normal_data = geometry_handler.getNormalData_ptr(geometry_type);
+        const auto *texture_flag_data = geometry_handler.getTextureFlagData_ptr(geometry_type);
+        const auto *texture_ID_data = geometry_handler.getTextureIDData_ptr(geometry_type);
+        const auto *coordinate_flag_data = geometry_handler.getCoordinateFlagData_ptr(geometry_type);
+        const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
+
+        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER,
+                         vertex_data->size() * sizeof(GLfloat), vertex_data->data());
+        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER,
+                         uv_data->size() * sizeof(GLfloat), uv_data->data());
+        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER,
+                         face_index_data->size() * sizeof(GLint), face_index_data->data());
+        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F,
+                            color_data->size() * sizeof(GLfloat), color_data->data());
+        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F,
+                            normal_data->size() * sizeof(GLfloat), normal_data->data());
+        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I,
+                            texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
+        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I,
+                            texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
+        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I,
+                            coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
+        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I,
+                            visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+    }
+
     bool rect_dirty = false;
     for (size_t UUID : dirty) {
         if (!geometry_handler.doesGeometryExist(UUID)) {
