@@ -109,6 +109,6 @@ add_custom_target(copy_textures ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visuali
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
-add_executable( visualizer_tests "src/selfTest.cpp" )
+add_executable( visualizer_tests "src/TestMain.cpp" )
 target_link_libraries( visualizer_tests PRIVATE visualizer )
 add_test( NAME visualizer_tests COMMAND visualizer_tests )

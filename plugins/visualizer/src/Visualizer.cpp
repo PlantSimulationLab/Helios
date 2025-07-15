@@ -3920,7 +3920,6 @@ bool validateTextureFile(const std::string &texture_file, bool pngonly) {
 
     // Check that the file exists and is a regular file
     if (!std::filesystem::exists(p) || !std::filesystem::is_regular_file(p)) {
-        std::cout << "Does not exist" << std::endl;
         return false;
     }
 
