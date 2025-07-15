@@ -2434,6 +2434,7 @@ The radiation model has been re-designed, with the following primary additions:
 - Added benchmarks to documentation.
 - Added benchmark cases `energy_balance_dragon` and `plant_architecture_bean`.
 - Updated required CMake version to 3.15 for plug-ins.
+- Started transitioning tests to using the "doctest" framework. This will be a gradual process, and the old self-test framework will still be supported for now.
 
 ## Context
 - Reverted a previous change in `Context::setPrimitiveData()` and `Context::setObjectData()` to not use range-based for loops when it is an openmp paralell loop.

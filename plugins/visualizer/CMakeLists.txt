@@ -7,7 +7,13 @@ include_directories(../../core/include)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(visualizer STATIC "src/Visualizer.cpp;src/GeometryHandler.cpp")
+set( VISUALIZER_SOURCES
+	"src/Visualizer.cpp"
+	"src/GeometryHandler.cpp"
+	"src/selfTest.cpp"
+)
+
+add_library(visualizer STATIC ${VISUALIZER_SOURCES})
 
 #External libraries
 set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
@@ -103,3 +109,6 @@ add_custom_target(copy_textures ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visuali
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
+add_executable( visualizer_tests "src/selfTest.cpp" )
+target_link_libraries( visualizer_tests PRIVATE visualizer )
+add_test( NAME visualizer_tests COMMAND visualizer_tests )

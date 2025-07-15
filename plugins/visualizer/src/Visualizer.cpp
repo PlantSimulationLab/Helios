@@ -338,20 +338,20 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 }
 
-Visualizer::Visualizer(uint Wdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true);
+Visualizer::Visualizer(uint Wdisplay, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, 16, true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, 16, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, aliasing_samples, true);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, true, headless);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
-    initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations);
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+    initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations, headless);
 }
 
 void Visualizer::openWindow() {
@@ -415,9 +415,11 @@ void Visualizer::openWindow() {
     glGetError();
 }
 
-void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations) {
+void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations, bool headless_mode) {
     Wdisplay = window_width_pixels;
     Hdisplay = window_height_pixels;
+
+    headless = headless_mode;
 
     shadow_buffer_size = make_uint2(8192, 8192);
 
@@ -456,161 +458,168 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     point_width = 1;
 
-    // Initialize OpenGL context and open graphic window
+    if (!headless) {
+        // Initialize OpenGL context and open graphic window
 
-    // Initialise GLFW
-    if (!glfwInit()) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
-    }
+        // Initialise GLFW
+        if (!glfwInit()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
+        }
 
-    glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #if __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
 #endif
-    glfwWindowHint(GLFW_VISIBLE, 0);
+        glfwWindowHint(GLFW_VISIBLE, 0);
 
-    if (!window_decorations) {
-        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-    }
+        if (!window_decorations) {
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        }
 
-    openWindow();
+        openWindow();
 
-    // Initialize GLEW
-    glewExperimental = GL_TRUE; // Needed in core profile
-    if (glewInit() != GLEW_OK) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
-    }
+        // Initialize GLEW
+        glewExperimental = GL_TRUE; // Needed in core profile
+        if (glewInit() != GLEW_OK) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
+        }
 
-    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
-    glGetError();
+        // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+        glGetError();
 
-    assert(checkerrors());
+        assert(checkerrors());
 
-    // Enable relevant parameters
+        // Enable relevant parameters
 
-    glEnable(GL_DEPTH_TEST); // Enable depth test
-    glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
-    // glEnable(GL_DEPTH_CLAMP);
+        glEnable(GL_DEPTH_TEST); // Enable depth test
+        glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
+        // glEnable(GL_DEPTH_CLAMP);
 
-    if (aliasing_samples <= 0) {
-        glDisable(GL_MULTISAMPLE);
-        glDisable(GL_MULTISAMPLE_ARB);
-    }
+        if (aliasing_samples <= 0) {
+            glDisable(GL_MULTISAMPLE);
+            glDisable(GL_MULTISAMPLE_ARB);
+        }
 
-    if (aliasing_samples <= 1) {
-        glDisable(GL_POLYGON_SMOOTH);
+        if (aliasing_samples <= 1) {
+            glDisable(GL_POLYGON_SMOOTH);
+        } else {
+            glEnable(GL_POLYGON_SMOOTH);
+        }
+
+        // glEnable(GL_TEXTURE0);
+        //  glEnable(GL_TEXTURE_2D_ARRAY);
+        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        assert(checkerrors());
+
+        // glEnable(GL_TEXTURE1);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.0f, 1.0f);
+        glDisable(GL_CULL_FACE);
+
+        assert(checkerrors());
+
+        // Initialize VBO's and texture buffers
+        constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
+        // per-vertex data
+        face_index_buffer.resize(Ntypes);
+        vertex_buffer.resize(Ntypes);
+        uv_buffer.resize(Ntypes);
+        glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+        glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
+        glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+
+        // per-primitive data
+        color_buffer.resize(Ntypes);
+        color_texture_object.resize(Ntypes);
+        normal_buffer.resize(Ntypes);
+        normal_texture_object.resize(Ntypes);
+        texture_flag_buffer.resize(Ntypes);
+        texture_flag_texture_object.resize(Ntypes);
+        texture_ID_buffer.resize(Ntypes);
+        texture_ID_texture_object.resize(Ntypes);
+        coordinate_flag_buffer.resize(Ntypes);
+        coordinate_flag_texture_object.resize(Ntypes);
+        hidden_flag_buffer.resize(Ntypes);
+        hidden_flag_texture_object.resize(Ntypes);
+        glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
+        glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
+        glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
+        glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
+        glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
+        glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
+        glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
+        glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
+        glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
+        glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
+        glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
+        glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+
+        glGenBuffers(1, &uv_rescale_buffer);
+        glGenTextures(1, &uv_rescale_texture_object);
+
+        assert(checkerrors());
+
+        //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
+
+        primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
+        depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
+
+        assert(checkerrors());
+
+        primaryShader.useShader();
+
+        // Initialize frame buffer
+
+        // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+        glGenFramebuffers(1, &framebufferID);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+
+        // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+        glActiveTexture(GL_TEXTURE1);
+        glGenTextures(1, &depthTexture);
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+        // enable hardware depth comparison
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
+        assert(checkerrors());
+
+        // restore default active texture for subsequent texture setup
+        glActiveTexture(GL_TEXTURE0);
+
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
+
+        glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+
+        // Always check that our framebuffer is ok
+        int max_checks = 10000;
+        int checks = 0;
+        while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
+            checks++;
+        }
+        assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+        // Finished OpenGL setup
+        assert(checkerrors());
     } else {
-        glEnable(GL_POLYGON_SMOOTH);
+        Wframebuffer = Wdisplay;
+        Hframebuffer = Hdisplay;
     }
-
-    // glEnable(GL_TEXTURE0);
-    //  glEnable(GL_TEXTURE_2D_ARRAY);
-    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    assert(checkerrors());
-
-    // glEnable(GL_TEXTURE1);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
-    glDisable(GL_CULL_FACE);
-
-    assert(checkerrors());
-
-    // Initialize VBO's and texture buffers
-    constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
-    // per-vertex data
-    face_index_buffer.resize(Ntypes);
-    vertex_buffer.resize(Ntypes);
-    uv_buffer.resize(Ntypes);
-    glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
-    glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
-    glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
-
-    // per-primitive data
-    color_buffer.resize(Ntypes);
-    color_texture_object.resize(Ntypes);
-    normal_buffer.resize(Ntypes);
-    normal_texture_object.resize(Ntypes);
-    texture_flag_buffer.resize(Ntypes);
-    texture_flag_texture_object.resize(Ntypes);
-    texture_ID_buffer.resize(Ntypes);
-    texture_ID_texture_object.resize(Ntypes);
-    coordinate_flag_buffer.resize(Ntypes);
-    coordinate_flag_texture_object.resize(Ntypes);
-    hidden_flag_buffer.resize(Ntypes);
-    hidden_flag_texture_object.resize(Ntypes);
-    glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
-    glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
-    glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
-    glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
-    glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
-    glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
-    glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
-    glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
-    glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
-    glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
-    glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
-    glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
-
-    glGenBuffers(1, &uv_rescale_buffer);
-    glGenTextures(1, &uv_rescale_texture_object);
-
-    assert(checkerrors());
-
-    //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
-
-    primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
-    depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
-
-    assert(checkerrors());
-
-    primaryShader.useShader();
-
-    // Initialize frame buffer
-
-    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-    glGenFramebuffers(1, &framebufferID);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-
-    // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
-    glActiveTexture(GL_TEXTURE1);
-    glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-    // enable hardware depth comparison
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-
-    assert(checkerrors());
-
-    // restore default active texture for subsequent texture setup
-    glActiveTexture(GL_TEXTURE0);
-
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
-
-    glDrawBuffer(GL_NONE); // No color buffer is drawn to.
-
-    // Always check that our framebuffer is ok
-    int max_checks = 10000;
-    int checks = 0;
-    while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
-        checks++;
-    }
-    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-
 
     // Initialize transformation matrices
 
@@ -618,13 +627,13 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     customTransformationMatrix = glm::mat4(1.f);
 
-    assert(checkerrors());
-
     // Default values
 
     light_direction = make_vec3(1, 1, 1);
     light_direction.normalize();
-    primaryShader.setLightDirection(light_direction);
+    if (!headless) {
+        primaryShader.setLightDirection(light_direction);
+    }
 
     primaryLightingModel.push_back(Visualizer::LIGHTING_NONE);
 
@@ -679,112 +688,40 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colormap_current = colormap_hot;
 
-    glfwSetMouseButtonCallback((GLFWwindow *) window, mouseCallback);
-    glfwSetCursorPosCallback((GLFWwindow *) window, cursorCallback);
-    glfwSetScrollCallback((GLFWwindow *) window, scrollCallback);
+    if (!headless) {
+        glfwSetMouseButtonCallback((GLFWwindow *) window, mouseCallback);
+        glfwSetCursorPosCallback((GLFWwindow *) window, cursorCallback);
+        glfwSetScrollCallback((GLFWwindow *) window, scrollCallback);
 
-    assert(checkerrors());
+        assert(checkerrors());
+    }
 }
 
 Visualizer::~Visualizer() {
-    glDeleteFramebuffers(1, &framebufferID);
-    glDeleteTextures(1, &depthTexture);
+    if (!headless) {
+        glDeleteFramebuffers(1, &framebufferID);
+        glDeleteTextures(1, &depthTexture);
 
-    glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
-    glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
-    glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+        glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+        glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
+        glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
 
-    glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
-    glDeleteTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
-    glDeleteBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
-    glDeleteTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
-    glDeleteBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
-    glDeleteTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
-    glDeleteBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
-    glDeleteTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
-    glDeleteBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
-    glDeleteTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
-    glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
-    glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
+        glDeleteTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
+        glDeleteBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
+        glDeleteTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
+        glDeleteBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
+        glDeleteTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
+        glDeleteTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
+        glDeleteBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
+        glDeleteTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
+        glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
 
-    // for( auto iter=textureIDData.begin(); iter!=textureIDData.end(); ++iter ){
-    //     std::vector<int> ID = textureIDData.at(iter->first);
-    //     for(int i : ID){
-    //         uint IDu = uint(i);
-    //         glDeleteTextures(1, &IDu );
-    //     }
-    // }
-
-    glfwDestroyWindow(scast<GLFWwindow *>(window));
-    glfwTerminate();
-}
-
-int Visualizer::selfTest() const {
-    if (message_flag) {
-        std::cout << "Running visualizer self-test..." << std::flush;
+        glfwDestroyWindow(scast<GLFWwindow *>(window));
+        glfwTerminate();
     }
-
-    Visualizer visualizer(1000);
-
-    visualizer.setCameraPosition(make_SphericalCoord(10, 0.49 * PI_F, 0), make_vec3(0, 0, 0));
-
-    visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
-
-    //---- rectangles ----//
-
-    visualizer.addRectangleByCenter(make_vec3(-1.5, 0, 0), make_vec2(1, 2), make_SphericalCoord(0.f, 0.f), make_RGBAcolor(RGB::yellow, 0.5), Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addRectangleByCenter(make_vec3(-0.5, -0.5, 0), make_vec2(1, 1), make_SphericalCoord(0.f, 0.f), RGB::blue, Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addRectangleByCenter(make_vec3(-0.5, 0.5, 0), make_vec2(1, 1), make_SphericalCoord(0.f, 0.f), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addRectangleByCenter(make_vec3(1.5, 0.5, 0), make_vec2(3.41, 1), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_logo.png", Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addRectangleByCenter(make_vec3(1.5, -0.5, 0), make_vec2(3.41, 1), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_logo.jpeg", Visualizer::COORDINATES_CARTESIAN);
-
-    std::vector<vec3> vertices;
-    vertices.resize(4);
-
-    vertices.at(0) = make_vec3(-2, -1, 0);
-    vertices.at(1) = make_vec3(-2, 1, 0);
-    vertices.at(2) = make_vec3(-3, 0.5, 0);
-    vertices.at(3) = make_vec3(-3, -0.5, 0);
-    visualizer.addRectangleByVertices(vertices, RGB::green, Visualizer::COORDINATES_CARTESIAN);
-
-    vertices.at(0) = make_vec3(-3, -0.5, 0);
-    vertices.at(1) = make_vec3(-3, 0.5, 0);
-    vertices.at(2) = make_vec3(-4, 1, 0);
-    vertices.at(3) = make_vec3(-4, -1, 0);
-    visualizer.addRectangleByVertices(vertices, make_RGBAcolor(RGB::violet, 0.5), Visualizer::COORDINATES_CARTESIAN);
-
-    vertices.at(0) = make_vec3(-4, -1, 0);
-    vertices.at(1) = make_vec3(-4, 1, 0);
-    vertices.at(2) = make_vec3(-5, 0.5, 0);
-    vertices.at(3) = make_vec3(-5, -0.5, 0);
-    visualizer.addRectangleByVertices(vertices, "plugins/visualizer/textures/Helios_logo.png", Visualizer::COORDINATES_CARTESIAN);
-
-    //---- triangles ----//
-
-    vec3 v0, v1, v2;
-
-    v0 = make_vec3(-1, -3, 0);
-    v1 = make_vec3(1, -3, 0);
-    v2 = make_vec3(1, -4, 0);
-    visualizer.addTriangle(v0, v1, v2, make_RGBAcolor(RGB::red, 0.5), Visualizer::COORDINATES_CARTESIAN);
-
-    v0 = make_vec3(-1, -3, 0);
-    v1 = make_vec3(-1, -4, 0);
-    v2 = make_vec3(1, -4, 0);
-    visualizer.addTriangle(v0, v1, v2, RGB::blue, Visualizer::COORDINATES_CARTESIAN);
-
-    //---- lines ----//
-
-    visualizer.addLine(make_vec3(-1, 3, 0), make_vec3(0, 4, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addLine(make_vec3(0, 4, 0), make_vec3(1, 3, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addLine(make_vec3(1, 3, 0), make_vec3(0, 2, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-    visualizer.addLine(make_vec3(0, 2, 0), make_vec3(-1, 3, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-
-    if (message_flag) {
-        std::cout << "done." << std::endl;
-    }
-
-    return 0;
 }
 
 void Visualizer::enableMessages() {
@@ -3170,8 +3107,7 @@ void Visualizer::transferBufferData() {
         return;
     }
 
-    auto ensureArrayBuffer = [](GLuint buf, GLenum target, GLsizeiptr size,
-                                const void *data) {
+    auto ensureArrayBuffer = [](GLuint buf, GLenum target, GLsizeiptr size, const void *data) {
         glBindBuffer(target, buf);
         GLint current_size = 0;
         glGetBufferParameteriv(target, GL_BUFFER_SIZE, &current_size);
@@ -3180,8 +3116,7 @@ void Visualizer::transferBufferData() {
         }
     };
 
-    auto ensureTextureBuffer = [](GLuint buf, GLuint tex, GLenum format,
-                                  GLsizeiptr size, const void *data) {
+    auto ensureTextureBuffer = [](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data) {
         glBindBuffer(GL_TEXTURE_BUFFER, buf);
         GLint current_size = 0;
         glGetBufferParameteriv(GL_TEXTURE_BUFFER, GL_BUFFER_SIZE, &current_size);
@@ -3205,24 +3140,15 @@ void Visualizer::transferBufferData() {
         const auto *coordinate_flag_data = geometry_handler.getCoordinateFlagData_ptr(geometry_type);
         const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
 
-        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER,
-                         vertex_data->size() * sizeof(GLfloat), vertex_data->data());
-        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER,
-                         uv_data->size() * sizeof(GLfloat), uv_data->data());
-        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER,
-                         face_index_data->size() * sizeof(GLint), face_index_data->data());
-        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F,
-                            color_data->size() * sizeof(GLfloat), color_data->data());
-        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F,
-                            normal_data->size() * sizeof(GLfloat), normal_data->data());
-        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I,
-                            texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
-        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I,
-                            texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
-        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I,
-                            coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
-        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I,
-                            visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
+        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data());
+        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data());
+        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data());
+        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data());
+        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data());
+        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
+        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
+        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
+        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindTexture(GL_TEXTURE_BUFFER, 0);
@@ -3298,7 +3224,7 @@ void Visualizer::transferBufferData() {
     }
 
     if (textures_dirty || texArray == 0) {
-    transferTextureData();
+        transferTextureData();
         textures_dirty = false;
     }
 
@@ -3316,12 +3242,7 @@ void Visualizer::transferTextureData() {
 
     const size_t layers = std::max<size_t>(1, texture_manager.size());
     if (layers != texture_array_layers) {
-        glTexStorage3D(GL_TEXTURE_2D_ARRAY,
-                       1,
-                       GL_RGBA8,
-                       maximum_texture_size.x,
-                       maximum_texture_size.y,
-                       layers);
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, maximum_texture_size.x, maximum_texture_size.y, layers);
         texture_array_layers = layers;
     }
 
@@ -3334,46 +3255,33 @@ void Visualizer::transferTextureData() {
     std::vector<GLfloat> uv_rescale;
     uv_rescale.resize(texture_manager.size() * 2);
 
-    for (const auto &[textureID, texture] : texture_manager) {
+    for (const auto &[textureID, texture]: texture_manager) {
         GLenum externalFormat = 0;
         switch (texture.num_channels) {
-        case 1:
-            externalFormat = GL_RED;
-            break;
-        case 3:
-            externalFormat = GL_RGB;
-            break;
-        case 4:
-            externalFormat = GL_RGBA;
-            break;
-        default:
-            throw std::runtime_error("unsupported channel count");
+            case 1:
+                externalFormat = GL_RED;
+                break;
+            case 3:
+                externalFormat = GL_RGB;
+                break;
+            case 4:
+                externalFormat = GL_RGBA;
+                break;
+            default:
+                throw std::runtime_error("unsupported channel count");
         }
 
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                        0,
-                        0,
-                        0,
-                        textureID,
-                        texture.texture_resolution.x,
-                        texture.texture_resolution.y,
-                        1,
-                        externalFormat,
-                        GL_UNSIGNED_BYTE,
-                        texture.texture_data.data());
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, textureID, texture.texture_resolution.x, texture.texture_resolution.y, 1, externalFormat, GL_UNSIGNED_BYTE, texture.texture_data.data());
 
-        uv_rescale.at(textureID * 2 + 0) =
-            float(texture.texture_resolution.x) / float(maximum_texture_size.x);
-        uv_rescale.at(textureID * 2 + 1) =
-            float(texture.texture_resolution.y) / float(maximum_texture_size.y);
+        uv_rescale.at(textureID * 2 + 0) = float(texture.texture_resolution.x) / float(maximum_texture_size.x);
+        uv_rescale.at(textureID * 2 + 1) = float(texture.texture_resolution.y) / float(maximum_texture_size.y);
     }
 
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
     glUniform1i(glGetUniformLocation(primaryShader.shaderID, "textureSampler"), 0);
 
     glBindBuffer(GL_TEXTURE_BUFFER, uv_rescale_buffer);
-    glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat),
-                 uv_rescale.data(), GL_STATIC_DRAW);
+    glBufferData(GL_TEXTURE_BUFFER, uv_rescale.size() * sizeof(GLfloat), uv_rescale.data(), GL_STATIC_DRAW);
     glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RG32F, uv_rescale_buffer);
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
@@ -4196,14 +4104,15 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     // Texture (u,v) rescaling factor
     uvRescaleUniform = glGetUniformLocation(shaderID, "uv_rescale");
 
-    // initialize default texture in case none are added to the scene
-    //  glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-    //  glTexImage2D(GL_TEXTURE_2D_ARRAY, 0,GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
     assert(checkerrors());
+
+    initialized = true;
 }
 
 Shader::~Shader() {
+    if (!initialized) {
+        return;
+    }
     glDeleteVertexArrays(vertex_array_IDs.size(), vertex_array_IDs.data());
     glDeleteProgram(shaderID);
 }
