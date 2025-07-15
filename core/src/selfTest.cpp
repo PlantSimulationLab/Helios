@@ -16,21 +16,14 @@
 #include "Context.h"
 #include <set>
 
+#define DOCTEST_CONFIG_IMPLEMENT
+#include "doctest.h"
+
 using namespace helios;
 
-int Context::selfTest(){
+double errtol = 1e-6;
 
-    std::cout << "Running Context self-test..." << std::flush;
-
-    Context context_test;
-
-    uint error_count=0;
-
-    double errtol = 1e-7;
-
-    std::string answer;
-
-    //------- Add Patch --------//
+TEST_CASE("Context::addPatch") {
 
     vec3 center,center_r;
     vec2 size, size_r;
@@ -42,8 +35,9 @@ int Context::selfTest(){
     std::vector<uint> UUIDs;
     PrimitiveType type;
     float area_r;
-    Primitive* prim;
     uint objID;
+
+    Context context_test;
 
     //uint addPatch( const vec3& center, const vec2& size );
     center = make_vec3(1,2,3);
@@ -53,192 +47,189 @@ int Context::selfTest(){
     vertices.at(1) = center + make_vec3( 0.5f*size.x, -0.5f*size.y, 0.f);
     vertices.at(2) = center + make_vec3( 0.5f*size.x, 0.5f*size.y, 0.f);
     vertices.at(3) = center + make_vec3( -0.5f*size.x, 0.5f*size.y, 0.f);
-    UUID = context_test.addPatch(center,size);
-    type = context_test.getPrimitiveType(UUID);
-    center_r = context_test.getPatchCenter(UUID);
-    size_r = context_test.getPatchSize(UUID);
-    normal_r = context_test.getPrimitiveNormal(UUID);
-    vertices_r = context_test.getPrimitiveVertices(UUID);
-    area_r = context_test.getPrimitiveArea(UUID);
-    color_r = context_test.getPrimitiveColor(UUID);
 
-    if( type!=PRIMITIVE_TYPE_PATCH ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getType did not return `PRIMITIVE_TYPE_PATCH'." << std::endl;
-    }
-    if( center_r.x!=center.x || center_r.y!=center.y || center_r.z!=center.z ){
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getCenter returned incorrect value." << std::endl;
-    }
-    if( size_r.x!=size.x || size_r.y!=size.y ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getSize returned incorrect value." << std::endl;
-    }
-    if( normal_r.x!=0.f || normal_r.y!=0.f || normal_r.z!=1.f ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getNormal did not return correct value." << std::endl;
-    }
-    if( vertices.at(0).x!=vertices_r.at(0).x || vertices.at(0).y!=vertices_r.at(0).y || vertices.at(0).z!=vertices_r.at(0).z ||
-        vertices.at(1).x!=vertices_r.at(1).x || vertices.at(1).y!=vertices_r.at(1).y || vertices.at(1).z!=vertices_r.at(1).z ||
-        vertices.at(2).x!=vertices_r.at(2).x || vertices.at(2).y!=vertices_r.at(2).y || vertices.at(2).z!=vertices_r.at(2).z ||
-        vertices.at(3).x!=vertices_r.at(3).x || vertices.at(3).y!=vertices_r.at(3).y || vertices.at(3).z!=vertices_r.at(3).z  ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getVertices did not return correct value." << std::endl;
-    }
-    if( std::abs( area_r - size.x*size.y )>1e-5 ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getArea did not return correct value." << std::endl;
-    }
-    if( color_r.r!=0.f || color_r.g!=0.f || color_r.b!=0.f ){
-        error_count++;
-        std::cerr << "failed: uint addPatch( const vec3& center, const vec2& size ). Patch::getColor did not return default color of black." << std::endl;
-    }
+    DOCTEST_CHECK_NOTHROW( UUID = context_test.addPatch(center,size) );
+    DOCTEST_CHECK_NOTHROW( type = context_test.getPrimitiveType(UUID) );
+    DOCTEST_CHECK_NOTHROW( center_r = context_test.getPatchCenter(UUID) );
+    DOCTEST_CHECK_NOTHROW( size_r = context_test.getPatchSize(UUID) );
+    DOCTEST_CHECK_NOTHROW( normal_r = context_test.getPrimitiveNormal(UUID) );
+    DOCTEST_CHECK_NOTHROW( vertices_r = context_test.getPrimitiveVertices(UUID) );
+    DOCTEST_CHECK_NOTHROW( area_r = context_test.getPrimitiveArea(UUID) );
+    DOCTEST_CHECK_NOTHROW( color_r = context_test.getPrimitiveColor(UUID) );
 
-    if( !context_test.getPrimitiveTextureFile(UUID).empty() ){
-        error_count++;
-        std::cerr << "failed: Patch without texture mapping returned true for texture map test." << std::endl;
-    }
+    DOCTEST_CHECK( type==PRIMITIVE_TYPE_PATCH );
+    DOCTEST_CHECK( center_r.x==center.x );
+    DOCTEST_CHECK( center_r.y==center.y );
+    DOCTEST_CHECK( center_r.z==center.z );
+    DOCTEST_CHECK( size_r.x==size.x );
+    DOCTEST_CHECK( size_r.y==size.y );
+    DOCTEST_CHECK( normal_r.x==0.f );
+    DOCTEST_CHECK( normal_r.y==0.f );
+    DOCTEST_CHECK( normal_r.z==1.f );
+    DOCTEST_CHECK( vertices_r.size()==4 );
+    DOCTEST_CHECK( vertices_r.at(0).x==vertices.at(0).x );
+    DOCTEST_CHECK( vertices_r.at(0).y==vertices.at(0).y );
+    DOCTEST_CHECK( vertices_r.at(0).z==vertices.at(0).z );
+    DOCTEST_CHECK( vertices_r.at(1).x==vertices.at(1).x );
+    DOCTEST_CHECK( vertices_r.at(1).y==vertices.at(1).y );
+    DOCTEST_CHECK( vertices_r.at(1).z==vertices.at(1).z );
+    DOCTEST_CHECK( vertices_r.at(2).x==vertices.at(2).x );
+    DOCTEST_CHECK( vertices_r.at(2).y==vertices.at(2).y );
+    DOCTEST_CHECK( vertices_r.at(2).z==vertices.at(2).z );
+    DOCTEST_CHECK( vertices_r.at(3).x==vertices.at(3).x );
+    DOCTEST_CHECK( vertices_r.at(3).y==vertices.at(3).y );
+    DOCTEST_CHECK( vertices_r.at(3).z==vertices.at(3).z );
+    CHECK( area_r == doctest::Approx(size.x*size.y).epsilon(errtol) );
+    DOCTEST_CHECK( color_r.r==0.f );
+    DOCTEST_CHECK( color_r.g==0.f );
+    DOCTEST_CHECK( color_r.b==0.f );
+    DOCTEST_CHECK( context_test.getPrimitiveTextureFile(UUID).empty() );
+}
 
-    //------- Copy Patch --------//
+TEST_CASE("Context::copyPrimitive (patch)") {
+
+    Context context_test;
+    uint UUID, UUID_cpy;
 
     std::vector<float> cpdata{5.2f,2.5f,3.1f};
 
-    context_test.setPrimitiveData( UUID, "somedata", cpdata );
+    vec3 center = make_vec3(1,2,3);
+    vec2 size = make_vec2(1,2);
 
-    uint UUID_cpy = context_test.copyPrimitive(UUID);
+    DOCTEST_CHECK_NOTHROW( UUID = context_test.addPatch(center,size) );
 
-    vec3 center_cpy = context_test.getPatchCenter(UUID_cpy);
-    vec2 size_cpy = context_test.getPatchSize(UUID_cpy);
+    DOCTEST_CHECK_NOTHROW( context_test.setPrimitiveData( UUID, "somedata", cpdata ) );
 
-    if( UUID_cpy != 1 ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch does not have the correct UUID." << std::endl;
-    }
-    if( center_cpy.x!=center.x || center_cpy.y!=center.y || center_cpy.z!=center.z  ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch did not return correct center coordinates." << std::endl;
-    }
-    if( size_cpy.x!=size.x || size_cpy.y!=size.y ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch did not return correct size." << std::endl;
-    }
+    DOCTEST_CHECK_NOTHROW( UUID_cpy = context_test.copyPrimitive(UUID) );
+
+    vec3 center_cpy;
+    DOCTEST_CHECK_NOTHROW( center_cpy = context_test.getPatchCenter(UUID_cpy) );
+    vec2 size_cpy;
+    DOCTEST_CHECK_NOTHROW( size_cpy = context_test.getPatchSize(UUID_cpy) );
+
+    DOCTEST_CHECK( UUID_cpy == 1 );
+    DOCTEST_CHECK( center_cpy.x == center.x );
+    DOCTEST_CHECK( center_cpy.y == center.y );
+    DOCTEST_CHECK( center_cpy.z == center.z );
+    DOCTEST_CHECK( size_cpy.x == size.x );
+    DOCTEST_CHECK( size_cpy.y == size.y );
 
     std::vector<float> cpdata_copy;
     context_test.getPrimitiveData( UUID_cpy, "somedata", cpdata_copy );
 
-    if( cpdata.size() != cpdata_copy.size() ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch primitive data does not have correct size." << std::endl;
-    }
+    DOCTEST_CHECK( cpdata.size() == cpdata_copy.size() );
     for( uint i=0; i<cpdata.size(); i++ ){
-        if( cpdata.at(i) != cpdata_copy.at(i) ){
-            error_count++;
-            std::cerr << "failed: copyPrimitive. Copied patch primitive data does not match." << std::endl;
-        }
-        break;
+        DOCTEST_CHECK( cpdata.at(i) == cpdata_copy.at(i) );
     }
 
     //translate the copied patch
     vec3 shift = make_vec3(5.f,4.f,3.f);
-    context_test.translatePrimitive(UUID_cpy,shift);
-    center_cpy = context_test.getPatchCenter(UUID_cpy);
-    center_r = context_test.getPatchCenter(UUID);
+    DOCTEST_CHECK_NOTHROW( context_test.translatePrimitive(UUID_cpy,shift) );
+    DOCTEST_CHECK_NOTHROW( center_cpy = context_test.getPatchCenter(UUID_cpy) );
+    vec3 center_r;
+    DOCTEST_CHECK_NOTHROW( center_r = context_test.getPatchCenter(UUID) );
 
-    if( std::abs(center_cpy.x-center.x-shift.x)>errtol || std::abs(center_cpy.y-center.y-shift.y)>errtol || std::abs(center_cpy.z-center.z-shift.z)>errtol || center_r.x!=center.x || center_r.y!=center.y || center_r.z!=center.z ){
-        error_count++;
-        std::cerr << "failed: copyPrimitive. Copied patch could not be properly translated." << std::endl;
-    }
+    DOCTEST_CHECK( center_cpy.x == doctest::Approx(center.x+shift.x).epsilon(errtol) );
+    DOCTEST_CHECK( center_cpy.y == doctest::Approx(center.y+shift.y).epsilon(errtol) );
+    DOCTEST_CHECK( center_cpy.z == doctest::Approx(center.z+shift.z).epsilon(errtol) );
+    DOCTEST_CHECK( center_r.x == center.x );
+    DOCTEST_CHECK( center_r.y == center.y );
+    DOCTEST_CHECK( center_r.z == center.z );
+}
 
-    //------- Delete Patch --------//
+TEST_CASE("Context::deletePrimitive") {
 
-    context_test.deletePrimitive(UUID);
+    Context context_test;
+    uint UUID;
+    vec3 center = make_vec3(1,2,3);
+    vec2 size = make_vec2(1,2);
 
-    if(context_test.getPrimitiveCount() != 1 ){
-        error_count++;
-        std::cerr << "failed: deletePrimitive. Patch not properly deleted based on primitive count." << std::endl;
-    }
-    if( context_test.doesPrimitiveExist(UUID) ){
-        error_count++;
-        std::cerr << "failed: deletePrimitive. Patch not properly deleted." << std::endl;
-    }
+    DOCTEST_CHECK_NOTHROW( UUID = context_test.addPatch(center,size) );
 
-    UUID = UUID_cpy;
+    DOCTEST_CHECK_NOTHROW( context_test.deletePrimitive(UUID) );
 
-    //------- Add a Rotated Patch --------//
+    uint primitive_count;
+    DOCTEST_CHECK_NOTHROW( primitive_count = context_test.getPrimitiveCount(UUID) );
+    DOCTEST_CHECK( primitive_count == 0 );
+    DOCTEST_CHECK( !context_test.doesPrimitiveExist(UUID) );
+}
 
-    center = make_vec3(1,2,3);
-    size = make_vec2(1,2);
-    rotation = make_SphericalCoord(1.f, 0.15f*M_PI, 0.5f*M_PI);
+TEST_CASE("Context rotated patch") {
+    Context context_test;
+
+    vec3 center = make_vec3(1,2,3);
+    vec2 size = make_vec2(1,2);
+    SphericalCoord rotation = make_SphericalCoord(1.f, 0.15f*M_PI, 0.5f*M_PI);
     rotation.azimuth = 0.5f*M_PI;;
-    UUID = context_test.addPatch(center,size,rotation);
-    normal_r = context_test.getPrimitiveNormal(UUID);
 
-    rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) );
+    uint UUID;
+    DOCTEST_CHECK_NOTHROW( UUID = context_test.addPatch(center,size,rotation) );
 
-    context_test.deletePrimitive(UUID);
+    vec3 normal_r;
+    DOCTEST_CHECK_NOTHROW( normal_r = context_test.getPrimitiveNormal(UUID) );
 
-    if( std::abs(rotation_r.elevation-rotation.elevation)>errtol || std::abs(rotation_r.azimuth-rotation.azimuth)>errtol ){
-        error_count++;
-        std::cerr << "failed: Rotated patch did not return correct normal vector." << std::endl;
-    }
+    SphericalCoord rotation_r;
+    DOCTEST_CHECK_NOTHROW( rotation_r = make_SphericalCoord( 0.5f*float(M_PI)-asinf( normal_r.z ), atan2f(normal_r.x,normal_r.y) ) );
 
-    //------- Add Triangle --------//
+    DOCTEST_CHECK_NOTHROW( context_test.deletePrimitive(UUID) );
+
+    DOCTEST_CHECK( rotation_r.elevation == doctest::Approx(rotation.elevation).epsilon(errtol) );
+    DOCTEST_CHECK( rotation_r.azimuth == doctest::Approx(rotation.azimuth).epsilon(errtol) );
+}
+
+TEST_CASE("Context::addTriangle") {
+    Context context_test;
 
     vec3 v0,v0_r;
     vec3 v1,v1_r;
     vec3 v2,v2_r;
+    uint UUID;
 
     //uint addTriangle( const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color );
     v0 = make_vec3(1,2,3);
     v1 = make_vec3(2,4,6);
     v2 = make_vec3(3,6,5);
-    vertices.at(0) = v0;
-    vertices.at(1) = v1;
-    vertices.at(2) = v2;
-    color = RGB::red;
-    UUID = context_test.addTriangle(v0,v1,v2,color);
+    std::vector<vec3> vertices{v0,v1,v2};
+    RGBcolor color = RGB::red;
 
-    type = context_test.getPrimitiveType(UUID);
-    normal_r = context_test.getPrimitiveNormal(UUID);
-    vertices_r = context_test.getPrimitiveVertices(UUID);
-    area_r = context_test.getPrimitiveArea(UUID);
-    color_r = context_test.getPrimitiveColor(UUID);
+    DOCTEST_CHECK_NOTHROW( UUID = context_test.addTriangle(v0,v1,v2,color) );
+    DOCTEST_CHECK( context_test.getPrimitiveType(UUID) == PRIMITIVE_TYPE_TRIANGLE );
 
-    if( type!=PRIMITIVE_TYPE_TRIANGLE ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getType did not return `PRIMITIVE_TYPE_TRIANGLE'." << std::endl;
-    }
-    normal = cross( v1-v0, v2-v1 );
-    normal.normalize();
-    if( normal_r.x!=normal.x || normal_r.y!=normal.y || normal_r.z!=normal.z ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getNormal did not return correct value." << std::endl;
-    }
-    if( vertices.at(0).x!=vertices_r.at(0).x || vertices.at(0).y!=vertices_r.at(0).y || vertices.at(0).z!=vertices_r.at(0).z ||
-        vertices.at(1).x!=vertices_r.at(1).x || vertices.at(1).y!=vertices_r.at(1).y || vertices.at(1).z!=vertices_r.at(1).z ||
-        vertices.at(2).x!=vertices_r.at(2).x || vertices.at(2).y!=vertices_r.at(2).y || vertices.at(2).z!=vertices_r.at(2).z ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getVertices did not return correct value." << std::endl;
-    }
-    vec3 A(v1-v0);
-    vec3 B(v2-v0);
-    vec3 C(v2-v1);
-    float a = A.magnitude();
-    float b = B.magnitude();
-    float c = C.magnitude();
+    vec3 normal = normalize(cross( v1-v0, v2-v1 ));
+    vec3 normal_r = context_test.getPrimitiveNormal(UUID);
+    DOCTEST_CHECK( normal_r.x == doctest::Approx(normal.x).epsilon(errtol) );
+    DOCTEST_CHECK( normal_r.y == doctest::Approx(normal.y).epsilon(errtol) );
+    DOCTEST_CHECK( normal_r.z == doctest::Approx(normal.z).epsilon(errtol) );
+
+    std::vector<vec3> vertices_r;
+    DOCTEST_CHECK_NOTHROW( vertices_r = context_test.getPrimitiveVertices(UUID) );
+    DOCTEST_CHECK( vertices_r.size() == 3 );
+    DOCTEST_CHECK( vertices_r.at(0).x == v0.x );
+    DOCTEST_CHECK( vertices_r.at(0).y == v0.y );
+    DOCTEST_CHECK( vertices_r.at(0).z == v0.z );
+
+    RGBcolor color_r;
+    DOCTEST_CHECK_NOTHROW( color_r = context_test.getPrimitiveColor(UUID) );
+    DOCTEST_CHECK( color_r.r == color.r );
+    DOCTEST_CHECK( color_r.g == color.g );
+    DOCTEST_CHECK( color_r.b == color.b );
+    DOCTEST_CHECK( context_test.getPrimitiveTextureFile(UUID).empty() );
+
+    float a = (v1-v0).magnitude();
+    float b = (v2-v0).magnitude();
+    float c = (v2-v1).magnitude();
     float s = 0.5f*( a+b+c );
-    if( area_r!=sqrtf(s*(s-a)*(s-b)*(s-c)) ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getArea did not return correct value." << std::endl;
-    }
-    if( color_r.r!=color.r || color_r.g!=color.g || color_r.b!=color.b ){
-        error_count++;
-        std::cerr << "failed: uint addTriangle(const vec3& v0, const vec3& v1, const vec3& v2, const RGBcolor &color ). Triangle::getColor did not return correct color." << std::endl;
-    }
+    float area = sqrtf(s*(s-a)*(s-b)*(s-c));
+    float area_r;
+    DOCTEST_CHECK_NOTHROW( area_r = context_test.getPrimitiveArea(UUID) );
+    DOCTEST_CHECK( area_r == doctest::Approx(area).epsilon(errtol) );
+}
 
-    if( !context_test.getPrimitiveTextureFile(UUID).empty() ){
-        error_count++;
-        std::cerr << "failed: Triangle without texture mapping returned true for texture map test." << std::endl;
-    }
+int Context::selfTest(){
+
+   /*
+
+
 
     //------- Copy Triangle --------//
 
@@ -7224,5 +7215,15 @@ int Context::selfTest(){
     }else{
         return 1;
     }
+
+    */
+
+    doctest::Context ctx;
+    ctx.setOption("exit", true);           // propagate exit code
+    ctx.setOption("no-breaks", true);      // continue on failure
+    ctx.setOption("reporters", "console"); // plain output
+
+    int result = ctx.run();
+    return result == 0;
 
 }

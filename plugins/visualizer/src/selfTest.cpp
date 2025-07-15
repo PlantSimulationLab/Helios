@@ -56,6 +56,76 @@ TEST_CASE("Visualizer::setLightingModel") {
     DOCTEST_CHECK_NOTHROW(visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED));
 }
 
+TEST_CASE("Visualizer::setBackgroundColor and Visualizer::getBackgroundColor") {
+    Visualizer visualizer(1000, true);
+    helios::RGBcolor bgcolor = RGB::white;
+    visualizer.setBackgroundColor(bgcolor);
+    DOCTEST_CHECK(visualizer.getBackgroundColor() == bgcolor);
+}
+
+TEST_CASE("Visualizer::setLightIntensityFactor") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.setLightIntensityFactor(0.75f));
+}
+
+TEST_CASE("Visualizer::enableColorbar and Visualizer::disableColorbar") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.enableColorbar());
+    DOCTEST_CHECK_NOTHROW(visualizer.disableColorbar());
+}
+
+TEST_CASE("Visualizer::setColorbarPosition") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarPosition(make_vec3(0.5f, 0.5f, 0.f)));
+    silence_cerr silence;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarPosition(make_vec3(-0.1f, 0.f, 0.f)), std::runtime_error);
+}
+
+TEST_CASE("Visualizer::setColorbarSize") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarSize(make_vec2(0.1f, 0.05f)));
+    silence_cerr silence;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarSize(make_vec2(1.5f, 0.f)), std::runtime_error);
+}
+
+TEST_CASE("Visualizer::setColorbarRange") {
+    Visualizer visualizer(1000, true);
+    visualizer.enableMessages();
+    visualizer.setColorbarRange(0.f, 1.f);
+    std::ostringstream buffer;
+    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarRange(20.f, 10.f));
+    std::cout.rdbuf(old);
+    DOCTEST_CHECK(!buffer.str().empty());
+}
+
+TEST_CASE("Visualizer::setColorbarTicks") {
+    Visualizer visualizer(1000, true);
+    visualizer.setColorbarRange(0.f, 1.f);
+    std::vector<float> ticks{0.f, 0.5f, 1.f};
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarTicks(ticks));
+    silence_cerr silence;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarTicks({}), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarTicks({0.f, 0.5f, 0.4f}), std::runtime_error);
+}
+
+TEST_CASE("Visualizer colorbar text attributes") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarTitle("MyBar"));
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarFontColor(RGB::yellow));
+    DOCTEST_CHECK_NOTHROW(visualizer.setColorbarFontSize(14));
+    silence_cerr silence;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarFontSize(0), std::runtime_error);
+}
+
+TEST_CASE("Visualizer::setColormap") {
+    Visualizer visualizer(1000, true);
+    DOCTEST_CHECK_NOTHROW(visualizer.setColormap(Visualizer::COLORMAP_COOL));
+    silence_cerr silence;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColormap(Visualizer::COLORMAP_CUSTOM), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(visualizer.setColormap(std::vector<RGBcolor>{RGB::red}, std::vector<float>{0.f, 1.f}), std::runtime_error);
+}
+
 TEST_CASE("Visualizer::read_png_file") {
     std::vector<unsigned char> texture;
     uint height = 0, width = 0;
@@ -172,145 +242,6 @@ TEST_CASE("Visualizer::validateTextureFile") {
 }
 
 int Visualizer::selfTest() {
-    /*
-    int error_count = 0; // Track total errors
-
-    std::cout << "Running visualizer self-test..." << std::endl;
-
-    // ---- Test updatePerspectiveTransformation() ---- //
-    {
-        try {
-            visualizer.updatePerspectiveTransformation(true);
-            visualizer.updatePerspectiveTransformation(false);
-            std::cout << "Passed updatePerspectiveTransformation() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: updatePerspectiveTransformation() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addRectangleByCenter() ---- //
-    {
-        try {
-            visualizer.addRectangleByCenter(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed addRectangleByCenter() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addRectangleByCenter() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addRectangleByCenter() with extreme values ---- //
-    {
-        try {
-            visualizer.addRectangleByCenter(make_vec3(1e6, 1e6, 1e6), make_vec2(1e6, 1e6), make_SphericalCoord(0, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed: addRectangleByCenter() executed successfully with extreme values." << std::endl;
-        } catch (...) {
-            std::cerr << "ERROR: addRectangleByCenter() threw an exception on extreme values." << std::endl;
-            error_count++;
-        }
-    }
-
-    // ---- Test addTriangle() ---- //
-    {
-        try {
-            visualizer.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::blue, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed addTriangle() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addTriangle() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addVoxelByCenter() ---- //
-    {
-        try {
-            visualizer.addVoxelByCenter(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_SphericalCoord(0, 0), RGB::green, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed addVoxelByCenter() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addVoxelByCenter() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addSphereByCenter() ---- //
-    {
-        try {
-            visualizer.addSphereByCenter(1.0f, make_vec3(0, 0, 0), 10, RGB::blue, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed addSphereByCenter() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addSphereByCenter() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addSkyDomeByCenter() ---- //
-    {
-        try {
-            visualizer.addSkyDomeByCenter(5.0f, make_vec3(0, 0, 0), 10, "plugins/visualizer/textures/SkyDome_clouds.jpg");
-            std::cout << "Passed addSkyDomeByCenter() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addSkyDomeByCenter() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addColorbarByCenter() ---- //
-    {
-        try {
-            std::vector<helios::RGBcolor> colors = {RGB::red, RGB::green, RGB::blue};
-            std::vector<float> positions = {0.0f, 0.5f, 1.0f};
-
-            Colormap colormap;
-            colormap.set(colors, positions, 100, 0.0f, 1.0f); // Correct initialization
-
-            // Adjusting position to ensure it stays within bounds
-            helios::vec3 safe_position = make_vec3(0.5, 0.1, 0.1);
-            helios::vec2 safe_size = make_vec2(0.1, 0.05);
-
-            visualizer.addColorbarByCenter("Colorbar", safe_size, safe_position, RGB::black, colormap);
-            std::cout << "Passed addColorbarByCenter() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addColorbarByCenter() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addCoordinateAxes() ---- //
-    {
-        try {
-            visualizer.addCoordinateAxes(make_vec3(0, 0, 0), make_vec3(1, 1, 1), "XYZ");
-            std::cout << "Passed addCoordinateAxes() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addCoordinateAxes() test failed.\n";
-            error_count++;
-        }
-    }
-
-    // ---- Test addLine() ---- //
-    {
-        try {
-            visualizer.addLine(make_vec3(-1, 3, 0), make_vec3(0, 4, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            visualizer.addLine(make_vec3(0, 4, 0), make_vec3(1, 3, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            visualizer.addLine(make_vec3(1, 3, 0), make_vec3(0, 2, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            visualizer.addLine(make_vec3(0, 2, 0), make_vec3(-1, 3, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
-            std::cout << "Passed addLine() test.\n";
-        } catch (...) {
-            std::cerr << "ERROR: addLine() test failed.\n";
-            error_count++;
-        }
-    }
-
-
-    // ---- Final Test Summary ---- //
-    if (error_count > 0) {
-        std::cerr << "completed with " << error_count << " errors." << std::endl;
-    } else {
-        std::cout << "passed all tests." << std::endl;
-    }
-
-    return error_count;
-    */
 
     doctest::Context ctx;
     ctx.setOption("exit", true);           // propagate exit code

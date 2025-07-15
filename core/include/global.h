@@ -1128,6 +1128,30 @@ namespace helios {
         }
     };
 
+    //! A utility struct to temporarily silence `std::cerr`.
+    /**
+     * This struct redirects the `std::cerr` stream to a null output stream
+     * while an instance of the struct exists. When the struct is destroyed,
+     * it restores the original `std::cerr` output stream.
+     */
+    struct silence_cerr {
+        std::streambuf* old_buf;
+        std::ofstream null_stream;
+
+        silence_cerr() {
+#ifdef _WIN32
+            null_stream.open("NUL");
+#else
+            null_stream.open("/dev/null");
+#endif
+            old_buf = std::cerr.rdbuf(null_stream.rdbuf());
+        }
+
+        ~silence_cerr() {
+            std::cerr.rdbuf(old_buf);
+        }
+    };
+
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;
     //! Default null vec3 that gives the origin (0,0,0)
